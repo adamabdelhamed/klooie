@@ -34,3 +34,4 @@ _ReSharper*/
 DoxygenOutput*/
 [Pp]ackages*/
 .vs/*
+/src/klooie/.vs/*

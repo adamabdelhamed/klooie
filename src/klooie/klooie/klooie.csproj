@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\klooie.PowerArgsBridge\klooie.PowerArgsBridge.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PowerArgs">
+      <HintPath>..\..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
