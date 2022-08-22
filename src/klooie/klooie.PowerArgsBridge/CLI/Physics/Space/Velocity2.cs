@@ -579,3 +579,14 @@ public class ColliderBox : Lifetime, ICollider
         return true;
     }
 }
+
+public static class ColliderEx
+{
+    public static ICollider Box(this RectF rect) => new ColliderBox(rect);
+
+    public static float CalculateDistanceTo(this RectF rect, ICollider collider) =>
+        rect.CalculateDistanceTo(collider.Left(), collider.Top(), collider.Width(), collider.Height());
+
+    public static Angle CalculateAngleTo(this RectF rect, ICollider collider) =>
+        rect.CalculateAngleTo(collider.Left(), collider.Top(), collider.Width(), collider.Height());
+}

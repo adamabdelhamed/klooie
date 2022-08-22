@@ -15,6 +15,7 @@
   <ItemGroup>
     <Folder Include="ConsoleApp\" />
     <Folder Include="Controls\" />
+    <Folder Include="Games\" />
   </ItemGroup>
 
 </Project>
