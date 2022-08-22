@@ -26,7 +26,7 @@ public readonly struct Edge
 
     public override string ToString() => $"{X1},{Y1} => {X2},{Y2}";
     public bool Equals(Edge other) => X1 == other.X1 && X2 == other.X2 && Y1 == other.Y1 && Y2 == other.Y2;
-    public override bool Equals(object? obj) => obj is RectF && Equals((Edge)obj);
+    public override bool Equals(object? obj) => obj is Edge && Equals((Edge)obj);
     public static bool operator ==(Edge a, Edge b) => a.Equals(b);
     public static bool operator !=(Edge a, Edge b) => a.Equals(b) == false;
     public override int GetHashCode()

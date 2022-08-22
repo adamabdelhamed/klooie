@@ -59,18 +59,6 @@ namespace ArgsTests.CLI
             appTask.Wait();
         }
 
-        [TestMethod]
-        public async Task TestTaskTimeout()
-        {
-            try
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1)).TimeoutAfter(TimeSpan.FromSeconds(.5));
-                Assert.Fail("An exception should have been thrown");
-            }
-            catch(TimeoutException)
-            {
-                Console.WriteLine("Expected timeout fired");
-            }
-        }
+   
     }
 }

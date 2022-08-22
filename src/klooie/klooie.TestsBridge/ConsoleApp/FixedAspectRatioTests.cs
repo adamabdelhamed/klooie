@@ -5,7 +5,7 @@ using PowerArgs.Cli;
 namespace ArgsTests.CLI.Controls
 {
     [TestClass]
-    [TestCategory(Categories.ConsoleApp)]
+    [TestCategory(Categories.Slow)]
     public class FixedAspectRatioTests
     {
         public TestContext TestContext { get; set; }
