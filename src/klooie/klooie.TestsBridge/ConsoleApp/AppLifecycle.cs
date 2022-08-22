@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs.Cli;
 using PowerArgs;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace ArgsTests.CLI.Apps
 {
@@ -30,8 +31,9 @@ namespace ArgsTests.CLI.Apps
             }
             catch (AggregateException ex)
             {
-                Assert.AreEqual(typeof(FormatException), ex.InnerException.GetType());
-                Assert.AreEqual("Some fake exception", ex.InnerException.Message);
+                var cleaned = ex.Clean().Single();
+                Assert.AreEqual(typeof(FormatException), cleaned.GetType());
+                Assert.AreEqual("Some fake exception", cleaned.Message);
             }
         }
     }
