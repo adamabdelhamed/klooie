@@ -1,5 +1,5 @@
 ﻿namespace klooie;
-
+/*
 public readonly struct Circle
 {
     public static int FindLineCircleIntersections(float cx, float cy, float radius, float x1, float y1, float x2, float y2, out float ox1, out float oy1, out float ox2, out float oy2)
@@ -53,3 +53,4 @@ public readonly struct Circle
         }
     }
 }
+*/
