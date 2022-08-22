@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\klooie\klooie.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="PowerArgs">
       <HintPath>..\..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
     </Reference>

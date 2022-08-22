@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using klooie;
+using System.Diagnostics;
 namespace PowerArgs.Cli.Physics;
 
 public class Velocity2
@@ -500,5 +501,81 @@ public class ColliderGroup
             v = null;
             return false;
         }
+    }
+}
+
+public interface ICollider : ILifetime
+{
+    public int ColliderHashCode { get; set; }
+    public int ZIndex { get; }
+    public RectF Bounds { get; set; }
+    public RectF MassBounds { get; }
+
+    public bool CanCollideWith(ICollider other);
+}
+
+
+public static class IColliderEx
+{
+    public static float NumberOfPixelsThatOverlap(this ICollider c, RectF other) => c.Bounds.NumberOfPixelsThatOverlap(other);
+    public static float NumberOfPixelsThatOverlap(this ICollider c, ICollider other) => c.Bounds.NumberOfPixelsThatOverlap(other.Bounds);
+
+    public static float OverlapPercentage(this ICollider c, RectF other) => c.Bounds.OverlapPercentage(other);
+    public static float OverlapPercentage(this ICollider c, ICollider other) => c.Bounds.OverlapPercentage(other.Bounds);
+
+    public static bool Touches(this ICollider c, RectF other) => c.Bounds.Touches(other);
+    public static bool Touches(this ICollider c, ICollider other) => c.Bounds.Touches(other.Bounds);
+
+    public static bool Contains(this ICollider c, RectF other) => c.Bounds.Contains(other);
+    public static bool Contains(this ICollider c, ICollider other) => c.Bounds.Contains(other.Bounds);
+
+    public static float Top(this ICollider c) => c.Bounds.Top;
+    public static float Left(this ICollider c) => c.Bounds.Left;
+
+    public static float Bottom(this ICollider c) => c.Bounds.Bottom;
+    public static float Right(this ICollider c) => c.Bounds.Right;
+
+    public static float Width(this ICollider c) => c.Bounds.Width;
+    public static float Height(this ICollider c) => c.Bounds.Height;
+
+    public static LocF TopRight(this ICollider c) => c.Bounds.TopRight;
+    public static LocF BottomRight(this ICollider c) => c.Bounds.BottomRight;
+    public static LocF TopLeft(this ICollider c) => c.Bounds.TopLeft;
+    public static LocF BottomLeft(this ICollider c) => c.Bounds.BottomLeft;
+
+    public static LocF Center(this ICollider c) => c.Bounds.Center;
+    public static float CenterX(this ICollider c) => c.Bounds.CenterX;
+    public static float CenterY(this ICollider c) => c.Bounds.CenterY;
+
+    public static RectF Round(this ICollider c) => c.Bounds.Round();
+
+    public static RectF OffsetByAngleAndDistance(this ICollider c, Angle a, float d, bool normalized = true) => c.Bounds.OffsetByAngleAndDistance(a, d, normalized);
+    public static RectF Offset(this ICollider c, float dx, float dy) => c.Bounds.Offset(dx, dy);
+
+    public static Angle CalculateAngleTo(this ICollider c, RectF other) => c.Bounds.CalculateAngleTo(other);
+    public static Angle CalculateAngleTo(this ICollider c, ICollider other) => c.Bounds.CalculateAngleTo(other.Bounds);
+
+    public static float CalculateDistanceTo(this ICollider c, RectF other) => c.Bounds.CalculateDistanceTo(other);
+    public static float CalculateDistanceTo(this ICollider c, ICollider other) => c.Bounds.CalculateDistanceTo(other.Bounds);
+
+    public static float CalculateNormalizedDistanceTo(this ICollider c, RectF other) => c.Bounds.CalculateNormalizedDistanceTo(other);
+    public static float CalculateNormalizedDistanceTo(this ICollider c, ICollider other) => c.Bounds.CalculateNormalizedDistanceTo(other.Bounds);
+}
+
+public class ColliderBox : Lifetime, ICollider
+{
+    public int ColliderHashCode { get; set; }
+    public int ZIndex { get; }
+    public RectF Bounds { get; set; }
+    public RectF MassBounds { get; private set; }
+    public ColliderBox(RectF f)
+    {
+        Bounds = f;
+        MassBounds = f;
+    }
+
+    public bool CanCollideWith(ICollider other)
+    {
+        return true;
     }
 }

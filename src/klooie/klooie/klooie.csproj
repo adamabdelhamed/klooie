@@ -7,13 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\klooie.PowerArgsBridge\klooie.PowerArgsBridge.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="PowerArgs">
       <HintPath>..\..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="ConsoleApp\" />
+    <Folder Include="Controls\" />
   </ItemGroup>
 
 </Project>

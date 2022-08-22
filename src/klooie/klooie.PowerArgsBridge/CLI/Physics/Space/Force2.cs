@@ -1,4 +1,6 @@
-﻿namespace PowerArgs.Cli.Physics;
+﻿using klooie;
+
+namespace PowerArgs.Cli.Physics;
 public class Force2 : Lifetime
 {
     public float Accelleration { get; set; }
