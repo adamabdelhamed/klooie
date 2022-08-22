@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\klooie.PowerArgsBridge\klooie.PowerArgsBridge.csproj" />
-    <ProjectReference Include="..\klooie\klooie.csproj" />
+    <ProjectReference Include="..\tests\tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
