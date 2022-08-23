@@ -1,7 +1,5 @@
 ﻿using PowerArgs;
-
 namespace klooie;
-
 
 public class Rectangular : ObservableObject, ICollider
 {
@@ -98,6 +96,30 @@ public class Rectangular : ObservableObject, ICollider
     public float Left => X;
 
     public float Top => Y;
+
+    public void MoveTo(float x, float y, int? z = null)
+    {
+        Bounds = new RectF(x, y, Bounds.Width, Bounds.Height);
+        if (z.HasValue)
+        {
+            ZIndex = z.Value;
+        }
+    }
+
+    public void MoveBy(float x, float y)
+    {
+        Bounds = new RectF(Bounds.Left + x, Bounds.Top + y, Bounds.Width, Bounds.Height);
+    }
+
+    public void ResizeTo(float w, float h)
+    {
+        Bounds = new RectF(Bounds.Left, Bounds.Top, w, h);
+    }
+
+    public void ResizeBy(float w, float h)
+    {
+        Bounds = new RectF(Bounds.Left, Bounds.Top, Width + w, Height + h);
+    }
 
     public virtual RectF MassBounds => new RectF(X, Y, Width, Height);
 }
