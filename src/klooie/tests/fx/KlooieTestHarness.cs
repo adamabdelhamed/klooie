@@ -265,10 +265,10 @@ public class KlooieTestHarness : ConsoleApp
         Directory.Move(CurrentTestTempPath, CurrentTestLKGPath);
     }
 
-    public Point? Find(ConsoleString text, StringComparison comparison = StringComparison.InvariantCulture) => Find(text, comparison, true);
-    public Point? Find(string text, StringComparison comparison = StringComparison.InvariantCulture) => Find(text.ToConsoleString(), comparison, false);
+    public Loc? Find(ConsoleString text, StringComparison comparison = StringComparison.InvariantCulture) => Find(text, comparison, true);
+    public Loc? Find(string text, StringComparison comparison = StringComparison.InvariantCulture) => Find(text.ToConsoleString(), comparison, false);
 
-    private Point? Find(ConsoleString text, StringComparison comparison, bool requireStylesToBeEqual)
+    private Loc? Find(ConsoleString text, StringComparison comparison, bool requireStylesToBeEqual)
     {
         if (text.Contains("\n") || text.Contains("\r"))
         {
@@ -297,7 +297,7 @@ public class KlooieTestHarness : ConsoleApp
 
             if (index >= 0)
             {
-                return new Point(index, y);
+                return new Loc(index, y);
             }
         }
 

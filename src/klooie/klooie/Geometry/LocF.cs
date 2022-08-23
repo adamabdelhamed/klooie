@@ -15,9 +15,11 @@ public readonly struct LocF
 
     public override string ToString() => $"{Left},{Top}";
     public LocF GetRounded() => new LocF(ConsoleMath.Round(Left), ConsoleMath.Round(Top));
+    public Loc ToLoc() => new Loc(ConsoleMath.Round(Left), ConsoleMath.Round(Top));
     public LocF GetFloor() => new LocF((int)Left, (int)Top);
+    public bool Equals(in Loc other) => Left == other.Left && Top == other.Top;
     public bool Equals(in LocF other) => Left == other.Left && Top == other.Top;
-    public override bool Equals(object? obj) => obj is LocF && Equals((LocF)obj);
+    public override bool Equals(object? obj) => (obj is LocF && Equals((LocF)obj)) || (obj is Loc && Equals((Loc)obj));
     public static bool operator ==(in LocF a, in LocF b) => a.Equals(b);
     public static bool operator !=(in LocF a, in LocF b) => a.Equals(b) == false;
 

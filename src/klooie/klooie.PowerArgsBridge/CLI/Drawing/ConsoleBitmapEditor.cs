@@ -25,7 +25,7 @@ namespace PowerArgs.Cli
         /// Gets the current cursor position in terms of which pixel it
         /// is covering on the target bitmap
         /// </summary>
-        public Point CursorPosition => new Point(cursor.X - 1, cursor.Y - 1);
+        public Loc CursorPosition => new Loc(cursor.X - 1, cursor.Y - 1);
 
         /// <summary>
         /// An event that fires when a change has been made to the bitmap by way
@@ -197,7 +197,7 @@ namespace PowerArgs.Cli
             }
             else if (key.Key == ConsoleKey.Backspace)
             {
-                Bitmap.Pixels[CursorPosition.X][CursorPosition.Y] = new ConsoleCharacter(' ');
+                Bitmap.Pixels[CursorPosition.Left][CursorPosition.Top] = new ConsoleCharacter(' ');
 
                 if (cursor.X > 1)
                 {

@@ -79,5 +79,17 @@ public class RectFTests
         Assert.IsFalse(r.Contains(r2));
         Assert.IsTrue(r2.Contains(r));
     }
+
+    [TestMethod]
+    public void RectF_ConvertToRect()
+    {
+        var r = new RectF(.5f, .5f, .5f, .5f);
+        var converted = r.ToRect();
+        var convertedF = converted.ToRectF();
+        Assert.AreEqual(converted, new RectF(1, 1,1,1));
+        Assert.AreEqual(converted, convertedF);
+        Assert.AreEqual(new RectF(1, 1, 1, 1), converted);
+        Assert.AreEqual(convertedF, converted);
+    }
 }
 

@@ -35,8 +35,9 @@ public readonly struct RectF
 
 
     public override string ToString() => $"{Left},{Top} {Width}x{Height}";
+    public bool Equals(in Rect other) => Equals(other.ToRectF());
     public bool Equals(in RectF other) => Left == other.Left && Top == other.Top && Width == other.Width && Height == other.Height;
-    public override bool Equals(object? obj) => obj is RectF && Equals((RectF)obj);
+    public override bool Equals(object? obj) => (obj is RectF && Equals((RectF)obj)) || (obj is Rect && Equals((Rect)obj));
     public static bool operator ==(in RectF a, in RectF b) => a.Equals(b);
     public static bool operator !=(in RectF a, in RectF b) => a.Equals(b) == false;
 
@@ -59,7 +60,7 @@ public readonly struct RectF
         OffsetByAngleAndDistance(Left, Top, Width, Height, angle, distance, normalized);
 
     public RectF Round() => new RectF(ConsoleMath.Round(Left), ConsoleMath.Round(Top), ConsoleMath.Round(Width), ConsoleMath.Round(Height));
-
+    public Rect ToRect() => new Rect(ConsoleMath.Round(Left), ConsoleMath.Round(Top), ConsoleMath.Round(Width), ConsoleMath.Round(Height));
 
     public RectF Grow(float percentage)
     {

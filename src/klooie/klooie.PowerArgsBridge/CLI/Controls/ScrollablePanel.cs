@@ -163,7 +163,7 @@ namespace PowerArgs.Cli
                 var offset = Application.FocusManager.FocusedControl.CalculateRelativePosition(this);
 
                 var visibleWindowBounds = new RectF(HorizontalScrollUnits, VerticalScrollUnits, Width, Height);
-                var focusedControlBounds = new RectF(offset.X, offset.Y, Application.FocusManager.FocusedControl.Width, Application.FocusManager.FocusedControl.Height);
+                var focusedControlBounds = new RectF(offset.Left, offset.Top, Application.FocusManager.FocusedControl.Width, Application.FocusManager.FocusedControl.Height);
 
                 if (focusedControlBounds.IsAbove(visibleWindowBounds))
                 {

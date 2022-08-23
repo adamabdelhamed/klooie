@@ -61,5 +61,17 @@ public class LocFTests
         Assert.AreEqual(new RectF(-.5f,-.5f,1,1), new LocF(0, 0).ToRect(1, 1));
         Assert.AreNotEqual(new RectF(0, 0, 1, 1), new LocF(0, 0).ToRect(1, 1));
     }
+
+    [TestMethod]
+    public void LocF_ConvertToLoc()
+    {
+        var l = new LocF(.5f, .5f);
+        var converted = l.ToLoc();
+        var convertedF = converted.ToLocF();
+        Assert.AreEqual(converted, new Loc(1, 1));
+        Assert.AreEqual(converted, convertedF);
+        Assert.AreEqual(new Loc(1, 1), converted);
+        Assert.AreEqual(convertedF, converted);
+    }
 }
 

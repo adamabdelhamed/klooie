@@ -1,14 +1,12 @@
-﻿using klooie.tests;
+﻿using klooie;
+using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using PowerArgs;
 using PowerArgs.Cli;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ArgsTests.CLI
@@ -270,10 +268,10 @@ namespace ArgsTests.CLI
             Directory.Move(CurrentTestTempPath, CurrentTestLKGPath);
         }
 
-        public Point? Find(ConsoleString text, StringComparison comparison = StringComparison.InvariantCulture) => Find(text, comparison, true);
-        public Point? Find(string text, StringComparison comparison = StringComparison.InvariantCulture) => Find(text.ToConsoleString(), comparison, false);
+        public Loc? Find(ConsoleString text, StringComparison comparison = StringComparison.InvariantCulture) => Find(text, comparison, true);
+        public Loc? Find(string text, StringComparison comparison = StringComparison.InvariantCulture) => Find(text.ToConsoleString(), comparison, false);
 
-        private Point? Find(ConsoleString text, StringComparison comparison, bool requireStylesToBeEqual)
+        private Loc? Find(ConsoleString text, StringComparison comparison, bool requireStylesToBeEqual)
         {
             if(text.Contains("\n") || text.Contains("\r"))
             {
@@ -302,7 +300,7 @@ namespace ArgsTests.CLI
 
                 if(index >= 0)
                 {
-                    return new Point(index, y);
+                    return new Loc(index, y);
                 }
             }
 

@@ -1,8 +1,4 @@
-﻿using PowerArgs.Cli.Physics;
-using System;
-using System.Collections.Generic;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
     /// <summary>
     /// An interfaced that, when implemented, allows you
@@ -416,7 +412,7 @@ namespace PowerArgs.Cli
             _keyInputReceived?.Fire(info);
         }
 
-        internal Point CalculateAbsolutePosition()
+        internal Loc CalculateAbsolutePosition()
         {
             var x = X;
             var y = Y;
@@ -429,10 +425,10 @@ namespace PowerArgs.Cli
                 tempParent = tempParent.Parent;
             }
           
-            return new Point(x, y);
+            return new Loc(x, y);
         }
 
-        internal Point CalculateRelativePosition(ConsoleControl parent)
+        internal Loc CalculateRelativePosition(ConsoleControl parent)
         {
             var x = X;
             var y = Y;
@@ -450,7 +446,7 @@ namespace PowerArgs.Cli
                 tempParent = tempParent.Parent;
             }
 
-            return new Point(x, y);
+            return new Loc(x, y);
         }
     }
 }

@@ -426,7 +426,7 @@ namespace PowerArgs.Cli
                     var x = ConvertXValueToPixel(labelInfo.Value);
                     var y = XAxisYValue + 1;
 
-                    if (x + labelInfo.Label.Length <= Width)
+                    if (x >= 0 && x + labelInfo.Label.Length <= Width)
                     {
                         context.DrawPoint(new ConsoleCharacter('^', Foreground, Background), x, y - 1);
                         context.DrawString(labelInfo.Label, x, y);
@@ -589,8 +589,8 @@ namespace PowerArgs.Cli
                                 var point = ConsoleBitmap.LineBuffer[j];
                                 var line = new BarOrLineControl()
                                 {
-                                    X = point.X,
-                                    Y = point.Y,
+                                    X = point.Left,
+                                    Y = point.Top,
                                     ZIndex = LinesAndBarsZIndex,
                                     Value = new ConsoleCharacter('-', control.Series.PlotCharacter.ForegroundColor, control.Series.PlotCharacter.BackgroundColor)
                                 };

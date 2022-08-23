@@ -439,14 +439,14 @@ namespace PowerArgs.Cli
 
             foreach (var element in this.Options.Elements)
             {
-                formFieldStack.Add(new FormField(element.Label, element.ValueControl)).FillHorizontally();
+                formFieldStack.Add(new FormField(element.Label, element.ValueControl) { LabelColumnWidth = ConsoleMath.Round(this.Width * this.Options.LabelColumnPercentage) }).FillHorizontally();
             }
 
             this.Options.Elements.Added.SubscribeForLifetime((addedElement) =>
             {
                 var index = this.Options.Elements.IndexOf(addedElement);
 
-                var formField = new FormField(addedElement.Label, addedElement.ValueControl);
+                var formField = new FormField(addedElement.Label, addedElement.ValueControl) { LabelColumnWidth = ConsoleMath.Round(this.Width * this.Options.LabelColumnPercentage) };
                 formFieldStack.Controls.Insert(index, formField);
                 formField.FillHorizontally();
             }, this);

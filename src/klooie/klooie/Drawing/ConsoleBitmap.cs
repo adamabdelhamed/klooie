@@ -1,9 +1,6 @@
-﻿using PowerArgs.Cli.Physics;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.CompilerServices;
+﻿using PowerArgs;
 
-namespace PowerArgs.Cli;
+namespace klooie;
 /// <summary>
 /// A data structure representing a 2d image that can be pained in
 /// a console window
@@ -14,6 +11,14 @@ public class ConsoleBitmap
     private static List<Chunk> chunksOnLine = new List<Chunk>();
     private static ChunkAwarePaintBuffer paintBuilder = new ChunkAwarePaintBuffer();
 
+    // todo: make internal after migration
+    /// <summary>
+    /// Don't use. Will be made internal.
+    /// </summary>
+    [ThreadStatic]
+    public static Loc[] LineBuffer;
+
+    private bool wasFancy;
 
     // larger is faster, but may cause gaps
     private const float DrawPrecision = .5f;
@@ -33,6 +38,11 @@ public class ConsoleBitmap
     /// </summary>
     public IConsoleProvider Console { get; set; }
 
+    /// <summary>
+    /// Gets raw access to the pixels. May improve performance, but is more dangerous than
+    /// using the built in methods. If you modify the values to an inconsistent state then
+    /// you can break the object.
+    /// </summary>
     public ConsoleCharacter[][] Pixels;
     private ConsoleCharacter[][] lastDrawnPixels;
 
@@ -44,16 +54,10 @@ public class ConsoleBitmap
     /// </summary>
     /// <param name="w">the width of the image</param>
     /// <param name="h">the height of the image</param>
-    public ConsoleBitmap(int w, int h) : this(new Size(w, h)) { }
-
-    /// <summary>
-    /// Creates a new ConsoleBitmap
-    /// </summary>
-    /// <param name="bounds">the area of the image</param>
-    public ConsoleBitmap(Size bounds)
-    {
-        this.Width = bounds.Width;
-        this.Height = bounds.Height;
+    public ConsoleBitmap(int w, int h)
+    { 
+        this.Width = w;
+        this.Height = h;
         this.Console = ConsoleProvider.Current;
         this.lastBufferWidth = this.Console.BufferWidth;
         Pixels = new ConsoleCharacter[this.Width][];
@@ -64,7 +68,6 @@ public class ConsoleBitmap
             lastDrawnPixels[x] = new ConsoleCharacter[this.Height];
             for (int y = 0; y < Pixels[x].Length; y++)
             {
-
                 Pixels[x][y] = new ConsoleCharacter(' ');
                 lastDrawnPixels[x][y] = new ConsoleCharacter(' ');
             }
@@ -131,7 +134,6 @@ public class ConsoleBitmap
     {
         if (w == Width && h == Height) return;
 
-     
         var newPixels = new ConsoleCharacter[w][];
         var newLastDrawnCharacters = new ConsoleCharacter[w][];
         for (int x = 0; x < w; x++)
@@ -140,8 +142,9 @@ public class ConsoleBitmap
             newLastDrawnCharacters[x] = new ConsoleCharacter[h];
             for (int y = 0; y < newPixels[x].Length; y++)
             {
-                newPixels[x][y] = new ConsoleCharacter(' ');
-                newLastDrawnCharacters[x][y] = new ConsoleCharacter(' ');
+                var c = x < Pixels.Length && y < Pixels[0].Length ? Pixels[x][y] : new ConsoleCharacter(' ');
+                newPixels[x][y] = c;
+                newLastDrawnCharacters[x][y] = c;
             }
         }
 
@@ -158,30 +161,25 @@ public class ConsoleBitmap
     /// <param name="x">the x coordinate</param>
     /// <param name="y">the y coordinate</param>
     /// <returns>the pixel at the given location</returns>
-    public ref ConsoleCharacter GetPixel(int x, int y)
-    {
-        return ref Pixels[x][y];
-    }
-
-    public void SetPixel(int x, int y, in ConsoleCharacter c)
-    {
-        Pixels[x][y] = c;
-    }
+    public ref ConsoleCharacter GetPixel(int x, int y) => ref Pixels[x][y];
+    
+    /// <summary>
+    /// Sets the value of the desired pixel
+    /// </summary>
+    /// <param name="x">pixel x coordinate</param>
+    /// <param name="y">pixel y coordinate</param>
+    /// <param name="c">the value to set</param>
+    public void SetPixel(int x, int y, in ConsoleCharacter c) => Pixels[x][y] = c;
 
     /// <summary>
-    /// Creates a snapshot of the cursor position
+    /// tests to see if the given coordinates are within the boundaries
+    /// of the image
     /// </summary>
-    /// <returns>a snapshot of the cursor positon</returns>
-    public ConsoleSnapshot CreateSnapshot()
-    {
-        var snapshot = new ConsoleSnapshot(0, 0, Console);
-        return snapshot;
-    }
-
-    public bool IsInBounds(int x, int y)
-    {
-        return x >= 0 && x < Width && y >= 0 && y < Height;
-    }
+    /// <param name="x">pixel x coordinate</param>
+    /// <param name="y">pixel y coordinate</param>
+    /// <returns>true if the given coordinates are within the boundaries of the image</returns>
+    public bool IsInBounds(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
+    
 
     /// <summary>
     /// Draws the given string onto the bitmap
@@ -190,10 +188,7 @@ public class ConsoleBitmap
     /// <param name="x">the x coordinate to draw the string's fist character</param>
     /// <param name="y">the y coordinate to draw the string's first character </param>
     /// <param name="vert">if true, draw vertically, else draw horizontally</param>
-    public void DrawString(string str, int x, int y, bool vert = false)
-    {
-        DrawString(new ConsoleString(str), x, y, vert);
-    }
+    public void DrawString(string str, int x, int y, bool vert = false) => DrawString(new ConsoleString(str), x, y, vert);
 
     /// <summary>
     /// Draws a filled in rectangle bounded by the given coordinates
@@ -223,9 +218,33 @@ public class ConsoleBitmap
             }
         }
     }
+
+    /// <summary>
+    /// Fills the given rectangle with a space character and a given background color
+    /// </summary>
+    /// <param name="color">the fill color</param>
+    /// <param name="x">the rectangle's x coordinate</param>
+    /// <param name="y">the rectangle's y coordinate</param>
+    /// <param name="w">the rectangle's width</param>
+    /// <param name="h">the rectangle's height</param>
     public void FillRect(in RGB color, int x, int y, int w, int h) => FillRect(new ConsoleCharacter(' ', backgroundColor: color),x,y,w,h);
 
+    /// <summary>
+    /// Fills the given rectangle with a space character and a given background color
+    /// </summary>
+    /// <param name="color">the fill color</param>
+    /// <param name="rect">the area to fill</param>
+    public void FillRect(in RGB color, in Rect rect) => FillRect(color, rect.Left, rect.Top, rect.Width, rect.Height);
+    /// <summary>
+    /// Fills the entire bitmap with a space character and a given background color
+    /// </summary>
+    /// <param name="color">the fill color</param>
     public void Fill(in RGB color) => Fill(new ConsoleCharacter(' ', backgroundColor: color));
+
+    /// <summary>
+    /// Fills the entire bitmap with a given pen
+    /// </summary>
+    /// <param name="pen">the pen</param>
     public void Fill(in ConsoleCharacter pen)
     {
         Span<ConsoleCharacter[]> xSpan = Pixels.AsSpan();
@@ -327,6 +346,7 @@ public class ConsoleBitmap
             {
                 y++;
                 x = xStart;
+                continue;
             }
             else if (character.Value == '\r')
             {
@@ -334,11 +354,11 @@ public class ConsoleBitmap
             }
             else if (IsInBounds(x, y))
             {
-
                 Pixels[x][y] = character;
-                if (vert) y++;
-                else x++;
             }
+
+            if (vert) y++;
+            else x++;
         }
     }
 
@@ -355,8 +375,6 @@ public class ConsoleBitmap
         }
     }
 
-    [ThreadStatic]
-    internal static Point[] LineBuffer;
 
     /// <summary>
     /// Draw a line segment between the given points
@@ -368,20 +386,29 @@ public class ConsoleBitmap
     public void DrawLine(in ConsoleCharacter pen, int x1, int y1, int x2, int y2)
     {
         var len = DefineLineBuffered(x1, y1, x2, y2);
-        Point point;
+        Loc point;
         for (var i = 0; i < len; i++)
         {
             point = LineBuffer[i];
-            if (IsInBounds(point.X, point.Y))
+            if (IsInBounds(point.Left, point.Top))
             {
-                Pixels[point.X][point.Y] = pen;
+                Pixels[point.Left][point.Top] = pen;
             }
         }
     }
 
-    public static int DefineLineBuffered(int x1, int y1, int x2, int y2, Point[] buffer = null)
+    /// <summary>
+    /// Given 2 points, defines a line as it can best be rendered in a ConsoleBitmap, but does not draw the line.
+    /// </summary>
+    /// <param name="x1">the x coordinate of the first point</param>
+    /// <param name="y1">the y coordinate of the first point</param>
+    /// <param name="x2">the x coordinate of the second point</param>
+    /// <param name="y2">the y coordinate of the second point</param>
+    /// <param name="buffer">a buffer to hold the points, a thread safe default buffer is used if not specified</param>
+    /// <returns></returns>
+    public static int DefineLineBuffered(int x1, int y1, int x2, int y2, Loc[] buffer = null)
     {
-        LineBuffer = LineBuffer ?? new Point[10000];
+        LineBuffer = buffer != null ? LineBuffer : LineBuffer ?? new Loc[10000];
         buffer = buffer ?? LineBuffer;
 
         var ret = 0;
@@ -391,7 +418,7 @@ public class ConsoleBitmap
             int yMax = y1 >= y2 ? y1 : y2;
             for (int y = yMin; y < yMax; y++)
             {
-                buffer[ret++] = new Point(x1, y);
+                buffer[ret++] = new Loc(x1, y);
             }
         }
         else if (y1 == y2)
@@ -400,7 +427,7 @@ public class ConsoleBitmap
             int xMax = x1 >= x2 ? x1 : x2;
             for (int x = xMin; x < xMax; x++)
             {
-                buffer[ret++] = new Point(x, y1);
+                buffer[ret++] = new Loc(x, y1);
             }
         }
         else
@@ -410,7 +437,7 @@ public class ConsoleBitmap
             int dx = Math.Abs(x1 - x2);
             int dy = Math.Abs(y1 - y2);
 
-            Point last = new Point();
+            var last = new Loc();
             if (dy > dx)
             {
                 for (float x = x1; x < x2; x += DrawPrecision)
@@ -418,7 +445,7 @@ public class ConsoleBitmap
                     float y = slope + (x - x1) + y1;
                     int xInt = ConsoleMath.Round(x);
                     int yInt = ConsoleMath.Round(y);
-                    var p = new Point(xInt, yInt);
+                    var p = new Loc(xInt, yInt);
                     if (p.Equals(last) == false)
                     {
                         buffer[ret++] = p;
@@ -431,7 +458,7 @@ public class ConsoleBitmap
                     float y = slope + (x - x1) + y1;
                     int xInt = ConsoleMath.Round(x);
                     int yInt = ConsoleMath.Round(y);
-                    var p = new Point(xInt, yInt);
+                    var p = new Loc(xInt, yInt);
                     if (p.Equals(last) == false)
                     {
                         buffer[ret++] = p;
@@ -446,7 +473,7 @@ public class ConsoleBitmap
                     float x = ((y - y1) / slope) + x1;
                     int xInt = ConsoleMath.Round(x);
                     int yInt = ConsoleMath.Round(y);
-                    var p = new Point(xInt, yInt);
+                    var p = new Loc(xInt, yInt);
                     if (p.Equals(last) == false)
                     {
                         buffer[ret++] = p;
@@ -459,7 +486,7 @@ public class ConsoleBitmap
                     float x = ((y - y1) / slope) + x1;
                     int xInt = ConsoleMath.Round(x);
                     int yInt = ConsoleMath.Round(y);
-                    var p = new Point(xInt, yInt);
+                    var p = new Loc(xInt, yInt);
                     if (p.Equals(last) == false)
                     {
                         buffer[ret++] = p;
@@ -490,7 +517,13 @@ public class ConsoleBitmap
     }
        
 
-    private bool wasFancy;
+    /// <summary>
+    /// Paints this bitmap to its console provider. If we detect Ansi support
+    /// then the rendering will use Ansi, allowing for richer colors, underlined
+    /// characters, and improved performance. If we do not detect Ansi then standard
+    /// System.Console APIs are used to render with limited colors, no underline support,
+    /// and slower performance.
+    /// </summary>
     public void Paint()
     {
         if (ConsoleProvider.Fancy != wasFancy)
@@ -517,7 +550,7 @@ public class ConsoleBitmap
     /// <summary>
     /// Paints this image to the current Console
     /// </summary>
-    public void PaintOld()
+    private void PaintOld()
     {
         if (Console.WindowHeight == 0) return;
 
@@ -669,7 +702,7 @@ public class ConsoleBitmap
     }
     */
 
-    public void PaintNew()
+    private void PaintNew()
     {
         if (Console.WindowHeight == 0) return;
 
@@ -850,10 +883,7 @@ public class ConsoleBitmap
     /// Gets a hashcode for this bitmap
     /// </summary>
     /// <returns></returns>
-    public override int GetHashCode()
-    {
-        return base.GetHashCode();
-    }
+    public override int GetHashCode() => base.GetHashCode();
 }
 
 internal class ChunkAwarePaintBuffer : PaintBuffer
