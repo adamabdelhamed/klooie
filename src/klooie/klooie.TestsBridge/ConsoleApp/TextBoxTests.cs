@@ -1,9 +1,6 @@
-﻿using System;
+﻿using klooie;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PowerArgs.Cli;
 using PowerArgs;
-using System.Threading;
-using klooie;
 
 namespace ArgsTests.CLI.Controls
 {
@@ -19,12 +16,12 @@ namespace ArgsTests.CLI.Controls
         public void TestRenderTextBox()
         {
             CliTestHarness.SetConsoleSize(9, 1);
-            var app = new CliTestHarness(this.TestContext);
+            var app = new CliTestHarness(this.TestContext, true);
 
             app.Invoke(async () =>
             {
                 app.LayoutRoot.Add(new TextBox() { Value = "SomeText".ToWhite() }).Fill();
-                await app.RequestPaintAsync();
+                await app.PaintAndRecordKeyFrameAsync();
                 Assert.IsTrue(app.Find("SomeText".ToWhite()).HasValue);
                 app.Stop();
             });

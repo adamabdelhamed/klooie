@@ -204,7 +204,22 @@ public class EventLoop : Lifetime
         Thread = System.Threading.Thread.CurrentThread;
         runDeferred = new TaskCompletionSource<bool>();
         RunCommon();
-        runTask.Wait();
+        try
+        {
+            runTask.Wait();
+        }catch(Exception ex)
+        {
+            if (ex is AggregateException == false) throw;
+            var cleaned = ex.Clean();
+            if(cleaned.Count == 1)
+            {
+                ExceptionDispatchInfo.Capture(cleaned.First()).Throw();
+            }
+            else
+            {
+                throw;
+            }
+        }
     }
 
     private void RunCommon()

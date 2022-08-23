@@ -29,7 +29,7 @@ public class KlooieTestHarness : ConsoleApp
     private ConsoleBitmapVideoWriter keyFrameRecorder;
     private int keyFrameCount = 0;
     public double SecondsBetweenKeyframes { get; set; } = 1;
-    private ConsoleBitmapVideoWriter EffectiveRecorder => keyFrameRecorder ?? this.Recorder;
+    private ConsoleBitmapVideoWriter EffectiveRecorder => keyFrameRecorder ?? this.LayoutRoot.Recorder;
 
     public string TestId => $"{testContext.FullyQualifiedTestClassName}.{testContext.TestName}";
 
@@ -84,7 +84,7 @@ public class KlooieTestHarness : ConsoleApp
         }
         else
         {
-            this.Recorder = new ConsoleBitmapVideoWriter(s => File.WriteAllText(CurrentTestRecordingFilePath, s));
+            this.LayoutRoot.EnableRecording(new ConsoleBitmapVideoWriter(s => File.WriteAllText(CurrentTestRecordingFilePath, s)));
         }
 
         this.Stopped.SubscribeOnce(() =>

@@ -84,12 +84,6 @@ public partial class ConsoleApp : EventLoop
     public int TotalPaints => paintRateMeter != null ? paintRateMeter.TotalFrames : 0;
 
     /// <summary>
-    /// The writer used to record the contents of the screen while the app
-    /// is running. If not set then recording does not take place
-    /// </summary>
-    public ConsoleBitmapVideoWriter Recorder { get; set; }
-
-    /// <summary>
     /// An event that fires when the application is about to stop, before the console is wiped
     /// </summary>
     public Event Stopping { get; private set; } = new Event();
@@ -465,8 +459,6 @@ public partial class ConsoleApp : EventLoop
     private void ExitInternal()
     {
         Stopping.Fire();
-        Recorder?.WriteFrame(Bitmap, true);
-        Recorder?.Finish();
 
         if (ClearOnExit)
         {
@@ -486,7 +478,6 @@ public partial class ConsoleApp : EventLoop
         Bitmap.Fill(defaultPen);
         LayoutRoot.Paint();
 
-        Recorder?.WriteFrame(Bitmap);
         if (PaintEnabled)
         {
             Bitmap.Paint();

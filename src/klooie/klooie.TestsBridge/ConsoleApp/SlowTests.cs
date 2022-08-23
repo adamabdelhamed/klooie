@@ -57,11 +57,21 @@ namespace ArgsTests.CLI
         public void TestTextBoxBlinkState()
         {
             CliTestHarness.SetConsoleSize(9,1);
-            var app = new CliTestHarness(this.TestContext);
+            var app = new CliTestHarness(this.TestContext, true);
             app.Invoke(() =>
             {
-                app.LayoutRoot.Add(new TextBox() { Value = "SomeText".ToWhite() }).Fill();
-                app.SetTimeout(() => app.Stop(), TimeSpan.FromSeconds(.9f));
+                var tb = app.LayoutRoot.Add(new TextBox() { Value = "SomeText".ToWhite() }).Fill();
+                var detectedCount = 0;
+                tb.SubscribeForLifetime(nameof(tb.IsBlinking), async () =>
+                {
+                    detectedCount++;
+                    await app.PaintAndRecordKeyFrameAsync();
+                    if (detectedCount == 4)
+                    {
+                        app.Stop();
+                    }
+                    
+                }, tb);
             });
             app.Start().Wait();
             app.AssertThisTestMatchesLKG();

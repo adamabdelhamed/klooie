@@ -8,8 +8,8 @@ public class TextBox : ConsoleControl
     private static readonly TimeSpan BlinkInterval = TimeSpan.FromMilliseconds(500);
 
     private RichTextEditor textState;
-    private bool blinkState;
-
+ 
+    public bool IsBlinking { get => Get<bool>(); private set => Set(value); }
     private ConsoleApp.SetIntervalHandle blinkTimerHandle;
 
     /// <summary>
@@ -75,7 +75,7 @@ public class TextBox : ConsoleControl
         {
             isAllSelected = true;
             blinkTimerHandle?.Dispose();
-            blinkState = false;
+            IsBlinking = false;
         }
         else
         {
@@ -85,11 +85,11 @@ public class TextBox : ConsoleControl
 
     private void StartBlinking()
     {
-        blinkState = true;
+        IsBlinking = true;
         blinkTimerHandle = Application.SetInterval(() =>
         {
             if (HasFocus == false) return;
-            blinkState = !blinkState;
+            IsBlinking = !IsBlinking;
             Application.RequestPaint();
         }, BlinkInterval);
     }
@@ -97,7 +97,7 @@ public class TextBox : ConsoleControl
     private void TextBox_Unfocused()
     {
         blinkTimerHandle?.Dispose();
-        blinkState = false;
+        IsBlinking = false;
         isAllSelected = false;
     }
 
@@ -134,7 +134,7 @@ public class TextBox : ConsoleControl
 
         ConsoleCharacter? prototype = this.Value.Length == 0 ? (ConsoleCharacter?)null : this.Value[this.Value.Length - 1];
         textState.RegisterKeyPress(info, prototype);
-        blinkState = true;
+        IsBlinking = true;
         Application.ChangeInterval(blinkTimerHandle, BlinkInterval);
     }
 
@@ -173,7 +173,7 @@ public class TextBox : ConsoleControl
 
         context.DrawString(new ConsoleString(bgTransformed), 0, 0);
 
-        if (blinkState && BlinkEnabled)
+        if (IsBlinking && BlinkEnabled)
         {
             char blinkChar = textState.CursorPosition >= toPaint.Length ? ' ' : toPaint[textState.CursorPosition].Value;
             var pen = new ConsoleCharacter(blinkChar, DefaultColors.FocusContrastColor, DefaultColors.FocusColor);
