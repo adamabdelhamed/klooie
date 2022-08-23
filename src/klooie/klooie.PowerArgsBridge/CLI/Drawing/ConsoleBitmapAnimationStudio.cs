@@ -489,7 +489,7 @@ namespace PowerArgs.Cli
         private void Refresh()
         {
             refreshed.Fire();
-            this.Paint();
+            Application?.RequestPaint();
         }
 
         private static readonly RGB TimespanPopupBGColor = RGB.Gray;

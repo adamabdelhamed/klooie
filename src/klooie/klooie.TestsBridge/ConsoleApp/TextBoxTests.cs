@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs.Cli;
 using PowerArgs;
 using System.Threading;
+using klooie;
 
 namespace ArgsTests.CLI.Controls
 {

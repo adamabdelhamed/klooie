@@ -12,9 +12,4 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Controls\" />
-    <Folder Include="Games\" />
-  </ItemGroup>
-
 </Project>

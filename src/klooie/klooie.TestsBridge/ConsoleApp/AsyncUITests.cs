@@ -4,6 +4,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PowerArgs;
+using klooie;
+
 namespace ArgsTests.CLI
 {
     [TestClass]

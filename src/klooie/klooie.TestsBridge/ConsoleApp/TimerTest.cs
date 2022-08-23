@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs.Cli;
 using PowerArgs;
+using klooie;
 
 namespace ArgsTests.CLI
 {

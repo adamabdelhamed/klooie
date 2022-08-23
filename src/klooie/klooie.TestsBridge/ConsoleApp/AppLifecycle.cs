@@ -4,6 +4,7 @@ using PowerArgs.Cli;
 using PowerArgs;
 using System.Threading.Tasks;
 using System.Linq;
+using klooie;
 
 namespace ArgsTests.CLI.Apps
 {

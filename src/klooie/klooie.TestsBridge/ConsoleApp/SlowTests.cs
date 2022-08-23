@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using klooie;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using PowerArgs.Cli;
 using System;
@@ -58,7 +59,7 @@ namespace ArgsTests.CLI
             app.Invoke(() =>
             {
                 app.LayoutRoot.Add(new TextBox() { Value = "SomeText".ToWhite() }).Fill();
-                app.SetTimeout(() => app.Stop(), TimeSpan.FromSeconds(1));
+                app.SetTimeout(() => app.Stop(), TimeSpan.FromSeconds(.9f));
             });
             app.Start().Wait();
             app.AssertThisTestMatchesLKG();

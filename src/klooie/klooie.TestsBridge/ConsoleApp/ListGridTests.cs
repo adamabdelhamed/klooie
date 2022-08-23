@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using PowerArgs;
 using System.Threading;
+using klooie;
 
 namespace ArgsTests.CLI.Controls
 {
