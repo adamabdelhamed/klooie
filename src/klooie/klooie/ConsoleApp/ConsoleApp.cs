@@ -227,7 +227,7 @@ public partial class ConsoleApp : EventLoop
 
     protected virtual Task Startup() => Task.CompletedTask;
 
-    public void MoveFocus(bool forward = true) => focus.MoveFocus(true);
+    public void MoveFocus(bool forward = true) => focus.MoveFocus(forward);
     public void SetFocus(ConsoleControl c) => focus.SetFocus(c);
     public void ClearFocus() => focus.ClearFocus();
     public void PushFocusStack() => focus.Push();

@@ -182,6 +182,7 @@ public partial class ConsoleApp : EventLoop
 
         public void Push()
         {
+            ClearFocus();
             focusStack.Push(new FocusContext());
             FirePropertyChanged(nameof(StackDepth));
         }
