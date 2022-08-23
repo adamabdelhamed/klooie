@@ -1,16 +1,10 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using PowerArgs;
+﻿using PowerArgs;
 namespace klooie;
 
 /// <summary>
 /// A class representing a console application that uses a message pump to synchronize work on a UI thread
 /// </summary>
-public class ConsoleApp : EventLoop, IObservableObject
+public partial class ConsoleApp : EventLoop
 {
     [ThreadStatic]
     private static ConsoleApp _current;
@@ -25,7 +19,7 @@ public class ConsoleApp : EventLoop, IObservableObject
         public TaskCompletionSource<bool> TaskSource { get; set; }
     }
     private Queue<KeyRequest> sendKeys = new Queue<KeyRequest>();
-
+    private ConsoleCharacter defaultPen = new ConsoleCharacter(' ', null, DefaultColors.BackgroundColor);
     /// <summary>
     /// True by default. When true, discards key presses that come in too fast
     /// likely because the user is holding the key down. You can set the
@@ -58,7 +52,6 @@ public class ConsoleApp : EventLoop, IObservableObject
     public Event WindowResized { get; private set; } = new Event();
 
 
-    private IConsoleProvider console;
     private int lastConsoleWidth, lastConsoleHeight;
 
     private List<IDisposable> timerHandles = new List<IDisposable>();
@@ -157,20 +150,7 @@ public class ConsoleApp : EventLoop, IObservableObject
     /// </summary>
     public ConsolePanel LayoutRoot { get; private set; }
 
-    /// <summary>
-    /// Gets the focus manager used to manage input focus
-    /// </summary>
-    public FocusManager FocusManager { get; private set; }
-
-    /// <summary>
-    /// If set to true then the app will automatically update its layout to fill the entire window.  If false the app
-    /// will not react to resizing, which means it may clip or wrap in unexpected ways when the window is resized.
-    /// 
-    /// If you use the constructor that takes no parameters then this is set to true and assumes you want to take the
-    /// whole window and respond to window size changes.  If you use the constructor that takes in coordinates and boudnds
-    /// then it is set to false and it is assumed that you only want the app to live within those bounds
-    /// </summary>
-    private bool isFullScreen;
+    private FocusManager Focus { get; set; }
 
     /// <summary>
     /// Gets or set whether or not to give focus to a control when the app starts.  The default is true.
@@ -195,21 +175,21 @@ public class ConsoleApp : EventLoop, IObservableObject
     public ConsoleApp(int w, int h)
     {
         this.Name = GetType().Name;
-        this.console = ConsoleProvider.Current;
+ 
         consoleWriter = Console.Out;
-        this.lastConsoleWidth = this.console.BufferWidth;
-        this.lastConsoleHeight = this.console.WindowHeight;
-        this.observable = new ObservableObject(this);
+        this.lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
+        this.lastConsoleHeight = ConsoleProvider.Current.WindowHeight;
 
         cycleRateMeter = new FrameRateMeter();
 
         this.EndOfCycle.SubscribeForLifetime(Cycle, this);
         SetFocusOnStart = true;
         LayoutRoot = new ConsolePanel(w,h);
-        FocusManager = new FocusManager();
+        Focus = new FocusManager();
         LayoutRoot.Application = this;
-        isFullScreen = false;
-        FocusManager.SubscribeForLifetime(nameof(FocusManager.FocusedControl), () => RequestPaintAsync(), this);
+        Focus.SubscribeForLifetime(nameof(Focus.StackDepth), () => FocusStackDepthChanged.Fire(Focus.StackDepth), this);
+        Focus.SubscribeForLifetime(nameof(Focus.FocusedControl), () => FocusChanged.Fire(Focus.FocusedControl), this);
+        Focus.SubscribeForLifetime(nameof(Focus.FocusedControl), () => RequestPaintAsync(), this);
         LayoutRoot.Controls.BeforeAdded.SubscribeForLifetime((c) => { c.Application = this; c.BeforeAddedToVisualTreeInternal(); }, this);
         LayoutRoot.Controls.BeforeRemoved.SubscribeForLifetime((c) => { c.BeforeRemovedFromVisualTreeInternal(); }, this);
         LayoutRoot.Controls.Added.SubscribeForLifetime(ControlAddedToVisualTree, this);
@@ -218,6 +198,22 @@ public class ConsoleApp : EventLoop, IObservableObject
         this.LoopStarted.SubscribeOnce(() => _current = this);
         this.EndOfCycle.SubscribeForLifetime(DrainPaints, this);
     }
+
+    public Event<int> FocusStackDepthChanged { get; private set; } = new Event<int>();
+    public Event<ConsoleControl> FocusChanged { get; private set; } = new Event<ConsoleControl>();
+    public void MoveFocus(bool forward = true) => Focus.MoveFocus(true);
+    public void SetFocus(ConsoleControl c) => Focus.SetFocus(c);
+    public void ClearFocus() => Focus.ClearFocus();
+    public ConsoleControl FocusedControl => Focus.FocusedControl;
+    public int FocusStackDepth => Focus.StackDepth;
+    public void PushFocusStack() => Focus.Push();
+    public void PopFocusStack() => Focus.Pop();
+
+    public void PushKeyForLifetime(ConsoleKey k, ConsoleModifiers? modifier, Action a, ILifetimeManager lt) => Focus.GlobalKeyHandlers.PushForLifetime(k, modifier, a, lt);
+    public void PushKeyForLifetime(ConsoleKey k, Action a, ILifetimeManager lt) => Focus.GlobalKeyHandlers.PushForLifetime(k, null, a, lt);
+
+    public void PushKeyForLifetime(ConsoleKey k, ConsoleModifiers modifier, Action a, ILifetimeManager lt, int stackIndex) => Focus.Stack.ToArray()[stackIndex].Interceptors.PushForLifetime(k, modifier, a, lt);
+    public void PushKeyForLifetime(ConsoleKey k, Action a, ILifetimeManager lt, int stackIndex) => Focus.Stack.ToArray()[stackIndex].Interceptors.PushForLifetime(k, null, a, lt);
 
 
     /// <summary>
@@ -265,7 +261,6 @@ public class ConsoleApp : EventLoop, IObservableObject
     /// </summary>
     public ConsoleApp(Action init = null) : this(ConsoleProvider.Current.BufferWidth, ConsoleProvider.Current.WindowHeight - 1)
     {
-        this.isFullScreen = true;
         if (init != null)
         {
             Invoke(init);
@@ -304,10 +299,7 @@ public class ConsoleApp : EventLoop, IObservableObject
     {
         if (SetFocusOnStart)
         {
-            InvokeNextCycle(() =>
-            {
-                FocusManager.TryMoveFocus();
-            });
+            InvokeNextCycle(() => Focus.MoveFocus());
         }
 
         try
@@ -326,10 +318,7 @@ public class ConsoleApp : EventLoop, IObservableObject
         _current = this;
         if (SetFocusOnStart)
         {
-            InvokeNextCycle(() =>
-            {
-                FocusManager.TryMoveFocus();
-            });
+            InvokeNextCycle(() => Focus.MoveFocus());
         }
 
         try
@@ -352,12 +341,8 @@ public class ConsoleApp : EventLoop, IObservableObject
             return;
         }
 
-        if (isFullScreen)
-        {
-            this.LayoutRoot.Width = Bitmap.Console.BufferWidth;
-            this.LayoutRoot.Height = Bitmap.Console.WindowHeight - 1;
-        }
-
+        this.LayoutRoot.Width = Bitmap.Console.BufferWidth;
+        this.LayoutRoot.Height = Bitmap.Console.WindowHeight - 1;
         RequestPaint();
     }
 
@@ -409,7 +394,7 @@ public class ConsoleApp : EventLoop, IObservableObject
             childPanel.OnDisposed(() => ControlRemovedFromVisualTree(childPanel.ProtectedPanelInternal));
         }
 
-        FocusManager.Add(c);
+        Focus.Add(c);
         c.AddedToVisualTreeInternal();
 
         ControlAdded.Fire(c);
@@ -420,7 +405,7 @@ public class ConsoleApp : EventLoop, IObservableObject
         c.IsBeingRemoved = true;
         if (ControlRemovedFromVisualTreeRecursive(c))
         {
-            FocusManager.TryRestoreFocus();
+            Focus.RestoreFocus();
         }
     }
 
@@ -437,13 +422,13 @@ public class ConsoleApp : EventLoop, IObservableObject
             }
         }
 
-        if (FocusManager.FocusedControl == c)
+        if (Focus.FocusedControl == c)
         {
-            FocusManager.ClearFocus();
+            Focus.ClearFocus();
             focusChanged = true;
         }
 
-        FocusManager.Remove(c);
+        Focus.Remove(c);
 
         c.RemovedFromVisualTreeInternal();
         c.Application = null;
@@ -461,24 +446,24 @@ public class ConsoleApp : EventLoop, IObservableObject
     /// <param name="info">The key that was pressed</param>
     protected virtual void HandleKeyInput(ConsoleKeyInfo info)
     {
-        if (FocusManager.GlobalKeyHandlers.TryIntercept(info))
+        if (Focus.GlobalKeyHandlers.TryIntercept(info))
         {
             // great, it was handled
         }
         else if (info.Key == ConsoleKey.Tab)
         {
-            FocusManager.TryMoveFocus(info.Modifiers.HasFlag(ConsoleModifiers.Shift) == false);
+            Focus.MoveFocus(info.Modifiers.HasFlag(ConsoleModifiers.Shift) == false);
         }
         else if (info.Key == ConsoleKey.Escape)
         {
             Stop();
             return;
         }
-        else if (FocusManager.FocusedControl != null)
+        else if (Focus.FocusedControl != null)
         {
-            if (FocusManager.FocusedControl.IsExpired == false)
+            if (Focus.FocusedControl.IsExpired == false)
             {
-                FocusManager.FocusedControl.HandleKeyInput(info);
+                Focus.FocusedControl.HandleKeyInput(info);
             }
         }
         else
@@ -506,7 +491,7 @@ public class ConsoleApp : EventLoop, IObservableObject
         _current = null;
     }
 
-    private ConsoleCharacter defaultPen = new ConsoleCharacter(' ', null, DefaultColors.BackgroundColor);
+
     private void PaintInternal()
     {
         Bitmap.Fill(defaultPen);
@@ -525,15 +510,15 @@ public class ConsoleApp : EventLoop, IObservableObject
     {
         cycleRateMeter.Increment();
         // todo - if evaluation showed up on a profile. Consider checking this at most twice per second.
-        if ((lastConsoleWidth != this.console.BufferWidth || lastConsoleHeight != this.console.WindowHeight))
+        if ((lastConsoleWidth != ConsoleProvider.Current.BufferWidth || lastConsoleHeight != ConsoleProvider.Current.WindowHeight))
         {
             DebounceResize();
             WindowResized.Fire();
         }
 
-        if (this.console.KeyAvailable)
+        if (ConsoleProvider.Current.KeyAvailable)
         {
-            var info = this.console.ReadKey(true);
+            var info = ConsoleProvider.Current.ReadKey(true);
 
             var effectiveMinTimeBetweenKeyPresses = MinTimeBetweenKeyPresses;
             if (KeyThrottlingEnabled && info.Key == lastKey && DateTime.UtcNow - lastKeyPressTime < effectiveMinTimeBetweenKeyPresses)
@@ -618,23 +603,18 @@ public class ConsoleApp : EventLoop, IObservableObject
         var lt = new Lifetime();
         Invoke(async () =>
         {
-            if (IsRunning && IsDrainingOrDrained == false && lt.IsExpired == false)
-                await Task.Delay(period);
-            a();
+            await Task.Delay(period);
+            if (lt.ShouldContinue)
+            {
+                a();
+            }
         });
         return lt;
     }
 
-
-
-
-
-
-    
-
     private void DebounceResize()
     {
-        console.Clear();
+        ConsoleProvider.Current.Clear();
         bool done = false;
         var debouncer = new TimerActionDebouncer(TimeSpan.FromSeconds(.25), () =>
         {
@@ -644,37 +624,23 @@ public class ConsoleApp : EventLoop, IObservableObject
         debouncer.Trigger();
         while (done == false)
         {
-            if (console.BufferWidth != lastConsoleWidth || console.WindowHeight != lastConsoleHeight)
+            if (ConsoleProvider.Current.BufferWidth != lastConsoleWidth || ConsoleProvider.Current.WindowHeight != lastConsoleHeight)
             {
-                lastConsoleWidth = console.BufferWidth;
-                lastConsoleHeight = console.WindowHeight;
+                lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
+                lastConsoleHeight = ConsoleProvider.Current.WindowHeight;
                 debouncer.Trigger();
             }
         }
     }
 
-    private ObservableObject observable;
-    public bool SuppressEqualChanges { get => observable.SuppressEqualChanges; set => observable.SuppressEqualChanges = value; }
-    public IDisposable SubscribeUnmanaged(string propertyName, Action handler) => observable.SubscribeUnmanaged(propertyName, handler);
-    public void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.SubscribeForLifetime(propertyName, handler, lifetimeManager);
-    public IDisposable SynchronizeUnmanaged(string propertyName, Action handler) => observable.SynchronizeUnmanaged(propertyName, handler);
-    public void SynchronizeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => SynchronizeForLifetime(propertyName, handler, lifetimeManager);
-    public object GetPrevious(string propertyName) => ((IObservableObject)observable).GetPrevious(propertyName);
-    public Lifetime GetPropertyValueLifetime(string propertyName) => observable.GetPropertyValueLifetime(propertyName);
-
-    public T Get<T>([CallerMemberName] string name = null) => observable.Get<T>(name);
-    public void Set<T>(T value, [CallerMemberName] string name = null) => observable.Set<T>(value, name);
-
-
-}
-
-public class SetIntervalHandle : Lifetime
-{
-    public TimeSpan Interval { get; internal set; }
-
-    public SetIntervalHandle(TimeSpan interval)
+    public class SetIntervalHandle : Lifetime
     {
-        this.Interval = interval;
+        internal TimeSpan Interval { get; set; }
+
+        internal SetIntervalHandle(TimeSpan interval)
+        {
+            this.Interval = interval;
+        }
     }
 }
 

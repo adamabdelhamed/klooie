@@ -236,11 +236,11 @@ namespace PowerArgs.Cli
 
                         textBox.AddedToVisualTree.SubscribeForLifetime(() =>
                         {
-                            var previouslyFocusedControl = textBox.Application.FocusManager.FocusedControl;
+                            var previouslyFocusedControl = textBox.Application.FocusedControl;
 
-                            var emptyStringAction = new Action(() =>
+                            var emptyStringAction = ((ConsoleControl focusedControl) =>
                             {
-                                if (previouslyFocusedControl == textBox && textBox.Application.FocusManager.FocusedControl != textBox)
+                                if (previouslyFocusedControl == textBox && textBox.Application.FocusedControl != textBox)
                                 {
                                     if (textBox.Value.Length == 0)
                                     {
@@ -249,11 +249,11 @@ namespace PowerArgs.Cli
                                     }
                                 }
 
-                                previouslyFocusedControl = textBox.Application.FocusManager.FocusedControl;
+                                previouslyFocusedControl = textBox.Application.FocusedControl;
 
                             });
 
-                            textBox.Application.FocusManager.SubscribeForLifetime(nameof(FocusManager.FocusedControl), emptyStringAction, textBox);
+                            textBox.Application.FocusChanged.SubscribeForLifetime(emptyStringAction, textBox);
                         }, textBox);
 
                         editControl = textBox;
@@ -299,11 +299,11 @@ namespace PowerArgs.Cli
 
                     textBox.AddedToVisualTree.SubscribeForLifetime(() =>
                     {
-                        var previouslyFocusedControl = textBox.Application.FocusManager.FocusedControl;
+                        var previouslyFocusedControl = textBox.Application.FocusedControl;
 
-                        var emptyStringAction = new Action(() =>
+                        var emptyStringAction = ((ConsoleControl newlyFocused) =>
                         {
-                            if (previouslyFocusedControl == textBox && textBox.Application.FocusManager.FocusedControl != textBox)
+                            if (previouslyFocusedControl == textBox && textBox.Application.FocusedControl != textBox)
                             {
                                 if (textBox.Value.Length == 0)
                                 {
@@ -312,11 +312,11 @@ namespace PowerArgs.Cli
                                 }
                             }
 
-                            previouslyFocusedControl = textBox.Application.FocusManager.FocusedControl;
+                            previouslyFocusedControl = textBox.Application.FocusedControl;
 
                         });
 
-                        textBox.Application.FocusManager.SubscribeForLifetime(nameof(FocusManager.FocusedControl), emptyStringAction, textBox);
+                        textBox.Application.FocusChanged.SubscribeForLifetime(emptyStringAction, textBox);
                     }, textBox);
 
                     editControl = textBox;

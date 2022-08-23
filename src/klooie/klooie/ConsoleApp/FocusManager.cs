@@ -1,296 +1,338 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using PowerArgs;
+﻿using PowerArgs;
 namespace klooie;
-/// <summary>
-/// A class that manages the focus of a CLI application
-/// </summary>
-public class FocusManager : ObservableObject
+
+public partial class ConsoleApp : EventLoop
 {
-    /// <summary>
-    /// Data object used to capture the focus context on the stack
-    /// </summary>
-    public class FocusContext
+    private class KeyboardInterceptionManager
     {
-        public KeyboardInterceptionManager Interceptors { get; private set; } = new KeyboardInterceptionManager();
+        private class HandlerContext
+        {
+            internal Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> NakedHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>>();
+            internal Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> AltHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>>();
+            internal Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> ShiftHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>>();
+            internal Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> ControlHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>>();
+        }
+
+        private Stack<HandlerContext> handlerStack;
+
+        internal KeyboardInterceptionManager()
+        {
+            handlerStack = new Stack<HandlerContext>();
+            handlerStack.Push(new HandlerContext());
+        }
+
+        internal bool TryIntercept(ConsoleKeyInfo keyInfo)
+        {
+            bool alt = keyInfo.Modifiers.HasFlag(ConsoleModifiers.Alt);
+            bool control = keyInfo.Modifiers.HasFlag(ConsoleModifiers.Control);
+            bool shift = keyInfo.Modifiers.HasFlag(ConsoleModifiers.Shift);
+            bool noModifier = alt == false && shift == false && control == false;
+
+            int handlerCount = 0;
+            try
+            {
+                if (noModifier && handlerStack.Peek().NakedHandlers.ContainsKey(keyInfo.Key))
+                {
+                    handlerStack.Peek().NakedHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    handlerCount++;
+                }
+
+                if (alt && handlerStack.Peek().AltHandlers.ContainsKey(keyInfo.Key))
+                {
+                    handlerStack.Peek().AltHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    handlerCount++;
+                }
+
+                if (shift && handlerStack.Peek().ShiftHandlers.ContainsKey(keyInfo.Key))
+                {
+                    handlerStack.Peek().ShiftHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    handlerCount++;
+                }
+
+                if (control && handlerStack.Peek().ControlHandlers.ContainsKey(keyInfo.Key))
+                {
+                    handlerStack.Peek().ControlHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    handlerCount++;
+                }
+
+                return handlerCount > 0;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
+
+
+        internal ILifetime PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler)
+        {
+            Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> target;
+
+            if (modifier.HasValue == false) target = handlerStack.Peek().NakedHandlers;
+            else if (modifier.Value.HasFlag(ConsoleModifiers.Alt)) target = handlerStack.Peek().AltHandlers;
+            else if (modifier.Value.HasFlag(ConsoleModifiers.Shift)) target = handlerStack.Peek().ShiftHandlers;
+            else if (modifier.Value.HasFlag(ConsoleModifiers.Control)) target = handlerStack.Peek().ControlHandlers;
+            else throw new ArgumentException("Unsupported modifier: " + modifier.Value);
+
+            Stack<Action<ConsoleKeyInfo>> targetStack;
+            if (target.TryGetValue(key, out targetStack) == false)
+            {
+                targetStack = new Stack<Action<ConsoleKeyInfo>>();
+                target.Add(key, targetStack);
+            }
+
+            targetStack.Push(handler);
+            var lt = new Lifetime();
+            lt.OnDisposed(() =>
+            {
+                targetStack.Pop();
+                if (targetStack.Count == 0)
+                {
+                    target.Remove(key);
+                }
+            });
+
+            return lt;
+        }
 
         /// <summary>
-        /// The controls being managed by this context
+        /// Pushes this handler onto its appropriate handler stack for the given lifetime
         /// </summary>
-        public List<ConsoleControl> Controls { get; internal set; }
+        /// <param name="key">the key ti handle</param>
+        /// <param name="modifier">the modifier, or null if you want to handle the unmodified keypress</param>
+        /// <param name="handler">the code to run when the key input is intercepted</param>
+        /// <param name="manager">the lifetime of the handlers registration</param>
+        public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler, ILifetimeManager manager)
+        {
+            manager.OnDisposed(PushUnmanaged(key, modifier, handler));
+        }
 
         /// <summary>
-        /// The current focus index within this context
+        /// Pushes this handler onto the appropriate handler stack
         /// </summary>
-        public int FocusIndex { get; internal set; }
+        /// <param name="key">the key ti handle</param>
+        /// <param name="modifier">the modifier, or null if you want to handle the unmodified keypress</param>
+        /// <param name="handler">the code to run when the key input is intercepted</param>
+        /// <returns>A subscription that you should dispose when you no longer want this interception to happen</returns>
+        public ILifetime PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action handler)
+        {
+            return PushUnmanaged(key, modifier, (k) => { handler(); });
+        }
 
         /// <summary>
-        /// Creates a new focus context
+        /// Pushes this handler onto its appropriate handler stack for the given lifetime
         /// </summary>
-        public FocusContext()
+        /// <param name="key">the key ti handle</param>
+        /// <param name="modifier">the modifier, or null if you want to handle the unmodified keypress</param>
+        /// <param name="handler">the code to run when the key input is intercepted</param>
+        /// <param name="manager">the lifetime of the handlers registration</param>
+        public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, Action handler, ILifetimeManager manager)
         {
-            Controls = new List<ConsoleControl>();
-            FocusIndex = -1;
+            PushForLifetime(key, modifier, (k) => { handler(); }, manager);
         }
     }
 
-    private Stack<FocusContext> focusStack;
-
-    public Stack<FocusContext> Stack => focusStack;
-
-    /// <summary>
-    /// Gets the number of layers on the stack
-    /// </summary>
-    public int StackDepth
+    private class FocusManager : ObservableObject
     {
-        get
+        public class FocusContext
         {
-            return focusStack.Count;
-        }
-    }
+            public KeyboardInterceptionManager Interceptors { get; private set; } = new KeyboardInterceptionManager();
+            public List<ConsoleControl> Controls { get; internal set; }
+            public int FocusIndex { get; internal set; }
 
-    /// <summary>
-    /// Gets the keyboard manager that can be used to intercept keystrokes on the current layer
-    /// </summary>
-    public KeyboardInterceptionManager GlobalKeyHandlers
-    {
-        get
-        {
-            return focusStack.Peek().Interceptors;
-        }
-    }
-
-    /// <summary>
-    /// Gets the currently focused control or null if there is no control with focus yet.
-    /// </summary>
-    public ConsoleControl FocusedControl
-    {
-        get
-        {
-            return Get<ConsoleControl>();
-        }
-        private set
-        {
-            Set(value);
-        }
-    }
-
-    /// <summary>
-    /// Initializes the focus manager
-    /// </summary>
-    public FocusManager()
-    {
-        focusStack = new Stack<FocusContext>();
-        focusStack.Push(new FocusContext());
-    }
-
-    /// <summary>
-    /// Adds the current control to the current focus context
-    /// </summary>
-    /// <param name="c">The control to add</param>
-    internal void Add(ConsoleControl c)
-    {
-        if (focusStack.Peek().Controls.Contains(c))
-        {
-            throw new InvalidOperationException("Item already being tracked");
-        }
-        focusStack.Peek().Controls.Add(c);
-    }
-
-    /// <summary>
-    /// Removes the control from all focus contexts
-    /// </summary>
-    /// <param name="c">The control to remove</param>
-    internal void Remove(ConsoleControl c)
-    {
-        foreach (var context in focusStack)
-        {
-            context.Controls.Remove(c);
-        }
-    }
-
-    /// <summary>
-    /// Pushes a new focus context onto the stack.  This is useful, for example, when a dialog appears above all other
-    /// controls and you want to limit focus to the dialog to acheive a modal affect.  You must remember to call pop
-    /// when your context ends.
-    /// </summary>
-    public void Push()
-    {
-        focusStack.Push(new FocusContext());
-        FirePropertyChanged(nameof(StackDepth));
-    }
-
-    /// <summary>
-    /// Pops the current focus context.  This should be called if you've implemented a modal dialog like experience and your dialog
-    /// has just closed.  Pop() will automatically restore focus on the previous context.
-    /// </summary>
-    public void Pop()
-    {
-        if (focusStack.Count == 1)
-        {
-            throw new InvalidOperationException("Cannot pop the last item off the focus stack");
-        }
-
-        var context = focusStack.Pop();
-        TryRestoreFocus();
-        FirePropertyChanged(nameof(StackDepth));
-    }
-
-    /// <summary>
-    /// Tries to set focus on the given control.
-    /// </summary>
-    /// <param name="newFocusControl">the control to focus.  </param>
-    /// <returns>True if the focus was set or if it was already set, false if the control cannot be focused</returns>
-    public bool TrySetFocus(ConsoleControl newFocusControl)
-    {
-        var index = focusStack.Peek().Controls.IndexOf(newFocusControl);
-        if (index < 0)
-        {
-            return false;
-        }
-
-        if (newFocusControl.CanFocus == false)
-        {
-            return false;
-        }
-        else if (newFocusControl == FocusedControl)
-        {
-            return true;
-        }
-        else
-        {
-            var oldFocusedControl = FocusedControl;
-            if (oldFocusedControl != null)
+            public FocusContext()
             {
-                oldFocusedControl.HasFocus = false;
+                Controls = new List<ConsoleControl>();
+                FocusIndex = -1;
             }
-            newFocusControl.HasFocus = true;
-            FocusedControl = newFocusControl;
+        }
 
-            focusStack.Peek().FocusIndex = index;
+        private Stack<FocusContext> focusStack;
 
-            if (oldFocusedControl != null)
+        public Stack<FocusContext> Stack => focusStack;
+
+        public int StackDepth => focusStack.Count;
+
+        public KeyboardInterceptionManager GlobalKeyHandlers => focusStack.Peek().Interceptors;
+
+        public ConsoleControl FocusedControl { get => Get<ConsoleControl>(); set => Set(value); }
+
+        public FocusManager()
+        {
+            focusStack = new Stack<FocusContext>();
+            focusStack.Push(new FocusContext());
+        }
+
+        public void Add(ConsoleControl c)
+        {
+            if (focusStack.Peek().Controls.Contains(c))
             {
-                oldFocusedControl.FireFocused(false);
+                throw new InvalidOperationException("Item already being tracked");
+            }
+            focusStack.Peek().Controls.Add(c);
+        }
+
+        public void Remove(ConsoleControl c)
+        {
+            foreach (var context in focusStack)
+            {
+                context.Controls.Remove(c);
+            }
+        }
+
+        public void Push()
+        {
+            focusStack.Push(new FocusContext());
+            FirePropertyChanged(nameof(StackDepth));
+        }
+
+        public void Pop()
+        {
+            if (focusStack.Count == 1)
+            {
+                throw new InvalidOperationException("Cannot pop the last item off the focus stack");
             }
 
-            if (FocusedControl != null)
-            {
-                FocusedControl.FireFocused(true);
-            }
-            return true;
-        }
-    }
-
-    /// <summary>
-    /// Tries to move the focus forward or backwards
-    /// </summary>
-    /// <param name="forward">If true then the manager will try to move forwards, otherwise backwards</param>
-    /// <returns>True if the focus moved, false otehrwise</returns>
-    public bool TryMoveFocus(bool forward = true)
-    {
-        if (focusStack.Peek().Controls.Count == 0)
-        {
-            return false;
+            focusStack.Pop();
+            RestoreFocus();
+            FirePropertyChanged(nameof(StackDepth));
         }
 
-        int initialPosition = focusStack.Peek().FocusIndex;
-
-        DateTime start = DateTime.Now;
-        do
+        public void SetFocus(ConsoleControl newFocusControl)
         {
-            bool wrapped = CycleFocusIndex(forward);
-            var nextControl = focusStack.Peek().Controls[focusStack.Peek().FocusIndex];
-            if (nextControl.CanFocus && nextControl.TabSkip == false)
+            var index = focusStack.Peek().Controls.IndexOf(newFocusControl);
+            if (index < 0)
             {
-                return TrySetFocus(nextControl);
+                throw new InvalidOperationException("The given control is not in the focus stack. ");
             }
 
-            if (wrapped && initialPosition < 0) break;
-        }
-        while (focusStack.Peek().FocusIndex != initialPosition && DateTime.Now - start < TimeSpan.FromSeconds(.2));
-
-        return false;
-    }
-
-    /// <summary>
-    /// Tries to restore the focus on the given context
-    /// </summary>
-    /// <returns>True if the focus changed, false otehrwise</returns>
-    public bool TryRestoreFocus()
-    {
-        if (focusStack.Peek().Controls.Where(c => c.CanFocus).Count() == 0)
-        {
-            return false;
-        }
-
-        int initialPosition = focusStack.Peek().FocusIndex;
-
-        bool skipOnce = true;
-        do
-        {
-            bool wrapped = false;
-            if (skipOnce)
+            if (newFocusControl.CanFocus == false)
             {
-                skipOnce = false;
+                throw new InvalidOperationException("The given control cannot be focused");
+            }
+            else if (newFocusControl == FocusedControl)
+            {
+                // done
             }
             else
             {
-                wrapped = CycleFocusIndex(true);
-            }
+                var oldFocusedControl = FocusedControl;
+                if (oldFocusedControl != null)
+                {
+                    oldFocusedControl.HasFocus = false;
+                }
+                newFocusControl.HasFocus = true;
+                FocusedControl = newFocusControl;
 
-            var newFocusIndex = Math.Max(0, Math.Min(focusStack.Peek().FocusIndex, focusStack.Peek().Controls.Count - 1));
-            focusStack.Peek().FocusIndex = newFocusIndex;
-            var nextControl = focusStack.Peek().Controls[focusStack.Peek().FocusIndex];
-            if (nextControl.CanFocus)
+                focusStack.Peek().FocusIndex = index;
+
+                if (oldFocusedControl != null)
+                {
+                    oldFocusedControl.FireFocused(false);
+                }
+
+                if (FocusedControl != null)
+                {
+                    FocusedControl.FireFocused(true);
+                }
+            }
+        }
+
+        public void MoveFocus(bool forward = true)
+        {
+            if (focusStack.Peek().Controls.Count == 0)
             {
-                return TrySetFocus(nextControl);
+                return;
             }
 
-            if (wrapped && initialPosition < 0) break;
-        }
-        while (focusStack.Peek().FocusIndex != initialPosition);
+            int initialPosition = focusStack.Peek().FocusIndex;
 
-        return false;
-    }
+            DateTime start = DateTime.Now;
+            do
+            {
+                bool wrapped = CycleFocusIndex(forward);
+                var nextControl = focusStack.Peek().Controls[focusStack.Peek().FocusIndex];
+                if (nextControl.CanFocus && nextControl.TabSkip == false)
+                {
+                    SetFocus(nextControl);
+                    return;
+                }
 
-    /// <summary>
-    /// Clears the focus, but preserves the focus index
-    /// </summary>
-    public void ClearFocus()
-    {
-        if (ConsoleApp.Current?.ShouldContinue == false) return;
-        if (FocusedControl != null)
-        {
-            FocusedControl.HasFocus = false;
-            FocusedControl.FireFocused(false);
-            FocusedControl = null;
-        }
-    }
-
-    private bool CycleFocusIndex(bool forward)
-    {
-        if (forward)
-        {
-            focusStack.Peek().FocusIndex++;
-        }
-        else
-        {
-            focusStack.Peek().FocusIndex--;
+                if (wrapped && initialPosition < 0) break;
+            }
+            while (focusStack.Peek().FocusIndex != initialPosition && DateTime.Now - start < TimeSpan.FromSeconds(.2));
         }
 
-        if (focusStack.Peek().FocusIndex >= focusStack.Peek().Controls.Count)
+        public void RestoreFocus()
         {
-            focusStack.Peek().FocusIndex = 0;
-            return true;
-        }
-        else if (focusStack.Peek().FocusIndex < 0)
-        {
-            focusStack.Peek().FocusIndex = focusStack.Peek().Controls.Count - 1;
-            return true;
+            if (focusStack.Peek().Controls.Where(c => c.CanFocus).Count() == 0)
+            {
+                return;
+            }
+
+            int initialPosition = focusStack.Peek().FocusIndex;
+
+            bool skipOnce = true;
+            do
+            {
+                bool wrapped = false;
+                if (skipOnce)
+                {
+                    skipOnce = false;
+                }
+                else
+                {
+                    wrapped = CycleFocusIndex(true);
+                }
+
+                var newFocusIndex = Math.Max(0, Math.Min(focusStack.Peek().FocusIndex, focusStack.Peek().Controls.Count - 1));
+                focusStack.Peek().FocusIndex = newFocusIndex;
+                var nextControl = focusStack.Peek().Controls[focusStack.Peek().FocusIndex];
+                if (nextControl.CanFocus)
+                {
+                    SetFocus(nextControl);
+                    return;
+                }
+
+                if (wrapped && initialPosition < 0) break;
+            }
+            while (focusStack.Peek().FocusIndex != initialPosition);
         }
 
-        return false;
+        public void ClearFocus()
+        {
+            if (Current?.ShouldContinue == false) return;
+            if (FocusedControl != null)
+            {
+                FocusedControl.HasFocus = false;
+                FocusedControl.FireFocused(false);
+                FocusedControl = null;
+            }
+        }
+
+        private bool CycleFocusIndex(bool forward)
+        {
+            if (forward)
+            {
+                focusStack.Peek().FocusIndex++;
+            }
+            else
+            {
+                focusStack.Peek().FocusIndex--;
+            }
+
+            if (focusStack.Peek().FocusIndex >= focusStack.Peek().Controls.Count)
+            {
+                focusStack.Peek().FocusIndex = 0;
+                return true;
+            }
+            else if (focusStack.Peek().FocusIndex < 0)
+            {
+                focusStack.Peek().FocusIndex = focusStack.Peek().Controls.Count - 1;
+                return true;
+            }
+
+            return false;
+        }
     }
 }

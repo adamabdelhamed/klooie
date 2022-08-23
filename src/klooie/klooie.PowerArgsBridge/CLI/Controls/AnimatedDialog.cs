@@ -56,11 +56,11 @@ namespace PowerArgs.Cli
                 var handle = new DialogHandle();
                 if (options.PushPop)
                 {
-                    ConsoleApp.Current.FocusManager.Push();
+                    ConsoleApp.Current.PushFocusStack();
 
                     if(options.AllowEscapeToClose)
                     {
-                        ConsoleApp.Current.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Escape, null, () =>
+                        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () =>
                         {
                             handle.CloseDialog();
                         }, dialogLt);
@@ -68,13 +68,13 @@ namespace PowerArgs.Cli
 
                     if (options.AllowEnterToClose)
                     {
-                        ConsoleApp.Current.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Enter, null, () =>
+                        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, () =>
                         {
                             handle.CloseDialog();
                         }, dialogLt);
                     }
 
-                    dialogLt.OnDisposed(ConsoleApp.Current.FocusManager.Pop);
+                    dialogLt.OnDisposed(ConsoleApp.Current.PopFocusStack);
                 }
       
                 var content = contentFactory(handle);

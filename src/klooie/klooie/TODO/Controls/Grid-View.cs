@@ -169,7 +169,7 @@ public partial class Grid : ConsoleControl
         else if (FilteringEnabled && RichTextCommandLineReader.IsWriteable(info) && FilterTextBox != null)
         {
             FilterTextBox.Value = info.KeyChar.ToString().ToConsoleString();
-            Application.FocusManager.TrySetFocus(FilterTextBox);
+            Application.SetFocus(FilterTextBox);
         }
     }
 
@@ -194,7 +194,7 @@ public partial class Grid : ConsoleControl
         {
             if (DataView.Items.Count == 0)
             {
-                Application.FocusManager.TryMoveFocus();
+                Application.MoveFocus();
             }
         }, this);
     }
@@ -220,15 +220,15 @@ public partial class Grid : ConsoleControl
         }
         else if (keyInfo.Key == ConsoleKey.DownArrow)
         {
-            this.TryFocus();
+            this.Focus();
         }
         else if (keyInfo.Key == ConsoleKey.PageDown)
         {
-            this.TryFocus();
+            this.Focus();
         }
         else if (keyInfo.Key == ConsoleKey.PageUp)
         {
-            this.TryFocus();
+            this.Focus();
         }
     }
 

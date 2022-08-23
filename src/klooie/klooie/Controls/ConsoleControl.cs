@@ -250,7 +250,7 @@ public class ConsoleControl : Rectangular
         }
         else if (propertyName == nameof(CanFocus) && IsExpired == false && CanFocus == false && HasFocus)
         {
-            ConsoleApp.Current?.FocusManager.TryMoveFocus();
+            ConsoleApp.Current?.MoveFocus();
         }
 
         if (this.Application != null && this.Application.IsRunning && this.Application.IsDrainingOrDrained == false)
@@ -300,33 +300,14 @@ public class ConsoleControl : Rectangular
     /// and has it's CanFocus property to true then focus should be granted.
     /// </summary>
     /// <returns>True if focus was granted, false otherwise.  </returns>
-    public bool TryFocus()
-    {
-        if (Application != null)
-        {
-            return Application.FocusManager.TrySetFocus(this);
-        }
-        else
-        {
-            return false;
-        }
-    }
+    public void Focus() => Application?.SetFocus(this);
+
 
     /// <summary>
     /// Tries to unfocus this control.
     /// </summary>
     /// <returns>True if focus was cleared and moved.  False otherwise</returns>
-    public bool TryUnfocus()
-    {
-        if (Application != null)
-        {
-            return Application.FocusManager.TryMoveFocus(true);
-        }
-        else
-        {
-            return false;
-        }
-    }
+    public void Unfocus() => Application?.MoveFocus(true);
 
     public Task AnimateForeground(RGB to, float duration = 1000, EasingFunction ease = null, bool autoReverse = false, ILifetimeManager loop = null, IDelayProvider delayProvider = null, float autoReverseDelay = 0, Func<bool> isCancelled = null)
         => Animator.AnimateAsync(Foreground, to, c => Foreground = c, duration, ease, autoReverse, loop, delayProvider, autoReverseDelay, isCancelled);

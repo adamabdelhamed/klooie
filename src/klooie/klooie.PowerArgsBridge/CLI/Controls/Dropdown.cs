@@ -78,10 +78,10 @@ namespace PowerArgs.Cli
         {
             isOpen = true;
             SyncValueLabel();
-            TryUnfocus();
+            Unfocus();
             try
             {
-                Application.FocusManager.Push();
+                Application.PushFocusStack();
                 var appropriatePopupWidth = 2 + 1 + Options.Select(o => o.DisplayText.Length).Max() + 1 + 1 + 2;
                 var scrollPanel = new ScrollablePanel();
                 scrollPanel.Width = appropriatePopupWidth - 4;
@@ -120,18 +120,18 @@ namespace PowerArgs.Cli
                     }
 
                     var label = optionsStack.Children.ToArray()[index] as Label;
-                    label.TryFocus();
+                    label.Focus();
                     label.Text = label.Text.ToBlack(bg: RGB.Cyan);
                 };
                 syncSelectedIndex();
 
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Enter, null, () =>
+                Application.PushKeyForLifetime(ConsoleKey.Enter, () =>
                 {
                     Value = Options[index];
                     popup.Dispose();
                 }, popup);
 
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Escape, null, popup.Dispose, popup);
+                Application.PushKeyForLifetime(ConsoleKey.Escape, popup.Dispose, popup);
 
                 Action up = () =>
                 {
@@ -163,22 +163,22 @@ namespace PowerArgs.Cli
 
                 if (EnableWAndSKeysForUpDown)
                 {
-                    Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.W, null, up, popup);
-                    Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.S, null, down, popup);
+                    Application.PushKeyForLifetime(ConsoleKey.W, up, popup);
+                    Application.PushKeyForLifetime(ConsoleKey.S, down, popup);
                 }
 
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.UpArrow, null, up, popup);
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.DownArrow, null, down, popup);
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Tab,  ConsoleModifiers.Shift, up, popup);
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Tab, null, down, popup);
+                Application.PushKeyForLifetime(ConsoleKey.UpArrow, up, popup);
+                Application.PushKeyForLifetime(ConsoleKey.DownArrow, down, popup);
+                Application.PushKeyForLifetime(ConsoleKey.Tab,  ConsoleModifiers.Shift, up, popup);
+                Application.PushKeyForLifetime(ConsoleKey.Tab, down, popup);
 
                 await popup.AsTask();
             }
             finally
             {
                 isOpen = false;
-                Application.FocusManager.Pop();
-                TryFocus();
+                Application.PopFocusStack();
+                Focus();
             }
         }
     }

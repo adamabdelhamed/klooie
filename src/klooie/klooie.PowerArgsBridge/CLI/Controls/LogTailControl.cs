@@ -62,7 +62,7 @@ namespace PowerArgs.Cli
             logLabel.Text = text;
             logLabel.Height = linesUsed;
             scrollPanel.ScrollableContent.Height = linesUsed;
-            var focused = Application.FocusManager.FocusedControl;
+            var focused = Application.FocusedControl;
             if (focused is Scrollbar && Descendents.Contains(focused))
             {
                 // do nothing since the scrollbar is in focus

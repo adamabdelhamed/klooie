@@ -72,7 +72,7 @@ public class ScrollablePanel : ConsolePanel
 
     private void OnAddedToVisualTree()
     {
-        focusSubscription = Application.FocusManager.SubscribeUnmanaged(nameof(FocusManager.FocusedControl), FocusChanged);
+        focusSubscription = Application.FocusChanged.SubscribeUnmanaged(FocusChanged);
         SynchronizeForLifetime(nameof(HorizontalScrollUnits), UpdateScrollbars, this);
         SynchronizeForLifetime(nameof(VerticalScrollUnits), UpdateScrollbars, this);
         ScrollableContent.Controls.SynchronizeForLifetime(ScrollableControls_Added, (c) => { }, () => { }, this);
@@ -148,20 +148,20 @@ public class ScrollablePanel : ConsolePanel
 
 
 
-    private void FocusChanged()
+    private void FocusChanged(ConsoleControl newlyFocused)
     {
         bool focusedControlIsWithinMe = VisitControlTree((control) =>
         {
             if (IsExpired || IsExpiring || IsBeingRemoved) return false;
-            return control is Scrollbar == false && control == Application.FocusManager.FocusedControl;
+            return control is Scrollbar == false && control == Application.FocusedControl;
         });
 
         if (focusedControlIsWithinMe)
         {
-            var offset = Application.FocusManager.FocusedControl.CalculateRelativePosition(this);
+            var offset = Application.FocusedControl.CalculateRelativePosition(this);
 
             var visibleWindowBounds = new RectF(HorizontalScrollUnits, VerticalScrollUnits, Width, Height);
-            var focusedControlBounds = new RectF(offset.Left, offset.Top, Application.FocusManager.FocusedControl.Width, Application.FocusManager.FocusedControl.Height);
+            var focusedControlBounds = new RectF(offset.Left, offset.Top, Application.FocusedControl.Width, Application.FocusedControl.Height);
 
             if (focusedControlBounds.IsAbove(visibleWindowBounds))
             {

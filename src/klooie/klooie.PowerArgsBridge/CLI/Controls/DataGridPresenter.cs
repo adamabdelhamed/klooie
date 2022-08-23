@@ -193,10 +193,10 @@ namespace PowerArgs.Cli
                 pager.Controls.Remove(pager.LastPageButton);
             }
 
-            if (firstButtonFocused) pager.FirstPageButton.TryFocus();
-            else if (previousButtonFocused) pager.PreviousPageButton.TryFocus();
-            else if(nextButtonFocused) pager.NextPageButton.TryFocus();
-            else if(lastButtonFocused) pager.LastPageButton.TryFocus();
+            if (firstButtonFocused) pager.FirstPageButton.Focus();
+            else if (previousButtonFocused) pager.PreviousPageButton.Focus();
+            else if(nextButtonFocused) pager.NextPageButton.Focus();
+            else if(lastButtonFocused) pager.LastPageButton.Focus();
         }
 
         private class RandomAccessPager : StackPanel

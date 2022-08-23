@@ -7,14 +7,7 @@ public class FrameRateMeter
     private int framesInPreviousSecond;
 
     public int TotalFrames { get; private set; }
-
-    public int CurrentFPS
-    {
-        get
-        {
-            return framesInPreviousSecond;
-        }
-    }
+    public int CurrentFPS => framesInPreviousSecond;
 
     public FrameRateMeter()
     {
@@ -40,9 +33,12 @@ public class FrameRateMeter
         }
     }
 
-    private bool AreSameSecond(DateTime a, DateTime b)
-    {
-        return a.Year == b.Year && a.Month == b.Month && a.Day == b.Day && a.Hour == b.Hour && a.Minute == b.Minute && a.Second == b.Second;
-    }
+    private bool AreSameSecond(DateTime a, DateTime b) => 
+        a.Year == b.Year &&
+        a.Month == b.Month && 
+        a.Day == b.Day &&
+        a.Hour == b.Hour &&
+        a.Minute == b.Minute &&
+        a.Second == b.Second;
 }
 

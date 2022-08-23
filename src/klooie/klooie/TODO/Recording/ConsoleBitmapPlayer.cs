@@ -414,9 +414,9 @@ public class ConsoleBitmapPlayer : ConsolePanel
                             seekForward10SButton.CanFocus = true;
                             seekToEndButton.CanFocus = true;
                             State = PlayerState.Stopped;
-                            if (Application.FocusManager.FocusedControl == null)
+                            if (Application.FocusedControl == null)
                             {
-                                Application.FocusManager.TrySetFocus(playButton);
+                                Application.SetFocus(playButton);
                             }
                         }
 

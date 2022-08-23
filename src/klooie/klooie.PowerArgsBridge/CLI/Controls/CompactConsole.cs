@@ -127,11 +127,11 @@ namespace PowerArgs.Cli
                         focusLt = new Lifetime();
 
 
-                        Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Tab, null, () =>
+                        Application.PushKeyForLifetime(ConsoleKey.Tab, () =>
                         {
                             var forgotten = OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));
                         }, focusLt);
-                        Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Tab, ConsoleModifiers.Shift, () =>
+                        Application.PushKeyForLifetime(ConsoleKey.Tab, ConsoleModifiers.Shift, () =>
                         {
                             var forgotten = OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, true, false, false));
                         }, focusLt);
@@ -146,7 +146,7 @@ namespace PowerArgs.Cli
                         }
                     }, refreshLt);
 
-                    InputBox.TryFocus();
+                    InputBox.Focus();
                 }
             });
 

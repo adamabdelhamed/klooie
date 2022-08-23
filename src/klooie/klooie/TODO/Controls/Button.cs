@@ -155,7 +155,7 @@ public class Button : ConsoleControl
         if (Shortcut != null && shortcutRegistered == false && Application != null)
         {
             shortcutRegistered = true;
-            Application.FocusManager.GlobalKeyHandlers.PushForLifetime(Shortcut.Key, Shortcut.Modifier, () =>
+            Application.PushKeyForLifetime(Shortcut.Key, Shortcut.Modifier, () =>
              {
                  if (this.CanFocus)
                  {
@@ -166,7 +166,7 @@ public class Button : ConsoleControl
             if (Shortcut.Key.ToString().Contains("NumPad"))
             {
                 var num = Shortcut.Key.ToString().Last();
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), Shortcut.Modifier, () =>
+                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), Shortcut.Modifier, () =>
                    {
                        if (this.CanFocus)
                        {
@@ -178,7 +178,7 @@ public class Button : ConsoleControl
             if (Regex.IsMatch(Shortcut.Key.ToString(), @"D\n"))
             {
                 var num = Shortcut.Key.ToString().Last();
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "NumPad" + num), Shortcut.Modifier, () =>
+                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "NumPad" + num), Shortcut.Modifier, () =>
                 {
                     if (this.CanFocus)
                     {
@@ -189,7 +189,7 @@ public class Button : ConsoleControl
             else if (Shortcut.Key.ToString().StartsWith("NumPad"))
             {
                 var num = Shortcut.Key.ToString().Last();
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), Shortcut.Modifier, () =>
+                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), Shortcut.Modifier, () =>
                 {
                     if (this.CanFocus)
                     {

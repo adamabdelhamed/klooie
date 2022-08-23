@@ -35,7 +35,7 @@ namespace ArgsTests.CLI.Controls
             {
                 var calendar = app.LayoutRoot.Add(new MonthCalendar(new MonthCalendarOptions() { Year = 2000, Month = 1 })).Fill();
                 await app.PaintAndRecordKeyFrameAsync();
-                calendar.TryFocus();
+                calendar.Focus();
                 await app.PaintAndRecordKeyFrameAsync();
                 var fwInfo = new ConsoleKeyInfo('a', calendar.Options.AdvanceMonthForwardKey.Key, false, false, false);
                 var backInfo = new ConsoleKeyInfo('b', calendar.Options.AdvanceMonthBackwardKey.Key, false, false, false);

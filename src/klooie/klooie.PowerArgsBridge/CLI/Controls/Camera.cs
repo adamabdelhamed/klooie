@@ -104,30 +104,30 @@ public class Camera : ConsolePanel
             AnimateBy(dx, dy, lt: panLt);
         }
 
-        var keys = ConsoleApp.Current.FocusManager.GlobalKeyHandlers;
+        var app = ConsoleApp.Current;
 
         if (wasd)
         {
-            keys.PushForLifetime(ConsoleKey.W, null, () => animate(0, -Height), lt);
-            keys.PushForLifetime(ConsoleKey.A, null, () => animate(-Width, 0), lt);
-            keys.PushForLifetime(ConsoleKey.S, null, () => animate(0, Height), lt);
-            keys.PushForLifetime(ConsoleKey.D, null, () => animate(Width, 0), lt);
-            keys.PushForLifetime(ConsoleKey.W, ConsoleModifiers.Shift, () => animate(0, -Height / 4), lt);
-            keys.PushForLifetime(ConsoleKey.A, ConsoleModifiers.Shift, () => animate(-Width / 4, 0), lt);
-            keys.PushForLifetime(ConsoleKey.S, ConsoleModifiers.Shift, () => animate(0, Height / 4), lt);
-            keys.PushForLifetime(ConsoleKey.D, ConsoleModifiers.Shift, () => animate(Width / 4, 0), lt);
+            app.PushKeyForLifetime(ConsoleKey.W, () => animate(0, -Height), lt);
+            app.PushKeyForLifetime(ConsoleKey.A, () => animate(-Width, 0), lt);
+            app.PushKeyForLifetime(ConsoleKey.S, () => animate(0, Height), lt);
+            app.PushKeyForLifetime(ConsoleKey.D, () => animate(Width, 0), lt);
+            app.PushKeyForLifetime(ConsoleKey.W, ConsoleModifiers.Shift, () => animate(0, -Height / 4), lt);
+            app.PushKeyForLifetime(ConsoleKey.A, ConsoleModifiers.Shift, () => animate(-Width / 4, 0), lt);
+            app.PushKeyForLifetime(ConsoleKey.S, ConsoleModifiers.Shift, () => animate(0, Height / 4), lt);
+            app.PushKeyForLifetime(ConsoleKey.D, ConsoleModifiers.Shift, () => animate(Width / 4, 0), lt);
         }
 
         if (arrows)
         {
-            keys.PushForLifetime(ConsoleKey.UpArrow, null, () => animate(0, -Height), lt);
-            keys.PushForLifetime(ConsoleKey.LeftArrow, null, () => animate(-Width, 0), lt);
-            keys.PushForLifetime(ConsoleKey.DownArrow, null, () => animate(0, Height), lt);
-            keys.PushForLifetime(ConsoleKey.RightArrow, null, () => animate(Width, 0), lt);
-            keys.PushForLifetime(ConsoleKey.UpArrow, ConsoleModifiers.Shift, () => animate(0, -Height / 4), lt);
-            keys.PushForLifetime(ConsoleKey.LeftArrow, ConsoleModifiers.Shift, () => animate(-Width / 4, 0), lt);
-            keys.PushForLifetime(ConsoleKey.DownArrow, ConsoleModifiers.Shift, () => animate(0, Height / 4), lt);
-            keys.PushForLifetime(ConsoleKey.RightArrow, ConsoleModifiers.Shift, () => animate(Width / 4, 0), lt);
+            app.PushKeyForLifetime(ConsoleKey.UpArrow, () => animate(0, -Height), lt);
+            app.PushKeyForLifetime(ConsoleKey.LeftArrow, () => animate(-Width, 0), lt);
+            app.PushKeyForLifetime(ConsoleKey.DownArrow, () => animate(0, Height), lt);
+            app.PushKeyForLifetime(ConsoleKey.RightArrow, () => animate(Width, 0), lt);
+            app.PushKeyForLifetime(ConsoleKey.UpArrow, ConsoleModifiers.Shift, () => animate(0, -Height / 4), lt);
+            app.PushKeyForLifetime(ConsoleKey.LeftArrow, ConsoleModifiers.Shift, () => animate(-Width / 4, 0), lt);
+            app.PushKeyForLifetime(ConsoleKey.DownArrow, ConsoleModifiers.Shift, () => animate(0, Height / 4), lt);
+            app.PushKeyForLifetime(ConsoleKey.RightArrow, ConsoleModifiers.Shift, () => animate(Width / 4, 0), lt);
         }
     }
 

@@ -29,10 +29,10 @@ public class MinimumSizeEnforcerPanel : ConsolePanel
             {
                 tooSmallLifetime = new Lifetime();
                 IsVisible = true;
-                CanFocus = true;
-                Application.InvokeNextCycle(() => this.TryFocus());
-                Application.FocusManager.Push();
-                Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Escape, null, () => { }, this);
+
+                Application.PushFocusStack();
+                Application.ClearFocus();
+                Application.PushKeyForLifetime(ConsoleKey.Escape, () => { }, this);
                 options.OnMinimumSizeNotMet?.Invoke();
                 OnTooSmall();
             }
@@ -40,12 +40,11 @@ public class MinimumSizeEnforcerPanel : ConsolePanel
         else
         {
             IsVisible = false;
-            CanFocus = false;
             if (tooSmallLifetime != null)
             {
                 tooSmallLifetime.Dispose();
                 tooSmallLifetime = null;
-                Application.FocusManager.Pop();
+                Application.PopFocusStack();
                 options.OnMinimumSizeMet?.Invoke();
             }
             else

@@ -75,7 +75,7 @@ namespace PowerArgs.Cli
                 {
                     if (this.IsExpired == false)
                     {
-                        frame.TryFocus();
+                        frame.Focus();
                         CursorMoved.Fire();
                     }
                 }, TimeSpan.FromMilliseconds(10));
@@ -125,13 +125,13 @@ namespace PowerArgs.Cli
                 form.Y = changeFgButton.AbsoluteY;
                 form.ZIndex = int.MinValue;
                 var dd = form.Descendents.WhereAs<Dropdown>().First();
-                var focusWorked = dd.TryFocus();
+                dd.Focus();
                 dd.KeyInputReceived.Fire(new ConsoleKeyInfo(' ', ConsoleKey.Enter, false, false, false));
                 dd.Focused.SubscribeOnce(() =>
                 {
                     currentFg = colorObj.Color;
                     form.Dispose();
-                    frame.TryFocus();
+                    frame.Focus();
                 });
             }, this);
 
@@ -147,13 +147,13 @@ namespace PowerArgs.Cli
                 form.Y = changeFgButton.AbsoluteY;
                 form.ZIndex = int.MinValue;
                 var dd = form.Descendents.WhereAs<Dropdown>().First();
-                var focusWorked = dd.TryFocus();
+                dd.Focus();
                 dd.KeyInputReceived.Fire(new ConsoleKeyInfo(' ', ConsoleKey.Enter, false, false, false));
                 dd.Focused.SubscribeOnce(() =>
                 {
                     currentBg = colorObj.Color;
                     form.Dispose();
-                    frame.TryFocus();
+                    frame.Focus();
                 });
             }, this);
 

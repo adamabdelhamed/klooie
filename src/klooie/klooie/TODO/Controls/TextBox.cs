@@ -10,7 +10,7 @@ public class TextBox : ConsoleControl
     private RichTextEditor textState;
     private bool blinkState;
 
-    private SetIntervalHandle blinkTimerHandle;
+    private ConsoleApp.SetIntervalHandle blinkTimerHandle;
 
     /// <summary>
     /// Gets the editor object that controls the rich text capabilities of the text box

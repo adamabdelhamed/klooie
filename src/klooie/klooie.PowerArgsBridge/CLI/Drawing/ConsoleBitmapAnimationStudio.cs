@@ -137,22 +137,22 @@ namespace PowerArgs.Cli
                     fakeDialogLabel.Text = FormatTimespanForFramePopup(CurrentFrame.FrameTime);
                 }, fakeDialogLabel);
 
-                ConsoleApp.Current.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.OemPlus, null, () =>
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.OemPlus, () =>
                 {
                     undoRedo.Do(new ShiftTimeStampForwardAction(this, CurrentFrameIndex, 50));
                 }, fakeDialog);
 
-                ConsoleApp.Current.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.OemMinus, null, () =>
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.OemMinus, () =>
                 {
                     undoRedo.Do(new ShiftTimeStampBackwardAction(this, CurrentFrameIndex, 50));
                 }, fakeDialog);
 
-                ConsoleApp.Current.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.OemPlus, ConsoleModifiers.Shift, () =>
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.OemPlus, ConsoleModifiers.Shift, () =>
                 {
                     undoRedo.Do(new ShiftTimeStampForwardAction(this, CurrentFrameIndex, 10));
                 }, fakeDialog);
 
-                ConsoleApp.Current.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.OemMinus, ConsoleModifiers.Shift, () =>
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.OemMinus, ConsoleModifiers.Shift, () =>
                 {
                     undoRedo.Do(new ShiftTimeStampBackwardAction(this, CurrentFrameIndex, 10));
                 }, fakeDialog);

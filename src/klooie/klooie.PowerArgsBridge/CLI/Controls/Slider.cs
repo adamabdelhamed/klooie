@@ -35,14 +35,14 @@ namespace PowerArgs.Cli
                 {
                     focusLt?.Dispose();
                     focusLt = new Lifetime();
-                    Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.RightArrow, null, SlideUp, focusLt);
-                    Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.LeftArrow, null, SlideDown, focusLt);
-                    Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.UpArrow, null, SlideUp, focusLt);
-                    Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.DownArrow, null, SlideDown, focusLt);
+                    Application.PushKeyForLifetime(ConsoleKey.RightArrow, SlideUp, focusLt);
+                    Application.PushKeyForLifetime(ConsoleKey.LeftArrow, SlideDown, focusLt);
+                    Application.PushKeyForLifetime(ConsoleKey.UpArrow, SlideUp, focusLt);
+                    Application.PushKeyForLifetime(ConsoleKey.DownArrow, SlideDown, focusLt);
                     if (EnableWAndSKeysForUpDown)
                     {
-                        Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.D, null, SlideUp, focusLt);
-                        Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.A, null, SlideDown, focusLt);
+                        Application.PushKeyForLifetime(ConsoleKey.D, SlideUp, focusLt);
+                        Application.PushKeyForLifetime(ConsoleKey.A, SlideDown, focusLt);
                     }
                 }, this);
 
@@ -50,13 +50,13 @@ namespace PowerArgs.Cli
             });
         }
 
-        private void SlideUp(ConsoleKeyInfo obj)
+        private void SlideUp()
         {
             var newVal = Math.Min(Max, Value + Increment);
             Value = newVal;
         }
 
-        private void SlideDown(ConsoleKeyInfo obj)
+        private void SlideDown()
         {
             var newVal = Math.Max(Min, Value - Increment);
             Value = newVal;

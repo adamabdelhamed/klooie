@@ -126,7 +126,7 @@ public class RichTextDialogOptions : DialogOptions
             }
         }, TextBox);
 
-        TextBox.AddedToVisualTree.SubscribeOnce(() => TextBox.Application.InvokeNextCycle(() => TextBox.TryFocus()));
+        TextBox.AddedToVisualTree.SubscribeOnce(() => TextBox.Application.InvokeNextCycle(() => TextBox.Focus()));
         return content;
     }
 }
@@ -215,7 +215,7 @@ public class DialogButtonOptions : DialogOptions
                     buttonPanel.Controls.Add(b);
                 }
 
-                buttonPanel.Controls.Last().AddedToVisualTree.SubscribeOnce(() => buttonPanel.Application.InvokeNextCycle(() => { buttonPanel.Controls.Last().TryFocus(); }));
+                buttonPanel.Controls.Last().AddedToVisualTree.SubscribeOnce(() => buttonPanel.Application.InvokeNextCycle(() => { buttonPanel.Controls.Last().Focus(); }));
             }
             return dialogContent;
         }
@@ -236,7 +236,7 @@ public class DialogButtonOptions : DialogOptions
                 Dialog.Dismiss();
             };
 
-            optionsGrid.AddedToVisualTree.SubscribeOnce(() => optionsGrid.Application.InvokeNextCycle(() => { optionsGrid.TryFocus(); }));
+            optionsGrid.AddedToVisualTree.SubscribeOnce(() => optionsGrid.Application.InvokeNextCycle(() => { optionsGrid.Focus(); }));
 
             return optionsGrid;
         }
@@ -299,9 +299,9 @@ public class Dialog : ConsolePanel
 
     private void OnBeforeAddedToVisualTree()
     {
-        Application.FocusManager.Push();
-        myFocusStackDepth = Application.FocusManager.StackDepth;
-        Application.FocusManager.GlobalKeyHandlers.PushForLifetime(ConsoleKey.Escape, null, Escape, this);
+        Application.PushFocusStack();
+        myFocusStackDepth = Application.FocusStackDepth;
+        Application.PushKeyForLifetime(ConsoleKey.Escape, Escape, this);
     }
 
     private void OnAddedToVisualTree()
@@ -321,11 +321,11 @@ public class Dialog : ConsolePanel
         }
 
         this.options.OnPosition(this);
-        ConsoleApp.Current.FocusManager.TryMoveFocus();
-        Application.FocusManager.SubscribeForLifetime(nameof(FocusManager.StackDepth), () =>
+        ConsoleApp.Current.MoveFocus();
+        Application.FocusStackDepthChanged.SubscribeForLifetime((int newDepth) =>
         {
             if (this.IsBeingRemoved) return;
-            if (Application.FocusManager.StackDepth != myFocusStackDepth)
+            if (newDepth != myFocusStackDepth)
             {
                 closeButton.Background = DefaultColors.DisabledColor;
             }
@@ -339,7 +339,7 @@ public class Dialog : ConsolePanel
 
     private void OnRemovedFromVisualTree()
     {
-        Application.FocusManager.Pop();
+        Application.PopFocusStack();
     }
 
     private void Escape()
@@ -357,7 +357,7 @@ public class Dialog : ConsolePanel
     /// <param name="context">the drawing surface</param>
     protected override void OnPaint(ConsoleBitmap context)
     {
-        var pen = new ConsoleCharacter(' ', null, myFocusStackDepth == Application.FocusManager.StackDepth ? DefaultColors.H1Color : DefaultColors.DisabledColor);
+        var pen = new ConsoleCharacter(' ', null, myFocusStackDepth == Application.FocusStackDepth ? DefaultColors.H1Color : DefaultColors.DisabledColor);
         context.DrawLine(pen, 0, 0, Width, 0);
         context.DrawLine(pen, 0, Height - 1, Width, Height - 1);
         base.OnPaint(context);
