@@ -18,9 +18,10 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void TestRenderTextBox()
         {
-            var app = new CliTestHarness(this.TestContext, 9, 1);
+            CliTestHarness.SetConsoleSize(9, 1);
+            var app = new CliTestHarness(this.TestContext);
 
-            app.InvokeNextCycle(async () =>
+            app.Invoke(async () =>
             {
                 app.LayoutRoot.Add(new TextBox() { Value = "SomeText".ToWhite() }).Fill();
                 await app.RequestPaintAsync();
@@ -28,7 +29,7 @@ namespace ArgsTests.CLI.Controls
                 app.Stop();
             });
 
-            app.Start().Wait();
+            app.Run();
             app.AssertThisTestMatchesLKG();
         }
 

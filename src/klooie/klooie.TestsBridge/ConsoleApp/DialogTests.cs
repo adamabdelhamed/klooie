@@ -1,4 +1,5 @@
 ﻿using klooie;
+using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using PowerArgs.Cli;
@@ -16,7 +17,8 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void ShowMessageBasicString()
         {
-            var app = new CliTestHarness(this.TestContext, 80,20, true);
+            CliTestHarness.SetConsoleSize(80, 20);
+            var app = new CliTestHarness(this.TestContext, true);
 
             app.InvokeNextCycle(async () =>
             {
@@ -42,7 +44,7 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void ShowYesConfirmation()
         {
-            var app = new CliTestHarness(this.TestContext, 80, 20, true);
+            var app = new CliTestHarness(this.TestContext, true);
 
             app.InvokeNextCycle(async () =>
             {
@@ -84,7 +86,7 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void ShowTextInput()
         {
-            var app = new CliTestHarness(this.TestContext, 80, 20, true);
+            var app = new CliTestHarness(this.TestContext, true);
 
             app.InvokeNextCycle(async () =>
             {
@@ -119,7 +121,8 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void ShowEnumOptions()
         {
-            var app = new CliTestHarness(this.TestContext, 80, 20, true);
+            CliTestHarness.SetConsoleSize(80,20);
+            var app = new CliTestHarness(this.TestContext, true);
 
             app.InvokeNextCycle(async () =>
             {

@@ -18,7 +18,8 @@ public class ConsoleBitmapTests
         var centerX = bitmap.Width / 2;
         var centerY = bitmap.Height / 2;
 
-        var app = new KlooieTestHarness(TestContext, bitmap.Width, bitmap.Height, true);
+        KlooieTestHarness.SetConsoleSize(bitmap.Width, bitmap.Height);
+        var app = new KlooieTestHarness(TestContext, true);
 
         app.InvokeNextCycle(async () =>
         {
@@ -104,7 +105,8 @@ public class ConsoleBitmapTests
         var centerX = bitmap.Width / 2;
         var centerY = bitmap.Height / 2;
 
-        var app = new KlooieTestHarness(TestContext, bitmap.Width, bitmap.Height, true);
+        KlooieTestHarness.SetConsoleSize(bitmap.Width, bitmap.Height);
+        var app = new KlooieTestHarness(TestContext, true);
 
         app.InvokeNextCycle(async () =>
         {
@@ -179,8 +181,9 @@ public class ConsoleBitmapTests
     public void ConsoleBitmap_DrawRect()
     {
         var bitmap = new ConsoleBitmap(80, 30);
-        var app = new KlooieTestHarness(TestContext, bitmap.Width, bitmap.Height, true);
-
+        KlooieTestHarness.SetConsoleSize(bitmap.Width, bitmap.Height);
+        var app = new KlooieTestHarness(TestContext, true);
+       
         app.InvokeNextCycle(async () =>
         {
             app.LayoutRoot.Add(new BitmapControl() { Bitmap = bitmap }).Fill();

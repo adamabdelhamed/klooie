@@ -61,9 +61,14 @@ namespace ArgsTests.CLI
         public string CurrentTestRecordingLKGFilePath => Path.Combine(CurrentTestLKGPath, "Recording.cv");
         public string CurrentTestMetadataLKGFilePath => Path.Combine(CurrentTestLKGPath, "Metadata.json");
 
-        public CliTestHarness(TestContext testContext,int w, int h, bool keyframeMode = false) : base(w,h)
+        public static void SetConsoleSize(int w, int h)
         {
-            Init(testContext, keyframeMode);
+            ConsoleProvider.Current = new KlooieTestConsole()
+            {
+                BufferWidth = w,
+                WindowWidth = w,
+                WindowHeight = h+1
+            };
         }
 
         public CliTestHarness(TestContext testContext, bool keyframeMode = false) 

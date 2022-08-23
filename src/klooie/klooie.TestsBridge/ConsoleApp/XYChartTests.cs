@@ -149,9 +149,10 @@ namespace ArgsTests.CLI.Controls
 
 
 
-        public void RenderChartTestCommon(XYChartOptions options, int w = 80, int h = 30)
+        public void RenderChartTestCommon(XYChartOptions options)
         {
-            var app = new CliTestHarness(this.TestContext, w, h, true) { SetFocusOnStart = false};
+            CliTestHarness.SetConsoleSize(80, 30);
+            var app = new CliTestHarness(this.TestContext, true) { SetFocusOnStart = false};
             app.InvokeNextCycle(() => app.LayoutRoot.Add(new XYChart(options)).Fill());
             app.InvokeNextCycle(async () =>
             {

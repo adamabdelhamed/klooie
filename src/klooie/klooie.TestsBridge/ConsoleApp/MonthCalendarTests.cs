@@ -15,7 +15,8 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void TestMonthCalendarBasicRender()
         {
-            var app = new CliTestHarness(this.TestContext, MonthCalendar.MinWidth, MonthCalendar.MinHeight, true);
+            CliTestHarness.SetConsoleSize(MonthCalendar.MinWidth, MonthCalendar.MinHeight);
+            var app = new CliTestHarness(this.TestContext, true);
             app.InvokeNextCycle(() => app.LayoutRoot.Add(new MonthCalendar(new MonthCalendarOptions() { Year = 2000, Month = 1 })).Fill());
             app.InvokeNextCycle(async () =>
             {
@@ -30,7 +31,8 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void TestMonthCalendarFocusAndNav()
         {
-            var app = new CliTestHarness(this.TestContext, MonthCalendar.MinWidth, MonthCalendar.MinHeight, true);
+            CliTestHarness.SetConsoleSize(MonthCalendar.MinWidth, MonthCalendar.MinHeight);
+            var app = new CliTestHarness(this.TestContext, true);
             app.InvokeNextCycle(async () =>
             {
                 var calendar = app.LayoutRoot.Add(new MonthCalendar(new MonthCalendarOptions() { Year = 2000, Month = 1 })).Fill();

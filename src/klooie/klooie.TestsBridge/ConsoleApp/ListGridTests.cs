@@ -71,7 +71,7 @@ namespace ArgsTests.CLI.Controls
                 });
             }
 
-            var app = new CliTestHarness(TestContext, 80, 20, true) {  };
+            var app = new CliTestHarness(TestContext, true) {  };
 
             var dataGrid = new ListGrid<Item>(new ListGridOptions<Item>()
             {
@@ -128,7 +128,8 @@ namespace ArgsTests.CLI.Controls
                 });
             }
 
-            var app = new CliTestHarness(TestContext, 80, 20, true) { SecondsBetweenKeyframes = .05 };
+            CliTestHarness.SetConsoleSize(80, 20);
+            var app = new CliTestHarness(TestContext, true) { SecondsBetweenKeyframes = .05 };
 
             var dataGrid = new ListGrid<Item>(new ListGridOptions<Item>()
             {
@@ -193,7 +194,8 @@ namespace ArgsTests.CLI.Controls
                 });
             }
 
-            var app = new CliTestHarness(TestContext, 80, 20, true) { };
+            CliTestHarness.SetConsoleSize(80, 20);
+            var app = new CliTestHarness(TestContext, true) { };
 
             var dataGrid = new ListGrid<Item>(new ListGridOptions<Item>()
             {
@@ -251,7 +253,8 @@ namespace ArgsTests.CLI.Controls
                 });
             }
 
-            var app = new CliTestHarness(TestContext, 80, 20, true) { };
+            CliTestHarness.SetConsoleSize(80, 20);
+            var app = new CliTestHarness(TestContext, true) { };
 
             var dataGrid = new ListGrid<Item>(new ListGridOptions<Item>()
             {

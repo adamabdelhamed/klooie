@@ -21,11 +21,13 @@ namespace ArgsTests.CLI
                 new { Name = "Bob", State = "New Jersey" }
             });
 
-            var app = new CliTestHarness(this.TestContext, 80,30);
+            CliTestHarness.SetConsoleSize(80, 30);
+            var app = new CliTestHarness(this.TestContext);
 
-            app.InvokeNextCycle(() =>
+            app.Invoke(() =>
             {
                 app.LayoutRoot.Add(grid).Fill();
+                grid.Focus();
                 app.SetTimeout(() => app.SendKey(new ConsoleKeyInfo((char)0, ConsoleKey.DownArrow, false,false,false)), TimeSpan.FromMilliseconds(333));
                 app.SetTimeout(() => app.SendKey(new ConsoleKeyInfo((char)0, ConsoleKey.UpArrow, false, false, false)), TimeSpan.FromMilliseconds(666));
                 app.SetTimeout(() => app.Stop(), TimeSpan.FromMilliseconds(1000));

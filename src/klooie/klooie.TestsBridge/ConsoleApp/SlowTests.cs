@@ -16,7 +16,8 @@ namespace ArgsTests.CLI
         [TestMethod]
         public void TestThreeMonthCalendarBasicRender()
         {
-            var app = new CliTestHarness(this.TestContext, 120, 40);
+            CliTestHarness.SetConsoleSize(120,40);
+            var app = new CliTestHarness(this.TestContext);
             app.Invoke(async () =>
             {
                 var carousel = new ThreeMonthCarousel(new ThreeMonthCarouselOptions() { Month = 1, Year = 2000 });
@@ -55,7 +56,8 @@ namespace ArgsTests.CLI
         [TestMethod]
         public void TestTextBoxBlinkState()
         {
-            var app = new CliTestHarness(this.TestContext, 9, 1);
+            CliTestHarness.SetConsoleSize(9,1);
+            var app = new CliTestHarness(this.TestContext);
             app.Invoke(() =>
             {
                 app.LayoutRoot.Add(new TextBox() { Value = "SomeText".ToWhite() }).Fill();

@@ -16,7 +16,8 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void TestScrollableContentBasic()
         {
-            var app = new CliTestHarness(this.TestContext, 80, 10, true);
+            CliTestHarness.SetConsoleSize(80, 10);
+            var app = new CliTestHarness(this.TestContext, true);
             app.SecondsBetweenKeyframes = .1f;
             app.LayoutRoot.Background = RGB.Red;
             app.InvokeNextCycle(async () =>

@@ -14,7 +14,8 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void TestFixedAspectRatio()
         {
-            var app = new CliTestHarness(this.TestContext, 130, 40, true);
+            CliTestHarness.SetConsoleSize(130, 40);
+            var app = new CliTestHarness(this.TestContext, true);
             app.SecondsBetweenKeyframes = .05f;
             app.InvokeNextCycle(async () =>
             {

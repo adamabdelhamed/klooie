@@ -15,7 +15,7 @@ namespace ArgsTests.CLI
         [TestMethod]
         public void TestAsyncAwaitWithinApp()
         {
-            var app = new ConsoleApp(1, 1);
+            var app = new ConsoleApp();
             var appTask = app.Start();
 
             app.InvokeNextCycle(async () =>
@@ -37,7 +37,7 @@ namespace ArgsTests.CLI
         [TestMethod]
         public void TestAsyncAwaitWithinAppExceptionPath()
         {
-            var app = new ConsoleApp(1, 1);
+            var app = new ConsoleApp();
             var appTask = app.Start();
 
             app.InvokeNextCycle(async () =>

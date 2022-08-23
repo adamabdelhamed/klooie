@@ -14,7 +14,7 @@ namespace ArgsTests.CLI
         [TestCategory(Categories.ConsoleApp)]
         public void ConsoleAppLifecycleTestBasic()
         {
-            ConsoleApp app = new ConsoleApp(80, 10);
+            ConsoleApp app = new ConsoleApp();
             app.Invoke(() =>
             {
                 int addCounter = 0, removeCounter = 0;
@@ -62,7 +62,7 @@ namespace ArgsTests.CLI
         [TestMethod]
         public void EnsureCantReuseControls()
         {
-            ConsoleApp app = new ConsoleApp(80, 10);
+            ConsoleApp app = new ConsoleApp();
             app.Invoke(() =>
             {
                 var panel = app.LayoutRoot.Add(new ConsolePanel());

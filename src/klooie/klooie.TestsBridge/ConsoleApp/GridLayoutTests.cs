@@ -16,7 +16,8 @@ namespace ArgsTests.CLI.Controls
         [TestMethod]
         public void GridLayoutEndToEnd()
         {
-            var app = new CliTestHarness(this.TestContext, 80, 20, true);
+            CliTestHarness.SetConsoleSize(80, 20);
+            var app = new CliTestHarness(this.TestContext, true);
 
             app.InvokeNextCycle(async () =>
             {

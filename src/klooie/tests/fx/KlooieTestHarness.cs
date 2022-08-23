@@ -58,11 +58,15 @@ public class KlooieTestHarness : ConsoleApp
     public string CurrentTestRecordingLKGFilePath => Path.Combine(CurrentTestLKGPath, "Recording.cv");
     public string CurrentTestMetadataLKGFilePath => Path.Combine(CurrentTestLKGPath, "Metadata.json");
 
-    public KlooieTestHarness(TestContext testContext, int w, int h, bool keyframeMode = false) : base(w, h)
+    public static void SetConsoleSize(int w, int h)
     {
-        Init(testContext, keyframeMode);
+        ConsoleProvider.Current = new KlooieTestConsole()
+        {
+            BufferWidth = w,
+            WindowWidth = w,
+            WindowHeight = h + 1
+        };
     }
-
     public KlooieTestHarness(TestContext testContext, bool keyframeMode = false)
     {
         Init(testContext, keyframeMode);

@@ -89,9 +89,10 @@ namespace ArgsTests.CLI.Recording
         [TestMethod]
         public void TestPlaybackEndToEnd()
         {
-            var app = new CliTestHarness(this.TestContext, 80, 30);
+            CliTestHarness.SetConsoleSize(80, 30);
+            var app = new CliTestHarness(this.TestContext);
 
-            app.InvokeNextCycle(async () =>
+            app.Invoke(async () =>
             {
                 int w = 10, h = 1;
                 var temp = Path.GetTempFileName();

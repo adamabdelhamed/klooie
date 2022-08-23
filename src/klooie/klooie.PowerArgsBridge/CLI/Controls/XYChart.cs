@@ -354,30 +354,6 @@ namespace PowerArgs.Cli
         }
 
         /// <summary>
-        /// Shows the data in a chart via an interactive console app
-        /// </summary>
-        /// <param name="data">the data points, where each inner array is expected to have 2 values, the first being the X value and the second being the Y value</param>
-        public static void Show(IEnumerable<double[]> data) => Show(data.Select(d => new DataPoint() { X = d[0], Y = d[1] }));
-
-        /// <summary>
-        /// Shows the data in a chart via an interactive console app
-        /// </summary>
-        /// <param name="data">the data points, where the first item in the tuple is the X value and the second is the Y value</param>
-        public static void Show(IEnumerable<Tuple<double, double>> data) => Show(data.Select(d => new DataPoint() { X = d.Item1, Y = d.Item2 }));
-
-        /// <summary>
-        /// Shows the data in a chart via an interactive console app
-        /// </summary>
-        /// <param name="data">the data points to plot</param>
-        public static void Show(IEnumerable<DataPoint> data) => Show(new XYChartOptions() { Data = new List<Series>() { new Series() { Points = data.ToList() } } });
-
-        /// <summary>
-        /// Shows the data in a chart via an interactive console app
-        /// </summary>
-        /// <param name="options">options used to render the chart</param>
-        public static void Show(XYChartOptions options) => ConsoleApp.Show(new XYChart(options));
-
-        /// <summary>
         /// Re-evaluates the data and re-renders the chart. You need to call this method if you have
         /// modified the data since the last refresh or since calling the chart's constructor
         /// </summary>
