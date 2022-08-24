@@ -6,6 +6,9 @@ public struct Thickness
     public int Top { get; set; }
     public int Bottom { get; set; }
 
+    public int HorizontalPadding => Left + Right;
+    public int VerticalPadding => Top + Bottom;
+
     public Thickness(int l, int r, int t, int b)
     {
         this.Left = l;

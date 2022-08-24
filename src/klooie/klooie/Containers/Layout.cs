@@ -41,36 +41,32 @@ public static class Layout
         return height;
     }
 
-    public static T CenterBoth<T>(this T child, Container parent = null) where T : ConsoleControl => 
-        child.CenterHorizontally(parent).CenterVertically(parent);
+    public static T CenterBoth<T>(this T child) where T : ConsoleControl => 
+        child.CenterHorizontally().CenterVertically();
 
 
-    public static T CenterVertically<T>(this T child, Container parent = null) where T : ConsoleControl
+    public static T CenterVertically<T>(this T child) where T : ConsoleControl
     {
-        return DoTwoWayLayoutAction(child, parent, (c, p) =>
+        return DoTwoWayLayoutAction(child, (c, p) =>
         {
             if (p.Height == 0 || c.Height == 0) return;
-            var gap = p.Height - c.Height;
-            var y = gap / 2;
-            c.Y = Math.Max(0, y);
+            c.Y = ConsoleMath.Round((p.Height - c.Height) / 2f);
         });
     }
 
-    public static T CenterHorizontally<T>(this T child, Container parent = null) where T : ConsoleControl
+    public static T CenterHorizontally<T>(this T child) where T : ConsoleControl
     {
-        return DoTwoWayLayoutAction(child, parent, (c, p) =>
+        return DoTwoWayLayoutAction(child, (c, p) =>
         {
             if (p.Width == 0 || c.Width == 0) return;
-            var gap = p.Width - c.Width;
-            var x = gap / 2;
-            c.X = Math.Max(0, x);
+            c.X = ConsoleMath.Round((p.Width - c.Width) / 2f);
         });
     }
 
-    public static T Fill<T>(this T child, Container parent = null, Thickness? padding = null) where T : ConsoleControl
+    public static T Fill<T>(this T child, Thickness? padding = null) where T : ConsoleControl
     {
         var effectivePadding = padding.HasValue ? padding.Value : new Thickness(0, 0, 0, 0);
-        return DoParentTriggeredLayoutAction(child, parent, (c, p) =>
+        return DoParentTriggeredLayoutAction(child, (c, p) =>
         {
             if (p.Width == 0 || p.Height == 0) return;
 
@@ -93,35 +89,10 @@ public static class Layout
         });
     }
 
-
-    public static T FillAndPreserveAspectRatio<T>(this T child, Container parent = null, Thickness? padding = null) where T : ConsoleControl
+    public static T FillHorizontally<T>(this T child, Thickness? padding = null) where T : ConsoleControl
     {
         var effectivePadding = padding.HasValue ? padding.Value : new Thickness(0, 0, 0, 0);
-        return DoParentTriggeredLayoutAction(child, parent, (c, p) =>
-        {
-            if (p.Width == 0 || p.Height == 0) return;
-
-            var aspectRatio = (float)c.Width / c.Height;
-            var newW = p.Width - (effectivePadding.Left + effectivePadding.Right);
-            var newH = ConsoleMath.Round(newW / aspectRatio);
-
-            if (newH > p.Height)
-            {
-                newH = p.Height;
-                newW = ConsoleMath.Round(newH * aspectRatio);
-            }
-
-            var newLeft = (p.Width - newW) / 2;
-            var newTop = (p.Height - newH) / 2;
-
-            c.Bounds = new RectF(newLeft, newTop, newW, newH);
-        });
-    }
-
-    public static T FillHorizontally<T>(this T child, Container parent = null, Thickness? padding = null) where T : ConsoleControl
-    {
-        var effectivePadding = padding.HasValue ? padding.Value : new Thickness(0, 0, 0, 0);
-        return DoParentTriggeredLayoutAction(child, parent, (c, p) =>
+        return DoParentTriggeredLayoutAction(child, (c, p) =>
         {
             if (p.Width == 0) return;
             if (p.Width - (effectivePadding.Right + effectivePadding.Left) <= 0) return;
@@ -129,43 +100,43 @@ public static class Layout
         });
     }
 
-    public static T FillVertically<T>(this T child, Container parent = null, Thickness? padding = null) where T : ConsoleControl
+    public static T FillVertically<T>(this T child, Thickness? padding = null) where T : ConsoleControl
     {
         var effectivePadding = padding.HasValue ? padding.Value : new Thickness(0, 0, 0, 0);
-        return DoParentTriggeredLayoutAction(child, parent, (c, p) => c.Bounds = new RectF(c.X, effectivePadding.Top, c.Width, p.Height - (effectivePadding.Top + effectivePadding.Bottom)));
+        return DoParentTriggeredLayoutAction(child, (c, p) => c.Bounds = new RectF(c.X, effectivePadding.Top, c.Width, p.Height - (effectivePadding.Top + effectivePadding.Bottom)));
     }
 
     public static T DockToBottom<T>(this T child, Container parent = null, int padding = 0) where T : ConsoleControl =>
-        DoTwoWayLayoutAction(child, parent, (c, p) => c.Y = p.Height - c.Height - padding);
+        DoTwoWayLayoutAction(child, (c, p) => c.Y = p.Height - c.Height - padding);
 
 
-    public static T DockToTop<T>(this T child, Container parent = null, int padding = 0) where T : ConsoleControl =>
-        DoTwoWayLayoutAction(child, parent, (c, p) => c.Y = padding);
+    public static T DockToTop<T>(this T child, int padding = 0) where T : ConsoleControl =>
+        DoTwoWayLayoutAction(child, (c, p) => c.Y = padding);
 
 
-    public static T DockToRight<T>(this T child, Container parent = null, int padding = 0) where T : ConsoleControl =>
-        DoTwoWayLayoutAction(child, parent, (c, p) => c.X = p.Width - c.Width - padding);
+    public static T DockToRight<T>(this T child, int padding = 0) where T : ConsoleControl =>
+        DoTwoWayLayoutAction(child, (c, p) => c.X = p.Width - c.Width - padding);
 
 
-    public static T DockToLeft<T>(this T child, Container parent = null, int padding = 0) where T : ConsoleControl =>
-        DoTwoWayLayoutAction(child, parent, (c, p) => c.X = padding);
+    public static T DockToLeft<T>(this T child, int padding = 0) where T : ConsoleControl =>
+        DoTwoWayLayoutAction(child, (c, p) => c.X = padding);
 
 
-    private static T DoTwoWayLayoutAction<T>(this T child, Container parent, Action<T, Container> a) where T : ConsoleControl
+    private static T DoTwoWayLayoutAction<T>(this T child, Action<T, Container> a) where T : ConsoleControl
     {
-        parent = parent ?? child.Parent;
-        var syncAction = () => a(child, parent);
-        child.SubscribeForLifetime(nameof(ConsoleControl.Bounds), syncAction, parent);
-        parent.SubscribeForLifetime(nameof(ConsoleControl.Bounds), syncAction, parent);
+        if (child.Parent == null) throw new ArgumentException("This control does yet have a parent");
+        var syncAction = () => a(child, child.Parent);
+        child.SubscribeForLifetime(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
+        child.Parent.SubscribeForLifetime(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
         syncAction();
         return child;
     }
 
-    private static T DoParentTriggeredLayoutAction<T>(this T child, Container parent, Action<T, Container> a) where T : ConsoleControl
+    private static T DoParentTriggeredLayoutAction<T>(this T child, Action<T, Container> a) where T : ConsoleControl
     {
-        parent = parent ?? child.Parent;
-        var syncAction = () => a(child, parent);
-        parent.SubscribeForLifetime(nameof(ConsoleControl.Bounds), syncAction, parent);
+        if (child.Parent == null) throw new ArgumentException("This control does yet have a parent");
+        var syncAction = () => a(child, child.Parent);
+        child.Parent.SubscribeForLifetime(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
         syncAction();
         return child;
     }
