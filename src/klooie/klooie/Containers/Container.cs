@@ -1,5 +1,24 @@
 ﻿using PowerArgs;
 namespace klooie;
+
+public enum CompositionMode
+{
+    /// <summary>
+    /// The default. The control being painted always paints over whatever pixel is beneath it
+    /// </summary>
+    PaintOver = 0,
+    /// <summary>
+    /// If the control being painted's pixel has a non-default BG and the pixel it's being
+    /// painted on also has a non-default BG then use the background color of the existing pixel instead
+    /// of the control pixel. Otherwise behaves like PaintOver.
+    /// </summary>
+    BlendBackground = 1,
+    /// <summary>
+    /// If the control being painted's pixel would end up looking invisible on the parent panel
+    /// then skip drawing it so that the pixel will end up looking transparent.
+    /// </summary>
+    BlendVisible = 2,
+}
 public abstract class Container : ConsoleControl
 {
     internal Container() { }
@@ -107,39 +126,12 @@ public abstract class Container : ConsoleControl
             for (var y = minY; y < maxY; y++)
             {
                 var controlPixel = control.Bitmap.Pixels[x - position.X][y - position.Y];
-
-                if (controlPixel.BackgroundColor != ConsoleString.DefaultBackgroundColor)
-                {
-                    Bitmap.Pixels[x][y] = controlPixel;
-                }
-                else
-                {
-                    var myPixel = Bitmap.Pixels[x][y];
-                    if (myPixel.BackgroundColor != ConsoleString.DefaultBackgroundColor)
-                    {
-                        var composedValue = new ConsoleCharacter(controlPixel.Value, controlPixel.ForegroundColor, myPixel.BackgroundColor);
-                        Bitmap.Pixels[x][y] = composedValue;
-                    }
-                    else
-                    {
-                        Bitmap.Pixels[x][y] = controlPixel;
-                    }
-                }
+                var myPixel = Bitmap.Pixels[x][y];
+                var controlIsNonDefaultBg = controlPixel.BackgroundColor != ConsoleString.DefaultBackgroundColor;
+                var pixelIsNonDefaultBg = myPixel.BackgroundColor != ConsoleString.DefaultBackgroundColor;
+                var blend = controlIsNonDefaultBg && pixelIsNonDefaultBg;
+                Bitmap.Pixels[x][y] = blend ? new ConsoleCharacter(controlPixel.Value, controlPixel.ForegroundColor, myPixel.BackgroundColor) : controlPixel;
             }
-        }
-    }
-
-    private bool IsVisibleOnMyPanel(in ConsoleCharacter pixel)
-    {
-        var c = pixel.Value;
-
-        if (c == ' ')
-        {
-            return pixel.BackgroundColor != Background;
-        }
-        else
-        {
-            return pixel.ForegroundColor != Background || pixel.BackgroundColor != Background;
         }
     }
 
@@ -155,14 +147,8 @@ public abstract class Container : ConsoleControl
             for (var y = minY; y < maxY; y++)
             {
                 var controlPixel = control.Bitmap.Pixels[x - position.X][y - position.Y];
-
-                var controlPixelHasRenderableContent = IsVisibleOnMyPanel(controlPixel);
-
-
-                if (controlPixelHasRenderableContent)
-                {
-                    Bitmap.Pixels[x][y] = controlPixel;
-                }
+                var vis = controlPixel.Value == ' ' ? controlPixel.BackgroundColor != Background : controlPixel.ForegroundColor != Background || controlPixel.BackgroundColor != Background;
+                Bitmap.Pixels[x][y] = vis ? controlPixel : Bitmap.Pixels[x][y];
             }
         }
     }

@@ -1,11 +1,5 @@
 ﻿using PowerArgs;
 namespace klooie;
-public enum CompositionMode
-{
-    PaintOver = 0,
-    BlendBackground = 1,
-    BlendVisible = 2,
-}
 
 /// <summary>
 /// A console control that has nested control within its bounds
