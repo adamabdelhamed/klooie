@@ -23,8 +23,14 @@ public abstract class Container : ConsoleControl
 {
     internal Container() { }
 
+    /// <summary>
+    /// Gets the children of this container
+    /// </summary>
     public abstract IEnumerable<ConsoleControl> Children { get; }
 
+    /// <summary>
+    /// Gets all descendents of this container
+    /// </summary>
     public IEnumerable<ConsoleControl> Descendents
     {
         get

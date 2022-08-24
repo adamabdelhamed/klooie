@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
+using System.Linq;
 
 namespace klooie.tests;
 
@@ -79,6 +80,30 @@ public class ContainerTests
             app.Stop();
         });
 
+        app.Run();
+    }
+
+    [TestMethod]
+    public void Container_ChildrenAndDescendents()
+    {
+        var app = new ConsoleApp();
+        app.Invoke(async () =>
+        {
+            var p1 = app.LayoutRoot.Add(new ConsolePanel()).Fill();
+            var p2 = p1.Add(new ConsolePanel()).Fill();
+            Assert.AreEqual(1, app.LayoutRoot.Children.Count());
+            Assert.AreSame(p1, app.LayoutRoot.Children.Single());
+
+            Assert.AreEqual(2, app.LayoutRoot.Descendents.Count());
+            Assert.AreSame(p2, app.LayoutRoot.Descendents.Last());
+
+            Assert.AreEqual(1, p1.Descendents.Count());
+            Assert.AreSame(p2, p1.Descendents.Single());
+
+            Assert.AreEqual(0, p2.Children.Count());
+            Assert.AreEqual(0, p2.Descendents.Count());
+            app.Stop();
+        });
         app.Run();
     }
 }
