@@ -1,12 +1,10 @@
-﻿using System.Threading.Tasks;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
-    public class ColorFilter : IConsoleControlFilter
+    public class ForegroundColorFilter : IConsoleControlFilter
     {
         public RGB Color { get; set; }
 
-        public ColorFilter(in RGB color)
+        public ForegroundColorFilter(in RGB color)
         {
             this.Color = color;
         }
@@ -23,20 +21,86 @@ namespace PowerArgs.Cli
                 for (var y = 0; y < bitmap.Height; y++)
                 {
                     var pixel = bitmap.GetPixel(x, y);
-                   
-                    if (pixel.BackgroundColor != pixel.ForegroundColor && pixel.BackgroundColor == RGB.Black && pixel.Value != ' ')
+                    if (pixel.Value == ' ') continue;
+                    bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, Color, pixel.BackgroundColor));
+                }
+            }
+        }
+    }
+
+    public class BackgroundColorFilter : IConsoleControlFilter
+    {
+        public RGB Color { get; set; }
+
+        public BackgroundColorFilter(in RGB color)
+        {
+            this.Color = color;
+        }
+
+        /// <summary>
+        /// The control to filter
+        /// </summary>
+        public ConsoleControl Control { get; set; }
+
+        public void Filter(ConsoleBitmap bitmap)
+        {
+            for (var x = 0; x < bitmap.Width; x++)
+            {
+                for (var y = 0; y < bitmap.Height; y++)
+                {
+                    var pixel = bitmap.GetPixel(x, y);
+                    bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, pixel.ForegroundColor, Color));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// A filter that creates contrast between the foreground and background using the given color
+    /// </summary>
+    public class ContrastColorFilter : IConsoleControlFilter
+    {
+        /// <summary>
+        /// The color of the filter
+        /// </summary>
+        public RGB Color { get; set; }
+
+        /// <summary>
+        /// Creates a new filter using the given color
+        /// </summary>
+        /// <param name="color">the filter color</param>
+        public ContrastColorFilter(in RGB color)
+        {
+            this.Color = color;
+        }
+
+        /// <summary>
+        /// The control to filter
+        /// </summary>
+        public ConsoleControl Control { get; set; }
+
+        public void Filter(ConsoleBitmap bitmap)
+        {
+            for (var x = 0; x < bitmap.Width; x++)
+            {
+                for (var y = 0; y < bitmap.Height; y++)
+                {
+                    var pixel = bitmap.GetPixel(x, y);
+
+                    if (pixel.BackgroundColor != pixel.ForegroundColor && pixel.BackgroundColor == ConsoleString.DefaultBackgroundColor && pixel.Value != ' ')
                     {
                         bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, Color));
                     }
 
-                    if (pixel.BackgroundColor != RGB.Black)
+                    if (pixel.BackgroundColor != ConsoleString.DefaultBackgroundColor)
                     {
-                        bitmap.SetPixel(x,y, new ConsoleCharacter(pixel.Value, pixel.ForegroundColor, Color));
+                        bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, pixel.ForegroundColor, Color));
                     }
                 }
             }
         }
     }
+
 
     public class FadeOutFilter : IConsoleControlFilter
     {

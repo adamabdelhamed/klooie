@@ -296,6 +296,18 @@ public class ConsoleControl : Rectangular
     public void AddTag(string tag) => GetTagsLazy(true).Add(tag);
 
     /// <summary>
+    /// Adds a key / value tag
+    /// </summary>
+    /// <param name="key">the key</param>
+    /// <param name="value">the value</param>
+    /// <exception cref="ArgumentException"></exception>
+    public void AddValueTag(string key, string value)
+    {
+        if (key.Contains(":")) throw new ArgumentException("key cannot contain a colon");
+        AddTag($"{key}:{value}");
+    }
+
+    /// <summary>
     /// Adds a set of tags to this control
     /// </summary>
     /// <param name="tags">the tags to add</param>
@@ -305,7 +317,7 @@ public class ConsoleControl : Rectangular
     /// Removes a tag from this control
     /// </summary>
     /// <param name="tag"></param>
-    public void RemoveTag(string tag) => GetTagsLazy(true).Remove(tag);
+    public bool RemoveTag(string tag) => GetTagsLazy(HasSimpleTag(tag) || HasValueTag(tag)) == null ? false : tags.Remove(tag);
 
     /// <summary>
     /// Tests to see if there is a key value tag with the given key
