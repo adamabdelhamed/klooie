@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,24 +55,10 @@ namespace PowerArgs.Cli
 
         private void InitLayout()
         {
-            layout = ProtectedPanel.Add(new GridLayout(new GridLayoutOptions()
-            {
-                Columns = new List<GridColumnDefinition>()
-                {
-                    new GridColumnDefinition(){ Type = GridValueType.Pixels, Width = 15 },
-                    new GridColumnDefinition(){ Type = GridValueType.RemainderValue, Width = 1 },
-                },
-                Rows = new List<GridRowDefinition>()
-                {
-                    new GridRowDefinition(){ Type = GridValueType.Pixels, Height = 3 },
-                    new GridRowDefinition(){ Type = GridValueType.RemainderValue, Height = 1 }
-                }
-            })).Fill();
-            layout.RefreshLayout();
+            layout = ProtectedPanel.Add(new GridLayout("15p;1r","3p;1r")).Fill();
             commandBar = layout.Add(new ConsolePanel(), 0, 0, columnSpan: 2);
             framePanel = layout.Add(new ConsolePanel(), 0, 1);
             previewPanel = layout.Add(new ConsolePanel(), 1, 1);
-            layout.RefreshLayout();
         }
 
         private void InitFramePanel()
@@ -667,3 +654,4 @@ namespace PowerArgs.Cli
         }
     }
 }
+*/

@@ -14,6 +14,31 @@ public class GridLayoutOptions
     /// Row definitions
     /// </summary>
     public List<GridRowDefinition> Rows { get; set; } = new List<GridRowDefinition>();
+
+    /// <summary>
+    /// Converts the columns to a column spec
+    /// </summary>
+    /// <returns>a column spec</returns>
+    public string GetColumnSpec() => ToSpec(Columns);
+
+    /// <summary>
+    /// Converts the rows to a row spec
+    /// </summary>
+    /// <returns></returns>
+    public string GetRowSpec() => ToSpec(Rows);
+
+    private string ToSpecType(GridValueType type) => 
+        type == GridValueType.Percentage ? "%" : 
+        type == GridValueType.Pixels ? "p" : 
+        type == GridValueType.RemainderValue ? "r" : 
+        throw new NotSupportedException("Unknown type: "+type);
+
+    private string ToSpec<T>(List<T> spec) where T : GridValueDefinition
+    {
+        var ret = string.Concat(spec.Select(s => $"{s.Value}{ToSpecType(s.Type)};"));
+        ret = ret.Substring(0, ret.Length - 1);
+        return ret;
+    }
 }
 
 /// <summary>
@@ -52,72 +77,31 @@ public abstract class GridValueDefinition
     internal abstract double Value { get; }
 }
 
-/// <summary>
-/// An object representation of a row height
-/// </summary>
-public class GridRowDefinition : GridValueDefinition
-{
     /// <summary>
-    /// The magnitude of the height
+    /// An object representation of a row height
     /// </summary>
-    public double Height { get; set; }
+    public class GridRowDefinition : GridValueDefinition
+    {
+        /// <summary>
+        /// The magnitude of the height
+        /// </summary>
+        public double Height { get; set; }
 
-    internal override double Value => Height;
-
-    /// <summary>
-    /// Creates a pixel based row definition
-    /// </summary>
-    /// <param name="pixels">the number of pixels</param>
-    /// <returns>a pixel based row definition</returns>
-    public static GridRowDefinition Pixels(int pixels) => new GridRowDefinition() { Height = pixels, Type = GridValueType.Pixels };
+        internal override double Value => Height;
+    }
 
     /// <summary>
-    /// Creates a percentage based row definition
+    /// An object representation of either a column width or a row height
     /// </summary>
-    /// <param name="percentage">the percentage, from 0 to 1</param>
-    /// <returns>a percentage based row definition</returns>
-    public static GridRowDefinition Percentage(double percentage) => new GridRowDefinition() { Height = percentage, Type = GridValueType.Percentage };
+    public class GridColumnDefinition : GridValueDefinition
+    {
+        /// <summary>
+        /// The magnitude of the width or height
+        /// </summary>
+        public double Width { get; set; }
 
-    /// <summary>
-    /// Creates a remainder based row definition
-    /// </summary>
-    /// <param name="remainder">the relative remainder value</param>
-    /// <returns>a remainder based row definition</returns>
-    public static GridRowDefinition Remainder(double remainder) => new GridRowDefinition() { Height = remainder, Type = GridValueType.RemainderValue };
-}
-
-/// <summary>
-/// An object representation of either a column width or a row height
-/// </summary>
-public class GridColumnDefinition : GridValueDefinition
-{
-    /// <summary>
-    /// The magnitude of the width or height
-    /// </summary>
-    public double Width { get; set; }
-
-    internal override double Value => Width;
-
-    /// <summary>
-    /// Creates a pixel based column definition
-    /// </summary>
-    /// <param name="pixels">the number of pixels</param>
-    /// <returns>a pixel based column definition</returns>
-    public static GridColumnDefinition Pixels(int pixels) => new GridColumnDefinition() { Width = pixels, Type = GridValueType.Pixels };
-    /// <summary>
-    /// Creates a percentage based column definition
-    /// </summary>
-    /// <param name="percentage">the percentage, from 0 to 1</param>
-    /// <returns>a percentage based column definition</returns>
-    public static GridColumnDefinition Percentage(double percentage) => new GridColumnDefinition() { Width = percentage, Type = GridValueType.Percentage };
-    /// <summary>
-    /// Creates a remainder based column definition
-    /// </summary>
-    /// <param name="remainder">the relative remainder value</param>
-    /// <returns>a remainder based column definition</returns>
-    public static GridColumnDefinition Remainder(double remainder) => new GridColumnDefinition() { Width = remainder, Type = GridValueType.RemainderValue };
-
-}
+        internal override double Value => Width;
+    }
 
 /// <summary>
 /// A control for laying out other controls in a grid layout.
@@ -133,7 +117,7 @@ public class GridLayout : ProtectedConsolePanel
         public int RowSpan { get; set; }
     }
 
-    public GridLayoutOptions Options { get; private set; }
+    private GridLayoutOptions options;
     private List<GridLayoutAssignment> layoutAssignments = new List<GridLayoutAssignment>();
     private int[] columnWidths;
     private int[] rowHeights;
@@ -141,21 +125,30 @@ public class GridLayout : ProtectedConsolePanel
     /// <summary>
     /// The number of columns in this grid
     /// </summary>
-    public int NumColumns => Options.Columns.Count;
+    public int NumColumns => options.Columns.Count;
 
     /// <summary>
     /// The number of rows in this grid
     /// </summary>
-    public int NumRows => Options.Rows.Count;
+    public int NumRows => options.Rows.Count;
 
     /// <summary>
-    /// Creates a new grid layout with the given options
+    /// Creates a layout using the given rowSpec and columnSpec. A spec
+    /// is a semi-colon delimited string where each entry represents a row or a column.
+    /// For example, a column spec for a 30 pixel wide menu area with a second column taking
+    /// up the remaining space would be "30p;1r" where 'p' stands for pixels and 'r' stands for remainder.
+    /// You can also use the '%' character to indicate a percentage spec.
     /// </summary>
-    /// <param name="options">the options</param>
-    public GridLayout(GridLayoutOptions options)
+    /// <param name="rowSpec">a row spec</param>
+    /// <param name="columnSpec">a column spec</param>
+    public GridLayout(string rowSpec, string columnSpec)
     {
-        this.Options = options;
-        this.SubscribeForLifetime(nameof(Bounds), HandleSizeChanged, this);
+        this.options = new GridLayoutOptions()
+        {
+            Rows = ParseSpec<GridRowDefinition>(rowSpec),
+            Columns = ParseSpec<GridColumnDefinition>(columnSpec),
+        };
+        this.SynchronizeForLifetime(nameof(Bounds), RefreshLayout, this);
         ProtectedPanel.Controls.Removed.SubscribeForLifetime(HandleControlRemoved, this);
     }
 
@@ -165,6 +158,7 @@ public class GridLayout : ProtectedConsolePanel
     /// <param name="col">the index of the column to inspect</param>
     /// <returns>the current column width for the given column index</returns>
     public int GetColumnWidth(int col) => columnWidths[col];
+
     /// <summary>
     /// Gets the current row heightfor the given row index
     /// </summary>
@@ -195,34 +189,20 @@ public class GridLayout : ProtectedConsolePanel
         layoutAssignments.Add(assignment);
         control.Bounds = GetCellArea(assignment);
         ProtectedPanel.Controls.Add(control);
-
-
         return control;
-    }
-
-    public void Move(ConsoleControl control, int column, int row, int columnSpan = 1, int rowSpan = 1)
-    {
-        var assignment = layoutAssignments.Where(a => a.Control == control).First();
-        assignment.Column = column;
-        assignment.Row = row;
-        assignment.ColumnSpan = columnSpan;
-        assignment.RowSpan = rowSpan;
-        control.Bounds = GetCellArea(assignment);
     }
 
     /// <summary>
     /// Removes the given control from the layout
     /// </summary>
     /// <param name="control">the control to remove</param>
-    public void Remove(ConsoleControl control)
-    {
-        ProtectedPanel.Controls.Remove(control);
-    }
-
-    public void Clear()
-    {
-        ProtectedPanel.Controls.Clear();
-    }
+    public void Remove(ConsoleControl control) => ProtectedPanel.Controls.Remove(control);
+    
+    /// <summary>
+    /// Removes all children from the layout
+    /// </summary>
+    public void Clear() => ProtectedPanel.Controls.Clear();
+    
 
     private void HandleControlRemoved(ConsoleControl c)
     {
@@ -236,15 +216,10 @@ public class GridLayout : ProtectedConsolePanel
         }
     }
 
-    private void HandleSizeChanged()
+    private void RefreshLayout()
     {
-        RefreshLayout();
-    }
-
-    public void RefreshLayout()
-    {
-        this.columnWidths = ConvertDefinitionsIntoAbsolutePixelSizes(Options.Columns.Select(c => c as GridValueDefinition).ToList(), this.Width);
-        this.rowHeights = ConvertDefinitionsIntoAbsolutePixelSizes(Options.Rows.Select(c => c as GridValueDefinition).ToList(), this.Height);
+        this.columnWidths = ConvertDefinitionsIntoAbsolutePixelSizes(options.Columns.Select(c => c as GridValueDefinition).ToList(), this.Width);
+        this.rowHeights = ConvertDefinitionsIntoAbsolutePixelSizes(options.Rows.Select(c => c as GridValueDefinition).ToList(), this.Height);
 
         foreach (var assignment in layoutAssignments)
         {
@@ -252,11 +227,8 @@ public class GridLayout : ProtectedConsolePanel
         }
     }
 
-    private RectF GetCellArea(GridLayoutAssignment assignment)
-    {
-        return GetCellArea(assignment.Column, assignment.Row, assignment.ColumnSpan, assignment.RowSpan);
-    }
-
+    private RectF GetCellArea(GridLayoutAssignment assignment) => GetCellArea(assignment.Column, assignment.Row, assignment.ColumnSpan, assignment.RowSpan);
+    
     private RectF GetCellArea(int column, int row, int columnSpan = 1, int rowSpan = 1)
     {
         var xOffset = 0;
@@ -360,6 +332,34 @@ public class GridLayout : ProtectedConsolePanel
         for (var i = 0; i < ret.Length; i++)
         {
             ret[i] = results[i];
+        }
+        return ret;
+    }
+
+    private static List<T> ParseSpec<T>(string theSpec) where T : GridValueDefinition
+    {
+        var vals = theSpec.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.RemoveEmptyEntries);
+        var ret = new List<T>();
+        foreach (var spec in vals)
+        {
+            if (string.IsNullOrWhiteSpace(spec)) throw new ArgumentException("null or whitespace definition");
+            var numberStr = spec.Substring(0, spec.Length - 1);
+            if (double.TryParse(numberStr, out double number) == false) throw new ArgumentException($"{numberStr} is not a number");
+            var type = spec.Substring(spec.Length - 1);
+
+            var unit = type == "p" ? GridValueType.Pixels :
+                       type == "%" ? GridValueType.Percentage :
+                       type == "r" ? GridValueType.RemainderValue :
+                       throw new ArgumentException($"unsupported grid value type: {type}");
+            number = unit == GridValueType.Percentage ? number / 100.0 : number;
+            if (typeof(T) == typeof(GridColumnDefinition))
+            {
+                ret.Add(new GridColumnDefinition() { Width = number, Type = unit } as T);
+            }
+            else
+            {
+                ret.Add(new GridRowDefinition() { Height = number, Type = unit } as T);
+            }
         }
         return ret;
     }

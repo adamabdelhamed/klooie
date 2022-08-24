@@ -17,14 +17,13 @@ namespace ArgsTests.CLI.Controls
         {
             CliTestHarness.SetConsoleSize(MonthCalendar.MinWidth, MonthCalendar.MinHeight);
             var app = new CliTestHarness(this.TestContext, true);
-            app.InvokeNextCycle(() => app.LayoutRoot.Add(new MonthCalendar(new MonthCalendarOptions() { Year = 2000, Month = 1 })).Fill());
-            app.InvokeNextCycle(async () =>
+            app.Invoke(async () =>
             {
-                await app.RequestPaintAsync();
-                app.RecordKeyFrame();
+                app.LayoutRoot.Add(new MonthCalendar(new MonthCalendarOptions() { Year = 2000, Month = 1 })).Fill();
+                await app.PaintAndRecordKeyFrameAsync();
                 app.Stop();
             });
-            app.Start().Wait();
+            app.Run();
             app.AssertThisTestMatchesLKG();
         }
 

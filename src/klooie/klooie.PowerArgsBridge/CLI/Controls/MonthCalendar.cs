@@ -90,7 +90,7 @@ namespace PowerArgs.Cli
         {
             var now = DateTime.Today;
             this.Options = options ?? new MonthCalendarOptions() { Year = now.Year, Month = now.Month };
-            Refresh();
+            SynchronizeForLifetime(nameof(Bounds), Refresh, this);
             SetupKeyboardInput();
         }
 
@@ -131,15 +131,8 @@ namespace PowerArgs.Cli
 
             }, this);
 
-            this.Focused.SubscribeForLifetime(() =>
-            {  
-                Refresh();
-            }, this);
-
-            this.Unfocused.SubscribeForLifetime(() =>
-            {
-                Refresh();
-            }, this);
+            this.Focused.SubscribeForLifetime(Refresh, this);
+            this.Unfocused.SubscribeForLifetime(Refresh, this);
         }
 
         /// <summary>
@@ -149,6 +142,11 @@ namespace PowerArgs.Cli
         {
             ClearState();
             InitGridLayout();
+            if (gridLayout == null)
+            {
+                SetupMinimumSizeExperience();
+                return;
+            }
             InitCellContainers();
             PopulateDayOfWeekLabels();
             PopulateCells();
@@ -180,50 +178,41 @@ namespace PowerArgs.Cli
                 gridOptions.Rows.Add(new GridRowDefinition() { Height = 1, Type = GridValueType.Pixels });
             }
 
-            // add the grid
-            gridLayout = this.ProtectedPanel.Add(new GridLayout(gridOptions)).CenterBoth();
-            gridLayout.RefreshLayout();
+            var dayOfWeekHeight = 3;
+            var leftOuterBorderWidth = 2;
+            if (Width < MinWidth || Height < MinHeight) return;
+            var cellWidth = (Width - leftOuterBorderWidth) / 7;
+            var rowHeight = (Height - dayOfWeekHeight) / NumberOfRowsNeeded;
 
-            // Adjust the dimensions of the grid layout whenever the parent size changes. This ensures that
-            // all cells are the same size. If we were to just let the grid layout do its thing then it would
-            // round down the last row /or column in some cases. 
-            this.SynchronizeForLifetime(nameof(Bounds), () =>
+            for (var i = 0; i < gridOptions.Columns.Count; i++)
             {
-                var dayOfWeekHeight = 3;
-                var leftOuterBorderWidth = 2;
-                if (Width < MinWidth || Height < MinHeight) return;
-                var cellWidth = (Width - leftOuterBorderWidth) / 7;
-                var rowHeight = (Height - dayOfWeekHeight) / NumberOfRowsNeeded;
+                var col = gridOptions.Columns[i];
+                col.Width = i == 0 ? cellWidth + leftOuterBorderWidth : cellWidth;
+                col.Type = GridValueType.Pixels;
+            }
 
-                for (var i = 0; i < gridOptions.Columns.Count; i++)
-                {
-                    var col = gridOptions.Columns[i];
-                    col.Width = i == 0 ? cellWidth + leftOuterBorderWidth : cellWidth;
-                    col.Type = GridValueType.Pixels;
-                }
+            var rowsAfterDayOfWeekHeaders = gridOptions.Rows.Skip(1);
+            foreach (var row in rowsAfterDayOfWeekHeaders)
+            {
+                row.Height = rowHeight;
+                row.Type = GridValueType.Pixels;
+            }
 
-                var rowsAfterDayOfWeekHeaders = gridOptions.Rows.Skip(1);
-                foreach (var row in rowsAfterDayOfWeekHeaders)
-                {
-                    row.Height = rowHeight;
-                    row.Type = GridValueType.Pixels;
-                }
-                gridLayout.Width = leftOuterBorderWidth + (cellWidth * 7);
-                gridLayout.Height = (rowHeight * NumberOfRowsNeeded) + dayOfWeekHeight;
-                gridLayout.RefreshLayout();
-            }, gridLayout);
+            // add the grid
+            gridLayout = this.ProtectedPanel.Add(new GridLayout(gridOptions.GetRowSpec(), gridOptions.GetColumnSpec())).CenterBoth();
+            gridLayout.Width = leftOuterBorderWidth + (cellWidth * 7);
+            gridLayout.Height = (rowHeight * NumberOfRowsNeeded) + dayOfWeekHeight;
         }
-
         /// <summary>
         /// create content panels for each cell so that other pieces of code don't need to worry about
         /// the grid layout implementation
         /// </summary>
         private void InitCellContainers()
         {
-            for (var x = 0; x < gridLayout.Options.Columns.Count; x++)
+            for (var x = 0; x < gridLayout.NumColumns; x++)
             {
                 // start at 1 since the first row is for day of week labels
-                for (var y = 1; y < gridLayout.Options.Rows.Count; y++)
+                for (var y = 1; y < gridLayout.NumRows; y++)
                 {
                     var key = GetKeyForCoordinates(y, x);
                     var outerPanel = new ConsolePanel() { Background = Foreground };
@@ -241,7 +230,6 @@ namespace PowerArgs.Cli
                     outerPanel.Add(new ConsolePanel() { Height = 1, Background = Foreground }).FillHorizontally().DockToBottom();
                 }
             }
-            gridLayout.RefreshLayout();
         }
 
         private void PopulateDayOfWeekLabels()
@@ -256,7 +244,7 @@ namespace PowerArgs.Cli
                 dayLabels.Add(label);
                 gridLayout.Add(panel, day, 0);
                 Func<int> smallestDayLabelWidth = () => dayLabels.Select(l => l.Width).Min();
-                this.SynchronizeForLifetime(nameof(Bounds), () => label.Text = GetDayOfWeekDisplay(dayOfWeek, smallestDayLabelWidth()) , this);
+                label.Text = GetDayOfWeekDisplay(dayOfWeek, smallestDayLabelWidth());
             }
         }
 
@@ -292,30 +280,27 @@ namespace PowerArgs.Cli
         {
             var date = new DateTime(Options.Year, Options.Month, 1);
             var monthAndYearLabel = ProtectedPanel.Add(new Label() { Text = date.ToString("Y").ToConsoleString(HasFocus ? RGB.Black : Background, HasFocus ? RGB.Cyan : Foreground) });
-            gridLayout.SynchronizeForLifetime(nameof(Bounds), () =>
-            {
-                monthAndYearLabel.X = gridLayout.X + gridLayout.Width - monthAndYearLabel.Width;
-                monthAndYearLabel.Y = + gridLayout.Y + gridLayout.Height - 1;
-            }, gridLayout);
+            monthAndYearLabel.X = gridLayout.X + gridLayout.Width - monthAndYearLabel.Width;
+            monthAndYearLabel.Y = + gridLayout.Y + gridLayout.Height - 1;
         }
 
         private void SetupMinimumSizeExperience()
         {
             ConsolePanel shield = null;
-            ConsoleControl min = null;
-            min = ProtectedPanel.Add(new MinimumSizeEnforcerPanel(new MinimumSizeEnforcerPanelOptions()
+            ConsoleControl min = ProtectedPanel.Add(new MinimumSizeEnforcerPanel(new MinimumSizeEnforcerPanelOptions()
             {
                 MinWidth = MinWidth,
                 MinHeight = MinHeight,
                 OnMinimumSizeNotMet = ()=>
                 {
-                    if (min == null) return;
-                    min.IsVisible = false;
-                    shield = ProtectedPanel.Add(new ConsolePanel() { Background = Foreground }).Fill();
+                    shield = ProtectedPanel.Add(new ConsolePanel() { ZIndex = int.MaxValue, Background = Foreground }).Fill();
                     var date = new DateTime(Options.Year, Options.Month, 1);
                     shield.Add(new Label() { Text = date.ToString("Y").ToConsoleString(Background, Foreground) }).CenterBoth();
                 },
-                OnMinimumSizeMet = ()=> shield?.Dispose()
+                OnMinimumSizeMet = ()=>
+                {
+                    shield?.Dispose();
+                }
             })).Fill();
         }
 

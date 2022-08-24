@@ -23,6 +23,7 @@ public class MinimumSizeEnforcerPanel : ConsolePanel
 
     private void CheckSize()
     {
+        if (Application == null) return;
         if (Width < options.MinWidth || Height < options.MinHeight)
         {
             if (tooSmallLifetime == null)

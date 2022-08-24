@@ -1,4 +1,5 @@
-﻿using System;
+﻿/*
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -134,7 +135,6 @@ namespace PowerArgs.Cli
             {
                 gridLayout.Options.Rows.Add(new GridRowDefinition() {Height= 1, Type = GridValueType.Pixels });
             }
-            gridLayout.RefreshLayout();
         }
 
         private void ComposeLoadingUX()
@@ -229,3 +229,4 @@ namespace PowerArgs.Cli
         }
     }
 }
+*/

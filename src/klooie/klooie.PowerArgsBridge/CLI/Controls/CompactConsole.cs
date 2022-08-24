@@ -87,12 +87,11 @@ namespace PowerArgs.Cli
                 options.Rows.RemoveAt(options.Rows.Count - 1); // empty
             }
 
-            var gridLayout = Add(new GridLayout(options));
+            var gridLayout = Add(new GridLayout(options.GetRowSpec(),options.GetColumnSpec()));
 
 
 
             gridLayout.Fill();
-            gridLayout.RefreshLayout();
 
             var top = SuperCompact ? 0 : 1;
 

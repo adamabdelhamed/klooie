@@ -171,37 +171,11 @@ namespace PowerArgs.Cli
 
         private void SetupInvisiblePlaceholders()
         {
-            var placeholderGrid = ProtectedPanel.Add(new GridLayout(new GridLayoutOptions()
-            {
-                Columns = new List<GridColumnDefinition>()
-                {
-                    new GridColumnDefinition(){ Width = .01f, Type = GridValueType.Percentage },
-                    new GridColumnDefinition(){ Width = .25f, Type = GridValueType.Percentage },
-                    new GridColumnDefinition(){ Width = .01f, Type = GridValueType.Percentage },
-                    new GridColumnDefinition(){ Width = .46f, Type = GridValueType.Percentage },
-                    new GridColumnDefinition(){ Width = .01f, Type = GridValueType.Percentage },
-                    new GridColumnDefinition(){ Width = .25f, Type = GridValueType.Percentage },
-                    new GridColumnDefinition(){ Width = .01f, Type = GridValueType.Percentage },
-                },
-                Rows = new List<GridRowDefinition>()
-                {
-                    // top margin
-                    new GridRowDefinition(){ Height = .1f, Type = GridValueType.Percentage },
+            var placeholderGrid = ProtectedPanel.Add(new GridLayout("1%;15%;50%;15%;1%", "01%;25%;01%;46%;01%;25%;01%")).Fill();
 
-                    new GridRowDefinition(){ Height = .15f, Type = GridValueType.Percentage },
-                    new GridRowDefinition(){ Height = .5f, Type = GridValueType.Percentage },
-                    new GridRowDefinition(){ Height = .15f, Type = GridValueType.Percentage },
-
-                    // bottom margin
-                    new GridRowDefinition(){ Height = .1f, Type = GridValueType.Percentage },
-                }
-            })).Fill();
-
-            placeholderGrid.RefreshLayout();
             leftPlaceHolder = placeholderGrid.Add(new ConsolePanel() { Background = RGB.Green }, 1, 2, 1, 1);
             centerPlaceHolder = placeholderGrid.Add(new ConsolePanel() { Background = RGB.Green }, 3, 1, 1, 3);
             rightPlaceHolder = placeholderGrid.Add(new ConsolePanel() { Background = RGB.Green }, 5, 2, 1, 1);
-            placeholderGrid.RefreshLayout();
             placeholderGrid.IsVisible = false;
         }
 
