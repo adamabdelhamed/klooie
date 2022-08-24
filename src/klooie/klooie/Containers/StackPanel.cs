@@ -1,7 +1,4 @@
-﻿using System.Linq;
-
-using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 /// <summary>
 /// Represents the orientation of a 2d visual
 /// </summary>
@@ -48,10 +45,8 @@ public class StackPanel : ConsolePanel
         Controls.Changed.SubscribeForLifetime(RedoLayout, this);
     }
 
-    private void Controls_Added(ConsoleControl obj)
-    {
-        obj.SynchronizeForLifetime(nameof(Bounds), RedoLayout, Controls.GetMembershipLifetime(obj));
-    }
+    private void Controls_Added(ConsoleControl obj) => obj.SynchronizeForLifetime(nameof(Bounds), RedoLayout, Controls.GetMembershipLifetime(obj));
+    
 
     private void RedoLayout()
     {
