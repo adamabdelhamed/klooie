@@ -11,5 +11,6 @@ namespace klooie.tests
         public const string Physics = "Physics tests";
         public const string Drawing = "ConsoleBitmap and recording tests";
         public const string Games = "Gaming tests";
+        public const string Slow = "Slow";
     }
 }
