@@ -52,6 +52,18 @@ public class ConsoleControlFilter : IConsoleControlFilter
 /// </summary>
 public class ConsoleControl : Rectangular
 {
+    private Event _focused, _unfocused, _addedToVisualTree, _beforeAddedToVisualTree, _removedFromVisualTree, _beforeRemovedFromVisualTree, _ready;
+    private Event<ConsoleKeyInfo> _keyInputReceived;
+    private Container _parent;
+    private RGB _bg, _fg;
+    private bool _transparent;
+    private bool _hasFocus;
+    private bool _tabSkip;
+    private bool _canFocus;
+    private bool _isVisible;
+    private object _tag;
+    private bool hasBeenAddedToVisualTree;
+
     /// <summary>
     /// Used to stabilize the z-index sorting for painting
     /// </summary>
@@ -63,13 +75,11 @@ public class ConsoleControl : Rectangular
     /// </summary>
     public CompositionMode CompositionMode { get; set; } = CompositionMode.PaintOver;
 
-
-    private Event _focused, _unfocused, _addedToVisualTree, _beforeAddedToVisualTree, _removedFromVisualTree, _beforeRemovedFromVisualTree, _ready;
-    private Event<ConsoleKeyInfo> _keyInputReceived;
     /// <summary>
     /// An event that fires after this control gets focus
     /// </summary>
     public Event Focused { get => _focused ?? (_focused = new Event()); }
+
     /// <summary>
     /// An event that fires after this control loses focus
     /// </summary>
@@ -106,15 +116,12 @@ public class ConsoleControl : Rectangular
     /// </summary>
     public ConsoleApp Application { get; internal set; }
 
-    private Container _parent;
     /// <summary>
     /// Gets a reference to this control's parent in the visual tree.  It will be null if this control is not in the visual tree 
     /// and also if this control is the root of the visual tree.
     /// </summary>
     public Container Parent { get { return _parent; } internal set { SetHardIf(ref _parent, value, _parent == null); } }
 
-
-    private RGB _bg, _fg;
     /// <summary>
     /// Gets or sets the background color
     /// </summary>
@@ -125,41 +132,36 @@ public class ConsoleControl : Rectangular
     /// </summary>
     public RGB Foreground { get { return _fg; } set { SetHardIf(ref _fg, value, value != _fg); } }
 
-    private bool _transparent;
     /// <summary>
     /// Gets or sets whether or not this control should paint its background color or leave it transparent.  By default
     /// this value is false.
     /// </summary>
     public bool TransparentBackground { get { return _transparent; } set { SetHardIf(ref _transparent, value, _transparent != value); } }
 
-    private object _tag;
     /// <summary>
     /// An arbitrary reference to an object to associate with this control
     /// </summary>
     public object Tag { get { return _tag; } set { SetHardIf(ref _tag, value, ReferenceEquals(_tag, value) == false); } }
 
-    private bool _isVisible;
+
     /// <summary>
     /// Gets or sets whether or not this control is visible.  Invisible controls are still fully functional, except that they
     /// don't get painted
     /// </summary>
     public virtual bool IsVisible { get { return _isVisible; } set { SetHardIf(ref _isVisible, value, _isVisible != value); } }
 
-    private bool _canFocus;
     /// <summary>
     /// Gets or sets whether or not this control can accept focus.  By default this is set to true, but can
     /// be overridden by derived classes to be false by default.
     /// </summary>
     public virtual bool CanFocus { get { return _canFocus; } set { SetHardIf(ref _canFocus, value, _canFocus != value); } }
 
-    private bool _tabSkip;
     /// <summary>
     /// Gets or sets whether or not this control can accept focus via the tab key. By default this is set to false. This
     /// is useful if you to control how focus is managed for larger collections.
     /// </summary>
     public virtual bool TabSkip { get { return _tabSkip; } set { SetHardIf(ref _tabSkip, value, _tabSkip != value); } }
 
-    private bool _hasFocus;
     /// <summary>
     /// Gets whether or not this control currently has focus
     /// </summary>
@@ -180,8 +182,6 @@ public class ConsoleControl : Rectangular
     /// Set to true if the Control is in the process of being removed
     /// </summary>
     internal bool IsBeingRemoved { get; set; }
-
-    private bool hasBeenAddedToVisualTree;
 
     /// <summary>
     /// An event that fires when this control is both added to an app and that app is running
@@ -224,19 +224,21 @@ public class ConsoleControl : Rectangular
         }
     }
 
+    /// <summary>
+    /// Gets this controls bitmap, which can be painted onto its parent
+    /// </summary>
     public ConsoleBitmap Bitmap { get; internal set; }
 
-    public ConsoleControl() : this(1, 1) { }
     /// <summary>
-    /// Creates a new ConsoleControl
+    /// Creates a 1x1 ConsoleControl
     /// </summary>
-    public ConsoleControl(int w, int h)
+    public ConsoleControl()
     {
         CanFocus = true;
         TabSkip = false;
-        this.Bitmap = new ConsoleBitmap(w, h);
-        this.Width = w;
-        this.Height = h;
+        this.Bitmap = new ConsoleBitmap(1, 1);
+        this.Width = Bitmap.Width;
+        this.Height = Bitmap.Height;
         Background = DefaultColors.BackgroundColor;
         this.Foreground = DefaultColors.ForegroundColor;
         this.IsVisible = true;

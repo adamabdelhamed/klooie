@@ -154,7 +154,8 @@ public partial class ConsoleApp : EventLoop
         cycleRateMeter = new FrameRateMeter();
         EndOfCycle.SubscribeForLifetime(Cycle, this);
         SetFocusOnStart = true;
-        LayoutRoot = new ConsolePanel(lastConsoleWidth, lastConsoleHeight);
+        LayoutRoot = new ConsolePanel();
+        LayoutRoot.ResizeTo(lastConsoleWidth, lastConsoleHeight);
         focus = new FocusManager();
         LayoutRoot.Application = this;
         focus.SubscribeForLifetime(nameof(focus.StackDepth), () => FocusStackDepthChanged.Fire(focus.StackDepth), this);

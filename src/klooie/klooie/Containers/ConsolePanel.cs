@@ -24,12 +24,10 @@ public class ConsolePanel : Container
     /// </summary>
     public override IEnumerable<ConsoleControl> Children => Controls;
 
-    public ConsolePanel() : this(1, 1) { }
-
     /// <summary>
     /// Creates a new console panel
     /// </summary>
-    public ConsolePanel(int w, int h) : base(w, h)
+    public ConsolePanel()
     {
         Controls = new ObservableCollection<ConsoleControl>();
         Controls.Added.SubscribeForLifetime((c) =>
