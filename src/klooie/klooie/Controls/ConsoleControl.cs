@@ -56,7 +56,7 @@ public class ConsoleControl : Rectangular
     /// Used to stabilize the z-index sorting for painting
     /// </summary>
     internal int ParentIndex { get; set; }
-    public List<IConsoleControlFilter> RenderFilters { get; private set; } = new List<IConsoleControlFilter>();
+    public List<IConsoleControlFilter> Filters { get; private set; } = new List<IConsoleControlFilter>();
 
     /// <summary>
     /// Controls how controls are painted when multiple controls overlap

@@ -129,7 +129,7 @@ namespace PowerArgs.Cli
         {
             easingFunction = easingFunction ?? Animator.Linear;
             var filter = new AnimationFilter() { From = from, To = to };
-            c.RenderFilters.Add(filter);
+            c.Filters.Add(filter);
 
             await Animator.AnimateAsync(new FloatAnimatorOptions()
             {
@@ -150,7 +150,7 @@ namespace PowerArgs.Cli
         {
             easingFunction = easingFunction ?? Animator.Linear;
             var filter = new FadeInFilter();
-            c.RenderFilters.Add(filter);
+            c.Filters.Add(filter);
 
             await Animator.AnimateAsync(new FloatAnimatorOptions()
             {
@@ -176,7 +176,7 @@ namespace PowerArgs.Cli
             {
                 filter.OutColor = outColor.Value;
             }
-            c.RenderFilters.Add(filter);
+            c.Filters.Add(filter);
 
             await Animator.AnimateAsync(new FloatAnimatorOptions()
             {

@@ -112,7 +112,7 @@ public class ConsolePanel : Container
             }
         }
 
-        foreach (var filter in RenderFilters)
+        foreach (var filter in Filters)
         {
             filter.Control = this;
             filter.Filter(Bitmap);

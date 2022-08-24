@@ -53,7 +53,7 @@ public abstract class Container : ConsoleControl
         if (control.IsVisible == false) return;
         control.Paint();
 
-        foreach (var filter in control.RenderFilters)
+        foreach (var filter in control.Filters)
         {
             filter.Control = control;
             filter.Filter(control.Bitmap);
