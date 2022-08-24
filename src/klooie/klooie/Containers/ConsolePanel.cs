@@ -6,12 +6,15 @@ namespace klooie;
 /// </summary>
 public class ConsolePanel : Container
 {
-    /// <summary>
-    /// The nested controls
-    /// </summary>
-    public ObservableCollection<ConsoleControl> Controls { get; private set; }
+    private static readonly Comparison<ConsoleControl> CompareZ = new Comparison<ConsoleControl>((a, b) =>
+        a.ZIndex == b.ZIndex ? a.ParentIndex.CompareTo(b.ParentIndex) : a.ZIndex.CompareTo(b.ZIndex));
 
     private List<ConsoleControl> sortedControls = new List<ConsoleControl>();
+
+    /// <summary>
+    /// Gets the nested controls
+    /// </summary>
+    public ObservableCollection<ConsoleControl> Controls { get; private set; }
 
     /// <summary>
     /// All nested controls, including those that are recursively nested within inner console panels
@@ -65,30 +68,7 @@ public class ConsolePanel : Container
     /// Adds a collection of controls to the panel
     /// </summary>
     /// <param name="controls">the controls to add</param>
-    public void AddRange(IEnumerable<ConsoleControl> controls)
-    {
-        foreach (var c in controls)
-        {
-            Controls.Add(c);
-        }
-    }
-
-
-
-    private static Comparison<ConsoleControl> CompareZ = new Comparison<ConsoleControl>((a, b) =>
-    {
-        return a.ZIndex == b.ZIndex ? a.ParentIndex.CompareTo(b.ParentIndex) : a.ZIndex.CompareTo(b.ZIndex);
-    });
-
-    private void SortZ()
-    {
-        for (var i = 0; i < sortedControls.Count; i++)
-        {
-            sortedControls[i].ParentIndex = i;
-        }
-        sortedControls.Sort(CompareZ);
-        ConsoleApp.Current?.RequestPaint();
-    }
+    public void AddRange(IEnumerable<ConsoleControl> controls) => controls.ForEach(c => Controls.Add(c));
 
     /// <summary>
     /// Paints this control
@@ -110,34 +90,14 @@ public class ConsolePanel : Container
             filter.Filter(Bitmap);
         }
     }
-}
 
-/// <summary>
-/// A ConsolePanel that can prevent outside influences from
-/// adding to its Controls collection. You must use the internal
-/// Unlock method to add or remove controls.
-/// </summary>
-public class ProtectedConsolePanel : Container
-{
-    protected ConsolePanel ProtectedPanel { get; private set; }
-    internal ConsolePanel ProtectedPanelInternal => ProtectedPanel;
-    public override IEnumerable<ConsoleControl> Children => ProtectedPanel.Children;
-
-    /// <summary>
-    /// Creates a new ConsolePanel
-    /// </summary>
-    public ProtectedConsolePanel()
+    private void SortZ()
     {
-        this.CanFocus = false;
-        ProtectedPanel = new ConsolePanel();
-        ProtectedPanel.Parent = this;
-        ProtectedPanel.Fill();
-        this.SubscribeForLifetime(nameof(Background), () => ProtectedPanel.Background = Background, this);
-        this.SubscribeForLifetime(nameof(Foreground), () => ProtectedPanel.Foreground = Foreground, this);
-    }
-
-    protected override void OnPaint(ConsoleBitmap context)
-    {
-        Compose(ProtectedPanel);
+        for (var i = 0; i < sortedControls.Count; i++)
+        {
+            sortedControls[i].ParentIndex = i;
+        }
+        sortedControls.Sort(CompareZ);
+        ConsoleApp.Current?.RequestPaint();
     }
 }

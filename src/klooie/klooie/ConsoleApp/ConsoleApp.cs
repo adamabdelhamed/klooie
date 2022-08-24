@@ -473,7 +473,6 @@ public partial class ConsoleApp : EventLoop
         _current = null;
     }
 
-
     private void PaintInternal()
     {
         Bitmap.Fill(defaultPen);
@@ -485,7 +484,6 @@ public partial class ConsoleApp : EventLoop
         }
         AfterPaint.Fire();
     }
-
 
     private void Cycle()
     {
