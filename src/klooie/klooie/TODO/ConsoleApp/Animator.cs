@@ -470,3 +470,12 @@ public class CustomEase
         }
     }
 }
+
+public static class ConsoleControlAnimationExtensions
+{
+    public static Task AnimateForeground(this ConsoleControl control, RGB to, float duration = 1000, EasingFunction ease = null, bool autoReverse = false, ILifetimeManager loop = null, IDelayProvider delayProvider = null, float autoReverseDelay = 0, Func<bool> isCancelled = null)
+        => Animator.AnimateAsync(control.Foreground, to, c => control.Foreground = c, duration, ease, autoReverse, loop, delayProvider, autoReverseDelay, isCancelled);
+
+    public static Task AnimateBackground(this ConsoleControl control, RGB to, float duration = 1000, EasingFunction ease = null, bool autoReverse = false, ILifetimeManager loop = null, IDelayProvider delayProvider = null, float autoReverseDelay = 0, Func<bool> isCancelled = null)
+        => Animator.AnimateAsync(control.Background, to, c => control.Background = c, duration, ease, autoReverse, loop, delayProvider, autoReverseDelay, isCancelled);
+}

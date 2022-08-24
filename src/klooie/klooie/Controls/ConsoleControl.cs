@@ -63,6 +63,7 @@ public class ConsoleControl : Rectangular
     private bool _isVisible;
     private object _tag;
     private bool hasBeenAddedToVisualTree;
+    private HashSet<string> tags;
 
     /// <summary>
     /// Used to stabilize the z-index sorting for painting
@@ -143,6 +144,11 @@ public class ConsoleControl : Rectangular
     /// </summary>
     public object Tag { get { return _tag; } set { SetHardIf(ref _tag, value, ReferenceEquals(_tag, value) == false); } }
 
+    /// <summary>
+    /// An arbitrary set of tags, which can be interpreted as raw strings or key value pairs when the
+    /// tag contains a colon ":"
+    /// </summary>
+    public IEnumerable<string> Tags => tags ?? Enumerable.Empty<string>();
 
     /// <summary>
     /// Gets or sets whether or not this control is visible.  Invisible controls are still fully functional, except that they
@@ -244,6 +250,114 @@ public class ConsoleControl : Rectangular
         this.IsVisible = true;
     }
 
+    /// <summary>
+    /// Enables recording the visual content of the control using the specified writer
+    /// </summary>
+    /// <param name="recorder">the writer to use</param>
+    /// <param name="timestampFunc">an optional callback that will be called to determine the timestamp for each frame. If not specified the wall clock will be used.</param>
+    /// <param name="lifetime">A lifetime that determines how long recording will last. Defaults to the lifetime of the control.</param>
+    public void EnableRecording(ConsoleBitmapVideoWriter recorder, Func<TimeSpan> timestampFunc = null, LifetimeManager lifetime = null)
+    {
+        if (Recorder != null)
+        {
+            throw new InvalidOperationException("This control is already being recorded");
+        }
+        var h = this.Height;
+        var w = this.Width;
+        this.SubscribeForLifetime(nameof(Bounds), () =>
+        {
+            if (Width != w || Height != h)
+            {
+                throw new InvalidOperationException("You cannot resize a control that has recording enabled");
+            }
+        }, this);
+        this.Recorder = recorder;
+        this.RecorderTimestampProvider = timestampFunc;
+
+        lifetime = lifetime ?? this.Manager;
+        lifetime.OnDisposed(() =>
+        {
+            Recorder.TryFinish();
+            Recorder = null;
+        });
+    }
+
+    /// <summary>
+    /// returns true if this control has been tagged with the given value
+    /// </summary>
+    /// <param name="tag">the valute to test</param>
+    /// <returns>true if this control has been tagged with the given value</returns>
+    public bool HasSimpleTag(string tag) => tags.Contains(tag);
+    
+    /// <summary>
+    /// Adds a tag to this control
+    /// </summary>
+    /// <param name="tag">the tag to add</param>
+    public void AddTag(string tag) => tags.Add(tag);
+
+    /// <summary>
+    /// Adds a set of tags to this control
+    /// </summary>
+    /// <param name="tags">the tags to add</param>
+    public void AddTags(IEnumerable<string> tags) => tags.ForEach(t => this.tags.Add(t));
+
+    /// <summary>
+    /// Removes a tag from this control
+    /// </summary>
+    /// <param name="tag"></param>
+    public void RemoveTag(string tag) => tags.Remove(tag);
+
+    /// <summary>
+    /// Tests to see if there is a key value tag with the given key
+    /// </summary>
+    /// <param name="key">the key to check for</param>
+    /// <returns>true if there is a key value tag with the given key</returns>
+    public bool HasValueTag(string key) => tags.Where(t => t.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase)).Any();
+
+    /// <summary>
+    /// Tries to get the value for a given tag key
+    /// </summary>
+    /// <param name="key">the key to check for</param>
+    /// <param name="value">the value to be populated if found</param>
+    /// <returns>true if the tag was found and the out value was populated</returns>
+    public bool TryGetTagValue(string key, out string value)
+    {
+        key = key.ToLower();
+        if (HasValueTag(key))
+        {
+            var tag = tags.Where(t => t.ToLower().StartsWith(key + ":")).FirstOrDefault();
+            value = ParseTagValue(tag);
+            return true;
+        }
+        else
+        {
+            value = null;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Tries to give this control focus. If the focus is in the visual tree, and is in the current focus layer, 
+    /// and has it's CanFocus property to true then focus should be granted.
+    /// </summary>
+    public void Focus() => Application?.SetFocus(this);
+
+    /// <summary>
+    /// Tries to unfocus this control.
+    /// </summary>
+    public void Unfocus() => Application?.MoveFocus(true);
+
+    /// <summary>
+    /// You should override this method if you are building a custom control, from scratch, and need to control
+    /// every detail of the painting process.  If possible, prefer to create your custom control by deriving from
+    /// ConsolePanel, which will let you assemble a new control from others.
+    /// </summary>
+    /// <param name="context">The scoped bitmap that you can paint on</param>
+    protected virtual void OnPaint(ConsoleBitmap context)
+    {
+
+    }
+
     protected override void OnPropertyChanged(string propertyName)
     {
         if (propertyName == nameof(Bounds))
@@ -262,78 +376,11 @@ public class ConsoleControl : Rectangular
         }
     }
 
-    private void ResizeBitmapOnBoundsChanged()
-    {
-        if (this.IsExpired || this.IsExpiring) return;
-        if (this.Width > 0 && this.Height > 0)
-        {
-            this.Bitmap.Resize(this.Width, this.Height);
-        }
-    }
-
-    /// <summary>
-    /// Enables recording the visual content of the control using the specified writer
-    /// </summary>
-    /// <param name="recorder">the writer to use</param>
-    /// <param name="timestampFunc">an optional callback that will be called to determine the timestamp for each frame. If not specified the wall clock will be used.</param>
-    public void EnableRecording(ConsoleBitmapVideoWriter recorder, Func<TimeSpan> timestampFunc = null)
-    {
-        if (Recorder != null)
-        {
-            throw new InvalidOperationException("This control is already being recorded");
-        }
-        var h = this.Height;
-        var w = this.Width;
-        this.SubscribeForLifetime(nameof(Bounds), () =>
-        {
-            if (Width != w || Height != h)
-            {
-                throw new InvalidOperationException("You cannot resize a control that has recording enabled");
-            }
-        }, this);
-        this.Recorder = recorder;
-        this.RecorderTimestampProvider = timestampFunc;
-
-        this.OnDisposed(() => Recorder.TryFinish());
-    }
-
-    /// <summary>
-    /// Tries to give this control focus. If the focus is in the visual tree, and is in the current focus layer, 
-    /// and has it's CanFocus property to true then focus should be granted.
-    /// </summary>
-    /// <returns>True if focus was granted, false otherwise.  </returns>
-    public void Focus() => Application?.SetFocus(this);
-
-
-    /// <summary>
-    /// Tries to unfocus this control.
-    /// </summary>
-    /// <returns>True if focus was cleared and moved.  False otherwise</returns>
-    public void Unfocus() => Application?.MoveFocus(true);
-
-    public Task AnimateForeground(RGB to, float duration = 1000, EasingFunction ease = null, bool autoReverse = false, ILifetimeManager loop = null, IDelayProvider delayProvider = null, float autoReverseDelay = 0, Func<bool> isCancelled = null)
-        => Animator.AnimateAsync(Foreground, to, c => Foreground = c, duration, ease, autoReverse, loop, delayProvider, autoReverseDelay, isCancelled);
-
-    public Task AnimateBackground(RGB to, float duration = 1000, EasingFunction ease = null, bool autoReverse = false, ILifetimeManager loop = null, IDelayProvider delayProvider = null, float autoReverseDelay = 0, Func<bool> isCancelled = null)
-  => Animator.AnimateAsync(Background, to, c => Background = c, duration, ease, autoReverse, loop, delayProvider, autoReverseDelay, isCancelled);
-
-    /// <summary>
-    /// You should override this method if you are building a custom control, from scratch, and need to control
-    /// every detail of the painting process.  If possible, prefer to create your custom control by deriving from
-    /// ConsolePanel, which will let you assemble a new control from others.
-    /// </summary>
-    /// <param name="context">The scoped bitmap that you can paint on</param>
-    protected virtual void OnPaint(ConsoleBitmap context)
-    {
-
-    }
-
     internal void FireFocused(bool focused)
     {
         if (focused) _focused?.Fire();
         else _unfocused?.Fire();
     }
-
 
     internal void AddedToVisualTreeInternal()
     {
@@ -358,8 +405,6 @@ public class ConsoleControl : Rectangular
     {
         _beforeAddedToVisualTree?.Fire();
     }
-
-
 
     internal void BeforeRemovedFromVisualTreeInternal()
     {
@@ -431,5 +476,20 @@ public class ConsoleControl : Rectangular
         }
 
         return new Loc(x, y);
+    }
+
+    private void ResizeBitmapOnBoundsChanged()
+    {
+        if (ShouldContinue == false || Width <= 0 || Height <= 0) return;
+        Bitmap.Resize(Width, Height);
+    }
+
+    private string ParseTagValue(string tag)
+    {
+        var splitIndex = tag.IndexOf(':');
+        if (splitIndex <= 0) throw new ArgumentException("No tag value present for tag: " + tag);
+
+        var val = tag.Substring(splitIndex + 1, tag.Length - (splitIndex + 1));
+        return val;
     }
 }
