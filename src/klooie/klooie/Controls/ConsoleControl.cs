@@ -287,32 +287,32 @@ public class ConsoleControl : Rectangular
     /// </summary>
     /// <param name="tag">the valute to test</param>
     /// <returns>true if this control has been tagged with the given value</returns>
-    public bool HasSimpleTag(string tag) => tags.Contains(tag);
+    public bool HasSimpleTag(string tag) => GetTagsLazy(false)?.Contains(tag) == true;
     
     /// <summary>
     /// Adds a tag to this control
     /// </summary>
     /// <param name="tag">the tag to add</param>
-    public void AddTag(string tag) => tags.Add(tag);
+    public void AddTag(string tag) => GetTagsLazy(true).Add(tag);
 
     /// <summary>
     /// Adds a set of tags to this control
     /// </summary>
     /// <param name="tags">the tags to add</param>
-    public void AddTags(IEnumerable<string> tags) => tags.ForEach(t => this.tags.Add(t));
+    public void AddTags(IEnumerable<string> tags) => GetTagsLazy(true).ForEach(t => this.tags.Add(t));
 
     /// <summary>
     /// Removes a tag from this control
     /// </summary>
     /// <param name="tag"></param>
-    public void RemoveTag(string tag) => tags.Remove(tag);
+    public void RemoveTag(string tag) => GetTagsLazy(true).Remove(tag);
 
     /// <summary>
     /// Tests to see if there is a key value tag with the given key
     /// </summary>
     /// <param name="key">the key to check for</param>
     /// <returns>true if there is a key value tag with the given key</returns>
-    public bool HasValueTag(string key) => tags.Where(t => t.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase)).Any();
+    public bool HasValueTag(string key) => GetTagsLazy(false)?.Where(t => t.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase)).Any() == true;
 
     /// <summary>
     /// Tries to get the value for a given tag key
@@ -322,6 +322,12 @@ public class ConsoleControl : Rectangular
     /// <returns>true if the tag was found and the out value was populated</returns>
     public bool TryGetTagValue(string key, out string value)
     {
+        if (tags == null)
+        {
+            value = null;
+            return false;
+        }
+
         key = key.ToLower();
         if (HasValueTag(key))
         {
@@ -353,10 +359,7 @@ public class ConsoleControl : Rectangular
     /// ConsolePanel, which will let you assemble a new control from others.
     /// </summary>
     /// <param name="context">The scoped bitmap that you can paint on</param>
-    protected virtual void OnPaint(ConsoleBitmap context)
-    {
-
-    }
+    protected virtual void OnPaint(ConsoleBitmap context) { }
 
     protected override void OnPropertyChanged(string propertyName)
     {
@@ -491,5 +494,14 @@ public class ConsoleControl : Rectangular
 
         var val = tag.Substring(splitIndex + 1, tag.Length - (splitIndex + 1));
         return val;
+    }
+
+    private HashSet<string> GetTagsLazy(bool willWrite)
+    {
+        if (willWrite && tags == null)
+        {
+            tags = new HashSet<string>();
+        }
+        return tags;
     }
 }
