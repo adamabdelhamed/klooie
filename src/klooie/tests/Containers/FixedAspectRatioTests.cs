@@ -10,7 +10,7 @@ public class FixedAspectRatioTests
     public TestContext TestContext { get; set; }
 
     [TestMethod]
-    public void TestFixedAspectRatio()
+    public void FixedAspectRatioPanel_Basic()
     {
         KlooieTestHarness.SetConsoleSize(130, 40);
         var app = new KlooieTestHarness(this.TestContext, true);
