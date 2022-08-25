@@ -8,7 +8,7 @@ public enum CompositionMode
     /// </summary>
     PaintOver = 0,
     /// <summary>
-    /// If the control being painted's pixel has a non-default BG then use the background 
+    /// If the control being painted's pixel has a default BG then use the background 
     /// color of the existing pixel instead of the control pixel. Otherwise behaves like PaintOver.
     /// </summary>
     BlendBackground = 1,
@@ -132,8 +132,8 @@ public abstract class Container : ConsoleControl
             {
                 var controlPixel = control.Bitmap.Pixels[x - position.X][y - position.Y];
                 var myPixel = Bitmap.Pixels[x][y];
-                var controlIsNonDefaultBg = controlPixel.BackgroundColor != ConsoleString.DefaultBackgroundColor;
-                var blend = controlIsNonDefaultBg;
+                var controlIsDefaultBg = controlPixel.BackgroundColor == ConsoleString.DefaultBackgroundColor;
+                var blend = controlIsDefaultBg;
                 Bitmap.Pixels[x][y] = blend ? new ConsoleCharacter(controlPixel.Value, controlPixel.ForegroundColor, myPixel.BackgroundColor) : controlPixel;
             }
         }

@@ -40,7 +40,7 @@ public class ContainerTests
         app.Invoke(async () =>
         {
             var bottomYellowTextWithMagentaBg = app.LayoutRoot.Add(new Label() { ZIndex = 0, Text = "Text".ToYellow(RGB.Magenta) }).Fill();
-            var topRedTextWithGreenBg = app.LayoutRoot.Add(new Label() { CompositionMode = CompositionMode.BlendBackground, ZIndex = 1, Text = "Text".ToRed(RGB.Green) }).Fill();
+            var topRedTextWithGreenBg = app.LayoutRoot.Add(new Label() { CompositionMode = CompositionMode.BlendBackground, ZIndex = 1, Text = "Text".ToRed() }).Fill();
             await app.RequestPaintAsync();
 
             for (var x = 0; x < topRedTextWithGreenBg.Text.Length; x++)

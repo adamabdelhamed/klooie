@@ -16,8 +16,4 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="CLI\Drawing\Filters\" />
-  </ItemGroup>
-
 </Project>
