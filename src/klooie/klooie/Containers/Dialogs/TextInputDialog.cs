@@ -9,12 +9,12 @@ public class ShowTextInputOptions : ShowMessageOptions
     /// <summary>
     /// Set this to use a custom text box, otherwise a default will be created
     /// </summary>
-    public Func<TextBox> TextBoxFactory { get; set; }
+    public Func<TextBox>? TextBoxFactory { get; set; }
 
     /// <summary>
     /// Gets the value that the user entered in the text box
     /// </summary>
-    public ConsoleString Value { get; private set; }
+    public ConsoleString? Value { get; private set; }
 
     /// <summary>
     /// Creates the options given a message
