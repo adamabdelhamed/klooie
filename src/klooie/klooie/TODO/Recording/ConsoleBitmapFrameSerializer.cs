@@ -160,7 +160,7 @@ internal class ConsoleBitmapFrameSerializer
         var ret = builder.ToString();
         return ret;
     }
-    private static readonly Regex ColorSpecifierRegex = new Regex(@"(?<ForB>F|B)=(?<color>\w+)");
+    private static readonly Regex ColorSpecifierRegex = new Regex(@"(?<ForB>F|B)=(?<color>.+)");
     private static readonly Regex PixelDiffRegex = new Regex("(?<x>\\d+),(?<y>\\d+),(?<val>.+)");
     /// <summary>
     /// Deserializes the given frame given a known width and height.
