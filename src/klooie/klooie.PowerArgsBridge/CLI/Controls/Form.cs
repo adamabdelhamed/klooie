@@ -481,7 +481,6 @@ namespace PowerArgs.Cli
 
         public FormField(ConsoleString label, ConsoleControl valueControl)
         {
-            CompositionMode = CompositionMode.BlendBackground;
             LabelColumnWidth = 10;
             this.labelText = label;
             this.valueControl = valueControl;
