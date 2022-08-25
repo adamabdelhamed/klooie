@@ -58,11 +58,10 @@ public class Label : ConsoleControl
         }
     }
 
-    private LabelRenderMode _mode;
     /// <summary>
-    /// Gets or sets the render mode
+    /// Gets the render mode
     /// </summary>
-    public LabelRenderMode Mode { get { return _mode; } set { SetHardIf(ref _mode, value, value != _mode); } }
+    public LabelRenderMode Mode { get; private set; }
 
     private List<List<ConsoleCharacter>> lines;
 
@@ -70,19 +69,19 @@ public class Label : ConsoleControl
     /// <summary>
     /// Creates a new label
     /// </summary>
-    public Label()
+    public Label(LabelRenderMode mode = LabelRenderMode.SingleLineAutoSize)
     {
         Height = 1;
-        this.Mode = LabelRenderMode.SingleLineAutoSize;
+        this.Mode = mode;
         this.CanFocus = false;
         lines = new List<List<ConsoleCharacter>>();
-
+        Text = ConsoleString.Empty;
         this.SubscribeForLifetime(nameof(Text), HandleTextChanged, this);
         this.SubscribeForLifetime(nameof(Mode), HandleTextChanged, this);
         this.SubscribeForLifetime(nameof(MaxHeight), HandleTextChanged, this);
         this.SubscribeForLifetime(nameof(MaxWidth), HandleTextChanged, this);
-        this.SynchronizeForLifetime(nameof(Bounds), HandleTextChanged, this);
-        Text = ConsoleString.Empty;
+        this.SubscribeForLifetime(nameof(Bounds), HandleTextChanged, this);
+
     }
 
     public Task AnimateTextForeground(RGB to, float duration = 1000, EasingFunction ease = null, bool autoReverse = false, ILifetimeManager loop = null, IDelayProvider delayProvider = null, float autoReverseDelay = 0, Func<bool> isCancelled = null)

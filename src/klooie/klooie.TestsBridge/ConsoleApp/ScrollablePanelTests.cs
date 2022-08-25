@@ -4,6 +4,7 @@ using PowerArgs.Cli;
 using PowerArgs;
 using System.Threading;
 using klooie;
+using System.Linq;
 
 namespace ArgsTests.CLI.Controls
 {
@@ -28,7 +29,7 @@ namespace ArgsTests.CLI.Controls
                 var scrollPanel = app.LayoutRoot.Add(new ScrollablePanel() { Background = RGB.DarkBlue }).Fill();
                 
                 // Step 2 - Add scrollable content to the ScrollableContent container
-                var stack = scrollPanel.ScrollableContent.Add(new StackPanel() { Background = RGB.Yellow, AutoSize = true });
+                var stack = scrollPanel.ScrollableContent.Add(new StackPanel() { Background = RGB.Yellow, AutoSize = StackPanel.AutoSizeMode.Both });
                 
                 // IMPORTANT - The ScrollableContent container is the thing that will scroll if it's bigger than the view
                 //             so make sure it's height gets bigger as its content grows.
@@ -45,9 +46,10 @@ namespace ArgsTests.CLI.Controls
                     label.Focused.SubscribeForLifetime(() => label.Text = label.Text.ToWhite(), label);
                 }
 
+                await app.SendKey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));
                 // Step 4 - Tab through all the rows. The scrollbar and scrollable content should automatically
                 //        - keep the focused row in view.
-                for(var i = 0; i < rows; i++)
+                for (var i = 0; i < rows; i++)
                 {
                     app.SendKey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));
                     await app.PaintAndRecordKeyFrameAsync();

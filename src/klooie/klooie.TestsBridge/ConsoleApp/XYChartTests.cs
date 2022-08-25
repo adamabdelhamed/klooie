@@ -152,7 +152,7 @@ namespace ArgsTests.CLI.Controls
         public void RenderChartTestCommon(XYChartOptions options)
         {
             CliTestHarness.SetConsoleSize(80, 30);
-            var app = new CliTestHarness(this.TestContext, true) { SetFocusOnStart = false};
+            var app = new CliTestHarness(this.TestContext, true);
             app.InvokeNextCycle(() => app.LayoutRoot.Add(new XYChart(options)).Fill());
             app.InvokeNextCycle(async () =>
             {

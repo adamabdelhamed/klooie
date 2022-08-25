@@ -3,17 +3,19 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie", "klooie\klooie.csproj", "{E9C4865F-FB82-4011-9E86-B2CE45770B5C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie", "klooie\klooie.csproj", "{E9C4865F-FB82-4011-9E86-B2CE45770B5C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tests", "tests\tests.csproj", "{5AED424F-E854-483F-9D9B-DF07ADAD5C56}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tests", "tests\tests.csproj", "{5AED424F-E854-483F-9D9B-DF07ADAD5C56}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.PowerArgsBridge", "klooie.PowerArgsBridge\klooie.PowerArgsBridge.csproj", "{6DCAF733-3771-45C9-9AD9-D47F5B4AC6E2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.PowerArgsBridge", "klooie.PowerArgsBridge\klooie.PowerArgsBridge.csproj", "{6DCAF733-3771-45C9-9AD9-D47F5B4AC6E2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.TestsBridge", "klooie.TestsBridge\klooie.TestsBridge.csproj", "{685306D0-3491-4CF0-B14B-E96EAC6A532A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.TestsBridge", "klooie.TestsBridge\klooie.TestsBridge.csproj", "{685306D0-3491-4CF0-B14B-E96EAC6A532A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.animationstudio", "klooie.animationstudio\klooie.animationstudio.csproj", "{95A2DB71-7EF5-4214-84D6-A37FAA15A661}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.animationstudio", "klooie.animationstudio\klooie.animationstudio.csproj", "{95A2DB71-7EF5-4214-84D6-A37FAA15A661}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.VideoPlayer", "klooie.VideoPlayer\klooie.VideoPlayer.csproj", "{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.VideoPlayer", "klooie.VideoPlayer\klooie.VideoPlayer.csproj", "{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "Playground\Playground.csproj", "{1D7E2A64-A1A7-40AF-A55D-A539EC088825}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

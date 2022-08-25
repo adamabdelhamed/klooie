@@ -113,10 +113,6 @@ public partial class ConsoleApp : EventLoop
     /// </summary>
     public ConsolePanel LayoutRoot { get; private set; }
 
-    /// <summary>
-    /// Gets or set whether or not to give focus to a control when the app starts.  The default is true.
-    /// </summary>
-    public bool SetFocusOnStart { get; set; }
 
     /// <summary>
     /// An event that fires just after painting the app
@@ -153,7 +149,6 @@ public partial class ConsoleApp : EventLoop
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
         cycleRateMeter = new FrameRateMeter();
         EndOfCycle.SubscribeForLifetime(Cycle, this);
-        SetFocusOnStart = true;
         LayoutRoot = new ConsolePanel();
         LayoutRoot.ResizeTo(lastConsoleWidth, lastConsoleHeight);
         focus = new FocusManager();
@@ -191,11 +186,6 @@ public partial class ConsoleApp : EventLoop
     /// <returns>A task that will complete when the app exits</returns>
     public override async Task Start()
     {
-        if (SetFocusOnStart)
-        {
-            InvokeNextCycle(() => focus.MoveFocus());
-        }
-
         try
         {
             Invoke(Startup);
@@ -210,11 +200,6 @@ public partial class ConsoleApp : EventLoop
     public override void Run()
     {
         _current = this;
-        if (SetFocusOnStart)
-        {
-            InvokeNextCycle(() => focus.MoveFocus());
-        }
-
         try
         {
             Invoke(Startup);

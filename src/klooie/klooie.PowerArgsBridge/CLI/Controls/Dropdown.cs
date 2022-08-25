@@ -9,21 +9,21 @@ namespace PowerArgs.Cli
     /// </summary>
     public class Dropdown : ProtectedConsolePanel
     {
-        public List<DialogOption> Options { get; private set; } = new List<DialogOption>();
+        public List<DialogChoice> Options { get; private set; } = new List<DialogChoice>();
         private Label valueLabel;
         private bool isOpen;
 
         /// <summary>
         /// The currently selected option
         /// </summary>
-        public DialogOption Value { get => Get<DialogOption>(); set => Set(value); }
+        public DialogChoice Value { get => Get<DialogChoice>(); set => Set(value); }
 
         public bool EnableWAndSKeysForUpDown { get; set; }
 
         /// <summary>
         /// Creates a new Dropdown
         /// </summary>
-        public Dropdown(IEnumerable<DialogOption> options)
+        public Dropdown(IEnumerable<DialogChoice> options)
         {
             this.Options.AddRange(options);
             Value = this.Options.FirstOrDefault();

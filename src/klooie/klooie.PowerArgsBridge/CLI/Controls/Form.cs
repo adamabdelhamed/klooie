@@ -324,13 +324,13 @@ namespace PowerArgs.Cli
                 }
                 else if (property.HasAttr<FormReadOnlyAttribute>() == false && property.PropertyType.IsEnum)
                 {
-                    var options = new List<DialogOption>();
+                    var options = new List<DialogChoice>();
                     foreach (var val in Enum.GetValues(property.PropertyType))
                     {
                         var enumField = property.PropertyType.GetField(Enum.GetName(property.PropertyType, val));
                         var display = enumField.HasAttr<FormLabelAttribute>() ? enumField.Attr<FormLabelAttribute>().Label.ToConsoleString() : (val + "").ToConsoleString();
 
-                        options.Add(new DialogOption()
+                        options.Add(new DialogChoice()
                         {
                             DisplayText = display,
                             Id = val.ToString(),

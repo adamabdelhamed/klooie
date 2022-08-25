@@ -61,7 +61,7 @@ public class ScrollablePanel : ConsolePanel
 
     public ScrollablePanel()
     {
-        ScrollableContent = Add(new ConsolePanel() { IsVisible = true }).Fill();
+        ScrollableContent = Add(new ConsolePanel()).Fill();
         SynchronizeForLifetime(nameof(Background), () => ScrollableContent.Background = Background, this);
         verticalScrollbar = Add(new Scrollbar(Orientation.Vertical) { Width = 1 }).DockToRight();
         horizontalScrollbar = Add(new Scrollbar(Orientation.Horizontal) { Height = 1 }).DockToBottom();
@@ -75,6 +75,7 @@ public class ScrollablePanel : ConsolePanel
         focusSubscription = Application.FocusChanged.SubscribeUnmanaged(FocusChanged);
         SynchronizeForLifetime(nameof(HorizontalScrollUnits), UpdateScrollbars, this);
         SynchronizeForLifetime(nameof(VerticalScrollUnits), UpdateScrollbars, this);
+        ScrollableContent.SubscribeForLifetime(nameof(Bounds), UpdateScrollbars, this);
         ScrollableContent.Controls.SynchronizeForLifetime(ScrollableControls_Added, (c) => { }, () => { }, this);
     }
 
@@ -103,7 +104,7 @@ public class ScrollablePanel : ConsolePanel
             var verticalPercentageScrolled = VerticalScrollUnits / (double)contentSize.Height;
 
 
-            var verticalScrollbarHeight = ConsoleMath.Round(Height * verticalPercentageShowing);
+            var verticalScrollbarHeight = (int)Math.Ceiling(Height * verticalPercentageShowing);
 
             verticalScrollbar.Height = verticalScrollbarHeight;
             verticalScrollbar.Y = ConsoleMath.Round(Height * verticalPercentageScrolled);
@@ -212,11 +213,17 @@ public class ScrollablePanel : ConsolePanel
             }
         }
 
-        verticalScrollbar.Paint();
-        horizontalScrollbar.Paint();
-        DrawScrollbar(verticalScrollbar, context);
-        DrawScrollbar(horizontalScrollbar, context);
+        if (ScrollableContent.Width > Width)
+        {
+            horizontalScrollbar.Paint();
+            DrawScrollbar(horizontalScrollbar, context);
+        }
 
+        if (ScrollableContent.Height > Height)
+        {
+            verticalScrollbar.Paint();
+            DrawScrollbar(verticalScrollbar, context);
+        }
     }
 
     private void DrawScrollbar(Scrollbar bar, ConsoleBitmap context)

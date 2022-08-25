@@ -240,7 +240,7 @@ namespace PowerArgs.Cli
                 var dayOfWeek = (DayOfWeek)day;
                 var panel = new ConsolePanel();
                 panel.Background = Foreground;
-                var label = panel.Add(new Label() { Mode = LabelRenderMode.ManualSizing, Background = Foreground }).FillHorizontally(padding: new Thickness(day == 0 ? 2 : 0, 0, 0, 0)).CenterVertically();
+                var label = panel.Add(new Label(LabelRenderMode.ManualSizing) { Background = Foreground }).FillHorizontally(padding: new Thickness(day == 0 ? 2 : 0, 0, 0, 0)).CenterVertically();
                 dayLabels.Add(label);
                 gridLayout.Add(panel, day, 0);
                 Func<int> smallestDayLabelWidth = () => dayLabels.Select(l => l.Width).Min();

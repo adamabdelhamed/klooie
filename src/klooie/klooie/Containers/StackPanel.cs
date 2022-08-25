@@ -20,6 +20,21 @@ public enum Orientation
 public class StackPanel : ConsolePanel
 {
     /// <summary>
+    /// Specifies how auto sizing works
+    /// </summary>
+    public enum AutoSizeMode
+    {
+        // don't auto size
+        None,
+        // auto size only the height
+        Height,
+        // auto size only the width
+        Width,
+        // auto size both
+        Both
+    }
+
+    /// <summary>
     /// Gets or sets the orientation of the control
     /// </summary>
     public Orientation Orientation { get { return Get<Orientation>(); } set { Set(value); } }
@@ -30,9 +45,9 @@ public class StackPanel : ConsolePanel
     public int Margin { get { return Get<int>(); } set { Set(value); } }
 
     /// <summary>
-    /// When set to true, the panel will size itself automatically based on its children.
+    /// Control the auto size behavior of the stack panel Defaults to None.
     /// </summary>
-    public bool AutoSize { get; set; }
+    public AutoSizeMode AutoSize { get; set; }
 
     /// <summary>
     /// Creates a new stack panel
@@ -47,25 +62,32 @@ public class StackPanel : ConsolePanel
 
     private void Controls_Added(ConsoleControl obj) => obj.SynchronizeForLifetime(nameof(Bounds), RedoLayout, Controls.GetMembershipLifetime(obj));
     
-
     private void RedoLayout()
     {
         if (this.IsExpired || this.IsExpiring) return;
         if (Orientation == Orientation.Vertical)
         {
             int h = Layout.StackVertically(Margin, Controls);
-            if (AutoSize)
+            if (AutoSize == AutoSizeMode.Height || AutoSize == AutoSizeMode.Both)
             {
                 Height = h;
+            }
+
+            if (AutoSize == AutoSizeMode.Width || AutoSize == AutoSizeMode.Both)
+            {
                 Width = Controls.Count == 0 ? 0 : Controls.Select(c => c.X + c.Width).Max();
             }
         }
         else
         {
             int w = Layout.StackHorizontally(Margin, Controls);
-            if (AutoSize)
+            if (AutoSize == AutoSizeMode.Width || AutoSize == AutoSizeMode.Both)
             {
                 Width = w;
+            }
+
+            if (AutoSize == AutoSizeMode.Height || AutoSize == AutoSizeMode.Both)
+            {
                 Height = Controls.Count == 0 ? 0 : Controls.Select(c => c.Y + c.Height).Max();
             }
         }

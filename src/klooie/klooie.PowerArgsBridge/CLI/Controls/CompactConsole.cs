@@ -152,11 +152,11 @@ namespace PowerArgs.Cli
             if (SuperCompact == false)
             {
                 var outputPanel = gridLayout.Add(new ConsolePanel() { Background = ConsoleColor.Black }, 1, top);
-                outputLabel = outputPanel.Add(new Label() { Text = 
+                outputLabel = outputPanel.Add(new Label(LabelRenderMode.MultiLineSmartWrap) { Text = 
                     string.IsNullOrWhiteSpace(outputValue?.StringValue) == false ? outputValue : 
                     string.IsNullOrWhiteSpace(outputLabel?.Text?.StringValue) == false ? outputLabel?.Text : 
                     CreateAssistiveText(), 
-                Mode = LabelRenderMode.MultiLineSmartWrap }).Fill();
+                 }).Fill();
             }
             InputBox.KeyInputReceived.SubscribeForLifetime(async (keyInfo) => await OnHandleHey(keyInfo), InputBox);
         }

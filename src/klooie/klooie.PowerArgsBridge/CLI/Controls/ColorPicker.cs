@@ -9,7 +9,7 @@ namespace PowerArgs.Cli
 
         public ColorPicker()
         {
-            var dropdown = ProtectedPanel.Add(new Dropdown(Enums.GetEnumValues<ConsoleColor>().Select(c => new DialogOption
+            var dropdown = ProtectedPanel.Add(new Dropdown(Enums.GetEnumValues<ConsoleColor>().Select(c => new DialogChoice
             {
                 DisplayText = c.ToString().ToConsoleString((RGB)c),
                 Value = (RGB)c,

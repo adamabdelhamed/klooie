@@ -15,7 +15,7 @@ public class StackPanelTests
         app.SecondsBetweenKeyframes = .05f;
         app.Invoke(async ()=>
         {
-            var stack = app.LayoutRoot.Add(new StackPanel() { AutoSize = true, Orientation = Orientation.Vertical }).CenterBoth();
+            var stack = app.LayoutRoot.Add(new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Orientation = Orientation.Vertical }).CenterBoth();
 
             foreach(var color in new RGB[] { RGB.Red, RGB.Red, RGB.Yellow, RGB.Yellow, RGB.Green, RGB.Green, RGB.Blue, RGB.Blue, RGB.Magenta, RGB.Magenta })
             {
@@ -37,7 +37,7 @@ public class StackPanelTests
         app.SecondsBetweenKeyframes = .05f;
         app.Invoke(async () =>
         {
-            var stack = app.LayoutRoot.Add(new StackPanel() { AutoSize = true, Orientation = Orientation.Horizontal }).CenterBoth();
+            var stack = app.LayoutRoot.Add(new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Orientation = Orientation.Horizontal }).CenterBoth();
 
             foreach (var color in new RGB[] { RGB.Red, RGB.Red, RGB.Yellow, RGB.Yellow, RGB.Green, RGB.Green, RGB.Blue, RGB.Blue, RGB.Magenta, RGB.Magenta })
             {
@@ -59,7 +59,7 @@ public class StackPanelTests
         app.SecondsBetweenKeyframes = .05f;
         app.Invoke(async () =>
         {
-            var stack = app.LayoutRoot.Add(new StackPanel() { AutoSize = true, Orientation = Orientation.Vertical, Margin = 2 }).CenterBoth();
+            var stack = app.LayoutRoot.Add(new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Orientation = Orientation.Vertical, Margin = 2 }).CenterBoth();
 
             foreach (var color in new RGB[] { RGB.Red, RGB.Red, RGB.Yellow, RGB.Yellow, RGB.Green, RGB.Green, RGB.Blue, RGB.Blue, RGB.Magenta, RGB.Magenta })
             {
@@ -81,7 +81,7 @@ public class StackPanelTests
         app.SecondsBetweenKeyframes = .05f;
         app.Invoke(async () =>
         {
-            var stack = app.LayoutRoot.Add(new StackPanel() { AutoSize = true, Orientation = Orientation.Horizontal, Margin = 2 }).CenterBoth();
+            var stack = app.LayoutRoot.Add(new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Orientation = Orientation.Horizontal, Margin = 2 }).CenterBoth();
 
             foreach (var color in new RGB[] { RGB.Red, RGB.Red, RGB.Yellow, RGB.Yellow, RGB.Green, RGB.Green, RGB.Blue, RGB.Blue, RGB.Magenta, RGB.Magenta })
             {
