@@ -155,8 +155,8 @@ public class DialogTests
 
         app.InvokeNextCycle(async () =>
         {
-            Task<ConsoleString> dialogTask;
-            dialogTask = TextInputDialog.Show("Rich text input prompt text".ToGreen(), new ShowTextInputOptions() { SpeedPercentage = 0 });
+            Task<ConsoleString?> dialogTask;
+            dialogTask = TextInputDialog.Show(new ShowTextInputOptions("Rich text input prompt text".ToGreen()) { SpeedPercentage = 0 });
             await app.PaintAndRecordKeyFrameAsync();
             Assert.IsFalse(dialogTask.IsFulfilled());
             await app.SendKey(ConsoleKey.A.KeyInfo(shift: true));

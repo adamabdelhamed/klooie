@@ -1,14 +1,48 @@
 ﻿using PowerArgs;
 namespace klooie;
 
+/// <summary>
+/// Abstract class for dialog options that include choices the user can make, which
+/// will be displayed as buttons on the bottom of the dialog
+/// </summary>
 public abstract class DialogWithChoicesOptions : DialogOptions
 {
+    /// <summary>
+    /// optionally customize the width of the dialog
+    /// </summary>
     public int DialogWidth { get; set; } = ConsoleApp.Current != null ? ConsoleMath.Round(ConsoleApp.Current.Width * .5f) : 50;
+
+    /// <summary>
+    /// optionally customize the height of the dialog
+    /// </summary>
     public int DialogHeight { get; set; } = 8;
+
+    /// <summary>
+    /// If true then the last choice you add will get focus first
+    /// </summary>
     public bool AutoFocusChoices { get; set; } = true;
+
+    /// <summary>
+    /// Sets the choices that the user can choose from
+    /// </summary>
     public IEnumerable<DialogChoice> UserChoices { get; set; } = Enumerable.Empty<DialogChoice>();
+
+    /// <summary>
+    /// optionally set the background color of the dialog
+    /// </summary>
     public RGB BackgroundColor { get; set; } = ConsoleString.DefaultBackgroundColor;
+
+    /// <summary>
+    /// optionally set a max lifetime that will cause the dialog to close when it expires
+    /// </summary>
     public ILifetimeManager? MaxLifetime { get; set; }
+
+    /// <summary>
+    /// Derived options classes should use this to create their content. The content
+    /// will be sized automatically to fit into the dialog.
+    /// </summary>
+    /// <param name="contentContainer">the container that your content will be added to</param>
+    /// <returns></returns>
     public abstract ConsoleControl ContentFactory(ConsolePanel contentContainer);
 }
 
@@ -87,7 +121,9 @@ public static class ChoiceDialog
     }
 }
 
-
+/// <summary>
+/// A type representing a choice that a user can make when interacting with a dialog
+/// </summary>
 public class DialogChoice
 {
     /// <summary>
@@ -128,18 +164,27 @@ public class DialogChoice
     /// <returns>the hashcode of the id</returns>
     public override int GetHashCode() => Id == null ? base.GetHashCode() : Id.GetHashCode();
 
+    /// <summary>
+    /// Ok and cancel choices
+    /// </summary>
     public static IEnumerable<DialogChoice> OKCancel => new DialogChoice[]
     {
         new DialogChoice(){ DisplayText = "OK".ToConsoleString(), Id = "OK", Value = "OK", Shortcut = new KeyboardShortcut(ConsoleKey.Enter) },
         new DialogChoice(){ DisplayText = "Cancel".ToConsoleString(), Id = "Cancel", Value = "Cancel", Shortcut = new KeyboardShortcut(ConsoleKey.Escape) },
     };
 
+    /// <summary>
+    /// Yes and no choices
+    /// </summary>
     public static IEnumerable<DialogChoice> YesNo => new DialogChoice[]
     {
         new DialogChoice(){ DisplayText = "Yes".ToConsoleString(), Id = "Yes", Value = "Yes", Shortcut = new KeyboardShortcut(ConsoleKey.Enter) },
         new DialogChoice(){ DisplayText = "No".ToConsoleString(), Id = "No", Value = "No" },
     };
 
+    /// <summary>
+    /// A single close choice
+    /// </summary>
     public static IEnumerable<DialogChoice> Close => new DialogChoice[]
     {
         new DialogChoice(){ DisplayText = "Close".ToConsoleString(), Id = "Close", Value = "Close",Shortcut = new KeyboardShortcut(ConsoleKey.Enter) },

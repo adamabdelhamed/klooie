@@ -1,14 +1,49 @@
 ﻿using PowerArgs;
 namespace klooie;
 
+/// <summary>
+/// Base class for all dialogs
+/// </summary>
 public class DialogOptions
 {
-    public ConsolePanel Parent { get; set; }
+    /// <summary>
+    /// Optionally set the parent otherwise the app's root will be used
+    /// </summary>
+    public ConsolePanel? Parent { get; set; }
+
+    /// <summary>
+    /// When set to true the dialog will push the focus stack when
+    /// the dialog opens and pop the stack with it closes. This ensures
+    /// that the focus cycling via the tab key only cycles through focusable
+    /// controls on the dialog and skips the focusable controls that are
+    /// underneath the dialog.
+    /// </summary>
     public bool PushPop { get; set; } = true;
+
+    /// <summary>
+    /// Increase to slow the animation. Decrease to speed it up.
+    /// Set to zero to skip animation.
+    /// </summary>
     public float SpeedPercentage { get; set; } = 1;
+    
+    /// <summary>
+    /// If true allows the user to close the dialog via the escape key
+    /// </summary>
     public bool AllowEscapeToClose { get; set; }
+
+    /// <summary>
+    /// If true allows the user to close the dialog via the enter key
+    /// </summary>
     public bool AllowEnterToClose { get; set; }
+
+    /// <summary>
+    /// optionally sets the z-index of the control
+    /// </summary>
     public int ZIndex { get; set; }
+
+    /// <summary>
+    /// optionally sets the border color of the dialog (defaults to a naturally contrasting color)
+    /// </summary>
     public RGB? BorderColor { get; set; }
 }
 
@@ -17,13 +52,17 @@ public class DialogOptions
 /// </summary>
 public class Dialog
 {
+    /// <summary>
+    /// An event that fires when any dialog is shown. It is fired once the dialog has settled
+    /// (i.e. the open animation is completed, the content is visible).
+    /// </summary>
     public static Event Shown { get; private set; } = new Event();
     /// <summary>
     /// Shows a dialog
     /// </summary>
     /// <param name="contentFactory">responsible for setting your own width and height</param>
     /// <param name="options">options you can configure</param>
-    /// <returns>an async task</returns>
+    /// <returns>true if the dialog was cancelled, false otherwise</returns>
     public static async Task<bool> Show(Func<ConsoleControl> contentFactory, DialogOptions options = null)
     {
         var cancelled = false;

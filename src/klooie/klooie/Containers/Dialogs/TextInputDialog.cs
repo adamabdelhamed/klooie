@@ -1,19 +1,35 @@
 ﻿using PowerArgs;
 namespace klooie;
 
-public class ShowTextInputOptions : DialogWithChoicesOptions
+/// <summary>
+/// Options for a dialog that shows a text box
+/// </summary>
+public class ShowTextInputOptions : ShowMessageOptions
 {
+    /// <summary>
+    /// Set this to use a custom text box, otherwise a default will be created
+    /// </summary>
     public Func<TextBox> TextBoxFactory { get; set; }
-    internal ConsoleString Message { get; set; }
 
+    /// <summary>
+    /// Gets the value that the user entered in the text box
+    /// </summary>
     public ConsoleString Value { get; private set; }
 
-    public ShowTextInputOptions()
+    /// <summary>
+    /// Creates the options given a message
+    /// </summary>
+    /// <param name="msg">the message to show</param>
+    public ShowTextInputOptions(ConsoleString msg) : base(msg)
     {
         AutoFocusChoices = false;
-        AllowEnterToClose = true;
     }
 
+    /// <summary>
+    /// Creates a label and a text box
+    /// </summary>
+    /// <param name="contentContainer">the container</param>
+    /// <returns>a label and a text box</returns>
     public override ConsoleControl ContentFactory(ConsolePanel contentContainer)
     {
         ConsolePanel content = new ConsolePanel();
@@ -32,15 +48,37 @@ public class ShowTextInputOptions : DialogWithChoicesOptions
     }
 }
 
+/// <summary>
+/// A dialog helper for getting a single text input from the user
+/// </summary>
 public static class TextInputDialog
 {
-    public static async Task<ConsoleString?> Show(ConsoleString message, ShowTextInputOptions options = null)
+    /// <summary>
+    /// Shows the dialog given options
+    /// </summary>
+    /// <param name="options">the dialog options</param>
+    /// <returns>the text entered or null if the dialog was cancelled</returns>
+    public static async Task<ConsoleString?> Show(ShowTextInputOptions options)
     {
-        options = options ?? new ShowTextInputOptions() { AllowEnterToClose = true };
-        options.Message = message;
         var result = await ChoiceDialog.Show(options);
         var ignore = result == null || "cancel".Equals(result.Id, StringComparison.OrdinalIgnoreCase);
 
         return ignore ? null : options.Value;
     }
+
+    /// <summary>
+    /// Shows the dialog given a message
+    /// </summary>
+    /// <param name="message">the message to show</param>
+    /// <returns>the text entered or null if the dialog was cancelled</returns>
+    public static Task<ConsoleString?> Show(string message) =>
+        Show(new ShowTextInputOptions(message.ToConsoleString()));
+
+    /// <summary>
+    /// Shows the dialog given a message
+    /// </summary>
+    /// <param name="message">the message to show</param>
+    /// <returns>the text entered or null if the dialog was cancelled</returns>
+    public static Task<ConsoleString?> Show(ConsoleString message) =>
+        Show(new ShowTextInputOptions(message));
 }
