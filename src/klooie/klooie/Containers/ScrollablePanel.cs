@@ -1,32 +1,32 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using PowerArgs;
+﻿using PowerArgs;
 namespace klooie;
+
+/// <summary>
+/// A panel that can scroll its content. Your responsibility is to
+/// add content to the ScrollableContent property on this class and
+/// to size the ScrollableContent panel to be whatever size you need.
+/// 
+/// If the size of ScrollableContent is larger than this panel then scrollbars
+/// will be added. They will become focusable and also enable keyboard shortcuts
+/// like home, end, page up, and page down.
+/// 
+/// If a control within ScrollableContent gets focus and it not currently in view then
+/// it will be automatically scrolled into view.
+/// </summary>
 public class ScrollablePanel : ConsolePanel
 {
-    public ConsolePanel ScrollableContent;
+    private IDisposable focusSubscription;
+    private Scrollbar verticalScrollbar;
+    private Scrollbar horizontalScrollbar;
 
-    public Size ScrollableContentSize
-    {
-        get
-        {
-            int w = 0;
-            int h = 0;
+    /// <summary>
+    /// The content that you should add to
+    /// </summary>
+    public ConsolePanel ScrollableContent { get; private set; }
 
-            foreach (var c in ScrollableContent.Controls.Where(c => c.IsVisible))
-            {
-                w = Math.Max(w, c.X + c.Width);
-                h = Math.Max(h, c.Y + c.Height);
-            }
-            return new Size(w, h);
-        }
-    }
-
+    /// <summary>
+    /// Gets or sets the current horizontal scroll amount in pixels
+    /// </summary>
     public int HorizontalScrollUnits
     {
         get
@@ -40,6 +40,9 @@ public class ScrollablePanel : ConsolePanel
         }
     }
 
+    /// <summary>
+    /// Gets or sets the current vertical scroll amount in pixels
+    /// </summary>
     public int VerticalScrollUnits
     {
         get
@@ -49,25 +52,21 @@ public class ScrollablePanel : ConsolePanel
         set
         {
             if (value < 0) throw new IndexOutOfRangeException("Value must be >= 0");
-
             Set(value);
         }
     }
 
-    private IDisposable focusSubscription;
-
-    private Scrollbar verticalScrollbar;
-    private Scrollbar horizontalScrollbar;
-
+    /// <summary>
+    /// Creates a scrollable panel
+    /// </summary>
     public ScrollablePanel()
     {
         ScrollableContent = Add(new ConsolePanel()).Fill();
         SynchronizeForLifetime(nameof(Background), () => ScrollableContent.Background = Background, this);
         verticalScrollbar = Add(new Scrollbar(Orientation.Vertical) { Width = 1 }).DockToRight();
         horizontalScrollbar = Add(new Scrollbar(Orientation.Horizontal) { Height = 1 }).DockToBottom();
-
         AddedToVisualTree.SubscribeForLifetime(OnAddedToVisualTree, this);
-        RemovedFromVisualTree.SubscribeForLifetime(OnRemovedFromVisualTree, this);
+        RemovedFromVisualTree.SubscribeForLifetime(()=>focusSubscription.Dispose(), this);
     }
 
     private void OnAddedToVisualTree()
@@ -76,18 +75,9 @@ public class ScrollablePanel : ConsolePanel
         SynchronizeForLifetime(nameof(HorizontalScrollUnits), UpdateScrollbars, this);
         SynchronizeForLifetime(nameof(VerticalScrollUnits), UpdateScrollbars, this);
         ScrollableContent.SubscribeForLifetime(nameof(Bounds), UpdateScrollbars, this);
-        ScrollableContent.Controls.SynchronizeForLifetime(ScrollableControls_Added, (c) => { }, () => { }, this);
+        ScrollableContent.Controls.SynchronizeForLifetime(c => c.SubscribeForLifetime(nameof(Bounds), UpdateScrollbars, c), (c) => { }, () => { }, this);
     }
 
-    private void OnRemovedFromVisualTree()
-    {
-        focusSubscription.Dispose();
-    }
-
-    private void ScrollableControls_Added(ConsoleControl c)
-    {
-        c.SubscribeForLifetime(nameof(Bounds), UpdateScrollbars, c);
-    }
     private void UpdateScrollbars()
     {
         var contentSize = ScrollableContentSize;
@@ -147,8 +137,6 @@ public class ScrollablePanel : ConsolePanel
         }
     }
 
-
-
     private void FocusChanged(ConsoleControl newlyFocused)
     {
         bool focusedControlIsWithinMe = VisitControlTree((control) =>
@@ -189,8 +177,6 @@ public class ScrollablePanel : ConsolePanel
             }
         }
     }
-
-
 
     protected override void OnPaint(ConsoleBitmap context)
     {
@@ -236,21 +222,33 @@ public class ScrollablePanel : ConsolePanel
             }
         }
     }
-}
 
-public class Scrollbar : ConsoleControl
-{
-    public ScrollablePanel ScrollablePanel
+    internal Size ScrollableContentSize
     {
         get
         {
-            return Parent as ScrollablePanel;
+            int w = 0;
+            int h = 0;
+
+            foreach (var c in ScrollableContent.Controls.Where(c => c.IsVisible))
+            {
+                w = Math.Max(w, c.X + c.Width);
+                h = Math.Max(h, c.Y + c.Height);
+            }
+            return new Size(w, h);
         }
     }
+}
 
+/// <summary>
+/// A control that implements scrolling
+/// </summary>
+public class Scrollbar : ConsoleControl
+{
+    private ScrollablePanel ScrollablePanel => Parent as ScrollablePanel;
     private Orientation orientation;
 
-    public Scrollbar(Orientation orientation)
+    internal Scrollbar(Orientation orientation)
     {
         this.orientation = orientation;
         Background = ConsoleColor.White;
