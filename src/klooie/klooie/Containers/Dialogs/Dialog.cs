@@ -50,13 +50,14 @@ public class DialogOptions
 /// <summary>
 /// Utility that lets you add animated dialogs to your ConsoleApps.
 /// </summary>
-public class Dialog
+public static class Dialog
 {
     /// <summary>
     /// An event that fires when any dialog is shown. It is fired once the dialog has settled
     /// (i.e. the open animation is completed, the content is visible).
     /// </summary>
     public static Event Shown { get; private set; } = new Event();
+
     /// <summary>
     /// Shows a dialog
     /// </summary>
@@ -88,11 +89,12 @@ public class Dialog
         if (options.AllowEscapeToClose) ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => { cancelled = true; content.Dispose(); }, content);
         if (options.AllowEnterToClose) ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, () => { cancelled = false; content.Dispose(); }, content);
 
-        // animate in in
+        // animate in
         await Forward(300 * options.SpeedPercentage, content, percentage => dialogContainer.Width = Math.Max(1, ConsoleMath.Round((4 + content.Width) * percentage)));
         await Forward(200 * options.SpeedPercentage, content, percentage => dialogContainer.Height = Math.Max(1, ConsoleMath.Round((2 + content.Height) * percentage)));
         content.IsVisible = true;
         Shown.Fire();
+
         if (content.ShouldContinue)
         {
             // wait for the content to dispose, which indicates that it's time to close
@@ -114,15 +116,16 @@ public class Dialog
 
     private static Task Forward(float duration, Lifetime lt, Action<float> setter) => AnimateCommon(duration, lt, setter, 0, 1);
     private static Task Reverse(float duration, Lifetime lt, Action<float> setter) => AnimateCommon(duration, lt, setter, 1, 0);
-    private static async Task AnimateCommon(float duration, Lifetime lt, Action<float> setter, float from, float to)
+    private static Task AnimateCommon(float duration, Lifetime lt, Action<float> setter, float from, float to)
     {
         if (duration == 0)
         {
             setter(to);
+            return Task.CompletedTask;
         }
         else
         {
-            await Animator.AnimateAsync(new FloatAnimatorOptions()
+            return Animator.AnimateAsync(new FloatAnimatorOptions()
             {
                 From = from,
                 To = to,
