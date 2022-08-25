@@ -11,5 +11,6 @@ namespace ArgsTests
         public const string Drawing = "ConsoleBitmap and recording tests";
         public const string Games = "Gaming tests";
         public const string Slow = "Slow";
+        public const string Observability = "Observability";
     }
 }

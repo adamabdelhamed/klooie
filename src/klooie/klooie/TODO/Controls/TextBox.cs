@@ -60,7 +60,6 @@ public class TextBox : ConsoleControl
         CanFocus = true;
         this.Focused.SubscribeForLifetime(TextBox_Focused, this);
         this.Unfocused.SubscribeForLifetime(TextBox_Unfocused, this);
-        textState.SubscribeForLifetime(nameof(textState.CurrentValue), TextValueChanged, this);
         KeyInputReceived.SubscribeForLifetime(OnKeyInputReceived, this);
     }
 
@@ -134,6 +133,7 @@ public class TextBox : ConsoleControl
 
         ConsoleCharacter? prototype = this.Value.Length == 0 ? (ConsoleCharacter?)null : this.Value[this.Value.Length - 1];
         textState.RegisterKeyPress(info, prototype);
+        TextValueChanged();
         IsBlinking = true;
         Application.ChangeInterval(blinkTimerHandle, BlinkInterval);
     }
