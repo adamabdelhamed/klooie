@@ -30,7 +30,7 @@ public static class MessageDialog
     public static Task<DialogChoice> Show(ShowMessageOptions options) => ChoiceDialog.Show(options);
     
 
-    public static Task<bool> ShowYesNo(string message) => ShowYesNo(message.ToString());
+    public static Task<bool> ShowYesNo(string message) => ShowYesNo(message.ToConsoleString());
 
     public static async Task<bool> ShowYesNo(ConsoleString message)
     {

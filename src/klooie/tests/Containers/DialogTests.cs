@@ -96,10 +96,7 @@ public class DialogTests
         var app = new ConsoleApp();
         app.Invoke(async () =>
         {
-            Dialog.Shown.SubscribeOnce(async () =>
-            {
-                await app.SendKey(ConsoleKey.Enter);
-            });
+            Dialog.Shown.SubscribeOnce(async () => await app.SendKey(ConsoleKey.Enter));
             var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
             Assert.IsTrue("no".Equals(choice.Id, StringComparison.OrdinalIgnoreCase));
             app.Stop();
@@ -114,11 +111,7 @@ public class DialogTests
         var app = new ConsoleApp();
         app.Invoke(async () =>
         {
-            app.Invoke(async () =>
-            {
-                await Task.Delay(300);
-                await app.SendKey(ConsoleKey.Escape);
-            });
+            Dialog.Shown.SubscribeOnce(async () => await app.SendKey(ConsoleKey.Escape));
             var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
             Assert.IsNull(choice);
             app.Stop();
@@ -143,7 +136,7 @@ public class DialogTests
             Assert.IsFalse(dialogTask.IsFulfilled());
 
             // simulate an enter keypress, which should clear the dialog
-            app.SendKey(new ConsoleKeyInfo(' ', ConsoleKey.Enter, false, false, false));
+            await app.SendKey(ConsoleKey.Enter);
             await app.PaintAndRecordKeyFrameAsync();
             await dialogTask;
             app.Stop();
@@ -153,46 +146,6 @@ public class DialogTests
         app.AssertThisTestMatchesLKG();
     }
 
-    [TestMethod]
-    public void Dialog_ShowYesNoPorted()
-    {
-        var app = new KlooieTestHarness(this.TestContext, true);
-
-        app.InvokeNextCycle(async () =>
-        {
-            Task dialogTask;
-
-            dialogTask = MessageDialog.ShowYesNo("Yes or no, no will be clicked");
-            await app.PaintAndRecordKeyFrameAsync();
-            Assert.IsFalse(dialogTask.IsFulfilled());
-
-            var noRejected = false;
-            dialogTask.Fail((ex) => noRejected = true);
-
-            // simulate an enter keypress, which should clear the dialog, but should not trigger 
-            // the Task to resolve since yes was not chosen
-            app.SendKey(new ConsoleKeyInfo(' ', ConsoleKey.Enter, false, false, false));
-            await app.PaintAndRecordKeyFrameAsync();
-            Assert.IsTrue(dialogTask.IsFulfilled());
-            Assert.IsTrue(noRejected); // the Task should reject on no
-
-            dialogTask = MessageDialog.ShowYesNo("Yes or no, yes will be clicked");
-            await app.PaintAndRecordKeyFrameAsync();
-            Assert.IsFalse(dialogTask.IsFulfilled());
-            // give focus to the yes option
-            app.SendKey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, true, false, false));
-            await app.PaintAndRecordKeyFrameAsync();
-
-            // dismiss the dialog
-            app.SendKey(new ConsoleKeyInfo(' ', ConsoleKey.Enter, false, false, false));
-            await app.PaintAndRecordKeyFrameAsync();
-            await dialogTask;
-            app.Stop();
-        });
-
-        app.Start().Wait();
-        app.AssertThisTestMatchesLKG();
-    }
 
 
     [TestMethod]
@@ -206,16 +159,16 @@ public class DialogTests
             dialogTask = TextInputDialog.Show("Rich text input prompt text".ToGreen(), new ShowTextInputOptions() { SpeedPercentage = 0 });
             await app.PaintAndRecordKeyFrameAsync();
             Assert.IsFalse(dialogTask.IsFulfilled());
-            app.SendKey(new ConsoleKeyInfo('A', ConsoleKey.A, false, false, false));
+            await app.SendKey(ConsoleKey.A.KeyInfo(shift: true));
             await app.PaintAndRecordKeyFrameAsync();
-            app.SendKey(new ConsoleKeyInfo('d', ConsoleKey.D, false, false, false));
+            await app.SendKey(ConsoleKey.D);
             await app.PaintAndRecordKeyFrameAsync();
-            app.SendKey(new ConsoleKeyInfo('a', ConsoleKey.A, false, false, false));
+            await app.SendKey(ConsoleKey.A);
             await app.PaintAndRecordKeyFrameAsync();
-            app.SendKey(new ConsoleKeyInfo('m', ConsoleKey.M, false, false, false));
+            await app.SendKey(ConsoleKey.M);
             await app.PaintAndRecordKeyFrameAsync();
             Assert.IsFalse(dialogTask.IsFulfilled());
-            app.SendKey(new ConsoleKeyInfo(' ', ConsoleKey.Enter, false, false, false));
+            await app.SendKey(ConsoleKey.Enter);
             var stringVal = (await dialogTask).ToString();
             await app.RequestPaintAsync();
             app.RecordKeyFrame();

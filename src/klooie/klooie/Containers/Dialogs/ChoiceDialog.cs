@@ -23,6 +23,16 @@ public static class ChoiceDialog
     {
         options.UserChoices = options.UserChoices ?? Enumerable.Empty<DialogChoice>();
 
+        if(options.UserChoices.None() && options.AllowEnterToClose)
+        {
+            options.UserChoices = DialogChoice.Close;
+        }
+
+        if(options.AllowEscapeToClose && options.UserChoices.Where(c => c.Shortcut.Key == ConsoleKey.Escape).Any())
+        {
+            throw new ArgumentException($"You cannot use the Escape key as a dialog choice shortcut if you also set the {nameof(options.AllowEscapeToClose)} option to true");
+        }
+
         DialogChoice choice = null;
 
         var factory = () =>
@@ -47,17 +57,16 @@ public static class ChoiceDialog
                 foreach (var option in options.UserChoices)
                 {
                     var myOption = option;
-                    var button = buttonStack.Add(new Button() { Text = option.DisplayText, Tag = option.Value });
+                    var button = buttonStack.Add(new Button() { Text = option.DisplayText, Tag = option.Value, Shortcut = option.Shortcut });
                     button.Pressed.SubscribeForLifetime(() =>
                     {
                         choice = myOption;
                         layout.Dispose();
                     }, layout);
 
-                    button.Focused.SubscribeForLifetime(() =>
-                    {
-                        choice = myOption;
-                    }, layout);
+                    // This ensures that the global enter handler on dialogs will still reflect
+                    // the most recently focused button
+                    button.Focused.SubscribeForLifetime(() => choice = myOption , layout);
                 }
                 if (options.AutoFocusChoices)
                 {
@@ -78,4 +87,63 @@ public static class ChoiceDialog
 
         return choice ?? DialogChoice.Close.First();
     }
+}
+
+
+public class DialogChoice
+{
+    /// <summary>
+    /// The display text for the option
+    /// </summary>
+    public ConsoleString DisplayText { get; set; }
+
+    /// <summary>
+    /// The id of this option's value
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// An object that this option represents
+    /// </summary>
+    public object Value { get; set; }
+
+    /// <summary>
+    /// A keyboard shortcut for this option
+    /// </summary>
+    public KeyboardShortcut Shortcut { get; set; }
+
+    /// <summary>
+    /// Compares the ids of each option
+    /// </summary>
+    /// <param name="obj">the other option</param>
+    /// <returns>true if the ids match</returns>
+    public override bool Equals(object obj)
+    {
+        var b = obj as DialogChoice;
+        if (b == null) return false;
+        return b.Id == this.Id;
+    }
+
+    /// <summary>
+    /// gets the hashcode of the id
+    /// </summary>
+    /// <returns>the hashcode of the id</returns>
+    public override int GetHashCode() => Id == null ? base.GetHashCode() : Id.GetHashCode();
+
+    public static IEnumerable<DialogChoice> OKCancel => new DialogChoice[]
+    {
+        new DialogChoice(){ DisplayText = "OK".ToConsoleString(), Id = "OK", Value = "OK", Shortcut = new KeyboardShortcut(ConsoleKey.Enter) },
+        new DialogChoice(){ DisplayText = "Cancel".ToConsoleString(), Id = "Cancel", Value = "Cancel", Shortcut = new KeyboardShortcut(ConsoleKey.Escape) },
+    };
+
+    public static IEnumerable<DialogChoice> YesNo => new DialogChoice[]
+    {
+        new DialogChoice(){ DisplayText = "Yes".ToConsoleString(), Id = "Yes", Value = "Yes", Shortcut = new KeyboardShortcut(ConsoleKey.Enter) },
+        new DialogChoice(){ DisplayText = "No".ToConsoleString(), Id = "No", Value = "No" },
+    };
+
+    public static IEnumerable<DialogChoice> Close => new DialogChoice[]
+    {
+        new DialogChoice(){ DisplayText = "Close".ToConsoleString(), Id = "Close", Value = "Close",Shortcut = new KeyboardShortcut(ConsoleKey.Enter) },
+    };
 }
