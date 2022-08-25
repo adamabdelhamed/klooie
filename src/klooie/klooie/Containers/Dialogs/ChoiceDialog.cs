@@ -83,8 +83,6 @@ public static class ChoiceDialog
             return null; // cancelled
         }
 
-
-
         return choice ?? DialogChoice.Close.First();
     }
 }
