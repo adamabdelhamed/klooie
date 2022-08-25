@@ -1,5 +1,4 @@
 ﻿using PowerArgs;
-using PowerArgs.Cli;
 
 namespace klooie.VideoPlayer;
 class Program
@@ -16,6 +15,7 @@ class Program
             return;
         }
 
+        var fancy = ConsoleProvider.Fancy;
         var app = new ConsoleApp();
         app.Invoke(() =>
         {
