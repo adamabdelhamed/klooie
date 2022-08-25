@@ -32,7 +32,7 @@ public class DialogTests
         app.Invoke(async () =>
         {
             await app.PaintAndRecordKeyFrameAsync();
-            await Dialog.ShowMessage(new ShowMessageOptions("Hello world".ToGreen()) { UserChoices = DialogChoice.Close, SpeedPercentage = 0, MaxLifetime = Task.Delay(300).ToLifetime() });
+            await MessageDialog.Show(new ShowMessageOptions("Hello world".ToGreen()) { UserChoices = DialogChoice.Close, SpeedPercentage = 0, MaxLifetime = Task.Delay(300).ToLifetime() });
             await app.PaintAndRecordKeyFrameAsync();
             app.Stop();
         });
@@ -55,7 +55,7 @@ public class DialogTests
         app.Invoke(async () =>
         {
             await app.PaintAndRecordKeyFrameAsync();
-            var dialogTask = Dialog.ShowMessage(new ShowMessageOptions(msg.ToGreen()) { SpeedPercentage = 0 });
+            var dialogTask = MessageDialog.Show(new ShowMessageOptions(msg.ToGreen()) { SpeedPercentage = 0 });
             await Task.Delay(20);
             await app.PaintAndRecordKeyFrameAsync();
             await app.SendKey(ConsoleKey.Tab);
@@ -83,7 +83,7 @@ public class DialogTests
                 await app.SendKey(ConsoleKey.Tab, shift: true);
                 await app.SendKey(ConsoleKey.Enter);
             });
-            var choice = await Dialog.ShowMessage(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
+            var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
             Assert.IsTrue("yes".Equals(choice.Id, StringComparison.OrdinalIgnoreCase));
             app.Stop();
         });
@@ -96,12 +96,11 @@ public class DialogTests
         var app = new ConsoleApp();
         app.Invoke(async () =>
         {
-            app.Invoke(async () =>
+            Dialog.Shown.SubscribeOnce(async () =>
             {
-                await Task.Delay(300);
                 await app.SendKey(ConsoleKey.Enter);
             });
-            var choice = await Dialog.ShowMessage(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
+            var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
             Assert.IsTrue("no".Equals(choice.Id, StringComparison.OrdinalIgnoreCase));
             app.Stop();
         });
@@ -120,7 +119,7 @@ public class DialogTests
                 await Task.Delay(300);
                 await app.SendKey(ConsoleKey.Escape);
             });
-            var choice = await Dialog.ShowMessage(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
+            var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
             Assert.IsNull(choice);
             app.Stop();
         });
@@ -139,7 +138,7 @@ public class DialogTests
 
             // show hello world message, wait for a paint, then take a keyframe of the screen, which 
             // should have the dialog shown
-            dialogTask = Dialog.ShowMessage("Hello world");
+            dialogTask = MessageDialog.Show("Hello world");
             await app.PaintAndRecordKeyFrameAsync();
             Assert.IsFalse(dialogTask.IsFulfilled());
 
@@ -163,7 +162,7 @@ public class DialogTests
         {
             Task dialogTask;
 
-            dialogTask = Dialog.ShowYesNoConfirmation("Yes or no, no will be clicked");
+            dialogTask = MessageDialog.ShowYesNo("Yes or no, no will be clicked");
             await app.PaintAndRecordKeyFrameAsync();
             Assert.IsFalse(dialogTask.IsFulfilled());
 
@@ -177,7 +176,7 @@ public class DialogTests
             Assert.IsTrue(dialogTask.IsFulfilled());
             Assert.IsTrue(noRejected); // the Task should reject on no
 
-            dialogTask = Dialog.ShowYesNoConfirmation("Yes or no, yes will be clicked");
+            dialogTask = MessageDialog.ShowYesNo("Yes or no, yes will be clicked");
             await app.PaintAndRecordKeyFrameAsync();
             Assert.IsFalse(dialogTask.IsFulfilled());
             // give focus to the yes option
@@ -204,7 +203,7 @@ public class DialogTests
         app.InvokeNextCycle(async () =>
         {
             Task<ConsoleString> dialogTask;
-            dialogTask = Dialog.ShowTextInput("Rich text input prompt text".ToGreen(), new ShowTextInputOptions() { SpeedPercentage = 0 });
+            dialogTask = TextInputDialog.Show("Rich text input prompt text".ToGreen(), new ShowTextInputOptions() { SpeedPercentage = 0 });
             await app.PaintAndRecordKeyFrameAsync();
             Assert.IsFalse(dialogTask.IsFulfilled());
             app.SendKey(new ConsoleKeyInfo('A', ConsoleKey.A, false, false, false));
@@ -245,7 +244,7 @@ public class DialogTests
             if (keyframes) await app.PaintAndRecordKeyFrameAsync();
             Assert.IsTrue(label.HasFocus);
             await Task.Delay(250);
-            var options = new AnimatedDialogOptions();
+            var options = new DialogOptions();
             await Dialog.Show(() =>
             {
                 Assert.IsFalse(label.HasFocus);

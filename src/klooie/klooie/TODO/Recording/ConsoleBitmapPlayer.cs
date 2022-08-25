@@ -332,7 +332,7 @@ public class ConsoleBitmapPlayer : ConsolePanel
         else if (State == PlayerState.Failed)
         {
             pictureFrame.BorderColor = ConsoleColor.Red;
-            Dialog.ShowMessage(failedMessage.ToRed());
+            MessageDialog.Show(failedMessage.ToRed());
         }
         else
         {
