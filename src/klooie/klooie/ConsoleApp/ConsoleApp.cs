@@ -274,6 +274,16 @@ public partial class ConsoleApp : EventLoop
         return tcs.Task;
     }
 
+    /// <summary>
+    /// simulates a key press
+    /// </summary>
+    /// <param name="key">The key that was pressed</param>
+    /// <param name="shift">was shift pressed</param>
+    /// <param name="alt">was alt pressed</param>
+    /// <param name="control">was control pressed</param>
+    /// <returns></returns>
+    public Task SendKey(ConsoleKey key, bool shift = false, bool alt = false, bool control = false) => SendKey(key.KeyInfo(shift, alt, control));
+
 
     /// <summary>
     /// Schedules the given action for periodic processing by the message pump
