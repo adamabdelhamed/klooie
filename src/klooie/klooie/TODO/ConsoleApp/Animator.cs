@@ -380,6 +380,7 @@ namespace klooie;
                 var newValue = initialValue + (delta * percentageDone);
                 options.OnSet?.Invoke(percentageDone);
                 options.Set(newValue);
+                ConsoleApp.Current?.RequestPaint();
 #if DEBUG
                 options.Debug?.Invoke($"Set value to {newValue} at percentage {percentageDone}");
 #endif
