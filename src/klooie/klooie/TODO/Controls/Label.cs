@@ -54,7 +54,9 @@ public class Label : ConsoleControl
         {
             if (Text == null) return Null;
             _cleanCache = _cleanCache ?? Text.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\t", "    ");
-            return _cleanCache;
+            var ret = _cleanCache;
+            ret = ret.IsUnstyled ? ret.ToString().ToConsoleString(Foreground, Background) : ret;
+            return ret;
         }
     }
 
@@ -81,7 +83,8 @@ public class Label : ConsoleControl
         this.SubscribeForLifetime(nameof(MaxHeight), HandleTextChanged, this);
         this.SubscribeForLifetime(nameof(MaxWidth), HandleTextChanged, this);
         this.SubscribeForLifetime(nameof(Bounds), HandleTextChanged, this);
-
+        this.SubscribeForLifetime(nameof(Foreground), HandleTextChanged, this);
+        this.SubscribeForLifetime(nameof(Background), HandleTextChanged, this);
     }
 
     public Task AnimateTextForeground(RGB to, float duration = 1000, EasingFunction ease = null, bool autoReverse = false, ILifetimeManager loop = null, IDelayProvider delayProvider = null, float autoReverseDelay = 0, Func<bool> isCancelled = null)
@@ -241,5 +244,5 @@ public class NoFrillsLabel : ConsoleControl
         CanFocus = false;
     }
 
-    protected override void OnPaint(ConsoleBitmap context) => context.DrawString(_text, 0, 0);
+    protected override void OnPaint(ConsoleBitmap context) => context.DrawString(_text.IsUnstyled ? _text.ToString().ToConsoleString(Foreground,Background) : _text, 0, 0);
 }
