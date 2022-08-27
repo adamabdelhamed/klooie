@@ -52,7 +52,7 @@ public class ConsoleControlFilter : IConsoleControlFilter
 /// </summary>
 public class ConsoleControl : Rectangular
 {
-    private Event _focused, _unfocused, _addedToVisualTree, _beforeAddedToVisualTree, _removedFromVisualTree, _beforeRemovedFromVisualTree, _ready;
+    private Event _focused, _unfocused, _addedToVisualTree, _beforeAddedToVisualTree, _removedFromVisualTree, _beforeRemovedFromVisualTree, _ready, _tagsChanged;
     private Event<ConsoleKeyInfo> _keyInputReceived;
     private Container _parent;
     private RGB _bg, _fg;
@@ -111,6 +111,11 @@ public class ConsoleControl : Rectangular
     /// the key press internally.
     /// </summary>
     public Event<ConsoleKeyInfo> KeyInputReceived { get => _keyInputReceived ?? (_keyInputReceived = new Event<ConsoleKeyInfo>()); }
+
+    /// <summary>
+    /// An event that fires just before this control is removed from the visual tree of a ConsoleApp
+    /// </summary>
+    public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = new Event()); }
 
     /// <summary>
     /// Gets a reference to the application this control is a part of
@@ -288,12 +293,16 @@ public class ConsoleControl : Rectangular
     /// <param name="tag">the valute to test</param>
     /// <returns>true if this control has been tagged with the given value</returns>
     public bool HasSimpleTag(string tag) => GetTagsLazy(false)?.Contains(tag) == true;
-    
+
     /// <summary>
     /// Adds a tag to this control
     /// </summary>
     /// <param name="tag">the tag to add</param>
-    public void AddTag(string tag) => GetTagsLazy(true).Add(tag);
+    public void AddTag(string tag)
+    {
+        GetTagsLazy(true).Add(tag);
+        _tagsChanged?.Fire();
+    }
 
     /// <summary>
     /// Adds a key / value tag
@@ -311,13 +320,27 @@ public class ConsoleControl : Rectangular
     /// Adds a set of tags to this control
     /// </summary>
     /// <param name="tags">the tags to add</param>
-    public void AddTags(IEnumerable<string> tags) => GetTagsLazy(true).ForEach(t => this.tags.Add(t));
+    public void AddTags(IEnumerable<string> tags)
+    {
+        GetTagsLazy(true).ForEach(t => this.tags.Add(t));
+        _tagsChanged?.Fire();
+    }
 
     /// <summary>
     /// Removes a tag from this control
     /// </summary>
     /// <param name="tag"></param>
-    public bool RemoveTag(string tag) => GetTagsLazy(HasSimpleTag(tag) || HasValueTag(tag)) == null ? false : tags.Remove(tag);
+    public bool RemoveTag(string tag)
+    {
+        var ret = GetTagsLazy(HasSimpleTag(tag) || HasValueTag(tag)) == null ? false : tags.Remove(tag);
+
+        if(ret)
+        {
+            _tagsChanged?.Fire();
+        }
+
+        return ret;
+    }
 
     /// <summary>
     /// Tests to see if there is a key value tag with the given key
