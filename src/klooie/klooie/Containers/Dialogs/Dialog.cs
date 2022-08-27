@@ -45,6 +45,11 @@ public class DialogOptions
     /// optionally sets the border color of the dialog (defaults to a naturally contrasting color)
     /// </summary>
     public RGB? BorderColor { get; set; }
+
+    /// <summary>
+    /// Tags to be added to the root of the dialog
+    /// </summary>
+    public IEnumerable<string> Tags { get; set; } = Enumerable.Empty<string>();
 }
 
 /// <summary>
@@ -52,6 +57,11 @@ public class DialogOptions
 /// </summary>
 public static class Dialog
 {
+    /// <summary>
+    /// A tag that is put on the root border panel
+    /// </summary>
+    public const string Tag = "Dialog";
+
     /// <summary>
     /// An event that fires when any dialog is shown. It is fired once the dialog has settled
     /// (i.e. the open animation is completed, the content is visible).
@@ -85,6 +95,9 @@ public static class Dialog
 
         content.IsVisible = false;
         var dialogContainer = options.Parent.Add(new BorderPanel(content) { BorderColor = borderColor, Background = content.Background, Width = 1, Height = 1, ZIndex = options.ZIndex }).CenterBoth();
+        dialogContainer.AddTag(Tag);
+        options.Tags?.ForEach(t => dialogContainer.AddTag(t));
+
 
         if (options.AllowEscapeToClose) ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => { cancelled = true; content.Dispose(); }, content);
         if (options.AllowEnterToClose) ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, () => { cancelled = false; content.Dispose(); }, content);
