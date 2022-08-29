@@ -75,7 +75,6 @@ public class Button : ConsoleControl
     public Button()
     {
         Height = 1;
-        this.Foreground = DefaultColors.ButtonColor;
         this.SynchronizeForLifetime(nameof(Text), UpdateWidth, this);
         this.SynchronizeForLifetime(nameof(Shortcut), UpdateWidth, this);
 
@@ -87,7 +86,7 @@ public class Button : ConsoleControl
 
     private ConsoleString GetButtonDisplayString()
     {
-        var startAnchor = "[".ToConsoleString(HasFocus ? DefaultColors.BackgroundColor : CanFocus ? DefaultColors.H1Color : DefaultColors.DisabledColor, HasFocus ? (RGB)DefaultColors.FocusColor : Background);
+        var startAnchor = "[".ToConsoleString(HasFocus ? DefaultColors.BackgroundColor : CanFocus ? Foreground : DefaultColors.DisabledColor, HasFocus ? (RGB)DefaultColors.FocusColor : Background);
         var effectiveText = Text ?? ConsoleString.Empty;
         var shortcut = ConsoleString.Empty;
         if (Text != null)
@@ -124,23 +123,23 @@ public class Button : ConsoleControl
 
             if (Shortcut.Modifier.HasValue && Shortcut.Modifier == ConsoleModifiers.Alt)
             {
-                shortcut = new ConsoleString($" (ALT+{key})", CanFocus ? DefaultColors.H1Color : DefaultColors.DisabledColor, Background);
+                shortcut = new ConsoleString($" (ALT+{key})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
             }
             else if (Shortcut.Modifier.HasValue && Shortcut.Modifier == ConsoleModifiers.Shift)
             {
-                shortcut = new ConsoleString($" (SHIFT+{key})", CanFocus ? DefaultColors.H1Color : DefaultColors.DisabledColor, Background);
+                shortcut = new ConsoleString($" (SHIFT+{key})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
             }
             else if (Shortcut.Modifier.HasValue && Shortcut.Modifier == ConsoleModifiers.Control)
             {
-                shortcut = new ConsoleString($" (CTL+{key})", CanFocus ? DefaultColors.H1Color : DefaultColors.DisabledColor, Background);
+                shortcut = new ConsoleString($" (CTL+{key})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
             }
             else
             {
-                shortcut = new ConsoleString($" ({key})", CanFocus ? DefaultColors.H1Color : DefaultColors.DisabledColor, Background);
+                shortcut = new ConsoleString($" ({key})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
             }
         }
 
-        var endAnchor = "]".ToConsoleString(HasFocus ? DefaultColors.BackgroundColor : CanFocus ? DefaultColors.H1Color : DefaultColors.DisabledColor, HasFocus ? (RGB)DefaultColors.FocusColor : Background);
+        var endAnchor = "]".ToConsoleString(HasFocus ? DefaultColors.BackgroundColor : CanFocus ? Foreground : DefaultColors.DisabledColor, HasFocus ? (RGB)DefaultColors.FocusColor : Background);
         var ret = startAnchor + effectiveText + shortcut + endAnchor;
         return ret;
     }

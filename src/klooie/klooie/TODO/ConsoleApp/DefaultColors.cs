@@ -9,7 +9,6 @@ public static class DefaultColors
     public static RGB FocusContrastColor { get; set; }
     public static RGB SelectedUnfocusedColor { get; set; }
     public static RGB H1Color { get; set; }
-    public static RGB ButtonColor { get; set; }
     public static RGB HighlightColor { get; set; }
     public static RGB HighlightContrastColor { get; set; }
     public static RGB DisabledColor { get; set; }
@@ -22,7 +21,6 @@ public static class DefaultColors
         FocusContrastColor = RGB.Black;
         SelectedUnfocusedColor = RGB.DarkGray;
         H1Color = RGB.Yellow;
-        ButtonColor = RGB.White;
         HighlightColor = RGB.Yellow;
         HighlightContrastColor = RGB.Black;
         DisabledColor = RGB.DarkGray;
