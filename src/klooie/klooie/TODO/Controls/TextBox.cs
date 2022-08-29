@@ -49,11 +49,14 @@ public class TextBox : ConsoleControl
 
     public bool IsInputBlocked { get; set; }
 
+    public RGB FocusColor { get => Get<RGB>(); set => Set(value); } 
+
     /// <summary>
     /// Creates a new text box
     /// </summary>
     public TextBox()
     {
+        FocusColor = DefaultColors.FocusColor;
         this.textState = new RichTextEditor();
         this.Height = 1;
         this.Width = 15;
@@ -159,7 +162,7 @@ public class TextBox : ConsoleControl
         {
             if (isAllSelected)
             {
-                bgTransformed.Add(new ConsoleCharacter(c.Value, RGB.Black, RGB.Cyan));
+                bgTransformed.Add(new ConsoleCharacter(c.Value, RGB.Black, FocusColor));
             }
             else if (c.BackgroundColor == ConsoleString.DefaultBackgroundColor && Background != ConsoleString.DefaultBackgroundColor)
             {
@@ -176,7 +179,7 @@ public class TextBox : ConsoleControl
         if (IsBlinking && BlinkEnabled)
         {
             char blinkChar = textState.CursorPosition >= toPaint.Length ? ' ' : toPaint[textState.CursorPosition].Value;
-            var pen = new ConsoleCharacter(blinkChar, DefaultColors.FocusContrastColor, DefaultColors.FocusColor);
+            var pen = new ConsoleCharacter(blinkChar, DefaultColors.FocusContrastColor, FocusColor);
             context.DrawPoint(pen, textState.CursorPosition - offset, 0);
         }
     }
