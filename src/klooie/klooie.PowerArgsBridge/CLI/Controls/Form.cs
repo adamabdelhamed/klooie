@@ -156,7 +156,7 @@ namespace PowerArgs.Cli
                 if (property.HasAttr<FormReadOnlyAttribute>() == false && property.PropertyType == typeof(string))
                 {
                     var value = (string)property.GetValue(o);
-                    var textBox = new TextBox() { SelectAllOnFocus = property.HasAttr<FormSelectAllOnFocusAttribute>(), Foreground = ConsoleColor.White, Value = value == null ? ConsoleString.Empty : value.ToString().ToWhite() };
+                    var textBox = new TextBox() { SelectAllOnFocus = property.HasAttr<FormSelectAllOnFocusAttribute>(), Value = value == null ? ConsoleString.Empty : value.ToString().ToConsoleString() };
                     
                     if(property.HasAttr<FormContrastAttribute>())
                     {
@@ -174,7 +174,7 @@ namespace PowerArgs.Cli
                         }
                         else
                         {
-                            textBox.Value = (valueRead + "").ToWhite();
+                            textBox.Value = (valueRead + "").ToConsoleString();
                         }
                     }, textBox);
                     editControl = textBox;
@@ -218,7 +218,7 @@ namespace PowerArgs.Cli
                             }
                             else if (textBox.Value.Length > 0)
                             {
-                                textBox.Value = property.GetValue(o).ToString().ToWhite();
+                                textBox.Value = property.GetValue(o).ToString().ToConsoleString();
                             }
                         }, textBox);
                         (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () =>
@@ -263,7 +263,7 @@ namespace PowerArgs.Cli
                 {
 
                     var value = (float)property.GetValue(o);
-                    var textBox = new TextBox() { SelectAllOnFocus = property.HasAttr<FormSelectAllOnFocusAttribute>(), Foreground = ConsoleColor.White, Value = value.ToString().ToWhite() };
+                    var textBox = new TextBox() { SelectAllOnFocus = property.HasAttr<FormSelectAllOnFocusAttribute>(), Value = value.ToString().ToConsoleString() };
                     if (property.HasAttr<FormContrastAttribute>())
                     {
                         textBox.Background = RGB.White;
@@ -273,7 +273,7 @@ namespace PowerArgs.Cli
                     {
                         if (textBox.Value.Length == 0)
                         {
-                            textBox.Value = "0".ToConsoleString();
+                            textBox.Value = "".ToConsoleString();
                         }
                         if (textBox.Value.Length > 0 && float.TryParse(textBox.Value.ToString(), out float result))
                         {
@@ -281,7 +281,7 @@ namespace PowerArgs.Cli
                         }
                         else if (textBox.Value.Length > 0)
                         {
-                            textBox.Value = property.GetValue(o).ToString().ToWhite();
+                            textBox.Value = property.GetValue(o).ToString().ToConsoleString();
                         }
                     }, textBox);
                     (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () =>
@@ -371,7 +371,7 @@ namespace PowerArgs.Cli
                 {
                     var value = property.GetValue(o);
                     var valueString = value != null ? value.ToString().ToDarkGray() : "<null>".ToDarkGray();
-                    var valueLabel = new Label() { CompositionMode = CompositionMode.BlendBackground, CanFocus = true, Text = valueString + " (read only)".ToDarkGray() };
+                    var valueLabel = new Label() { CompositionMode = CompositionMode.BlendBackground, CanFocus = false, Text = valueString + " (read only)".ToDarkGray() };
                     (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () => valueLabel.Text = (property.GetValue(o) + "").ToConsoleString() + " (read only)".ToDarkGray(), valueLabel);
 
                     editControl = valueLabel;
@@ -384,7 +384,7 @@ namespace PowerArgs.Cli
 
                 ret.Elements.Add(new FormElement()
                 {
-                    Label = property.HasAttr<FormLabelAttribute>() ? property.Attr<FormLabelAttribute>().Label.ToYellow() : property.Name.ToYellow(),
+                    Label = property.HasAttr<FormLabelAttribute>() ? property.Attr<FormLabelAttribute>().Label.ToConsoleString() : property.Name.ToConsoleString(),
                     ValueControl = editControl
                 });
             }
