@@ -113,7 +113,7 @@ public class ConsoleControl : Rectangular
     public Event<ConsoleKeyInfo> KeyInputReceived { get => _keyInputReceived ?? (_keyInputReceived = new Event<ConsoleKeyInfo>()); }
 
     /// <summary>
-    /// An event that fires just before this control is removed from the visual tree of a ConsoleApp
+    /// An event that fires any time its tags changes
     /// </summary>
     public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = new Event()); }
 
