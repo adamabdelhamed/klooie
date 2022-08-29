@@ -162,6 +162,7 @@ public partial class ConsoleApp : EventLoop
         LayoutRoot.Controls.Removed.SubscribeForLifetime(ControlRemovedFromVisualTree, this);
         LoopStarted.SubscribeOnce(() => _current = this);
         EndOfCycle.SubscribeForLifetime(DrainPaints, this);
+        Invoke(Startup);
     }
 
     /// <summary>
@@ -188,7 +189,6 @@ public partial class ConsoleApp : EventLoop
     {
         try
         {
-            Invoke(Startup);
             await base.Start();
         }
         finally
@@ -202,7 +202,6 @@ public partial class ConsoleApp : EventLoop
         _current = this;
         try
         {
-            Invoke(Startup);
             base.Run();
         }
         finally
