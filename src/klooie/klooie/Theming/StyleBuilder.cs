@@ -144,7 +144,7 @@ public class StyleBuilder
     /// </summary>
     /// <param name="color">the focus color</param>
     /// <returns>this builder</returns>
-    public StyleBuilder Focus(RGB color) => Property(nameof(TextBox.FocusColor), color);
+    public StyleBuilder Focus(RGB color) => Property(nameof(ConsoleControl.FocusColor), color);
 
     /// <summary>
     /// Adds a style for the given property with the given value

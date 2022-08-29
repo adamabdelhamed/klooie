@@ -49,8 +49,6 @@ public class TextBox : ConsoleControl
 
     public bool IsInputBlocked { get; set; }
 
-    public RGB FocusColor { get => Get<RGB>(); set => Set(value); } 
-
     /// <summary>
     /// Creates a new text box
     /// </summary>
