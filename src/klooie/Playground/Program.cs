@@ -27,6 +27,7 @@ public class EventBenchmark
         events = new Event[numberOfEvents];
         for(var i = 0; i < numberOfEvents; i++)
         {
+            events[i] = new Event();
             for (var j = 0; j < numberOfSubscribersPerEvent; j++)
             {
                 events[i].SubscribeForLifetime(() => count++, Lifetime.Forever);
