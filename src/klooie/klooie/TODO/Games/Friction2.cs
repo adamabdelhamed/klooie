@@ -5,8 +5,8 @@ public class Friction2 : Lifetime
     public const int DefaultFrictionEvalFrequency = 50;
     public float Decay { get; set; } = .9f;
 
-    private Velocity2 tracker;
-    public Friction2(Velocity2 tracker, float evalFrequency = DefaultFrictionEvalFrequency)
+    private Velocity tracker;
+    public Friction2(Velocity tracker, float evalFrequency = DefaultFrictionEvalFrequency)
     {
         this.tracker = tracker;
         tracker.Collider.OnDisposed(this.Dispose);

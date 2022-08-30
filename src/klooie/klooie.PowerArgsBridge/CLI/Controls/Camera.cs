@@ -60,8 +60,9 @@ public class Camera : ConsolePanel
     /// <param name="duration">the time in milliseconds to spend on the animation</param>
     /// <param name="ease">the easing function to use</param>
     /// <param name="lt">a lifetime that can be used to cancel the animation</param>
+    /// <param name="delayProvider">the delay provider to use</param>
     /// <returns>an async task that completes when the animation is finished or cancelled</returns>
-    public Task AnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetimeManager lt = null)
+    public Task AnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetimeManager lt = null, IDelayProvider delayProvider = null)
     {
         ease = ease ?? Animator.EaseInOut;
         var startX = cameraLocation.Left;
@@ -83,7 +84,8 @@ public class Camera : ConsolePanel
                 {
                     CameraLocation = new LocF(frameX, frameY);
                 }
-            }
+            },
+            DelayProvider = delayProvider
         });
     }
 

@@ -8,9 +8,9 @@ public class Force2 : Lifetime
     public TimeSpan Duration { get; set; }
     public DateTime EndTime { get; set; }
     public bool IsPermanentForce { get; set; }
-    Velocity2 tracker;
+    Velocity tracker;
 
-    public Force2(Velocity2 tracker, float accelleration, Angle angle, TimeSpan? duration = null)
+    public Force2(Velocity tracker, float accelleration, Angle angle, TimeSpan? duration = null)
     {
         this.Accelleration = accelleration;
         this.Angle = angle;

@@ -1,8 +1,8 @@
-﻿using klooie;
+﻿using klooie.Gaming;
 using System.Diagnostics;
 namespace klooie;
 using PowerArgs;
-public class Velocity2
+public class Velocity
 {
     internal bool haveMovedSinceLastHitDetection = true;
     internal Angle angle;
@@ -69,14 +69,14 @@ public class Velocity2
         }
     }
 
-    public Velocity2(ICollider collider, ColliderGroup group)
+    public Velocity(ICollider collider, ColliderGroup group)
     {
         this.Group = group;
         this.Collider = collider;
         group.Add(collider, this);
     }
 
-    public Velocity2(ConsoleControl collider, ColliderGroup group) 
+    public Velocity(ConsoleControl collider, ColliderGroup group) 
     {
         this.Group = group;
         this.Collider = collider;
@@ -129,15 +129,15 @@ public class ColliderGroup
     private TimeSpan lastExecuteTime;
 
 
-    private Event<(Velocity2 Velocity, ICollider Collider)> _added;
-    public Event<(Velocity2 Velocity, ICollider Collider)> Added { get => _added ?? (_added = new Event<(Velocity2 Velocity, ICollider Collider)>()); }
+    private Event<(Velocity Velocity, ICollider Collider)> _added;
+    public Event<(Velocity Velocity, ICollider Collider)> Added { get => _added ?? (_added = new Event<(Velocity Velocity, ICollider Collider)>()); }
 
-    private Event<(Velocity2 Velocity, ICollider Collider)> _removed;
-    public Event<(Velocity2 Velocity, ICollider Collider)> Removed { get => _removed ?? (_removed = new Event<(Velocity2 Velocity, ICollider Collider)>()); }
+    private Event<(Velocity Velocity, ICollider Collider)> _removed;
+    public Event<(Velocity Velocity, ICollider Collider)> Removed { get => _removed ?? (_removed = new Event<(Velocity Velocity, ICollider Collider)>()); }
 
     public float SpeedRatio { get; set; } = 1;
 
-    public PauseManager PauseManager { get; set; }
+    internal PauseManager PauseManager { get; set; }
 
     public ColliderGroup(ILifetimeManager lt)
     {
@@ -146,9 +146,9 @@ public class ColliderGroup
         ConsoleApp.Current.Invoke(ExecuteAsync);
     }
 
-    public bool TryLookupVelocity(ICollider c, out Velocity2 v) => velocities.TryGetValue(c, out v);
+    public bool TryLookupVelocity(ICollider c, out Velocity v) => velocities.TryGetValue(c, out v);
 
-    internal (int RowIndex, int ColIndex) Add(ICollider c, Velocity2 v)
+    internal (int RowIndex, int ColIndex) Add(ICollider c, Velocity v)
     {
         if(c.ColliderHashCode >= 0)
         {
@@ -174,7 +174,7 @@ public class ColliderGroup
 
     public bool Remove(ICollider c)
     {
-        if(velocities.Remove(c, out Velocity2 v))
+        if(velocities.Remove(c, out Velocity v))
         {
             _removed?.Fire((v, c));
             Count--;
@@ -275,7 +275,7 @@ public class ColliderGroup
                             Prediction = hitPrediction,
                         };
 
-                        if (velocities.TryGetValue(obstacleHit, out Velocity2 vOther))
+                        if (velocities.TryGetValue(obstacleHit, out Velocity vOther))
                         {
                             if(vOther.Bounce)
                             {
@@ -399,9 +399,9 @@ public class ColliderGroup
         public class Item
         {
             public readonly ICollider Collider;
-            public readonly Velocity2 Velocity;
+            public readonly Velocity Velocity;
 
-            public Item(ICollider c, Velocity2 v)
+            public Item(ICollider c, Velocity v)
             {
                 Collider = c;
                 Velocity = v;
@@ -437,7 +437,7 @@ public class ColliderGroup
             }
         }
 
-        internal (int RowIndex, int ColIndex) Add(ICollider c, Velocity2 v)
+        internal (int RowIndex, int ColIndex) Add(ICollider c, Velocity v)
         {
             var i = c.ColliderHashCode % Table.Length;
             var myArray = Table[i].AsSpan();
@@ -456,7 +456,7 @@ public class ColliderGroup
             return (i, myArray.Length);
         }
 
-        public bool Remove(ICollider c, out Velocity2 v)
+        public bool Remove(ICollider c, out Velocity v)
         {
             var i = c.ColliderHashCode % Table.Length;
             var myArray = Table[i].AsSpan();
@@ -479,7 +479,7 @@ public class ColliderGroup
             return false;
         }
 
-        public bool TryGetValue(ICollider c, out Velocity2 v)
+        public bool TryGetValue(ICollider c, out Velocity v)
         {
             var i = c.ColliderHashCode % Table.Length;
             var myArray = Table[i].AsSpan();

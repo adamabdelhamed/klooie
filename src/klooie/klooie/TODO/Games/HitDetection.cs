@@ -99,7 +99,7 @@ public enum CastingMode
 
 public static class HitDetection
 {
-    public static bool HasLineOfSight(this Velocity2 from, ICollider to) => HasLineOfSight(from.Collider, to, from.GetObstaclesSlow());
+    public static bool HasLineOfSight(this Velocity from, ICollider to) => HasLineOfSight(from.Collider, to, from.GetObstaclesSlow());
 
     public static bool HasLineOfSight(this ICollider from, ICollider to, IEnumerable<ICollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
     public static bool HasLineOfSight(this ICollider from, RectF to, IEnumerable<ICollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
