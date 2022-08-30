@@ -15,28 +15,33 @@ public class Program
 [MemoryDiagnoser]
 public class EventBenchmark
 {
-    [Benchmark]
-    public void BenchmarkEvents()
+    int numberOfEvents = 1;
+    int numberOfSubscribersPerEvent = 100;
+    int numberOfFires = 50;
+    int count = 0;
+    private Event[] events;
+
+    [GlobalSetup]
+    public void Setup()
     {
-        var numberOfEvents = 5;
-        var numberOfSubscribersPerEvent = 5;
-        var numberOfFires = 5;
-
-        var count = 0;
-        for (var i = 0; i < numberOfEvents; i++)
+        events = new Event[numberOfEvents];
+        for(var i = 0; i < numberOfEvents; i++)
         {
-            using (var eventLt = new Lifetime())
+            for (var j = 0; j < numberOfSubscribersPerEvent; j++)
             {
-                var ev = new Event();
-                for (var j = 0; j < numberOfSubscribersPerEvent; j++)
-                {
-                    ev.SubscribeForLifetime(() => count++, eventLt);
-                }
+                events[i].SubscribeForLifetime(() => count++, Lifetime.Forever);
+            }
+        }
+    }
 
-                for (var k = 0; k < numberOfFires; k++)
-                {
-                    ev.Fire();
-                }
+    [Benchmark]
+    public void BenchmarkFire()
+    {
+        for(var i = 0; i < events.Length; i++)
+        {
+            for (var j = 0; j < numberOfFires; j++)
+            {
+                events[i].Fire();
             }
         }
     }
