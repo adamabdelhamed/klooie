@@ -347,6 +347,7 @@ namespace ArgsTests.CLI.Observability
         [TestMethod]
         public void ParallelEvents()
         {
+
             var e1 = new Event();
             var e2 = new Event();
             var t1Count = 0;
@@ -357,7 +358,7 @@ namespace ArgsTests.CLI.Observability
 
             Thread t1 = new Thread(() =>
             {
-                for(var i = 0; i < 200; i++)
+                for (var i = 0; i < 200; i++)
                 {
                     e1.SubscribeForLifetime(() => t1Count++, l1);
                 }
@@ -372,7 +373,7 @@ namespace ArgsTests.CLI.Observability
             {
                 for (var i = 0; i < 200; i++)
                 {
-                    e2.SubscribeForLifetime(() => t2Count++, l1);
+                    e2.SubscribeForLifetime(() => t2Count++, l2);
                 }
 
                 for (var i = 0; i < 200; i++)
@@ -383,7 +384,7 @@ namespace ArgsTests.CLI.Observability
 
             t1.Start();
             t2.Start();
-
+            Assert.AreNotEqual(t1.ManagedThreadId, t2.ManagedThreadId);
             while (t1.IsAlive || t2.IsAlive) Thread.Sleep(10);
             Assert.AreEqual(200 * 200, t1Count);
             Assert.AreEqual(200 * 200, t2Count);
