@@ -8,15 +8,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\klooie.PowerArgsBridge\klooie.PowerArgsBridge.csproj" />
     <ProjectReference Include="..\klooie\klooie.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="PowerArgs"  Condition=" '$(Configuration)' == 'Debug'">
+    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Debug'">
       <HintPath>..\..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
     </Reference>
-    <Reference Include="PowerArgs"  Condition=" '$(Configuration)' == 'Release'">
+    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Release'">
       <HintPath>..\..\..\..\PowerArgs\PowerArgs\bin\Release\net6.0\PowerArgs.dll</HintPath>
     </Reference>
   </ItemGroup>
