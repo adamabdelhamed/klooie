@@ -1,4 +1,4 @@
-﻿namespace PowerArgs;
+﻿namespace klooie;
 internal class NotificationBufferPool
 {
 #if DEBUG

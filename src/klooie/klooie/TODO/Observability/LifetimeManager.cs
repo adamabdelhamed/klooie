@@ -1,113 +1,112 @@
-﻿namespace PowerArgs
+﻿namespace klooie;
+
+/// <summary>
+/// An interface that defined the contract for associating cleanup
+/// code with a lifetime
+/// </summary>
+public interface ILifetimeManager
 {
     /// <summary>
-    /// An interface that defined the contract for associating cleanup
-    /// code with a lifetime
+    /// Registers the given cleanup code to run when the lifetime being
+    /// managed by this manager ends
     /// </summary>
-    public interface ILifetimeManager
+    /// <param name="cleanupCode">the code to run</param>
+    /// <returns>a Task that resolves after the cleanup code runs</returns>
+    void OnDisposed(Action cleanupCode);
+
+    /// <summary>
+    /// Registers the given disposable to dispose when the lifetime being
+    /// managed by this manager ends
+    /// </summary>
+    /// <param name="obj">the object to dispose</param>
+    /// <returns>a Task that resolves after the object is disposed</returns>
+    void OnDisposed(IDisposable obj);
+
+    /// <summary>
+    /// returns true if expired
+    /// </summary>
+    bool IsExpired { get; }
+
+    /// <summary>
+    /// returns true if expiring
+    /// </summary>
+    bool IsExpiring { get; }
+
+    bool ShouldContinue { get; }
+}
+
+public static class ILifetimeManagerEx
+{
+    /// <summary>
+    /// Delays until this lifetime is complete
+    /// </summary>
+    /// <returns>an async task</returns>
+    public static Task ToTask(this ILifetimeManager manager)
     {
-        /// <summary>
-        /// Registers the given cleanup code to run when the lifetime being
-        /// managed by this manager ends
-        /// </summary>
-        /// <param name="cleanupCode">the code to run</param>
-        /// <returns>a Task that resolves after the cleanup code runs</returns>
-        void OnDisposed(Action cleanupCode);
-
-        /// <summary>
-        /// Registers the given disposable to dispose when the lifetime being
-        /// managed by this manager ends
-        /// </summary>
-        /// <param name="obj">the object to dispose</param>
-        /// <returns>a Task that resolves after the object is disposed</returns>
-        void OnDisposed(IDisposable obj);
-
-        /// <summary>
-        /// returns true if expired
-        /// </summary>
-        bool IsExpired { get; }
-
-        /// <summary>
-        /// returns true if expiring
-        /// </summary>
-        bool IsExpiring { get; }
-
-        bool ShouldContinue { get; }
+        var tcs = new TaskCompletionSource();
+        manager.OnDisposed(() => tcs.SetResult());
+        return tcs.Task;
     }
+}
 
-    public static class ILifetimeManagerEx
+/// <summary>
+/// An implementation of ILifetimeManager
+/// </summary>
+public class LifetimeManager : ILifetimeManager
+{
+    private List<Subscription> subscribers = new List<Subscription>();
+    private List<SubscriptionWithParam> subscribersWithParams = new List<SubscriptionWithParam>();
+
+    /// <summary>
+    /// returns true if expired
+    /// </summary>
+    public bool IsExpired { get; internal set; }
+    public bool IsExpiring { get; internal set; }
+    public bool ShouldContinue => IsExpired == false && IsExpiring == false;
+
+    internal void Finish() => NotificationBufferPool.Notify(subscribers, subscribersWithParams);
+
+    /// <summary>
+    /// Registers the given disposable to dispose when the lifetime being
+    /// managed by this manager ends
+    /// </summary>
+    /// <param name="obj">the object to dispose</param>
+    public void OnDisposed(IDisposable obj)
     {
-        /// <summary>
-        /// Delays until this lifetime is complete
-        /// </summary>
-        /// <returns>an async task</returns>
-        public static Task ToTask(this ILifetimeManager manager)
+        subscribers.Add(new Subscription()
         {
-            var tcs = new TaskCompletionSource();
-            manager.OnDisposed(() => tcs.SetResult());
-            return tcs.Task;
-        }
+            Callback = () => obj.Dispose(),
+            Lifetime = this,
+        });
     }
 
     /// <summary>
-    /// An implementation of ILifetimeManager
+    /// Registers the given cleanup code to run when the lifetime being
+    /// managed by this manager ends
     /// </summary>
-    public class LifetimeManager : ILifetimeManager
+    /// <param name="cleanupCode">the code to run</param>
+    public void OnDisposed(Action cleanupCode)
     {
-        private List<Subscription> subscribers = new List<Subscription>();
-        private List<SubscriptionWithParam> subscribersWithParams = new List<SubscriptionWithParam>();
-
-        /// <summary>
-        /// returns true if expired
-        /// </summary>
-        public bool IsExpired { get; internal set; }
-        public bool IsExpiring { get; internal set; }
-        public bool ShouldContinue => IsExpired == false && IsExpiring == false;
-
-        internal void Finish() => NotificationBufferPool.Notify(subscribers, subscribersWithParams);
-
-        /// <summary>
-        /// Registers the given disposable to dispose when the lifetime being
-        /// managed by this manager ends
-        /// </summary>
-        /// <param name="obj">the object to dispose</param>
-        public void OnDisposed(IDisposable obj)
+        subscribers.Add(new Subscription()
         {
-            subscribers.Add(new Subscription()
-            {
-                Callback = () => obj.Dispose(),
-                Lifetime = this,
-            });
-        }
+            Callback = cleanupCode,
+            Lifetime = this,
+        });
+    }
 
-        /// <summary>
-        /// Registers the given cleanup code to run when the lifetime being
-        /// managed by this manager ends
-        /// </summary>
-        /// <param name="cleanupCode">the code to run</param>
-        public void OnDisposed(Action cleanupCode)
+    /// <summary>
+    /// Registers the given cleanup code to run when the lifetime being
+    /// managed by this manager ends
+    /// </summary>
+    /// <param name="cleanupCode">the code to run</param>
+    /// <param name="param">the parameter to pass</param>
+    public void OnDisposed(Action<object> cleanupCode, object param)
+    {
+        subscribersWithParams.Add(new SubscriptionWithParam()
         {
-            subscribers.Add(new Subscription()
-            {
-                Callback = cleanupCode,
-                Lifetime = this,
-            });
-        }
-
-        /// <summary>
-        /// Registers the given cleanup code to run when the lifetime being
-        /// managed by this manager ends
-        /// </summary>
-        /// <param name="cleanupCode">the code to run</param>
-        /// <param name="param">the parameter to pass</param>
-        public void OnDisposed(Action<object> cleanupCode, object param)
-        {
-            subscribersWithParams.Add(new SubscriptionWithParam()
-            {
-                Callback = cleanupCode,
-                Lifetime = this,
-                Param = param
-            });
-        }
+            Callback = cleanupCode,
+            Lifetime = this,
+            Param = param
+        });
     }
 }

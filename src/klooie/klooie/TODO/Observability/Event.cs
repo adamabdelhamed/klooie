@@ -1,4 +1,4 @@
-﻿namespace PowerArgs;
+﻿namespace klooie;
 /// <summary>
 /// A lifetime aware event
 /// </summary>
