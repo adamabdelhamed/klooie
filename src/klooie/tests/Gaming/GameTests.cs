@@ -12,14 +12,7 @@ namespace klooie.tests;
 [TestCategory(Categories.Gaming)]
 public class GameTests
 {
-    public class StaticGame : Game
-    {
-        protected override IRuleProvider RuleProvider => provider ?? ArrayRulesProvider.Empty;
-        private ArrayRulesProvider provider;
-
-        public StaticGame() { }
-        public StaticGame(IRule[] rules) => this.provider = new ArrayRulesProvider(rules);
-    }
+    public TestContext TestContext { get; set; }
 
     public class TestRule : IRule
     {
@@ -31,7 +24,7 @@ public class GameTests
     [TestMethod]
     public void EventBroadcaster_SingleVariable()
     {
-        var game = new StaticGame();
+        var game = new TestGame();
         game.Invoke(() =>
         {
             var receiveCount = 0;
@@ -59,7 +52,7 @@ public class GameTests
     [TestMethod]
     public void EventBroadcaster_Expression()
     {
-        var game = new StaticGame();
+        var game = new TestGame();
         game.Invoke(() =>
         {
             var receiveCount = 0;
@@ -91,7 +84,7 @@ public class GameTests
     public void Rules_Basic()
     {
         int count = 0;
-        var game = new StaticGame(new IRule[]
+        var game = new TestGame(new IRule[]
         {
             new TestRule(async() => count++),
             new TestRule(async() => count++),
@@ -105,7 +98,7 @@ public class GameTests
     [TestMethod]
     public void Rules_Exceptions()
     {
-        var game = new StaticGame(new IRule[]
+        var game = new TestGame(new IRule[]
         {
             new TestRule(async() => throw new Exception("threw")),
         });
@@ -116,7 +109,7 @@ public class GameTests
             game.Run();
             Assert.Fail("An exception should have been thrown");
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Assert.IsTrue(ex.Message == "threw");
         }
@@ -126,13 +119,13 @@ public class GameTests
     public void Rules_Dynamic()
     {
         int count = 0;
-        var game = new StaticGame(new IRule[]
+        var game = new TestGame(new IRule[]
         {
             new TestRule(async() => count++),
             new TestRule(async() => count++),
         });
 
-        game.Invoke(async()=>
+        game.Invoke(async () =>
         {
             Assert.AreEqual(2, count);
             Assert.AreEqual(2, game.Rules.Count());
@@ -143,5 +136,69 @@ public class GameTests
         });
         game.Run();
     }
+
+    [TestMethod]
+    [TestCategory(Categories.Slow)]
+    public void Pause_Basic() => GamingTest.Run(FuncRule.Create(async()=>
+    {
+        var period = 500;
+        var expected = period *.5f;
+        var minExpected = period * .48f;
+        var maxExpected = period * .58f;
+        var gameTask = Game.Current.Delay(period);
+        var wallClockTask = Task.Delay(period);
+
+        Assert.IsFalse(Game.Current.IsPaused);
+        await Task.Delay(period/2);
+        Game.Current.Pause();
+        Assert.IsTrue(Game.Current.IsPaused);
+        await wallClockTask;
+        Assert.IsTrue(Game.Current.IsPaused);
+        var now = Game.Now;
+        Console.WriteLine($"Pause expected between {minExpected} and {maxExpected}, actual: {Math.Round(now.TotalMilliseconds)}");
+        Assert.IsTrue(Game.Now.TotalMilliseconds >= minExpected);
+        Assert.IsTrue(Game.Now.TotalMilliseconds <= maxExpected);
+        await Task.Delay(100);
+        Assert.IsTrue(Game.Current.IsPaused);
+        Assert.AreEqual(now,Game.Now);
+        Game.Current.Resume();
+        Assert.IsFalse(Game.Current.IsPaused);
+        await Task.Delay(100);
+        Assert.IsFalse(Game.Current.IsPaused);
+        Assert.AreNotEqual(now,Game.Now);
+        Game.Current.Stop();
+
+    }), TestContext, UITestMode.Headless);
+
+
+    [TestMethod]
+    [TestCategory(Categories.Slow)]
+    public void Pause_Idempotent() => GamingTest.Run(FuncRule.Create(async()=>
+    {
+        var period = 500;
+        var expected = period *.5f;
+        var minExpected = period * .48f;
+        var maxExpected = period * .58f;
+        var gameTask = Game.Current.Delay(period);
+        var wallClockTask = Task.Delay(period);
+
+        await Task.Delay(period/2);
+        Game.Current.Pause();
+        Game.Current.Pause();
+        Game.Current.Pause();
+        await wallClockTask;
+        var now = Game.Now;
+        Console.WriteLine($"Pause expected between {minExpected} and {maxExpected}, actual: {Math.Round(now.TotalMilliseconds)}");
+        Assert.IsTrue(Game.Now.TotalMilliseconds >= minExpected);
+        Assert.IsTrue(Game.Now.TotalMilliseconds <= maxExpected);
+        await Task.Delay(100);
+        Assert.AreEqual(now,Game.Now);
+        Game.Current.Resume();
+        Game.Current.Resume();
+        Game.Current.Resume();
+        await Task.Delay(100);
+        Assert.AreNotEqual(now,Game.Now);
+        Game.Current.Stop();
+    }), TestContext, UITestMode.Headless);
 }
 

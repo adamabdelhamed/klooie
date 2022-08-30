@@ -96,7 +96,7 @@ namespace klooie;
         {
             if (await HandlePause() == false)
             {
-                await DelayProvider.DelayAsync(ts);
+                await DelayProvider.Delay(ts);
             }
         }
     }

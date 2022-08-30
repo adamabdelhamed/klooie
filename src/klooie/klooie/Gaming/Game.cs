@@ -13,19 +13,29 @@ public abstract class Game : ConsoleApp, IDelayProvider
     private ColliderGroup mainColliderGroup;
 
     /// <summary>
+    /// Gets a reference to the current game
+    /// </summary>
+    public static Game Current => ConsoleApp.Current as Game;
+
+    /// <summary>
     /// returns true if the game is currently paused
     /// </summary>
     public bool IsPaused => pauseManager.State == PauseManager.PauseState.Paused;
 
     /// <summary>
-    /// Pauses the game
+    /// Gets the time that has been elapsed in the MainColliderGroup
     /// </summary>
-    protected void Pause() => pauseManager.State = PauseManager.PauseState.Paused;
+    public static TimeSpan Now => Current != null ? Current.MainColliderGroup.Now : TimeSpan.Zero;
 
     /// <summary>
     /// Pauses the game
     /// </summary>
-    protected void Resume() => pauseManager.State = PauseManager.PauseState.Running;
+    public void Pause() => pauseManager.State = PauseManager.PauseState.Paused;
+
+    /// <summary>
+    /// Pauses the game
+    /// </summary>
+    public void Resume() => pauseManager.State = PauseManager.PauseState.Running;
 
     /// <summary>
     /// Gets the rules
@@ -66,6 +76,9 @@ public abstract class Game : ConsoleApp, IDelayProvider
     /// <param name="rule">the rule to add</param>
     public void AddDynamicRule(IRule rule) => ruleManager.AddDynamicDirective(rule);
 
+    /// <summary>
+    /// Creates a new Game
+    /// </summary>
     public Game()
     {
         this.eventBroadcaster = new EventBroadcaster();
@@ -83,20 +96,18 @@ public abstract class Game : ConsoleApp, IDelayProvider
         await ruleManager.Startup();
     }
 
-    public Task DelayAsync(double ms) => pauseManager.DelayProvider.DelayAsync(ms);
+    /// <summary>
+    /// implements a pause aware delay action
+    /// </summary>
+    /// <param name="ms">the amount of time in ms to delay</param>
+    /// <returns>a task</returns>
+    public Task Delay(double ms) => pauseManager.DelayProvider.Delay(ms);
 
-    public Task DelayAsync(TimeSpan timeout) => pauseManager.DelayProvider.DelayAsync(timeout);
-
-    public Task DelayAsync(Event ev, TimeSpan? timeout = null, TimeSpan? evalFrequency = null) =>
-        pauseManager.DelayProvider.DelayAsync(ev, timeout, evalFrequency);
-
-    public Task DelayAsync(Func<bool> condition, TimeSpan? timeout = null, TimeSpan? evalFrequency = null) =>
-        pauseManager.DelayProvider.DelayAsync(condition, timeout, evalFrequency);
-
-    public Task<bool> TryDelayAsync(Func<bool> condition, TimeSpan? timeout = null, TimeSpan? evalFrequency = null) =>
-        pauseManager.DelayProvider.TryDelayAsync(condition, timeout, evalFrequency);
-
-    public Task DelayFuzzyAsync(float ms, double maxDeltaPercentage = 0.1) =>
-        pauseManager.DelayProvider.DelayFuzzyAsync(ms, maxDeltaPercentage);
+    /// <summary>
+    /// implements a pause aware delay action
+    /// </summary>
+    /// <param name="timeout">the amount of time to delay</param>
+    /// <returns>a task</returns>
+    public Task Delay(TimeSpan timeout) => pauseManager.DelayProvider.Delay(timeout);
 }
 
