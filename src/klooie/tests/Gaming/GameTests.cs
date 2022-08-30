@@ -51,63 +51,54 @@ public class GameTests
     }
 
     [TestMethod]
-    public void EventBroadcaster_Expression()
-    {
-        var game = new TestGame();
-        game.Invoke(() =>
+    public void EventBroadcaster_Expression() => GamingTest.Run(FuncRule.Create(async() =>
+    { 
+        var receiveCount = 0;
+        Game.Current.Subscribe("Ready|Not", (e) =>
         {
-            var receiveCount = 0;
-            game.Subscribe("Ready|Not", (e) =>
-            {
-                Assert.IsTrue(e.Id == "Ready" || e.Id == "Not");
-                receiveCount++;
-            }, game);
+            Assert.IsTrue(e.Id == "Ready" || e.Id == "Not");
+            receiveCount++;
+        }, Game.Current);
 
-            Assert.AreEqual(0, receiveCount);
-            game.Publish("SomeOtherEvent");
-            Assert.AreEqual(0, receiveCount);
+        Assert.AreEqual(0, receiveCount);
+        Game.Current.Publish("SomeOtherEvent");
+        Assert.AreEqual(0, receiveCount);
 
-            game.Publish("Ready");
-            Assert.AreEqual(1, receiveCount);
+        Game.Current.Publish("Ready");
+        Assert.AreEqual(1, receiveCount);
 
-            game.Publish("Not");
-            Assert.AreEqual(2, receiveCount);
+        Game.Current.Publish("Not");
+        Assert.AreEqual(2, receiveCount);
 
-            game.Publish("SomeOtherEvent");
-            Assert.AreEqual(2, receiveCount);
+        Game.Current.Publish("SomeOtherEvent");
+        Assert.AreEqual(2, receiveCount);
 
-            game.Stop();
-        });
-        game.Run();
-    }
+        Game.Current.Stop();
+    }),TestContext.TestId(), UITestMode.Headless);
 
     [TestMethod]
     public void Rules_Basic()
     {
         int count = 0;
-        var game = new TestGame(new IRule[]
+
+        GamingTest.RunCustomSize(new ArrayRulesProvider(new IRule[]
         {
             new TestRule(async() => count++),
             new TestRule(async() => count++),
-        });
+        }), TestContext.TestId(), 1, 1, UITestMode.Headless);
 
-        game.Invoke(game.Stop);
-        game.Run();
         Assert.AreEqual(2, count);
     }
 
     [TestMethod]
     public void Rules_Exceptions()
     {
-        var game = new TestGame(new IRule[]
-        {
-            new TestRule(async() => throw new Exception("threw")),
-        });
-
-        game.Invoke(game.Stop);
         try
         {
-            game.Run();
+            GamingTest.RunCustomSize(new ArrayRulesProvider(new IRule[]
+            {
+                new TestRule(async() => throw new Exception("threw")),
+            }), TestContext.TestId(), 1, 1, UITestMode.Headless);
             Assert.Fail("An exception should have been thrown");
         }
         catch (Exception ex)
@@ -120,22 +111,19 @@ public class GameTests
     public void Rules_Dynamic()
     {
         int count = 0;
-        var game = new TestGame(new IRule[]
+        GamingTest.RunCustomSize(new ArrayRulesProvider(new IRule[]
         {
             new TestRule(async() => count++),
             new TestRule(async() => count++),
-        });
-
-        game.Invoke(async () =>
+        }), TestContext.TestId(), 1, 1, UITestMode.Headless,async(context)=>
         {
             Assert.AreEqual(2, count);
-            Assert.AreEqual(2, game.Rules.Count());
-            game.AddDynamicRule(new TestRule(async () => count++));
+            Assert.AreEqual(2, Game.Current.Rules.Count());
+            Game.Current.AddDynamicRule(new TestRule(async () => count++));
             Assert.AreEqual(3, count);
-            Assert.AreEqual(3, game.Rules.Count());
-            game.Stop();
+            Assert.AreEqual(3, Game.Current.Rules.Count());
+            Game.Current.Stop();
         });
-        game.Run();
     }
 
     [TestMethod]

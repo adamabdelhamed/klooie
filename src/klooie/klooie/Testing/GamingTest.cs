@@ -1,19 +1,32 @@
 ﻿using klooie.Gaming;
-using System;
-using System.Threading.Tasks;
+using PowerArgs;
 
 namespace klooie.tests;
 
 public static class GamingTest
 {
-    public static void Run(IRule theOnlyRule, string testId, UITestMode mode, Func<UITestManager, Task> test = null) =>
-        Run(new ArrayRulesProvider(new IRule[] { theOnlyRule }), testId, mode, test);
+    public static void Run(IRule theOnlyRule, string testId, UITestMode mode) =>
+        RunCustomSize(new ArrayRulesProvider(new IRule[] { theOnlyRule }), testId,80,50, mode, null);
 
-    public static void Run(IRuleProvider rules, string testId, UITestMode mode, Func<UITestManager,Task> test = null)
+    public static void RunCustomSize(IRuleProvider rules, string testId, int width, int height, UITestMode mode, Func<UITestManager,Task> test = null)
     {
+        ConsoleProvider.Current = new KlooieTestConsole()
+        {
+            BufferWidth = width,
+            WindowWidth = width,
+            WindowHeight = height + 1
+        };
+
         var game = new TestGame(rules);
         var testManager = new UITestManager(game, testId, mode);
-        game.Invoke(() => test?.Invoke(testManager));
+        if (test != null)
+        {
+            game.Invoke(() => test?.Invoke(testManager));
+        }
+        else
+        {
+            game.Invoke(() => game.Stop());
+        }
         try
         {
             game.Run();
