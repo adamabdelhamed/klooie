@@ -7,7 +7,6 @@ public enum UITestMode
 {
     KeyFramesVerified,
     KeyFramesFYI,
-    RealTimeFirstAndLastVerified,
     RealTimeFYI,
     Headless
 }
@@ -34,7 +33,9 @@ public class UITestManager
         }
     }
 
-    private string CurrentTestRootPath => Path.Combine(GitRootPath, "LKGCliResults", testId);
+    private string CurrentTestFYIRootPath => Path.Combine(GitRootPath, "FYI", testId);
+    private string CurrentTestLKGRootPath => Path.Combine(GitRootPath, "LKGCliResults", testId);
+    private string CurrentTestRootPath => mode == UITestMode.KeyFramesFYI || mode == UITestMode.RealTimeFYI ? CurrentTestFYIRootPath : CurrentTestLKGRootPath;
     private string CurrentTestLKGPath => Path.Combine(CurrentTestRootPath, "LKG");
     private string CurrentTestTempPath => Path.Combine(CurrentTestRootPath, "TEMP");
     private string CurrentTestRecordingFilePath => Path.Combine(CurrentTestTempPath, "Recording.cv");
@@ -68,7 +69,7 @@ public class UITestManager
         {
             this.keyFrameRecorder = new ConsoleBitmapVideoWriter(s => File.WriteAllText(CurrentTestRecordingFilePath, s));
         }
-        else if(mode == UITestMode.RealTimeFYI || mode == UITestMode.RealTimeFirstAndLastVerified)
+        else if(mode == UITestMode.RealTimeFYI)
         {
             app.LayoutRoot.EnableRecording(new ConsoleBitmapVideoWriter(s => File.WriteAllText(CurrentTestRecordingFilePath, s)));
         }
@@ -111,28 +112,6 @@ public class UITestManager
         {
             PromoteIfAllFramesMatch();
             return;
-        }
-
-        if (mode == UITestMode.RealTimeFirstAndLastVerified)
-        {
-            PromoteIfFirstAndLastMatch();
-            return;
-        }
-    }
-
-    private void PromoteIfFirstAndLastMatch()
-    {
-        if (TryGetLKGRecording(out ConsoleBitmapStreamReader reader))
-        {
-            reader.InnerStream.Dispose();
-            AssertMatchFirstAndLast();
-            Console.WriteLine("LKG matches");
-            PromoteToLKGInternal();
-        }
-        else
-        {
-            Console.WriteLine("Orignial LKG");
-            PromoteToLKGInternal();
         }
     }
 

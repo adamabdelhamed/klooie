@@ -88,7 +88,7 @@ namespace ArgsTests.CLI.Recording
         }
 
         [TestMethod]
-        public void TestPlaybackEndToEnd() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFirstAndLastVerified,80,30,async(context)=>
+        public void TestPlaybackEndToEnd() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI,80,30,async(context)=>
         { 
             int w = 10, h = 1;
             var temp = Path.GetTempFileName();

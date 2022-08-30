@@ -15,7 +15,7 @@ namespace ArgsTests.CLI
         public TestContext TestContext { get; set; }
 
         [TestMethod]
-        public void TestThreeMonthCalendarBasicRender() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFirstAndLastVerified,120, 40,async(context)=>
+        public void TestThreeMonthCalendarBasicRender() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI,120, 40,async(context)=>
         {
             var carousel = new ThreeMonthCarousel(new ThreeMonthCarouselOptions() { Month = 1, Year = 2000 });
             var start = carousel.Options.Month + "/" + carousel.Options.Year;
