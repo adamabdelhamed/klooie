@@ -1,4 +1,5 @@
 ﻿using klooie;
+using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using PowerArgs.Cli;
@@ -149,19 +150,11 @@ namespace ArgsTests.CLI.Controls
 
 
 
-        public void RenderChartTestCommon(XYChartOptions options)
+        public void RenderChartTestCommon(XYChartOptions options) => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified, 80, 30, async (context) =>
         {
-            CliTestHarness.SetConsoleSize(80, 30);
-            var app = new CliTestHarness(this.TestContext, true);
-            app.InvokeNextCycle(() => app.LayoutRoot.Add(new XYChart(options)).Fill());
-            app.InvokeNextCycle(async () =>
-            {
-                await app.RequestPaintAsync();
-                app.RecordKeyFrame();
-                app.Stop();
-            });
-            app.Run();
-            app.AssertThisTestMatchesLKG();
-        }
+            ConsoleApp.Current.LayoutRoot.Add(new XYChart(options)).Fill();
+            await context.PaintAndRecordKeyFrameAsync();
+            ConsoleApp.Current.Stop();
+        });
     }
 }

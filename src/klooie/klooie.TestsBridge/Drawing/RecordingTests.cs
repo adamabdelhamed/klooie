@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Text;
 using klooie;
+using klooie.tests;
 
 namespace ArgsTests.CLI.Recording
 {
@@ -87,54 +88,44 @@ namespace ArgsTests.CLI.Recording
         }
 
         [TestMethod]
-        public void TestPlaybackEndToEnd()
-        {
-            CliTestHarness.SetConsoleSize(80, 30);
-            var app = new CliTestHarness(this.TestContext);
-
-            app.Invoke(async () =>
+        public void TestPlaybackEndToEnd() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFirstAndLastVerified,80,30,async(context)=>
+        { 
+            int w = 10, h = 1;
+            var temp = Path.GetTempFileName();
+            using (var stream = File.OpenWrite(temp))
             {
-                int w = 10, h = 1;
-                var temp = Path.GetTempFileName();
-                using (var stream = File.OpenWrite(temp))
-                {
-                    var writer = new ConsoleBitmapVideoWriter(s => stream.Write(Encoding.Default.GetBytes(s)));
-                    var bitmap = new ConsoleBitmap(w, h);
+                var writer = new ConsoleBitmapVideoWriter(s => stream.Write(Encoding.Default.GetBytes(s)));
+                var bitmap = new ConsoleBitmap(w, h);
 
-                    for (var i = 0; i < bitmap.Width; i++)
-                    {
-                        bitmap.Fill(new ConsoleCharacter(' '));
-                        bitmap.DrawPoint(new ConsoleCharacter(' ', backgroundColor: ConsoleColor.Red), i, 0);
-                        writer.WriteFrame(bitmap, true, TimeSpan.FromSeconds(.1 * i));
-                    }
-                    writer.Finish();
+                for (var i = 0; i < bitmap.Width; i++)
+                {
+                    bitmap.Fill(new ConsoleCharacter(' '));
+                    bitmap.DrawPoint(new ConsoleCharacter(' ', backgroundColor: ConsoleColor.Red), i, 0);
+                    writer.WriteFrame(bitmap, true, TimeSpan.FromSeconds(.1 * i));
                 }
-
-                var player = app.LayoutRoot.Add(new ConsoleBitmapPlayer()).Fill();
-                Assert.IsFalse(player.Width == 0);
-                Assert.IsFalse(player.Height == 0);
-                player.Load(File.OpenRead(temp));
+                writer.Finish();
+            }
+            var app = ConsoleApp.Current;
+            var player = app.LayoutRoot.Add(new ConsoleBitmapPlayer()).Fill();
+            Assert.IsFalse(player.Width == 0);
+            Assert.IsFalse(player.Height == 0);
+            player.Load(File.OpenRead(temp));
                
-                var playStarted = false;
-                player.SubscribeForLifetime(nameof(player.State), () =>
+            var playStarted = false;
+            player.SubscribeForLifetime(nameof(player.State), () =>
+            {
+                if(player.State == PlayerState.Playing)
                 {
-                    if(player.State == PlayerState.Playing)
-                    {
-                        playStarted = true;
-                    }
-                    else if(player.State == PlayerState.Stopped && playStarted)
-                    {
-                        app.Stop();
-                    }
-                }, app);
+                    playStarted = true;
+                }
+                else if(player.State == PlayerState.Stopped && playStarted)
+                {
+                    app.Stop();
+                }
+            }, app);
 
-                await Task.Delay(100);
-                await app.SendKey(new ConsoleKeyInfo('p', ConsoleKey.P, false, false, false));
-            });
-
-            app.Run();
-            Thread.Sleep(100);
-            app.AssertThisTestMatchesLKGFirstAndLastFrame();
-        }
+            await Task.Delay(100);
+            await app.SendKey(new ConsoleKeyInfo('p', ConsoleKey.P, false, false, false));
+        });
     }
 }

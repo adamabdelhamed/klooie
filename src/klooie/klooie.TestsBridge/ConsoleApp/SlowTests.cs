@@ -1,4 +1,5 @@
 ﻿using klooie;
+using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using PowerArgs.Cli;
@@ -14,44 +15,38 @@ namespace ArgsTests.CLI
         public TestContext TestContext { get; set; }
 
         [TestMethod]
-        public void TestThreeMonthCalendarBasicRender()
+        public void TestThreeMonthCalendarBasicRender() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFirstAndLastVerified,120, 40,async(context)=>
         {
-            CliTestHarness.SetConsoleSize(120,40);
-            var app = new CliTestHarness(this.TestContext);
-            app.Invoke(async () =>
-            {
-                var carousel = new ThreeMonthCarousel(new ThreeMonthCarouselOptions() { Month = 1, Year = 2000 });
-                var start = carousel.Options.Month + "/" + carousel.Options.Year;
-                app.LayoutRoot.Add(new FixedAspectRatioPanel(4f / 1f, carousel)).Fill();
-                Assert.IsTrue(await carousel.SeekAsync(true, carousel.Options.AnimationDuration));
-                await Task.Delay(1000);
-                Assert.IsTrue(await carousel.SeekAsync(true, carousel.Options.AnimationDuration));
-                await Task.Delay(1000);
-                Assert.IsTrue(await carousel.SeekAsync(true, carousel.Options.AnimationDuration));
-                await Task.Delay(1000);
-                Assert.IsTrue(await carousel.SeekAsync(true, carousel.Options.AnimationDuration));
+            var carousel = new ThreeMonthCarousel(new ThreeMonthCarouselOptions() { Month = 1, Year = 2000 });
+            var start = carousel.Options.Month + "/" + carousel.Options.Year;
+            ConsoleApp.Current.LayoutRoot.Add(new FixedAspectRatioPanel(4f / 1f, carousel)).Fill();
+            Assert.IsTrue(await carousel.SeekAsync(true, carousel.Options.AnimationDuration));
+            await Task.Delay(1000);
+            Assert.IsTrue(await carousel.SeekAsync(true, carousel.Options.AnimationDuration));
+            await Task.Delay(1000);
+            Assert.IsTrue(await carousel.SeekAsync(true, carousel.Options.AnimationDuration));
+            await Task.Delay(1000);
+            Assert.IsTrue(await carousel.SeekAsync(true, carousel.Options.AnimationDuration));
 
-                await Task.Delay(3000);
+            await Task.Delay(3000);
 
-                var now = carousel.Options.Month + "/" + carousel.Options.Year;
-                Assert.AreNotEqual(start, now);
+            var now = carousel.Options.Month + "/" + carousel.Options.Year;
+            Assert.AreNotEqual(start, now);
 
-                Assert.IsTrue(await carousel.SeekAsync(false, carousel.Options.AnimationDuration));
-                await Task.Delay(1000);
-                Assert.IsTrue(await carousel.SeekAsync(false, carousel.Options.AnimationDuration));
-                await Task.Delay(1000);
-                Assert.IsTrue(await carousel.SeekAsync(false, carousel.Options.AnimationDuration));
-                await Task.Delay(1000);
-                Assert.IsTrue(await carousel.SeekAsync(false, carousel.Options.AnimationDuration));
-                await Task.Delay(1000);
+            Assert.IsTrue(await carousel.SeekAsync(false, carousel.Options.AnimationDuration));
+            await Task.Delay(1000);
+            Assert.IsTrue(await carousel.SeekAsync(false, carousel.Options.AnimationDuration));
+            await Task.Delay(1000);
+            Assert.IsTrue(await carousel.SeekAsync(false, carousel.Options.AnimationDuration));
+            await Task.Delay(1000);
+            Assert.IsTrue(await carousel.SeekAsync(false, carousel.Options.AnimationDuration));
+            await Task.Delay(1000);
 
-                now = carousel.Options.Month + "/" + carousel.Options.Year;
-                Assert.AreEqual(start, now);
-                app.Stop();
-            });
-            app.Run();
-            app.AssertThisTestMatchesLKGFirstAndLastFrame();
-        }
+            now = carousel.Options.Month + "/" + carousel.Options.Year;
+            Assert.AreEqual(start, now);
+            ConsoleApp.Current.Stop();
+        });
+
 
         [TestMethod]
         public async Task TestTaskTimeout()

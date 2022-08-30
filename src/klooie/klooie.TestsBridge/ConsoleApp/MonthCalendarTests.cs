@@ -1,8 +1,7 @@
-﻿using klooie;
+﻿using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs.Cli;
 using System;
-using System.Threading.Tasks;
 
 namespace ArgsTests.CLI.Controls
 {
@@ -13,41 +12,27 @@ namespace ArgsTests.CLI.Controls
         public TestContext TestContext { get; set; }
         
         [TestMethod]
-        public void TestMonthCalendarBasicRender()
-        {
-            CliTestHarness.SetConsoleSize(MonthCalendar.MinWidth, MonthCalendar.MinHeight);
-            var app = new CliTestHarness(this.TestContext, true);
-            app.Invoke(async () =>
-            {
-                app.LayoutRoot.Add(new MonthCalendar(new MonthCalendarOptions() { Year = 2000, Month = 1 })).Fill();
-                await app.PaintAndRecordKeyFrameAsync();
-                app.Stop();
-            });
-            app.Run();
-            app.AssertThisTestMatchesLKG();
-        }
+        public void TestMonthCalendarBasicRender() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified, MonthCalendar.MinWidth, MonthCalendar.MinHeight,async(context)=>
+        { 
+            ConsoleApp.Current.LayoutRoot.Add(new MonthCalendar(new MonthCalendarOptions() { Year = 2000, Month = 1 })).Fill();
+            await context.PaintAndRecordKeyFrameAsync();
+            ConsoleApp.Current.Stop();
+        });
 
         [TestMethod]
-        public void TestMonthCalendarFocusAndNav()
+        public void TestMonthCalendarFocusAndNav() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified, MonthCalendar.MinWidth, MonthCalendar.MinHeight, async (context) =>
         {
-            CliTestHarness.SetConsoleSize(MonthCalendar.MinWidth, MonthCalendar.MinHeight);
-            var app = new CliTestHarness(this.TestContext, true);
-            app.InvokeNextCycle(async () =>
-            {
-                var calendar = app.LayoutRoot.Add(new MonthCalendar(new MonthCalendarOptions() { Year = 2000, Month = 1 })).Fill();
-                await app.PaintAndRecordKeyFrameAsync();
-                calendar.Focus();
-                await app.PaintAndRecordKeyFrameAsync();
-                var fwInfo = new ConsoleKeyInfo('a', calendar.Options.AdvanceMonthForwardKey.Key, false, false, false);
-                var backInfo = new ConsoleKeyInfo('b', calendar.Options.AdvanceMonthBackwardKey.Key, false, false, false);
-                await app.SendKey(backInfo);
-                await app.PaintAndRecordKeyFrameAsync();
-                await app.SendKey(fwInfo);
-                await app.PaintAndRecordKeyFrameAsync();
-                app.Stop();
-            });
-            app.Run();
-            app.AssertThisTestMatchesLKG();
-        }
+            var calendar = ConsoleApp.Current.LayoutRoot.Add(new MonthCalendar(new MonthCalendarOptions() { Year = 2000, Month = 1 })).Fill();
+            await context.PaintAndRecordKeyFrameAsync();
+            calendar.Focus();
+            await context.PaintAndRecordKeyFrameAsync();
+            var fwInfo = new ConsoleKeyInfo('a', calendar.Options.AdvanceMonthForwardKey.Key, false, false, false);
+            var backInfo = new ConsoleKeyInfo('b', calendar.Options.AdvanceMonthBackwardKey.Key, false, false, false);
+            await ConsoleApp.Current.SendKey(backInfo);
+            await context.PaintAndRecordKeyFrameAsync();
+            await ConsoleApp.Current.SendKey(fwInfo);
+            await context.PaintAndRecordKeyFrameAsync();
+            ConsoleApp.Current.Stop();
+        }); 
     }
 }
