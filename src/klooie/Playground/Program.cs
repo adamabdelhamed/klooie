@@ -9,12 +9,21 @@ public class Program
     public static void Main(string[] args)
     {
         BenchmarkRunner.Run<EventBenchmark>();
+        return;
+        var b = new EventBenchmark();
+        b.Setup();
+        for(var i = 0; i < 100000; i++)
+        {
+            b.BenchmarkFire();
+        }
     }
 }
 
 [MemoryDiagnoser]
 public class EventBenchmark
 {
+    public int Count => count;
+
     int numberOfEvents = 1;
     int numberOfSubscribersPerEvent = 100;
     int numberOfFires = 50;
