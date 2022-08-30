@@ -347,38 +347,37 @@ public class ConsoleBitmapPlayer : ConsolePanel
         lastFrameIndex = 0;
         await Task.Delay(1);
         if (State != PlayerState.Playing) return;
-        using (var playLifetime = this.GetPropertyValueLifetime(nameof(State)))
+        var playLifetime = this.GetPropertyValueLifetime(nameof(State));
+
+        while (playLifetime.IsExpired == false)
         {
-            while (playLifetime.IsExpired == false)
+            // start a play loop for as long as the state remains unchanged
+            var now = DateTime.UtcNow;
+            var delta = now - playStartTime;
+            var newPlayerPosition = playStartPosition + delta;
+            var videoLocationPercentage = Math.Round(100.0 * newPlayerPosition.TotalSeconds / duration.Value.TotalSeconds, 1, MidpointRounding.AwayFromZero);
+            videoLocationPercentage = Math.Min(videoLocationPercentage, 100);
+            playerProgressBar.PlayCursorPosition = videoLocationPercentage / 100.0;
+            playButton.Text = $"Pause".ToConsoleString();
+
+            InMemoryConsoleBitmapFrame seekedFrame;
+
+            var prevFrameIndex = lastFrameIndex;
+            if ((lastFrameIndex = inMemoryVideo.Seek(newPlayerPosition, out seekedFrame, lastFrameIndex >= 0 ? lastFrameIndex : 0)) < 0)
             {
-                // start a play loop for as long as the state remains unchanged
-                var now = DateTime.UtcNow;
-                var delta = now - playStartTime;
-                var newPlayerPosition = playStartPosition + delta;
-                var videoLocationPercentage = Math.Round(100.0 * newPlayerPosition.TotalSeconds / duration.Value.TotalSeconds, 1, MidpointRounding.AwayFromZero);
-                videoLocationPercentage = Math.Min(videoLocationPercentage, 100);
-                playerProgressBar.PlayCursorPosition = videoLocationPercentage / 100.0;
-                playButton.Text = $"Pause".ToConsoleString();
-
-                InMemoryConsoleBitmapFrame seekedFrame;
-
-                var prevFrameIndex = lastFrameIndex;
-                if ((lastFrameIndex = inMemoryVideo.Seek(newPlayerPosition, out seekedFrame, lastFrameIndex >= 0 ? lastFrameIndex : 0)) < 0)
-                {
-                    State = PlayerState.Buffering;
-                }
-                else if (prevFrameIndex != lastFrameIndex)
-                {
-                    CurrentFrame = seekedFrame.Bitmap;
-                    OnFramePlayed.Fire(seekedFrame.FrameTime);
-                }
-
-                if (newPlayerPosition > duration)
-                {
-                    State = PlayerState.Stopped;
-                }
-                await Task.Delay(1);
+                State = PlayerState.Buffering;
             }
+            else if (prevFrameIndex != lastFrameIndex)
+            {
+                CurrentFrame = seekedFrame.Bitmap;
+                OnFramePlayed.Fire(seekedFrame.FrameTime);
+            }
+
+            if (newPlayerPosition > duration)
+            {
+                State = PlayerState.Stopped;
+            }
+            await Task.Delay(1);
         }
     }
 

@@ -15,7 +15,6 @@ namespace klooie;
 /// </summary>
 public class ScrollablePanel : ConsolePanel
 {
-    private IDisposable focusSubscription;
     private Scrollbar verticalScrollbar;
     private Scrollbar horizontalScrollbar;
 
@@ -66,12 +65,11 @@ public class ScrollablePanel : ConsolePanel
         verticalScrollbar = Add(new Scrollbar(Orientation.Vertical) { Width = 1 }).DockToRight();
         horizontalScrollbar = Add(new Scrollbar(Orientation.Horizontal) { Height = 1 }).DockToBottom();
         AddedToVisualTree.SubscribeForLifetime(OnAddedToVisualTree, this);
-        RemovedFromVisualTree.SubscribeForLifetime(()=>focusSubscription.Dispose(), this);
     }
 
     private void OnAddedToVisualTree()
     {
-        focusSubscription = Application.FocusChanged.SubscribeUnmanaged(FocusChanged);
+        Application.FocusChanged.SubscribeForLifetime(FocusChanged, this);
         SynchronizeForLifetime(nameof(HorizontalScrollUnits), UpdateScrollbars, this);
         SynchronizeForLifetime(nameof(VerticalScrollUnits), UpdateScrollbars, this);
         ScrollableContent.SubscribeForLifetime(nameof(Bounds), UpdateScrollbars, this);

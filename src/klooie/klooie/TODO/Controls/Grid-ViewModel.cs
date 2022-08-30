@@ -218,8 +218,6 @@ public partial class Grid : ConsoleControl
         }
     }
 
-    IDisposable dataSourceSub;
-    IDisposable boundsSub;
     private void InitGridViewModel()
     {
         this.SelectionMode = GridSelectionMode.Row;
@@ -229,8 +227,8 @@ public partial class Grid : ConsoleControl
 
         visibleRowOffset = 0;
         SelectedIndex = 0;
-        dataSourceSub = SubscribeUnmanaged(nameof(DataSource), DataSourceOrBoundsChangedListener);
-        boundsSub = SubscribeUnmanaged(nameof(Bounds), DataSourceOrBoundsChangedListener);
+        SubscribeForLifetime(nameof(DataSource), DataSourceOrBoundsChangedListener, this);
+        SubscribeForLifetime(nameof(Bounds), DataSourceOrBoundsChangedListener, this);
 
         this.query = new CollectionQuery();
 

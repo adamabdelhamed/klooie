@@ -25,7 +25,7 @@
         /// <summary>
         /// returns true if expired
         /// </summary>
-        bool IsExpired { get;  }
+        bool IsExpired { get; }
 
         /// <summary>
         /// returns true if expiring
@@ -54,25 +54,17 @@
     /// </summary>
     public class LifetimeManager : ILifetimeManager
     {
-        internal List<Action> cleanupItems;
-        internal List<IDisposable> cleanupItems2;
-        internal List<(Action<object>, object)> cleanupItemsWithParams;
+        private List<Subscription> subscribers = new List<Subscription>();
+        private List<SubscriptionWithParam> subscribersWithParams = new List<SubscriptionWithParam>();
 
         /// <summary>
         /// returns true if expired
         /// </summary>
         public bool IsExpired { get; internal set; }
         public bool IsExpiring { get; internal set; }
-
         public bool ShouldContinue => IsExpired == false && IsExpiring == false;
 
-        /// <summary>
-        /// Creates the lifetime manager
-        /// </summary>
-        public LifetimeManager()
-        {
-
-        }
+        internal void Finish() => NotificationBufferPool.Notify(subscribers, subscribersWithParams);
 
         /// <summary>
         /// Registers the given disposable to dispose when the lifetime being
@@ -81,8 +73,11 @@
         /// <param name="obj">the object to dispose</param>
         public void OnDisposed(IDisposable obj)
         {
-            cleanupItems2 = cleanupItems2 ?? new List<IDisposable>();
-            cleanupItems2.Add(obj);
+            subscribers.Add(new Subscription()
+            {
+                Callback = () => obj.Dispose(),
+                Lifetime = this,
+            });
         }
 
         /// <summary>
@@ -92,14 +87,27 @@
         /// <param name="cleanupCode">the code to run</param>
         public void OnDisposed(Action cleanupCode)
         {
-            cleanupItems = cleanupItems ?? new List<Action>();
-            cleanupItems.Add(cleanupCode);
+            subscribers.Add(new Subscription()
+            {
+                Callback = cleanupCode,
+                Lifetime = this,
+            });
         }
 
+        /// <summary>
+        /// Registers the given cleanup code to run when the lifetime being
+        /// managed by this manager ends
+        /// </summary>
+        /// <param name="cleanupCode">the code to run</param>
+        /// <param name="param">the parameter to pass</param>
         public void OnDisposed(Action<object> cleanupCode, object param)
         {
-            cleanupItemsWithParams = cleanupItemsWithParams ?? new List<(Action<object>, object)>();
-            cleanupItemsWithParams.Add((cleanupCode,param));
+            subscribersWithParams.Add(new SubscriptionWithParam()
+            {
+                Callback = cleanupCode,
+                Lifetime = this,
+                Param = param
+            });
         }
     }
 }

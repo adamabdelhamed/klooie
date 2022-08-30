@@ -104,7 +104,9 @@ public class UITestManager
     {
         this.keyFrameRecorder?.Finish();
 
-        if (mode == UITestMode.Headless || mode == UITestMode.KeyFramesFYI || mode == UITestMode.RealTimeFirstAndLastFYI)
+        if (mode == UITestMode.Headless) return;
+
+        if (mode == UITestMode.KeyFramesFYI || mode == UITestMode.RealTimeFirstAndLastFYI)
         {
             PromoteToLKGInternal();
             return;

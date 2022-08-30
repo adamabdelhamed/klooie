@@ -10,16 +10,14 @@ namespace PowerArgs
     public interface IObservableObject
     {
         bool SuppressEqualChanges { get; set; }
-        IDisposable SubscribeUnmanaged(string propertyName, Action handler);
         void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager);
-        IDisposable SynchronizeUnmanaged(string propertyName, Action handler);
         void SynchronizeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager);
         object GetPrevious(string propertyName);
 
         T Get<T>(string name);
         void Set<T>(T value, string name);
 
-        Lifetime GetPropertyValueLifetime(string propertyName);
+        ILifetimeManager GetPropertyValueLifetime(string propertyName);
 
     }
 
@@ -202,16 +200,10 @@ namespace PowerArgs
             if (condition == false) return;
             current = value;
             CurrentlyChangingPropertyName = name;
-            FirePropertyChanged(name); 
+            FirePropertyChanged(name);
         }
 
-        /// <summary>
-        /// Subscribes to be notified when the given property changes.
-        /// </summary>
-        /// <param name="propertyName">The name of the property to subscribe to or ObservableObject.AnyProperty if you want to be notified of any property change.</param>
-        /// <param name="handler">The action to call for notifications</param>
-        /// <returns>A subscription that will receive notifications until it is disposed</returns>
-        public IDisposable SubscribeUnmanaged(string propertyName, Action handler)
+        private Event GetEvent(string propertyName)
         {
             subscribers = subscribers ?? new Dictionary<string, Event>();
             Event evForProperty;
@@ -220,8 +212,7 @@ namespace PowerArgs
                 evForProperty = new Event();
                 subscribers.Add(propertyName, evForProperty);
             }
-
-            return evForProperty.SubscribeUnmanaged(handler);
+            return evForProperty;
         }
 
         /// <summary>
@@ -233,8 +224,7 @@ namespace PowerArgs
         /// <param name="lifetimeManager">the lifetime manager that determines when the subscription ends</param>
         public void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager)
         {
-            var sub = SubscribeUnmanaged(propertyName, handler);
-            lifetimeManager.OnDisposed(sub);
+            GetEvent(propertyName).SubscribeForLifetime(handler, lifetimeManager);
         }
 
         /// <summary>
@@ -244,15 +234,7 @@ namespace PowerArgs
         /// <param name="handler">The action to call for notifications</param>
         public void SubscribeOnce(string propertyName, Action handler)
         {
-            Action wrappedAction = null;
-            IDisposable sub = null;
-            wrappedAction = () =>
-            {
-                handler();
-                sub.Dispose();
-            };
-
-            sub = SubscribeUnmanaged(propertyName, wrappedAction);
+            GetEvent(propertyName).SubscribeOnce(handler);
         }
 
         /// <summary>
@@ -261,19 +243,6 @@ namespace PowerArgs
         /// <param name="propertyName">The name of the property to subscribe to or ObservableObject.AnyProperty if you want to be notified of any property change.</param>
         /// <param name="toCleanup">The disposable to cleanup the next time the property changes</param>
         public void SubscribeOnce(string propertyName, IDisposable toCleanup) => SubscribeOnce(propertyName, toCleanup.Dispose);
-
-        /// <summary>
-        /// Subscribes to be notified when the given property changes and also fires an initial notification immediately.
-        /// </summary>
-        /// <param name="propertyName">The name of the property to subscribe to or ObservableObject.AnyProperty if you want to be notified of any property change.</param>
-        /// <param name="handler">The action to call for notifications</param>
-        /// <returns>A subscription that will receive notifications until it is disposed</returns>
-        public IDisposable SynchronizeUnmanaged(string propertyName, Action handler)
-        {
-            handler();
-            return SubscribeUnmanaged(propertyName, handler);
-        }
-
 
         /// <summary>
         /// Subscribes to be notified when the given property changes and also fires an initial notification.  The subscription expires when
@@ -285,21 +254,14 @@ namespace PowerArgs
 
         public void SynchronizeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager)
         {
-            var sub = SynchronizeUnmanaged(propertyName, handler);
-            lifetimeManager.OnDisposed(sub);
+            GetEvent(propertyName).SynchronizeForLifetime(handler, lifetimeManager);
         }
 
-        public Lifetime GetPropertyValueLifetime(string propertyName)
+        public ILifetimeManager GetPropertyValueLifetime(string propertyName)
         {
-            Lifetime ret = new Lifetime();
-            IDisposable sub = null;
-            sub = SubscribeUnmanaged(propertyName, () =>
-            {
-                sub.Dispose();
-                ret.Dispose();
-            });
-
-            return ret;
+            var lt = new Lifetime();
+            GetEvent(propertyName).SubscribeOnce(lt.Dispose);
+            return lt.Manager;
         }
 
         /// <summary>

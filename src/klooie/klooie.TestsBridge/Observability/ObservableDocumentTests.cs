@@ -32,70 +32,73 @@ namespace ArgsTests
             var root = new MyDocument();
             var observableDocument = new ObservableDocument(root);
             var notifyCount = 0;
-            var sub = observableDocument.Changed.SubscribeUnmanaged(() => notifyCount++);
-            Assert.AreEqual(0, notifyCount);
-
-            var assertIncrement = new Action<Action>((action) =>
+            using (var lt = new Lifetime())
             {
-                var currentCount = notifyCount;
-                action();
-                Assert.AreEqual(currentCount + 1, notifyCount);
-            });
+                observableDocument.Changed.SubscribeForLifetime(() => notifyCount++, lt);
+                Assert.AreEqual(0, notifyCount);
 
-            var assertNoIncrement = new Action<Action>((action) =>
-            {
-                var currentCount = notifyCount;
-                action();
-                Assert.AreEqual(currentCount, notifyCount);
-            });
+                var assertIncrement = new Action<Action>((action) =>
+                {
+                    var currentCount = notifyCount;
+                    action();
+                    Assert.AreEqual(currentCount + 1, notifyCount);
+                });
 
-            assertIncrement(() => root.DocumentName = "TheName");
-            assertIncrement(() => root.DocumentName = null);
+                var assertNoIncrement = new Action<Action>((action) =>
+                {
+                    var currentCount = notifyCount;
+                    action();
+                    Assert.AreEqual(currentCount, notifyCount);
+                });
 
-            Assert.AreEqual(null, root.DocumentName);
-            assertIncrement(() => observableDocument.Undo());
-            Assert.AreEqual("TheName", root.DocumentName);
-            assertIncrement(() => observableDocument.Redo());
-            Assert.AreEqual(null, root.DocumentName);
+                assertIncrement(() => root.DocumentName = "TheName");
+                assertIncrement(() => root.DocumentName = null);
 
-            assertIncrement(() => root.DocumentName = "TheName2");
+                Assert.AreEqual(null, root.DocumentName);
+                assertIncrement(() => observableDocument.Undo());
+                Assert.AreEqual("TheName", root.DocumentName);
+                assertIncrement(() => observableDocument.Redo());
+                Assert.AreEqual(null, root.DocumentName);
 
-            
-            assertNoIncrement(() =>  root.DocumentName = "TheName2"); // duplicate change
-            assertIncrement(()=>  root.Numbers = new ObservableCollection<int>());
-            assertIncrement(()=> root.Numbers.Add(1));
-            assertIncrement(() => root.Numbers.Clear());
+                assertIncrement(() => root.DocumentName = "TheName2");
 
-            var originalCustomers = new ObservableCollection<Person>();
-            assertIncrement(()=> root.Customers = originalCustomers);
 
-            var joe = new Person();
-            assertIncrement(() => root.Customers.Add(joe));
-            assertIncrement(() => joe.FirstName = "Joe");
-            assertIncrement(() => root.Customers.Remove(joe));
-            assertNoIncrement(()=> joe.FirstName = "bob"); // removed so this should not trigger a change
-            assertIncrement(() => root.Customers = new ObservableCollection<Person>());
-            assertNoIncrement(() => originalCustomers.Add(new Person())); // removed so this should not trigger a change
-            assertIncrement(() => root.Customers.Add(new Person()));
-            assertIncrement(()=> root.Customers[0].Friends = new ObservableCollection<Person>());
-            assertIncrement(() => root.Customers[0].Friends.Add(new Person()));
-            assertIncrement(() => root.Customers[0].Friends[0].Friends = new ObservableCollection<Person>() { new Person() });
-            assertIncrement(() => root.Customers[0].Friends[0].Friends.Add(new Person()));
-            
-            var leafFriend = root.Customers[0].Friends[0].Friends[0];
-            assertNoIncrement(() => root.Customers[0].Friends[0].Friends[0] = leafFriend); // equal change, should be suppressed
-            assertIncrement(()=> leafFriend.FirstName = "Yay!");
-            assertIncrement(() => leafFriend.Mom = new Person());
+                assertNoIncrement(() => root.DocumentName = "TheName2"); // duplicate change
+                assertIncrement(() => root.Numbers = new ObservableCollection<int>());
+                assertIncrement(() => root.Numbers.Add(1));
+                assertIncrement(() => root.Numbers.Clear());
 
-            assertIncrement(() => root.Customers.Clear());
-            assertNoIncrement(() => leafFriend.FirstName = "Jimbo");
+                var originalCustomers = new ObservableCollection<Person>();
+                assertIncrement(() => root.Customers = originalCustomers);
 
-            observableDocument.Dispose();
+                var joe = new Person();
+                assertIncrement(() => root.Customers.Add(joe));
+                assertIncrement(() => joe.FirstName = "Joe");
+                assertIncrement(() => root.Customers.Remove(joe));
+                assertNoIncrement(() => joe.FirstName = "bob"); // removed so this should not trigger a change
+                assertIncrement(() => root.Customers = new ObservableCollection<Person>());
+                assertNoIncrement(() => originalCustomers.Add(new Person())); // removed so this should not trigger a change
+                assertIncrement(() => root.Customers.Add(new Person()));
+                assertIncrement(() => root.Customers[0].Friends = new ObservableCollection<Person>());
+                assertIncrement(() => root.Customers[0].Friends.Add(new Person()));
+                assertIncrement(() => root.Customers[0].Friends[0].Friends = new ObservableCollection<Person>() { new Person() });
+                assertIncrement(() => root.Customers[0].Friends[0].Friends.Add(new Person()));
 
-            assertNoIncrement(() => root.DocumentName = "No update"); // doc was disposed, should be no notification
+                var leafFriend = root.Customers[0].Friends[0].Friends[0];
+                assertNoIncrement(() => root.Customers[0].Friends[0].Friends[0] = leafFriend); // equal change, should be suppressed
+                assertIncrement(() => leafFriend.FirstName = "Yay!");
+                assertIncrement(() => leafFriend.Mom = new Person());
 
-            Assert.AreEqual(21, notifyCount);
-            Console.WriteLine(notifyCount);
+                assertIncrement(() => root.Customers.Clear());
+                assertNoIncrement(() => leafFriend.FirstName = "Jimbo");
+
+                observableDocument.Dispose();
+
+                assertNoIncrement(() => root.DocumentName = "No update"); // doc was disposed, should be no notification
+
+                Assert.AreEqual(21, notifyCount);
+                Console.WriteLine(notifyCount);
+            }
         }
 
         [TestMethod]

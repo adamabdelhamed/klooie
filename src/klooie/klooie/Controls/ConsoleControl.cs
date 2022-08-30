@@ -267,7 +267,7 @@ public class ConsoleControl : Rectangular
     /// <param name="recorder">the writer to use</param>
     /// <param name="timestampFunc">an optional callback that will be called to determine the timestamp for each frame. If not specified the wall clock will be used.</param>
     /// <param name="lifetime">A lifetime that determines how long recording will last. Defaults to the lifetime of the control.</param>
-    public void EnableRecording(ConsoleBitmapVideoWriter recorder, Func<TimeSpan> timestampFunc = null, LifetimeManager lifetime = null)
+    public void EnableRecording(ConsoleBitmapVideoWriter recorder, Func<TimeSpan> timestampFunc = null, ILifetimeManager lifetime = null)
     {
         if (Recorder != null)
         {

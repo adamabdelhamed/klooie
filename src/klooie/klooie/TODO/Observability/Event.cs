@@ -24,87 +24,13 @@ public class Event
     /// <summary>
     /// Fires the event. All subscribers will be notified
     /// </summary>
-    public void Fire()
+    public void Fire() => NotificationBufferPool.Notify(subscribers, subscribersWithParams);
+
+    public void SubscribeForLifetime(Action<object> handler, object param, ILifetimeManager lifetimeManager)
     {
-        var subscriberCount = subscribers.Count;
-        var subscriberCountWithParams = subscribersWithParams.Count;
-        var buffer = NotificationBufferPool.Instance.Get(subscriberCount, subscriberCountWithParams);
-        try
-        {
-            var subSpan = buffer.MainBuffer.AsSpan();
-            var paramSpan = buffer.ParamBuffer.AsSpan();
-
-            for (var i = 0; i < subscriberCount; i++)
-            {
-                subSpan[i] = subscribers[i];
-            }
-
-            for (var i = 0; i < subscriberCountWithParams; i++)
-            {
-                paramSpan[i] = subscribersWithParams[i];
-            }
-
-            for (var i = 0; i < subscriberCount; i++)
-            {
-                if (subSpan[i].Lifetime.ShouldContinue)
-                {
-                    subSpan[i].Callback();
-                }
-            }
-
-            for (var i = 0; i < subscriberCountWithParams; i++)
-            {
-                if (paramSpan[i].Lifetime.ShouldContinue)
-                {
-                    paramSpan[i].Callback(paramSpan[i].Param);
-                }
-            }
-        }
-        finally
-        {
-            NotificationBufferPool.Instance.Return(buffer);
-        }
-    }
-
-    /// <summary>
-    /// Subscribes to this event such that the given handler will be called when the event fires 
-    /// </summary>
-    /// <param name="handler">the action to run when the event fires</param>
-    /// <returns>A subscription that can be disposed when you no loner want to be notified from this event</returns>
-    public ILifetime SubscribeUnmanaged(Action handler)
-    {
-        var sub = new Lifetime();
-        var subRecord = new Subscription() { Callback = handler, Lifetime = sub.Manager };
-        subscribers.Add(subRecord);
-        sub.OnDisposed(()=> subscribers.Remove(subRecord));
-        return sub;
-    }
-
-    /// <summary>
-    /// Subscribes to an event and returns a lifetime that you
-    /// can dispose manually when you no longer want to be notified
-    /// </summary>
-    /// <param name="handler">the notification callback</param>
-    /// <param name="param">the parameter to send to the callback</param>
-    /// <returns>a lifetime that you can dispose manually when you no longer want to be notified</returns>
-    public ILifetime SubscribeUnmanaged(Action<object> handler, object param)
-    {
-        var sub = new Lifetime();
-        var subRecord = new SubscriptionWithParam() { Callback = handler, Lifetime = sub.Manager, Param = param };
+        var subRecord = new SubscriptionWithParam() { Callback = handler, Lifetime = lifetimeManager, Param = param };
         subscribersWithParams.Add(subRecord);
-        sub.OnDisposed(() => subscribersWithParams.Remove(subRecord));
-        return sub;
-    }
-
-    /// <summary>
-    /// calls the callback now and subscribes to the event
-    /// </summary>
-    /// <param name="handler">the callback</param>
-    /// <returns>a lifetime that you can dispose manually when you no longer want to be notified</returns>
-    public ILifetime SynchronizeUnmanaged(Action handler)
-    {
-        handler();
-        return SynchronizeUnmanaged(handler);
+        lifetimeManager.OnDisposed(() => subscribersWithParams.Remove(subRecord));
     }
 
     /// <summary>
@@ -115,8 +41,12 @@ public class Event
     /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
     public void SubscribeForLifetime(Action handler, ILifetimeManager lifetimeManager)
     {
-        var lt = SubscribeUnmanaged(handler);
-        lifetimeManager.OnDisposed(lt);
+        var subRecord = new Subscription() { Callback = handler, Lifetime = lifetimeManager };
+        subscribers.Add(subRecord);
+        lifetimeManager.OnDisposed(() =>
+        {
+            subscribers.Remove(subRecord);
+        });
     }
 
     /// <summary>
@@ -200,90 +130,10 @@ public class Event
         return tcs.Task;
     }
 
-    private class NotificationBuffer
-    {
-        public Subscription[] MainBuffer;
-        public SubscriptionWithParam[] ParamBuffer;
-    }
 
-    private class Subscription
-    {
-        public Action Callback { get; set; }
-        public ILifetimeManager Lifetime { get; set; }
-    }
-
-    private class SubscriptionWithParam
-    {
-        public Action<object> Callback { get; set; }
-        public ILifetimeManager Lifetime { get; set; }
-        public object Param { get; set; }
-    }
-
-    private class NotificationBufferPool
-    {
-#if DEBUG
-        internal static int HitCount = 0;
-        internal static int MissCount = 0;
-        internal static int PartialHitCount = 0;
-#endif
-        private List<NotificationBuffer> pool = new List<NotificationBuffer>();
-        public static readonly NotificationBufferPool Instance = new NotificationBufferPool();
-
-        public NotificationBuffer Get(int mainSize, int paramSize)
-        {
-            lock (pool)
-            {
-                mainSize = mainSize < 100 ? 100 : mainSize;
-                paramSize = paramSize < 100 ? 100 : paramSize;
-                // if no buffers, create one
-                if (pool.Count == 0)
-                {
-#if DEBUG
-                MissCount++;
-#endif
-                    return new NotificationBuffer()
-                    {
-                        MainBuffer = new Subscription[mainSize * 2],
-                        ParamBuffer = new SubscriptionWithParam[paramSize * 2]
-                    };
-                }
-
-                // try to find an existing buffer that is big enough
-                for (var i = 0; i < pool.Count; i++)
-                {
-                    if (pool[i].MainBuffer.Length >= mainSize && pool[i].ParamBuffer.Length >= paramSize)
-                    {
-                        var toRent = pool[i];
-                        pool.RemoveAt(i);
-#if DEBUG
-                    HitCount++;
-#endif
-                        return toRent;
-                    }
-                }
-
-#if DEBUG
-            PartialHitCount++;
-#endif
-
-                // resize existing buffer to be big enough and use it
-                var firstBuffer = pool.First();
-                firstBuffer.MainBuffer = new Subscription[mainSize * 2];
-                firstBuffer.ParamBuffer = new SubscriptionWithParam[paramSize * 2];
-                pool.RemoveAt(0);
-                return firstBuffer;
-            }
-        }
-
-        public void Return(NotificationBuffer buffer)
-        {
-            lock (pool)
-            {
-                pool.Add(buffer);
-            }
-        }
-    }
 }
+
+
 
 /// <summary>
 /// An event that has an argument of the given type
@@ -309,13 +159,6 @@ public class Event<T>
     public void SubscribeOnce(Action<T> handler) =>
         innerEvent.SubscribeOnce(() => handler(args.Peek()));
 
-    /// <summary>
-    /// Subscribes to the event
-    /// </summary>
-    /// <param name="handler">the callback</param>
-    /// <returns>a lifetime that you can dispose if you no longer want to be notified</returns>
-    public ILifetime SubscribeUnmanaged(Action<T> handler) =>
-        innerEvent.SubscribeUnmanaged(() => handler(args.Peek()));
 
     /// <summary>
     /// Fires the event and passes the given args to subscribers

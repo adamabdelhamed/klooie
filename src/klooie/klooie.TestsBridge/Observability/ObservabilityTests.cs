@@ -29,23 +29,6 @@ namespace ArgsTests.CLI.Observability
             public int Number{ get { return Get<int>(); } set { Set(value); } }
         }
 
-        [TestMethod]
-        public void SubscribeUnmanagedToProperty()
-        {
-            var observable = new SomeObservable();
-
-            var triggerCount = 0;
-
-            using (var subscription = observable.SubscribeUnmanaged(nameof(SomeObservable.Name), () => { triggerCount++;  }))
-            {
-                Assert.AreEqual(0, triggerCount);
-                observable.Name = "Some value";
-                Assert.AreEqual(1, triggerCount);
-            }
-
-            observable.Name = "Some new value";
-            Assert.AreEqual(1, triggerCount);
-        }
 
         [TestMethod]
         public void SubscribeForLifetimeToProperty()
@@ -131,51 +114,20 @@ namespace ArgsTests.CLI.Observability
             Assert.AreEqual(2, numChanged);
         }
 
-        [TestMethod]
-        public void SubscribeUnmanagedToEvent()
-        {
-            var observable = new SomeObservable();
-
-            var triggerCount = 0;
-
-            using (var subscription = observable.SomeEvent.SubscribeUnmanaged(() => { triggerCount++; }))
-            {
-                Assert.AreEqual(0, triggerCount);
-                observable.SomeEvent.Fire();
-                Assert.AreEqual(1, triggerCount);
-            }
-
-            observable.SomeEvent.Fire();
-            Assert.AreEqual(1, triggerCount);
-        }
-
-        [TestMethod]
-        public void SubscribeUnmanagedToEventWithUnsubscribe()
-        {
-            var observable = new SomeObservable();
-
-            var triggerCount = 0;
-
-            Action handler = () => { triggerCount++; };
-            observable.SomeEvent.SubscribeUnmanaged(handler);
-            
-            Assert.AreEqual(0, triggerCount);
-            observable.SomeEvent.Fire();
-            Assert.AreEqual(1, triggerCount);
-        }
 
         [TestMethod]
         public void SubscribeUnmanagedToEventOfStringWithUnsubscribe()
         {
             var observable = new SomeObservable();
             var triggerCount = 0;
-            var sub = observable.SomeEventWithAString.SubscribeUnmanaged((s) => { triggerCount++; });
+            using (var lt = new Lifetime())
+            {
+                observable.SomeEventWithAString.SubscribeForLifetime((s) => { triggerCount++; }, lt);
 
-            Assert.AreEqual(0, triggerCount);
-            observable.SomeEventWithAString.Fire("Foo");
-            Assert.AreEqual(1, triggerCount);
-
-            sub.Dispose();
+                Assert.AreEqual(0, triggerCount);
+                observable.SomeEventWithAString.Fire("Foo");
+                Assert.AreEqual(1, triggerCount);
+            }
             observable.SomeEventWithAString.Fire("Foo");
             Assert.AreEqual(1, triggerCount);
         }
@@ -270,23 +222,22 @@ namespace ArgsTests.CLI.Observability
             int numChildrenChanged = 0;
             int numChildrenAdded = 0;
             int numChildrenRemoved = 0;
-            observable.Children.SynchronizeForLifetime(
-                (c) =>
+            observable.Children.SynchronizeForLifetime((c) =>
+            {
+                c.SynchronizeForLifetime(nameof(SomeOtherObservable.Name), () => 
                 {
-                    c.SynchronizeForLifetime(nameof(SomeOtherObservable.Name), () => 
-                    {
-                        numChildrenChanged++;
-                    }
-                    , observable.Children.GetMembershipLifetime(c));
-                    numChildrenAdded++;
-                }, 
-                (c) =>
-                {
-                    numChildrenRemoved++;
-                }, 
-                () =>
-                {
-                }, observable);
+                    numChildrenChanged++;
+                }
+                , observable.Children.GetMembershipLifetime(c));
+                numChildrenAdded++;
+            }, 
+            (c) =>
+            {
+                numChildrenRemoved++;
+            }, 
+            () =>
+            {
+            }, observable);
 
             var newItem = new SomeOtherObservable();
 
@@ -317,7 +268,11 @@ namespace ArgsTests.CLI.Observability
         {
             var ev = new Event();
             var counter = 0;
-            ev.SubscribeOnce(() => counter++);
+            var count = () =>
+            {
+                counter++;
+            };
+            ev.SubscribeOnce(count);
             Assert.IsTrue(ev.HasSubscriptions);
             Assert.AreEqual(0, counter);
             ev.Fire();

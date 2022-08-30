@@ -45,13 +45,11 @@ namespace PowerArgs
     {
         private ObservableObject observable;
         public bool SuppressEqualChanges { get; set; } = true;
-        public IDisposable SubscribeUnmanaged(string propertyName, Action handler) => observable.SubscribeUnmanaged(propertyName, handler);
         public void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.SubscribeForLifetime(propertyName, handler, lifetimeManager);
-        public IDisposable SynchronizeUnmanaged(string propertyName, Action handler) => observable.SynchronizeUnmanaged(propertyName, handler);
         public void SynchronizeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.SynchronizeForLifetime(propertyName, handler, lifetimeManager);
         public T Get<T>([CallerMemberName]string name = null) => observable.Get<T>(name);
         public void Set<T>(T value, [CallerMemberName]string name = null) => observable.Set<T>(value);
-        public Lifetime GetPropertyValueLifetime(string propertyName) => observable.GetPropertyValueLifetime(propertyName);
+        public ILifetimeManager GetPropertyValueLifetime(string propertyName) => observable.GetPropertyValueLifetime(propertyName);
         public int LastModifiedIndex { get; private set; }
 
         public string Id { get => observable.Get<string>(); set => observable.Set(value); } 

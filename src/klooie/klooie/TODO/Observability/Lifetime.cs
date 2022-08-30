@@ -44,7 +44,7 @@ namespace PowerArgs
     {
         private LifetimeManager _manager;
 
-        public LifetimeManager Manager => _manager;
+        public ILifetimeManager Manager => _manager;
 
         private static Lifetime forever = CreateForeverLifetime();
 
@@ -245,28 +245,7 @@ namespace PowerArgs
                 _manager.IsExpiring = true;
                 try
                 {
-                    if (_manager.cleanupItems != null)
-                    {
-                        foreach (var item in _manager.cleanupItems.ToArray())
-                        {
-                            item();
-                        }
-                    }
-                    if (_manager.cleanupItems2 != null)
-                    {
-                        foreach (var item in _manager.cleanupItems2.ToArray())
-                        {
-                            item.Dispose();
-                        }
-                    }
-
-                    if (_manager.cleanupItemsWithParams != null)
-                    {
-                        foreach (var item in _manager.cleanupItemsWithParams.ToArray())
-                        {
-                            item.Item1(item.Item2);
-                        }
-                    }
+                    _manager.Finish();
                     _manager = null;
                 }
                 finally
