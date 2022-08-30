@@ -178,20 +178,6 @@ public class EventLoop : Lifetime
     private CustomSyncContext syncContext;
     public bool IsDrainingOrDrained { get; private set; }
 
-    /// <summary>
-    /// Runs the event loop on a new thread
-    /// </summary>
-    /// <param name="name"></param>
-    /// <returns></returns>
-    public virtual Task Start()
-    {
-        runDeferred = new TaskCompletionSource<bool>();
-        Thread = new Thread(RunCommon) { Name = Name };
-        Thread.Priority = Priority;
-        Thread.IsBackground = true;
-        Thread.Start();
-        return runDeferred.Task;
-    }
 
     private bool runMode;
     private Task runTask;

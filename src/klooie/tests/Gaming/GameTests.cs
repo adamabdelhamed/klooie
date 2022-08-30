@@ -1,5 +1,6 @@
 ﻿
 using klooie.Gaming;
+using klooie;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using System;
@@ -168,7 +169,7 @@ public class GameTests
         Assert.AreNotEqual(now,Game.Now);
         Game.Current.Stop();
 
-    }), TestContext, UITestMode.Headless);
+    }), TestContext.TestId(), UITestMode.Headless);
 
 
     [TestMethod]
@@ -199,6 +200,6 @@ public class GameTests
         await Task.Delay(100);
         Assert.AreNotEqual(now,Game.Now);
         Game.Current.Stop();
-    }), TestContext, UITestMode.Headless);
+    }), TestContext.TestId(), UITestMode.Headless);
 }
 

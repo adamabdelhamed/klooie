@@ -32,9 +32,15 @@ public interface ILifetimeManager
     /// </summary>
     bool IsExpiring { get; }
 
+    /// <summary>
+    /// true if the lifetime is not expired or expiring
+    /// </summary>
     bool ShouldContinue { get; }
 }
 
+/// <summary>
+/// Extension methods for lifetime managers
+/// </summary>
 public static class ILifetimeManagerEx
 {
     /// <summary>
@@ -52,7 +58,7 @@ public static class ILifetimeManagerEx
 /// <summary>
 /// An implementation of ILifetimeManager
 /// </summary>
-public class LifetimeManager : ILifetimeManager
+internal class LifetimeManager : ILifetimeManager
 {
     private List<Subscription> subscribers = new List<Subscription>();
     private List<SubscriptionWithParam> subscribersWithParams = new List<SubscriptionWithParam>();

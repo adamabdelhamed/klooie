@@ -11,22 +11,15 @@ public class ThemingTests
     public TestContext TestContext { get; set; }
 
     [TestMethod]
-    public void Theming_TextBox()
+    public void Theming_TextBox() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
-        var app = new KlooieTestHarness(TestContext, true);
-
-        app.InvokeNextCycle(async () =>
-        {
-            var tb = app.LayoutRoot.Add(new TextBox() { Width = 20, Value = "Adam".ToConsoleString() }).CenterBoth();
-            await app.PaintAndRecordKeyFrameAsync();
-            Theme.FromStyles(StyleBuilder.Create().For<TextBox>().FG(RGB.Red).BG(RGB.Green)).Apply();
-            await app.PaintAndRecordKeyFrameAsync();
-            app.Stop();
-        });
-
-        app.Run();
-        app.AssertThisTestMatchesLKG();
-    }
+        var tb = ConsoleApp.Current.LayoutRoot.Add(new TextBox() { Width = 20, Value = "Adam".ToConsoleString() }).CenterBoth();
+        await context.PaintAndRecordKeyFrameAsync();
+        Theme.FromStyles(StyleBuilder.Create().For<TextBox>().FG(RGB.Red).BG(RGB.Green)).Apply();
+        await context.PaintAndRecordKeyFrameAsync();
+        ConsoleApp.Current.Stop();
+    });
+ 
 
     [TestMethod]
     public void Theming_Builder_Basic()

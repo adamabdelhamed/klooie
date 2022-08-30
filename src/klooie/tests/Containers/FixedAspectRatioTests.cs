@@ -10,29 +10,22 @@ public class FixedAspectRatioTests
     public TestContext TestContext { get; set; }
 
     [TestMethod]
-    public void FixedAspectRatioPanel_Basic()
+    public void FixedAspectRatioPanel_Basic() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified,130,40, async (context) =>
     {
-        KlooieTestHarness.SetConsoleSize(130, 40);
-        var app = new KlooieTestHarness(this.TestContext, true);
-        app.SecondsBetweenKeyframes = .05f;
-        app.InvokeNextCycle(async () =>
+        context.SecondsBetweenKeyframes = .05f;
+        var fixedPanel = ConsoleApp.Current.LayoutRoot.Add(new FixedAspectRatioPanel(2, new ConsolePanel() { Background = RGB.Green })).CenterBoth();
+        ConsoleApp.Current.LayoutRoot.Background = RGB.DarkYellow;
+        fixedPanel.Background = RGB.Red;
+        fixedPanel.Width = ConsoleApp.Current.LayoutRoot.Width;
+        fixedPanel.Height = ConsoleApp.Current.LayoutRoot.Height;
+        await context.PaintAndRecordKeyFrameAsync();
+
+        while (fixedPanel.Width > 2)
         {
-            var fixedPanel = app.LayoutRoot.Add(new FixedAspectRatioPanel(2, new ConsolePanel() { Background = RGB.Green })).CenterBoth();
-            app.LayoutRoot.Background = RGB.DarkYellow;
-            fixedPanel.Background = RGB.Red;
-            fixedPanel.Width = app.LayoutRoot.Width;
-            fixedPanel.Height = app.LayoutRoot.Height;
-            await app.PaintAndRecordKeyFrameAsync();
+            fixedPanel.Width -= 2;
+            await context.PaintAndRecordKeyFrameAsync();
+        }
 
-            while (fixedPanel.Width > 2)
-            {
-                fixedPanel.Width -= 2;
-                await app.PaintAndRecordKeyFrameAsync();
-            }
-
-            app.Stop();
-        });
-        app.Run();
-        app.AssertThisTestMatchesLKG();
-    }
+        ConsoleApp.Current.Stop();
+    });
 }

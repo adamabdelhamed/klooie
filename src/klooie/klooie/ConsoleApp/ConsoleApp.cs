@@ -181,22 +181,6 @@ public partial class ConsoleApp : EventLoop
         }
     }
 
-    /// <summary>
-    /// Starts the app, asynchronously.
-    /// </summary>
-    /// <returns>A task that will complete when the app exits</returns>
-    public override async Task Start()
-    {
-        try
-        {
-            await base.Start();
-        }
-        finally
-        {
-            ExitInternal();
-        }
-    }
-
     public override void Run()
     {
         _current = this;

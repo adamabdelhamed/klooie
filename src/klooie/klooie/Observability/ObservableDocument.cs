@@ -16,6 +16,135 @@ namespace klooie;
 /// </summary>
 public class ObservableDocument : Lifetime
 {
+    private bool undoRedoPending = false;
+    private ObservableCollection<TrackedObservable> trackedObservables = new ObservableCollection<TrackedObservable>();
+    private UndoRedoStack undoRedoStack = new UndoRedoStack();
+
+    /// <summary>
+    /// An event that fires when any change is detected in the document. This could be a 
+    /// property change on the root object or some nested observable. It could also be an
+    /// add, remove ,or index assigment on a property that is an IObservableCollection.
+    /// </summary>
+    public Event Changed { get; private set; } = new Event();
+
+    /// <summary>
+    /// Undoes the last change that was detected
+    /// </summary>
+    /// <returns>true if there was a previous change to undo, false otherwise</returns>
+    public bool Undo()
+    {
+        undoRedoPending = true;
+        return undoRedoStack.Undo();
+    }
+
+    /// <summary>
+    /// Redoes the last change that was undone
+    /// </summary>
+    /// <returns>true if there was a change to redo, false otherwise</returns>
+    public bool Redo()
+    {
+        undoRedoPending = true;
+        return undoRedoStack.Redo();
+    }
+
+    /// <summary>
+    /// Clears the undo / redo stack.
+    /// </summary>
+    public void ClearUndoRedoStack() => undoRedoStack.Clear();
+
+    /// <summary>
+    /// Creates an ObservableDocument given a root observable. The ObservableDocument will
+    /// immiediately attach to the root object and all child observables.
+    /// </summary>
+    /// <param name="root">the root object to observe</param>
+    public ObservableDocument(IObservableObject root)
+    {
+        Watch(root);
+        this.Changed.SubscribeForLifetime(() => undoRedoPending = false, this);
+        this.OnDisposed(trackedObservables.Clear);
+    }
+
+    private void Watch(IObservableObject obj, string path = "root")
+    {
+        foreach (var existingTrackedProperty in trackedObservables.Where(o => o.Path.StartsWith(path)).ToList())
+        {
+            trackedObservables.Remove(existingTrackedProperty);
+        }
+
+        var trackedObservable = new TrackedObservable() { PropertyValue = obj, Path = path };
+        trackedObservables.Add(trackedObservable);
+        var trackingLifetime = trackedObservables.GetMembershipLifetime(trackedObservable);
+
+        foreach (var property in obj.GetType().GetProperties())
+        {
+            if (obj is IObservableCollection && property.Name == "Item") { continue; }
+            bool isSyncing = true;
+            obj.SynchronizeForLifetime(property.Name, () =>
+            {
+                var myProp = property;
+                var val = myProp.GetValue(obj);
+                if (val is IObservableObject)
+                {
+                    Watch(val as IObservableObject, path + "." + myProp.Name);
+                }
+
+                if (isSyncing)
+                {
+                    isSyncing = false;
+                }
+                else
+                {
+                    if (undoRedoPending == false)
+                    {
+                        undoRedoStack.Do(new PropertyAssignmentAction(obj, myProp, obj.GetPrevious(myProp.Name)));
+                    }
+                    Changed.Fire();
+                }
+            }, trackingLifetime);
+        }
+
+        if (obj is IObservableCollection)
+        {
+            var collection = obj as IObservableCollection;
+            collection
+                .WhereAs<IObservableObject>()
+                .ForEach(child => Watch(child as IObservableObject, path + "[" + Guid.NewGuid() + "]"));
+
+            collection.Added.SubscribeForLifetime((o) =>
+            {
+                if (undoRedoPending == false)
+                {
+                    undoRedoStack.Do(new AddToCollectionAction(collection, o, collection.LastModifiedIndex));
+                }
+
+                if (o is IObservableObject)
+                {
+                    Watch(o as IObservableObject, path + "[" + Guid.NewGuid() + "]");
+                }
+                Changed.Fire();
+            }, trackingLifetime);
+
+            collection.Removed.SubscribeForLifetime((o) =>
+            {
+                if (undoRedoPending == false)
+                {
+                    undoRedoStack.Do(new RemovedFromCollectionAction(collection, o, collection.LastModifiedIndex));
+                }
+                if (o is IObservableObject)
+                {
+                    var tracked = trackedObservables.Where(to => to.PropertyValue == o).Single();
+                    foreach (var related in trackedObservables.Where(t => t.Path.StartsWith(tracked.Path)).ToList())
+                    {
+                        trackedObservables.Remove(related);
+                    }
+                }
+                Changed.Fire();
+            }, trackingLifetime);
+
+            collection.AssignedToIndex.SubscribeForLifetime((args) => throw new NotSupportedException("Index assignments are not supported by observable documents"), trackingLifetime);
+        }
+    }
+
     private class PropertyAssignmentAction : IUndoRedoAction
     {
         private object target;
@@ -104,141 +233,5 @@ public class ObservableDocument : Lifetime
         public string Path { get; set; }
         public object PropertyValue { get; set; }
         public override string ToString() => Path;
-    }
-
-    /// <summary>
-    /// An event that fires when any change is detected in the document. This could be a 
-    /// property change on the root object or some nested observable. It could also be an
-    /// add, remove ,or index assigment on a property that is an IObservableCollection.
-    /// </summary>
-    public Event Changed { get; private set; } = new Event();
-
-    private bool undoRedoPending = false;
-
-    /// <summary>
-    /// Undoes the last change that was detected
-    /// </summary>
-    /// <returns>true if there was a previous change to undo, false otherwise</returns>
-    public bool Undo()
-    {
-        undoRedoPending = true;
-        return undoRedoStack.Undo();
-    }
-
-    /// <summary>
-    /// Redoes the last change that was undone
-    /// </summary>
-    /// <returns>true if there was a change to redo, false otherwise</returns>
-    public bool Redo()
-    {
-        undoRedoPending = true;
-        return undoRedoStack.Redo();
-    }
-
-    /// <summary>
-    /// Clears the undo / redo stack.
-    /// </summary>
-    public void ClearUndoRedoStack() => undoRedoStack.Clear();
-
-    private IObservableObject root;
-
-    private ObservableCollection<TrackedObservable> trackedObservables = new ObservableCollection<TrackedObservable>();
-
-    private UndoRedoStack undoRedoStack = new UndoRedoStack();
-
-    /// <summary>
-    /// Creates an ObservableDocument given a root observable. The ObservableDocument will
-    /// immiediately attach to the root object and all child observables.
-    /// </summary>
-    /// <param name="root">the root object to observe</param>
-    public ObservableDocument(IObservableObject root)
-    {
-        Watch(root);
-        this.Changed.SubscribeForLifetime(() => undoRedoPending = false, this);
-        this.OnDisposed(() =>
-        {
-            trackedObservables.Clear();
-        });
-    }
-
-    private void Watch(IObservableObject obj, string path = "root")
-    {
-        foreach (var existingTrackedProperty in trackedObservables.Where(o => o.Path.StartsWith(path)).ToList())
-        {
-            trackedObservables.Remove(existingTrackedProperty);
-        }
-
-        var trackedObservable = new TrackedObservable() { PropertyValue = obj, Path = path };
-        trackedObservables.Add(trackedObservable);
-        var trackingLifetime = trackedObservables.GetMembershipLifetime(trackedObservable);
-
-        foreach (var property in obj.GetType().GetProperties())
-        {
-            if (obj is IObservableCollection && property.Name == "Item") { continue; }
-            bool isSyncing = true;
-            obj.SynchronizeForLifetime(property.Name, () =>
-            {
-                var myProp = property;
-                var val = myProp.GetValue(obj);
-                if (val is IObservableObject)
-                {
-                    Watch(val as IObservableObject, path + "." + myProp.Name);
-                }
-
-                if (isSyncing)
-                {
-                    isSyncing = false;
-                }
-                else
-                {
-                    if (undoRedoPending == false)
-                    {
-                        undoRedoStack.Do(new PropertyAssignmentAction(obj, myProp, obj.GetPrevious(myProp.Name)));
-                    }
-                    Changed.Fire();
-                }
-            }, trackingLifetime);
-        }
-
-        if (obj is IObservableCollection)
-        {
-            var collection = obj as IObservableCollection;
-            collection
-                .WhereAs<IObservableObject>()
-                .ForEach(child => Watch(child as IObservableObject, path + "[" + Guid.NewGuid() + "]"));
-
-            collection.Added.SubscribeForLifetime((o) =>
-            {
-                if (undoRedoPending == false)
-                {
-                    undoRedoStack.Do(new AddToCollectionAction(collection, o, collection.LastModifiedIndex));
-                }
-
-                if (o is IObservableObject)
-                {
-                    Watch(o as IObservableObject, path + "[" + Guid.NewGuid() + "]");
-                }
-                Changed.Fire();
-            }, trackingLifetime);
-
-            collection.Removed.SubscribeForLifetime((o) =>
-            {
-                if (undoRedoPending == false)
-                {
-                    undoRedoStack.Do(new RemovedFromCollectionAction(collection, o, collection.LastModifiedIndex));
-                }
-                if (o is IObservableObject)
-                {
-                    var tracked = trackedObservables.Where(to => to.PropertyValue == o).Single();
-                    foreach (var related in trackedObservables.Where(t => t.Path.StartsWith(tracked.Path)).ToList())
-                    {
-                        trackedObservables.Remove(related);
-                    }
-                }
-                Changed.Fire();
-            }, trackingLifetime);
-
-            collection.AssignedToIndex.SubscribeForLifetime((args) => throw new NotSupportedException("Index assignments are not supported by observable documents"), trackingLifetime);
-        }
     }
 }

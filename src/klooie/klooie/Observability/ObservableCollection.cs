@@ -1,41 +1,52 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace klooie;
 
-    internal interface IObservableCollection : IEnumerable
-    {
-        int LastModifiedIndex { get; }
-        Event<object> Added { get; }
-        Event<object> Removed { get; }
-        Event<IIndexAssignment> AssignedToIndex { get; }
-        Event Changed { get; }
+internal interface IObservableCollection : IEnumerable
+{
+    int LastModifiedIndex { get; }
+    Event<object> Added { get; }
+    Event<object> Removed { get; }
+    Event<IIndexAssignment> AssignedToIndex { get; }
+    Event Changed { get; }
 
-        void RemoveAt(int index);
-        void Insert(int index, object item);
-        object this[int index] { get;set; }
-    }
+    void RemoveAt(int index);
+    void Insert(int index, object item);
+    object this[int index] { get;set; }
+}
 
-    public interface IIndexAssignment
-    {
-        int Index { get; set; }
-        object OldValue { get; }
-        object NewValue { get; }
-    }
+internal interface IIndexAssignment
+{
+    int Index { get; }
+    object OldValue { get; }
+    object NewValue { get; }
+}
 
-    public class IndexAssignment<T> : IIndexAssignment
-    {
-        public int Index { get; set; }
-        public T OldValue { get; set; }
-        public T NewValue { get; set; }
+/// <summary>
+/// A class representing an index assignment in an observable collection
+/// </summary>
+/// <typeparam name="T">the type of object in the collection</typeparam>
+public class IndexAssignment<T> : IIndexAssignment
+{
+    /// <summary>
+    /// The index that changes
+    /// </summary>
+    public int Index { get; internal set; }
 
-        object IIndexAssignment.OldValue => OldValue;
-        object IIndexAssignment.NewValue => NewValue;
-    }
+    /// <summary>
+    /// The previous value
+    /// </summary>
+    public T OldValue { get; internal set; }
+
+    /// <summary>
+    /// the new value
+    /// </summary>
+    public T NewValue { get; internal set; }
+
+    object IIndexAssignment.OldValue => OldValue;
+    object IIndexAssignment.NewValue => NewValue;
+}
 
 /// <summary>
 /// An observable list implementation
@@ -44,7 +55,15 @@ namespace klooie;
 public class ObservableCollection<T> : IList<T>, IObservableCollection, IObservableObject
 {
     private ObservableObject observable;
-    public bool SuppressEqualChanges { get; set; } = true;
+    private List<T> wrapped;
+    private Dictionary<T, Lifetime> membershipLifetimes;
+    private Event<object> _untypedAdded = new Event<object>();
+    Event<Object> IObservableCollection.Added => _untypedAdded;
+    private Event<object> _untypedRemove = new Event<object>();
+    Event<Object> IObservableCollection.Removed => _untypedRemove;
+    private Event<IIndexAssignment> untyped_Assigned = new Event<IIndexAssignment>();
+    Event<IIndexAssignment> IObservableCollection.AssignedToIndex => untyped_Assigned;
+
     public void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.SubscribeForLifetime(propertyName, handler, lifetimeManager);
     public void SynchronizeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.SynchronizeForLifetime(propertyName, handler, lifetimeManager);
     public T Get<T>([CallerMemberName] string name = null) => observable.Get<T>(name);
@@ -69,15 +88,6 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     /// </summary>
     public Event<T> Added { get; private set; } = new Event<T>();
 
-    private Event<object> _untypedAdded = new Event<object>();
-    Event<Object> IObservableCollection.Added => _untypedAdded;
-
-    private Event<object> _untypedRemove = new Event<object>();
-    Event<Object> IObservableCollection.Removed => _untypedRemove;
-
-    private Event<IIndexAssignment> untyped_Assigned = new Event<IIndexAssignment>();
-    Event<IIndexAssignment> IObservableCollection.AssignedToIndex => untyped_Assigned;
-
     /// <summary>
     /// Called when an element is removed from this list
     /// </summary>
@@ -94,10 +104,6 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     /// </summary>
     public Event<IndexAssignment<T>> AssignedToIndex { get; private set; } = new Event<IndexAssignment<T>>();
 
-    private List<T> wrapped;
-
-    Dictionary<T, Lifetime> membershipLifetimes;
-
     /// <summary>
     /// Initialized the collection
     /// </summary>
@@ -105,9 +111,17 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     {
         wrapped = new List<T>();
         membershipLifetimes = new Dictionary<T, Lifetime>();
-        observable = new ObservableObject(this);
+        observable = new ObservableObject();
     }
 
+    /// <summary>
+    /// Calls the change handler for each existing item, call the change handler once,
+    /// and subscribes to future changes
+    /// </summary>
+    /// <param name="addAction">the add handler</param>
+    /// <param name="removeAction">the remove handler</param>
+    /// <param name="changedAction">the changed handler</param>
+    /// <param name="manager">the lifetime of the subscriptions</param>
     public void SynchronizeForLifetime(Action<T> addAction, Action<T> removeAction, Action changedAction, ILifetimeManager manager)
     {
         Added.SubscribeForLifetime(addAction, manager);
@@ -128,6 +142,13 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     /// <param name="name">the name of the property to lookup</param>
     /// <returns>the previous value or null if there was no value</returns>
     public object GetPrevious(string name) => observable.GetPrevious<object>(name);
+
+    /// <summary>
+    /// Gets a lifetime that expires when the given item is removed from the collection
+    /// </summary>
+    /// <param name="item">the item to track</param>
+    /// <returns>a lifetime that expires when the given item is removed from the collection</returns>
+    public ILifetimeManager GetMembershipLifetime(T item) => membershipLifetimes[item];
 
     /// <summary>
     /// Fires the Added event for the given item
@@ -163,32 +184,16 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
         Changed.Fire();
     }
 
-    public ILifetimeManager GetMembershipLifetime(T item)
-    {
-        return membershipLifetimes[item];
-    }
-
-    internal void FireBeforeAdded(T item)
-    {
-        BeforeAdded.Fire(item);
-    }
-
-
-
-    internal void FireBeforeRemoved(T item)
-    {
-        BeforeRemoved.Fire(item);
-    }
+    internal void FireBeforeAdded(T item) => BeforeAdded.Fire(item);
+    internal void FireBeforeRemoved(T item) => BeforeRemoved.Fire(item);
+    
 
     /// <summary>
     /// Returns the index of the given item in the list
     /// </summary>
     /// <param name="item">the item to look for</param>
     /// <returns>the index or a negative number if the element is not in the list</returns>
-    public int IndexOf(T item)
-    {
-        return wrapped.IndexOf(item);
-    }
+    public int IndexOf(T item) => wrapped.IndexOf(item);
 
     /// <summary>
     /// Inserts the given item into the list at the specified position
@@ -232,7 +237,7 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
         set
         {
             var oldItem = wrapped[index];
-            if (SuppressEqualChanges && ObservableObject.EqualsSafe(oldItem, value))
+            if (ObservableObject.EqualsSafe(oldItem, value))
             {
                 return;
             }
@@ -287,36 +292,23 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     /// </summary>
     /// <param name="item">the item to look for</param>
     /// <returns>true if the list contains the given item, false otherwise</returns>
-    public bool Contains(T item)
-    {
-        return wrapped.Contains(item);
-    }
+    public bool Contains(T item) => wrapped.Contains(item);
 
     /// <summary>
     /// Copies values from this list into the given array starting at the given index in the destination
     /// </summary>
     /// <param name="array">the destination array</param>
     /// <param name="arrayIndex">the index in the destination array to start the copy</param>
-    public void CopyTo(T[] array, int arrayIndex)
-    {
-        wrapped.CopyTo(array, arrayIndex);
-    }
+    public void CopyTo(T[] array, int arrayIndex) =>  wrapped.CopyTo(array, arrayIndex);
 
     /// <summary>
     /// Gets the number of items in the list
     /// </summary>
-    public int Count
-    {
-        get { return wrapped.Count; }
-    }
-
+    public int Count => wrapped.Count;
     /// <summary>
     /// Always returns false
     /// </summary>
-    public bool IsReadOnly
-    {
-        get { return false; }
-    }
+    public bool IsReadOnly => false;
 
     /// <summary>
     /// Removes the given item from the list
@@ -348,17 +340,11 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     /// Gets an enumerator for this list
     /// </summary>
     /// <returns>an enumerator for this list</returns>
-    public IEnumerator<T> GetEnumerator()
-    {
-        return wrapped.GetEnumerator();
-    }
+    public IEnumerator<T> GetEnumerator() => wrapped.GetEnumerator();
 
     /// <summary>
     /// Gets an enumerator for this list
     /// </summary>
     /// <returns>an enumerator for this list</returns>
-    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-    {
-        return wrapped.GetEnumerator();
-    }
+    IEnumerator IEnumerable.GetEnumerator() => wrapped.GetEnumerator();
 }

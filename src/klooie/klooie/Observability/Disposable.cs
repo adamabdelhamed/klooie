@@ -8,10 +8,7 @@ public abstract class Disposable : IDisposable
     /// <summary>
     /// The deconstructor
     /// </summary>
-    ~Disposable()
-    {
-        Dispose(false);
-    }
+    ~Disposable() => Dispose(false);
 
     /// <summary>
     /// The dispose method

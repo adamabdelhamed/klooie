@@ -9,73 +9,67 @@ public class GridLayoutTests
     public TestContext TestContext { get; set; }
 
     [TestMethod]
-    public void GridLayout_Basic()
+    public void GridLayout_Basic() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
-        var app = new KlooieTestHarness(TestContext, true);
-        app.SecondsBetweenKeyframes = .03f;
-        app.Invoke(async () =>
+        context.SecondsBetweenKeyframes = .03f;
+        var grid = ConsoleApp.Current.LayoutRoot.Add(new GridLayout("25%;50%;25%", "20%;1p;1r") { Width = 50, Height = 10  }).CenterBoth();
+
+        var leftNav = grid.Add(new ConsoleControl() { Background = RGB.Red }, 0, 0, rowSpan: grid.NumRows);
+        var splitter = grid.Add(new ConsoleControl() { Background = RGB.White }, 1, 0, rowSpan: grid.NumRows);
+        var body = grid.Add(new ConsoleControl() { Background = RGB.Green }, 2, 0, rowSpan: grid.NumRows);
+
+        var colSplitter = grid.Add(new ConsoleControl() { Background = RGB.Yellow }, 0, 1, columnSpan: grid.NumColumns);
+
+        await context.PaintAndRecordKeyFrameAsync();
+        while(grid.Height < ConsoleApp.Current.Height && grid.Width < ConsoleApp.Current.Width)
         {
-            var grid = app.LayoutRoot.Add(new GridLayout("25%;50%;25%", "20%;1p;1r") { Width = 50, Height = 10  }).CenterBoth();
+            grid.ResizeBy(2, 1);
+            await context.PaintAndRecordKeyFrameAsync();
+        }
 
-            var leftNav = grid.Add(new ConsoleControl() { Background = RGB.Red }, 0, 0, rowSpan: grid.NumRows);
-            var splitter = grid.Add(new ConsoleControl() { Background = RGB.White }, 1, 0, rowSpan: grid.NumRows);
-            var body = grid.Add(new ConsoleControl() { Background = RGB.Green }, 2, 0, rowSpan: grid.NumRows);
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
 
-            var colSplitter = grid.Add(new ConsoleControl() { Background = RGB.Yellow }, 0, 1, columnSpan: grid.NumColumns);
+        grid.Remove(leftNav);
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
 
-            await app.PaintAndRecordKeyFrameAsync();
-            while(grid.Height < app.Height && grid.Width < app.Width)
-            {
-                grid.ResizeBy(2, 1);
-                await app.PaintAndRecordKeyFrameAsync();
-            }
+        grid.Remove(splitter);
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
 
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
+        grid.Remove(body);
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
+        await context.PaintAndRecordKeyFrameAsync();
 
-            grid.Remove(leftNav);
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
+        grid.Remove(colSplitter);
+        await context.PaintAndRecordKeyFrameAsync();
 
-            grid.Remove(splitter);
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-
-            grid.Remove(body);
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.PaintAndRecordKeyFrameAsync();
-
-            grid.Remove(colSplitter);
-            await app.PaintAndRecordKeyFrameAsync();
-
-            app.Stop();
-        });
-
-        app.Run();
-        app.AssertThisTestMatchesLKG();
-    }
+        ConsoleApp.Current.Stop();
+    });
+    
 }

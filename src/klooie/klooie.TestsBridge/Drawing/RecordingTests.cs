@@ -132,7 +132,7 @@ namespace ArgsTests.CLI.Recording
                 await app.SendKey(new ConsoleKeyInfo('p', ConsoleKey.P, false, false, false));
             });
 
-            app.Start().Wait();
+            app.Run();
             Thread.Sleep(100);
             app.AssertThisTestMatchesLKGFirstAndLastFrame();
         }

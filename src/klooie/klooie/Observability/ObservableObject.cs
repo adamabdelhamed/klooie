@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
-using System.Linq;
-using System.Reflection;
-using System.Collections.ObjectModel;
 
 namespace klooie;
 
+/// <summary>
+/// interface for an object with observable properties
+/// </summary>
 public interface IObservableObject
 {
-    bool SuppressEqualChanges { get; set; }
     void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager);
     void SynchronizeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager);
     object GetPrevious(string propertyName);
@@ -18,6 +16,22 @@ public interface IObservableObject
     void Set<T>(T value, string name);
 
     ILifetimeManager GetPropertyValueLifetime(string propertyName);
+    /*
+        // If you have a type that derives from a base that is not an ObservableObject
+        // then you can implement IObservableObject and paste in the body of this sample
+        // class. Your type will then be observable.
+
+        public class ObservableAdapter : IObservableObject
+        {
+            private ObservableObject observable = new ObservableObject();
+            public void SubscribeForLifetime(string p, Action h, ILifetimeManager l) => observable.SubscribeForLifetime(p, h, l);
+            public void SynchronizeForLifetime(string p, Action h, ILifetimeManager l) => observable.SynchronizeForLifetime(p, h, l);
+            public object GetPrevious(string p) => observable.GetPrevious<object>(p);
+            public T Get<T>(string name) => observable.Get<T>(name);
+            public void Set<T>(T value, string name) => Set(value, name);
+            public ILifetimeManager GetPropertyValueLifetime(string p) => observable.GetPropertyValueLifetime(p);
+        }
+     */
 }
 
 /// <summary>
@@ -35,27 +49,15 @@ public class ObservableObject : Lifetime, IObservableObject
     private Dictionary<string, object> previousValues;
 
     /// <summary>
-    /// Set to true if you want to suppress notification events for properties that get set to their existing values.
+    /// Converts this object into a dictionary
     /// </summary>
-    public bool SuppressEqualChanges { get; set; }
-
-    /// <summary>
-    /// DeepObservableRoot
-    /// </summary>
-    public IObservableObject DeepObservableRoot { get; private set; }
-
+    /// <returns></returns>
     public IReadOnlyDictionary<string, object> ToDictionary() => values != null ? new ReadOnlyDictionary<string, object>(values) : new Dictionary<string, object>();
 
-    public string CurrentlyChangingPropertyName { get; private set; }
-
     /// <summary>
-    /// Creates a new bag and optionally sets the notifier object.
+    /// Gets the name of the property that is changing now
     /// </summary>
-    public ObservableObject(IObservableObject proxy = null)
-    {
-        SuppressEqualChanges = true;
-        DeepObservableRoot = proxy;
-    }
+    public string CurrentlyChangingPropertyName { get; private set; }
 
     /// <summary>
     /// returns true if this object has a property with the given key
@@ -64,63 +66,46 @@ public class ObservableObject : Lifetime, IObservableObject
     /// <returns>true if this object has a property with the given key</returns>
     public bool ContainsKey(string key) => values != null && values.ContainsKey(key);
 
-
-    /// <summary>
-    /// returns true if this object has a property with the given key and val was populated
-    /// </summary>
-    /// <typeparam name="T">the type of property to get</typeparam>
-    /// <param name="key">the name of the property</param>
-    /// <param name="val">the output value</param>
-    /// <returns>true if this object has a property with the given key and val was populated</returns>
-    public bool TryGetValue<T>(string key, out T val)
-    {
-        if (values == null)
-        {
-            val = default;
-            return false;
-        }
-        if (values.TryGetValue(key, out object oVal))
-        {
-            val = (T)oVal;
-            return true;
-        }
-        else
-        {
-            val = default(T);
-            return false;
-        }
-    }
-
-
     /// <summary>
     /// This should be called by a property getter to get the value
     /// </summary>
     /// <typeparam name="T">The type of property to get</typeparam>
     /// <param name="name">The name of the property to get</param>
     /// <returns>The property's current value</returns>
-    public T Get<T>([CallerMemberName] string name = "")
+    public T Get<T>([CallerMemberName] string name = "") => TryGetValue(name, out T val) ? val : val;
+
+    /// <summary>
+    /// tries to get the value for the key provided
+    /// </summary>
+    /// <typeparam name="T">the type of value to get</typeparam>
+    /// <param name="key">the key</param>
+    /// <param name="val">the value to be populated or default(T)</param>
+    /// <returns>true if the value was retrieved, false otherwise</returns>
+    public bool TryGetValue<T>(string key, out T val)
     {
         values = values ?? new Dictionary<string, object>();
         previousValues = previousValues ?? new Dictionary<string, object>();
         object ret;
-        if (values.TryGetValue(name, out ret))
+        if (values.TryGetValue(key, out ret))
         {
             if (ret == null)
             {
-                return default(T);
+                val= default;
             }
             else if (ret is T)
             {
-                return (T)ret;
+                val = (T)ret;
             }
             else
             {
-                return (T)Convert.ChangeType(ret, typeof(T));
+                val = (T)Convert.ChangeType(ret, typeof(T));
             }
+            return true;
         }
         else
         {
-            return default(T);
+            val = default;
+            return false;
         }
     }
 
@@ -130,19 +115,7 @@ public class ObservableObject : Lifetime, IObservableObject
     /// <typeparam name="T">the type of property to get</typeparam>
     /// <param name="name">the name of the property</param>
     /// <returns>the previous value or default(T) if there was none</returns>
-    public T GetPrevious<T>([CallerMemberName] string name = "")
-    {
-        object ret;
-        if (previousValues.TryGetValue(name, out ret))
-        {
-            return (T)ret;
-        }
-        else
-        {
-            return default(T);
-        }
-    }
-
+    public T GetPrevious<T>([CallerMemberName] string name = "") => previousValues.TryGetValue(name, out object ret) ? (T)ret : default;
     object IObservableObject.GetPrevious(string name) => this.GetPrevious<object>(name);
 
     /// <summary>
@@ -158,7 +131,7 @@ public class ObservableObject : Lifetime, IObservableObject
 
         if (values.ContainsKey(name))
         {
-            if (SuppressEqualChanges == false || isEqualChange == false)
+            if (isEqualChange == false)
             {
                 previousValues[name] = current;
             }
@@ -169,49 +142,33 @@ public class ObservableObject : Lifetime, IObservableObject
             values.Add(name, value);
         }
 
-        if (SuppressEqualChanges == false || isEqualChange == false)
+        if (isEqualChange == false)
         {
             CurrentlyChangingPropertyName = name;
             FirePropertyChanged(name);
         }
     }
 
-    public void Set<T>(ref T current, T value, [CallerMemberName] string name = "")
-    {
-        var isEqualChange = EqualsSafe(current, value);
-
-        if (SuppressEqualChanges == false || isEqualChange == false)
-        {
-            previousValues[name] = current;
-        }
-
-        current = value;
-
-        if (SuppressEqualChanges == false || isEqualChange == false)
-        {
-            CurrentlyChangingPropertyName = name;
-            FirePropertyChanged(name);
-        }
-    }
-
+    /// <summary>
+    /// This method is useful for performance critical scenario, but has side effects. It allows the owning
+    /// type to declare fields for observability rather than depending on the dictionary
+    /// that this type uses to store values. It is much faster, but makes the owning type's
+    /// code more complex. It also means that you can't ever call Get() or TryGetValue()
+    /// since they will never have your value stored. And if you were to enumerate over
+    /// this object's dictionary to find all property names then any properties set by
+    /// this method will not appear.
+    /// </summary>
+    /// <typeparam name="T">the type of property</typeparam>
+    /// <param name="current">the current value</param>
+    /// <param name="value">the new value</param>
+    /// <param name="condition">false causes this method to exit early</param>
+    /// <param name="name">the name of the property to set</param>
     public void SetHardIf<T>(ref T current, T value, bool condition, [CallerMemberName] string name = "")
     {
         if (condition == false) return;
         current = value;
         CurrentlyChangingPropertyName = name;
         FirePropertyChanged(name);
-    }
-
-    private Event GetEvent(string propertyName)
-    {
-        subscribers = subscribers ?? new Dictionary<string, Event>();
-        Event evForProperty;
-        if (subscribers.TryGetValue(propertyName, out evForProperty) == false)
-        {
-            evForProperty = new Event();
-            subscribers.Add(propertyName, evForProperty);
-        }
-        return evForProperty;
     }
 
     /// <summary>
@@ -221,20 +178,16 @@ public class ObservableObject : Lifetime, IObservableObject
     /// <param name="propertyName">The name of the property to subscribe to or ObservableObject.AnyProperty if you want to be notified of any property change.</param>
     /// <param name="handler">The action to call for notifications</param>
     /// <param name="lifetimeManager">the lifetime manager that determines when the subscription ends</param>
-    public void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager)
-    {
-        GetEvent(propertyName).SubscribeForLifetime(handler, lifetimeManager);
-    }
+    public void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => GetEvent(propertyName).SubscribeForLifetime(handler, lifetimeManager);
+    
 
     /// <summary>
     ///  Subscribes to be notified once when the given property changes.   
     /// </summary>
     /// <param name="propertyName">The name of the property to subscribe to or ObservableObject.AnyProperty if you want to be notified of any property change.</param>
     /// <param name="handler">The action to call for notifications</param>
-    public void SubscribeOnce(string propertyName, Action handler)
-    {
-        GetEvent(propertyName).SubscribeOnce(handler);
-    }
+    public void SubscribeOnce(string propertyName, Action handler) => GetEvent(propertyName).SubscribeOnce(handler);
+    
 
     /// <summary>
     ///  Subscribes to be notified once when the given property changes.   
@@ -256,6 +209,11 @@ public class ObservableObject : Lifetime, IObservableObject
         GetEvent(propertyName).SynchronizeForLifetime(handler, lifetimeManager);
     }
 
+    /// <summary>
+    /// Gets a lifetime that represents the value of the given property
+    /// </summary>
+    /// <param name="propertyName">the property to track</param>
+    /// <returns>a lifetime that represents the value of the given property</returns>
     public ILifetimeManager GetPropertyValueLifetime(string propertyName)
     {
         var lt = new Lifetime();
@@ -282,10 +240,11 @@ public class ObservableObject : Lifetime, IObservableObject
         }
     }
 
-    protected virtual void OnPropertyChanged(string propertyName)
-    {
-
-    }
+    /// <summary>
+    /// derived types can override
+    /// </summary>
+    /// <param name="propertyName">the name of the property that was changed</param>
+    protected virtual void OnPropertyChanged(string propertyName) { }
 
     /// <summary>
     /// A generic equals implementation that allows nulls to be passed for either parameter.  Objects should not call this from
@@ -304,4 +263,15 @@ public class ObservableObject : Lifetime, IObservableObject
         return a.Equals(b);
     }
 
+    private Event GetEvent(string propertyName)
+    {
+        subscribers = subscribers ?? new Dictionary<string, Event>();
+        Event evForProperty;
+        if (subscribers.TryGetValue(propertyName, out evForProperty) == false)
+        {
+            evForProperty = new Event();
+            subscribers.Add(propertyName, evForProperty);
+        }
+        return evForProperty;
+    }
 }

@@ -15,61 +15,49 @@ public class DialogTests
     /// This test will store the whole video so we can visually look at the information
     /// </summary>
     [TestMethod]
-    public void Dialog_Basic() => DialogBasic(false);
+    public void Dialog_Basic() => DialogBasic(UITestMode.RealTimeFYI);
 
     /// <summary>
     /// This test will record keyframes so that we can check for regressions
     /// </summary>
     [TestMethod]
-    public void Dialog_BasicKeyFramed() => DialogBasic(true);
+    public void Dialog_BasicKeyFramed() => DialogBasic(UITestMode.KeyFramesVerified);
 
     [TestMethod]
-    public void Dialog_ShowMessage()
+    public void Dialog_ShowMessage() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified,async (context) =>
     {
-        var app = new KlooieTestHarness(TestContext, true);
-        Dialog.Shown.SubscribeForLifetime(async () => await app.PaintAndRecordKeyFrameAsync(), app);
-
-        app.Invoke(async () =>
-        {
-            await app.PaintAndRecordKeyFrameAsync();
-            await MessageDialog.Show(new ShowMessageOptions("Hello world".ToGreen()) { UserChoices = DialogChoice.Close, SpeedPercentage = 0, MaxLifetime = Task.Delay(300).ToLifetime() });
-            await app.PaintAndRecordKeyFrameAsync();
-            app.Stop();
-        });
-
-        app.Run();
-       app.AssertThisTestMatchesLKG();
-    }
+        Dialog.Shown.SubscribeForLifetime(async () => await context.PaintAndRecordKeyFrameAsync(), ConsoleApp.Current);
+        await context.PaintAndRecordKeyFrameAsync();
+        await MessageDialog.Show(new ShowMessageOptions("Hello world".ToGreen()) { UserChoices = DialogChoice.Close, SpeedPercentage = 0, MaxLifetime = Task.Delay(300).ToLifetime() });
+        await context.PaintAndRecordKeyFrameAsync();
+        ConsoleApp.Current.Stop();
+    });
+    
 
 
     [TestMethod]
-    public void Dialog_ShowLargeMessage()
+    public void Dialog_ShowLargeMessage() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
         var msg = "";
-        for(var i = 1; i <= 100; i++)
+        for (var i = 1; i <= 100; i++)
         {
             msg += $"Line {i}\n";
         }
-        var app = new KlooieTestHarness(TestContext, true);
-        app.SecondsBetweenKeyframes = .02f;
-        app.Invoke(async () =>
-        {
-            await app.PaintAndRecordKeyFrameAsync();
-            var dialogTask = MessageDialog.Show(new ShowMessageOptions(msg.ToGreen()) { SpeedPercentage = 0 });
-            await Task.Delay(20);
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.SendKey(ConsoleKey.Tab);
-            for (var i = 0; i < 100;i++)
-            {
-                await app.SendKey(ConsoleKey.DownArrow);
-                await app.PaintAndRecordKeyFrameAsync();
-            }
-            app.Stop();
-        });
 
-        app.Run();
-        app.AssertThisTestMatchesLKG();
-    }
+        context.SecondsBetweenKeyframes = .02f;
+        await context.PaintAndRecordKeyFrameAsync();
+        var dialogTask = MessageDialog.Show(new ShowMessageOptions(msg.ToGreen()) { SpeedPercentage = 0 });
+        await Task.Delay(20);
+        await context.PaintAndRecordKeyFrameAsync();
+        await ConsoleApp.Current.SendKey(ConsoleKey.Tab);
+        for (var i = 0; i < 100;i++)
+        {
+            await ConsoleApp.Current.SendKey(ConsoleKey.DownArrow);
+            await context.PaintAndRecordKeyFrameAsync();
+        }
+        ConsoleApp.Current.Stop();
+    });
+    
 
     [TestMethod]
     public void Dialog_Yes()
@@ -120,113 +108,79 @@ public class DialogTests
     }
 
     [TestMethod]
-    public void Dialog_ShowMessagePorted1()
+    public void Dialog_ShowMessagePorted1() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified,80,20,async (context) =>
     {
-        KlooieTestHarness.SetConsoleSize(80, 20);
-        var app = new KlooieTestHarness(this.TestContext, true);
+        Task dialogTask;
+        // show hello world message, wait for a paint, then take a keyframe of the screen, which 
+        // should have the dialog shown
+        dialogTask = MessageDialog.Show("Hello world");
+        await context.PaintAndRecordKeyFrameAsync();
+        Assert.IsFalse(dialogTask.IsFulfilled());
 
-        app.InvokeNextCycle(async () =>
-        {
-            Task dialogTask;
-
-            // show hello world message, wait for a paint, then take a keyframe of the screen, which 
-            // should have the dialog shown
-            dialogTask = MessageDialog.Show("Hello world");
-            await app.PaintAndRecordKeyFrameAsync();
-            Assert.IsFalse(dialogTask.IsFulfilled());
-
-            // simulate an enter keypress, which should clear the dialog
-            await app.SendKey(ConsoleKey.Enter);
-            await app.PaintAndRecordKeyFrameAsync();
-            await dialogTask;
-            app.Stop();
-        });
-
-        app.Start().Wait();
-        app.AssertThisTestMatchesLKG();
-    }
-
-
+        // simulate an enter keypress, which should clear the dialog
+        await ConsoleApp.Current.SendKey(ConsoleKey.Enter);
+        await context.PaintAndRecordKeyFrameAsync();
+        await dialogTask;
+        ConsoleApp.Current.Stop();
+    });
 
     [TestMethod]
-    public void Dialog_ShowTextInputPorted()
+    public void Dialog_ShowTextInputPorted() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified,async (context) =>
     {
-        var app = new KlooieTestHarness(this.TestContext, true);
+        Task<ConsoleString?> dialogTask;
+        dialogTask = TextInputDialog.Show(new ShowTextInputOptions("Rich text input prompt text".ToGreen()) { SpeedPercentage = 0 });
+        await context.PaintAndRecordKeyFrameAsync();
+        Assert.IsFalse(dialogTask.IsFulfilled());
+        await ConsoleApp.Current.SendKey(ConsoleKey.A.KeyInfo(shift: true));
+        await context.PaintAndRecordKeyFrameAsync();
+        await ConsoleApp.Current.SendKey(ConsoleKey.D);
+        await context.PaintAndRecordKeyFrameAsync();
+        await ConsoleApp.Current.SendKey(ConsoleKey.A);
+        await context.PaintAndRecordKeyFrameAsync();
+        await ConsoleApp.Current.SendKey(ConsoleKey.M);
+        await context.PaintAndRecordKeyFrameAsync();
+        Assert.IsFalse(dialogTask.IsFulfilled());
+        await ConsoleApp.Current.SendKey(ConsoleKey.Enter);
+        var stringVal = (await dialogTask).ToString();
+        await context.PaintAndRecordKeyFrameAsync();
+        Assert.AreEqual("Adam", stringVal);
+        ConsoleApp.Current.Stop();
+    });
+    
 
-        app.InvokeNextCycle(async () =>
-        {
-            Task<ConsoleString?> dialogTask;
-            dialogTask = TextInputDialog.Show(new ShowTextInputOptions("Rich text input prompt text".ToGreen()) { SpeedPercentage = 0 });
-            await app.PaintAndRecordKeyFrameAsync();
-            Assert.IsFalse(dialogTask.IsFulfilled());
-            await app.SendKey(ConsoleKey.A.KeyInfo(shift: true));
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.SendKey(ConsoleKey.D);
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.SendKey(ConsoleKey.A);
-            await app.PaintAndRecordKeyFrameAsync();
-            await app.SendKey(ConsoleKey.M);
-            await app.PaintAndRecordKeyFrameAsync();
-            Assert.IsFalse(dialogTask.IsFulfilled());
-            await app.SendKey(ConsoleKey.Enter);
-            var stringVal = (await dialogTask).ToString();
-            await app.RequestPaintAsync();
-            app.RecordKeyFrame();
-            Assert.AreEqual("Adam", stringVal);
-            app.Stop();
-        });
-
-        app.Start().Wait();
-        app.AssertThisTestMatchesLKG();
-    }
-
-    private void DialogBasic(bool keyframes)
+    private void DialogBasic(UITestMode mode) => AppTest.Run(TestContext.TestId(), mode, async (context) =>
     {
-        var app = new KlooieTestHarness(TestContext, keyframes);
-        app.Invoke(async () =>
+        await Task.Delay(25);
+        if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
+        ConsoleApp.Current.LayoutRoot.Background = RGB.Green;
+        var label = ConsoleApp.Current.LayoutRoot.Add(new Label() { Text = "Background text".ToYellow(), CanFocus = true }).DockToTop(padding: 1).CenterHorizontally();
+        ConsoleApp.Current.ClearFocus();
+        await Task.Delay(250);
+        if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
+        Assert.IsFalse(label.HasFocus);
+        await ConsoleApp.Current.SendKey(ConsoleKey.Tab);
+        if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
+        Assert.IsTrue(label.HasFocus);
+        await Task.Delay(250);
+        var options = new DialogOptions();
+        await Dialog.Show(() =>
         {
-            await Task.Delay(25);
-            if (keyframes) await app.PaintAndRecordKeyFrameAsync();
-            app.LayoutRoot.Background = RGB.Green;
-            var label = app.LayoutRoot.Add(new Label() { Text = "Background text".ToYellow(), CanFocus = true }).DockToTop(padding: 1).CenterHorizontally();
-            app.ClearFocus();
-            await Task.Delay(250);
-            if (keyframes) await app.PaintAndRecordKeyFrameAsync();
             Assert.IsFalse(label.HasFocus);
-            await app.SendKey(ConsoleKey.Tab);
-            if (keyframes) await app.PaintAndRecordKeyFrameAsync();
-            Assert.IsTrue(label.HasFocus);
-            await Task.Delay(250);
-            var options = new DialogOptions();
-            await Dialog.Show(() =>
+
+            var ret = new ConsolePanel() { Width = 60, Height = 7, Background = RGB.Red, IsVisible = false };
+            ret.SubscribeOnce(nameof(ret.IsVisible), async () =>
             {
+                if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
+                Assert.IsTrue(ret.IsVisible);
+                await ConsoleApp.Current.SendKey(ConsoleKey.Tab);
                 Assert.IsFalse(label.HasFocus);
-
-                var ret = new ConsolePanel() { Width = 60, Height = 7, Background = RGB.Red, IsVisible = false };
-                ret.SubscribeOnce(nameof(ret.IsVisible), async () =>
-                {
-                    if (keyframes) await app.PaintAndRecordKeyFrameAsync();
-                    Assert.IsTrue(ret.IsVisible);
-                    await app.SendKey(ConsoleKey.Tab);
-                    Assert.IsFalse(label.HasFocus);
-                    await Task.Delay(100);
-                    ret.Dispose();
-                });
-                return ret;
-            }, options);
-            if (keyframes) await app.PaintAndRecordKeyFrameAsync();
-            Assert.IsTrue(label.HasFocus);
-            app.Stop();
-        });
-
-        app.Run();
-        if (keyframes)
-        {
-            app.AssertThisTestMatchesLKG();
-        }
-        else
-        {
-            app.AssertThisTestMatchesLKGFirstAndLastFrame();
-        }
-    }
+                await Task.Delay(100);
+                ret.Dispose();
+            });
+            return ret;
+        }, options);
+        if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
+        Assert.IsTrue(label.HasFocus);
+        ConsoleApp.Current.Stop();
+    });
 }

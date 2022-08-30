@@ -1,9 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PowerArgs;
-using System;
-using System.IO;
+﻿using PowerArgs;
 using System.Reflection;
-using System.Threading.Tasks;
 
 namespace klooie.tests;
 
@@ -12,18 +8,17 @@ public enum UITestMode
     KeyFramesVerified,
     KeyFramesFYI,
     RealTimeFirstAndLastVerified,
-    RealTimeFirstAndLastFYI,
+    RealTimeFYI,
     Headless
 }
 
 public class UITestManager
 {
-    private TestContext testContext;
     private ConsoleBitmapVideoWriter keyFrameRecorder;
     private ConsoleApp app;
     private int keyFrameCount = 0;
+    private string testId;
     public double SecondsBetweenKeyframes { get; set; } = 1;
-    private string TestId => $"{testContext.FullyQualifiedTestClassName}.{testContext.TestName}";
 
     private string GitRootPath
     {
@@ -39,7 +34,7 @@ public class UITestManager
         }
     }
 
-    private string CurrentTestRootPath => Path.Combine(GitRootPath, "LKGCliResults", TestId);
+    private string CurrentTestRootPath => Path.Combine(GitRootPath, "LKGCliResults", testId);
     private string CurrentTestLKGPath => Path.Combine(CurrentTestRootPath, "LKG");
     private string CurrentTestTempPath => Path.Combine(CurrentTestRootPath, "TEMP");
     private string CurrentTestRecordingFilePath => Path.Combine(CurrentTestTempPath, "Recording.cv");
@@ -57,10 +52,10 @@ public class UITestManager
         };
     }
 
-    public UITestManager(ConsoleApp app, TestContext testContext, UITestMode mode)
+    public UITestManager(ConsoleApp app, string testId, UITestMode mode)
     {
+        this.testId = testId;
         this.app = app;
-        this.testContext = testContext;
         this.mode = mode;
 
         if (mode != UITestMode.Headless)
@@ -73,7 +68,7 @@ public class UITestManager
         {
             this.keyFrameRecorder = new ConsoleBitmapVideoWriter(s => File.WriteAllText(CurrentTestRecordingFilePath, s));
         }
-        else if(mode == UITestMode.RealTimeFirstAndLastFYI || mode == UITestMode.RealTimeFirstAndLastVerified)
+        else if(mode == UITestMode.RealTimeFYI || mode == UITestMode.RealTimeFirstAndLastVerified)
         {
             app.LayoutRoot.EnableRecording(new ConsoleBitmapVideoWriter(s => File.WriteAllText(CurrentTestRecordingFilePath, s)));
         }
@@ -106,7 +101,7 @@ public class UITestManager
 
         if (mode == UITestMode.Headless) return;
 
-        if (mode == UITestMode.KeyFramesFYI || mode == UITestMode.RealTimeFirstAndLastFYI)
+        if (mode == UITestMode.KeyFramesFYI || mode == UITestMode.RealTimeFYI)
         {
             PromoteToLKGInternal();
             return;
@@ -261,5 +256,15 @@ public class UITestManager
         }
 
         return null;
+    }
+
+    private static class Assert
+    {
+        public static void AreEqual(object a, object b, string msg = "")
+        {
+            if (a == null && b != null) throw new Exception($"{a} != {b}, {msg}");
+        }
+
+        public static void Fail(string msg) => throw new Exception(msg);
     }
 }

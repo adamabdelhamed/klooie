@@ -43,10 +43,7 @@ public class Event
     {
         var subRecord = new Subscription() { Callback = handler, Lifetime = lifetimeManager };
         subscribers.Add(subRecord);
-        lifetimeManager.OnDisposed(() =>
-        {
-            subscribers.Remove(subRecord);
-        });
+        lifetimeManager.OnDisposed(() => subscribers.Remove(subRecord));
     }
 
     /// <summary>
@@ -129,11 +126,7 @@ public class Event
         this.SubscribeOnce(()=> tcs.SetResult());
         return tcs.Task;
     }
-
-
 }
-
-
 
 /// <summary>
 /// An event that has an argument of the given type
@@ -142,23 +135,20 @@ public class Event
 public class Event<T>
 {
     private Event innerEvent = new Event();
-    private Stack<T> args = new Stack<T>();
+    private Stack<T> args = new Stack<T>(); // because notifications can be re-entrant
 
     /// <summary>
     /// Subscribes for the given lifetime
     /// </summary>
     /// <param name="handler">the callback</param>
     /// <param name="lt">the lifetime</param>
-    public void SubscribeForLifetime(Action<T> handler, ILifetimeManager lt) =>
-        innerEvent.SubscribeForLifetime(() => handler(args.Peek()), lt);
+    public void SubscribeForLifetime(Action<T> handler, ILifetimeManager lt) => innerEvent.SubscribeForLifetime(() => handler(args.Peek()), lt);
 
     /// <summary>
     /// Subscribes for one notification
     /// </summary>
     /// <param name="handler">the callback</param>
-    public void SubscribeOnce(Action<T> handler) =>
-        innerEvent.SubscribeOnce(() => handler(args.Peek()));
-
+    public void SubscribeOnce(Action<T> handler) => innerEvent.SubscribeOnce(() => handler(args.Peek()));
 
     /// <summary>
     /// Fires the event and passes the given args to subscribers
@@ -194,46 +184,3 @@ public class Event<T>
         return tcs.Task;
     }
 }
-
-/*
- 
-[MemoryDiagnoser]
-public class EventBenchmark
-{
-    public int Count => count;
-
-    int numberOfEvents = 1;
-    int numberOfSubscribersPerEvent = 100;
-    int numberOfFires = 50;
-    int count = 0;
-    private Event[] events;
-
-    [GlobalSetup]
-    public void Setup()
-    {
-        events = new Event[numberOfEvents];
-        for(var i = 0; i < numberOfEvents; i++)
-        {
-            events[i] = new Event();
-            for (var j = 0; j < numberOfSubscribersPerEvent; j++)
-            {
-                events[i].SubscribeForLifetime(() => count++, Lifetime.Forever);
-            }
-        }
-    }
-
-    [Benchmark]
-    public void BenchmarkFire()
-    {
-        for(var i = 0; i < events.Length; i++)
-        {
-            for (var j = 0; j < numberOfFires; j++)
-            {
-                events[i].Fire();
-            }
-        }
-    }
-}
-
- 
- */ 

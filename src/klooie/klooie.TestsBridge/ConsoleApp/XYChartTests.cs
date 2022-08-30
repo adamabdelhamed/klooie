@@ -160,7 +160,7 @@ namespace ArgsTests.CLI.Controls
                 app.RecordKeyFrame();
                 app.Stop();
             });
-            app.Start().Wait();
+            app.Run();
             app.AssertThisTestMatchesLKG();
         }
     }

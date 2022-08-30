@@ -46,7 +46,7 @@ namespace ArgsTests.CLI.Controls
                 await app.PaintAndRecordKeyFrameAsync();
                 app.Stop();
             });
-            app.Start().Wait();
+            app.Run();
             app.AssertThisTestMatchesLKG();
         }
     }

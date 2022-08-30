@@ -23,7 +23,7 @@ public class EventLoopTests
      }
 
     [TestMethod]
-    public async Task EventLoop_BasicAsync()
+    public void EventLoop_BasicAsync()
     {
         var loop = new EventLoop();
         loop.Invoke(async () =>
@@ -33,11 +33,11 @@ public class EventLoopTests
             Assert.AreEqual(tid, Thread.CurrentThread.ManagedThreadId);
             loop.Stop();
         });
-        await loop.Start();
+        loop.Run();
     }
 
     [TestMethod]
-    public async Task EventLoop_InvokeNextCycle()
+    public void EventLoop_InvokeNextCycle()
     {
         var loop = new EventLoop();
         loop.Invoke(() =>

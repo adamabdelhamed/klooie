@@ -32,7 +32,7 @@ namespace ArgsTests.CLI
                 app.SetTimeout(() => app.SendKey(new ConsoleKeyInfo((char)0, ConsoleKey.UpArrow, false, false, false)), TimeSpan.FromMilliseconds(666));
                 app.SetTimeout(() => app.Stop(), TimeSpan.FromMilliseconds(1000));
             });
-            app.Start().Wait();
+            app.Run();
 
             app.AssertThisTestMatchesLKG();
         }
