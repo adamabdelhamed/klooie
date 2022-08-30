@@ -8,8 +8,8 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        BenchmarkRunner.Run<EventBenchmark>();
-        return;
+        //BenchmarkRunner.Run<EventBenchmark>();
+        //return;
         var b = new EventBenchmark();
         b.Setup();
         for(var i = 0; i < 100000; i++)

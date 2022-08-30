@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using PowerArgs;
+using System.Threading;
 
 namespace ArgsTests.CLI.Observability
 {
@@ -341,6 +342,51 @@ namespace ArgsTests.CLI.Observability
             });
             collection[0] = "Goodbye";
             Assert.IsTrue(asserted);
+        }
+
+        [TestMethod]
+        public void ParallelEvents()
+        {
+            var e1 = new Event();
+            var e2 = new Event();
+            var t1Count = 0;
+            var t2Count = 0;
+
+            var l1 = new Lifetime();
+            var l2 = new Lifetime();
+
+            Thread t1 = new Thread(() =>
+            {
+                for(var i = 0; i < 200; i++)
+                {
+                    e1.SubscribeForLifetime(() => t1Count++, l1);
+                }
+
+                for(var i = 0; i < 200; i++)
+                {
+                    e1.Fire();
+                }
+            });
+
+            Thread t2 = new Thread(() =>
+            {
+                for (var i = 0; i < 200; i++)
+                {
+                    e2.SubscribeForLifetime(() => t2Count++, l1);
+                }
+
+                for (var i = 0; i < 200; i++)
+                {
+                    e2.Fire();
+                }
+            });
+
+            t1.Start();
+            t2.Start();
+
+            while (t1.IsAlive || t2.IsAlive) Thread.Sleep(10);
+            Assert.AreEqual(200 * 200, t1Count);
+            Assert.AreEqual(200 * 200, t2Count);
         }
     }
 }
