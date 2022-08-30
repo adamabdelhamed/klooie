@@ -88,8 +88,8 @@ namespace ArgsTests.CLI.Recording
         }
 
         [TestMethod]
-        public void TestPlaybackEndToEnd() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI,80,30,async(context)=>
-        { 
+        public void TestPlaybackEndToEndKeys() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified, 80, 30, async (context) =>
+        {
             int w = 10, h = 1;
             var temp = Path.GetTempFileName();
             using (var stream = File.OpenWrite(temp))
@@ -109,23 +109,13 @@ namespace ArgsTests.CLI.Recording
             var player = app.LayoutRoot.Add(new ConsoleBitmapPlayer()).Fill();
             Assert.IsFalse(player.Width == 0);
             Assert.IsFalse(player.Height == 0);
-            player.Load(File.OpenRead(temp));
-               
-            var playStarted = false;
-            player.SubscribeForLifetime(nameof(player.State), () =>
-            {
-                if(player.State == PlayerState.Playing)
-                {
-                    playStarted = true;
-                }
-                else if(player.State == PlayerState.Stopped && playStarted)
-                {
-                    app.Stop();
-                }
-            }, app);
-
-            await Task.Delay(100);
-            await app.SendKey(new ConsoleKeyInfo('p', ConsoleKey.P, false, false, false));
+            await context.PaintAndRecordKeyFrameAsync();
+            await player.Load(File.OpenRead(temp));
+            await context.PaintAndRecordKeyFrameAsync();
+            await app.SendKey(ConsoleKey.P);
+            await player.Stopped.CreateNextFireTask();
+            await context.PaintAndRecordKeyFrameAsync();
+            app.Stop();
         });
     }
 }

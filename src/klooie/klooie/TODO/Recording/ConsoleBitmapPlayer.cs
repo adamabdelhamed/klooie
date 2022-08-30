@@ -43,6 +43,11 @@ public class ConsoleBitmapPlayer : ConsolePanel
     public PlayerState State { get { return Get<PlayerState>(); } private set { Set(value); } }
 
     /// <summary>
+    /// An event that fires when the player stops
+    /// </summary>
+    public Event Stopped { get; private set; } = new Event();
+
+    /// <summary>
     /// An artificial delay that is added after each frame is loaded from the stream.  This can simulate
     /// a slow loading connection and is good for testing.  This should always be set to null when PowerArgs ships.
     /// </summary>
@@ -173,6 +178,13 @@ public class ConsoleBitmapPlayer : ConsolePanel
         }, this);
 
         State = PlayerState.NotLoaded;
+        SubscribeForLifetime(nameof(State), () =>
+        {
+            if(State == PlayerState.Stopped)
+            {
+                Stopped.Fire();
+            }
+        }, this);
     }
 
     /// <summary>
@@ -385,8 +397,9 @@ public class ConsoleBitmapPlayer : ConsolePanel
     /// Loads a video from a given stream
     /// </summary>
     /// <param name="videoStream">the video stream</param>
-    public void Load(Stream videoStream)
+    public Task Load(Stream videoStream)
     {
+        var tcs = new TaskCompletionSource();
         if (Application == null)
         {
             throw new InvalidOperationException("Can't load until the control has been added to an application");
@@ -401,7 +414,7 @@ public class ConsoleBitmapPlayer : ConsolePanel
                 {
                     inMemoryVideo = inMemoryVideo ?? videoWithProgressInfo;
                     this.duration = videoWithProgressInfo.Duration;
-                    Application.InvokeNextCycle(() =>
+                    Application.Invoke(() =>
                     {
                         if (this.CurrentFrame == null)
                         {
@@ -426,9 +439,11 @@ public class ConsoleBitmapPlayer : ConsolePanel
                         Thread.Sleep(AfterFrameLoadDelay.Value);
                     }
                 });
+                tcs.SetResult();
             }
             catch (Exception ex)
             {
+                tcs.SetException(ex);
 #if DEBUG
                     failedMessage = ex.ToString();
 #else
@@ -440,5 +455,6 @@ public class ConsoleBitmapPlayer : ConsolePanel
                 });
             }
         });
+        return tcs.Task;
     }
 }
