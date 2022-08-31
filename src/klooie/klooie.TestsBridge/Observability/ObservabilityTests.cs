@@ -39,7 +39,7 @@ namespace ArgsTests.CLI.Observability
 
             using (Lifetime lifetime = new Lifetime())
             {
-                observable.SubscribeForLifetime(nameof(SomeObservable.Name), () =>
+                observable.Subscribe(nameof(SomeObservable.Name), () =>
                 {
                     triggerCount++;
                 }, lifetime);
@@ -63,7 +63,7 @@ namespace ArgsTests.CLI.Observability
             using (var lifetime = new Lifetime())
             {
 
-                observable.SubscribeForLifetime(nameof(SomeObservable.Name), () => 
+                observable.Subscribe(nameof(SomeObservable.Name), () => 
                 {
                     triggerCount++; 
                 }, lifetime);
@@ -98,7 +98,7 @@ namespace ArgsTests.CLI.Observability
 
             using (var lifetime = new Lifetime())
             {
-                observable.SubscribeForLifetime(ObservableObject.AnyProperty, () => { numChanged++; }, lifetime);
+                observable.Subscribe(ObservableObject.AnyProperty, () => { numChanged++; }, lifetime);
 
                 Assert.AreEqual(0, numChanged);
                 observable.Name = "Foo";
@@ -122,7 +122,7 @@ namespace ArgsTests.CLI.Observability
             var triggerCount = 0;
             using (var lt = new Lifetime())
             {
-                observable.SomeEventWithAString.SubscribeForLifetime((s) => { triggerCount++; }, lt);
+                observable.SomeEventWithAString.Subscribe((s) => { triggerCount++; }, lt);
 
                 Assert.AreEqual(0, triggerCount);
                 observable.SomeEventWithAString.Fire("Foo");
@@ -141,7 +141,7 @@ namespace ArgsTests.CLI.Observability
 
             using (var lifetime = new Lifetime())
             {
-                observable.SomeEvent.SubscribeForLifetime(() => { triggerCount++; }, lifetime);
+                observable.SomeEvent.Subscribe(() => { triggerCount++; }, lifetime);
 
                 Assert.AreEqual(0, triggerCount);
                 observable.SomeEvent.Fire();
@@ -162,7 +162,7 @@ namespace ArgsTests.CLI.Observability
             using (var lifetime = new Lifetime())
             {
 
-                observable.SomeEvent.SubscribeForLifetime(() => { triggerCount++; }, lifetime);
+                observable.SomeEvent.Subscribe(() => { triggerCount++; }, lifetime);
 
                 Assert.AreEqual(0, triggerCount);
                 observable.SomeEvent.Fire();
@@ -315,7 +315,7 @@ namespace ArgsTests.CLI.Observability
             {
                 for (var i = 0; i < 200; i++)
                 {
-                    e1.SubscribeForLifetime(() => t1Count++, l1);
+                    e1.Subscribe(() => t1Count++, l1);
                 }
 
                 for(var i = 0; i < 200; i++)
@@ -328,7 +328,7 @@ namespace ArgsTests.CLI.Observability
             {
                 for (var i = 0; i < 200; i++)
                 {
-                    e2.SubscribeForLifetime(() => t2Count++, l2);
+                    e2.Subscribe(() => t2Count++, l2);
                 }
 
                 for (var i = 0; i < 200; i++)

@@ -23,7 +23,7 @@ namespace PowerArgs.Cli
             
             this.Ready.SubscribeOnce(() =>
             {
-                this.SubscribeForLifetime(ObservableObject.AnyProperty, () =>
+                this.Subscribe(ObservableObject.AnyProperty, () =>
                 {
                     if (Min > Max) throw new InvalidOperationException("Max must be >= Min");
                     if (Value > Max) throw new InvalidOperationException("Value must be <= Max");
@@ -31,7 +31,7 @@ namespace PowerArgs.Cli
 
                 }, this);
 
-                this.Focused.SubscribeForLifetime(() =>
+                this.Focused.Subscribe(() =>
                 {
                     focusLt?.Dispose();
                     focusLt = new Lifetime();
@@ -46,7 +46,7 @@ namespace PowerArgs.Cli
                     }
                 }, this);
 
-                this.Unfocused.SubscribeForLifetime(() => focusLt?.Dispose() , this);
+                this.Unfocused.Subscribe(() => focusLt?.Dispose() , this);
             });
         }
 

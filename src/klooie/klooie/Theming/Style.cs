@@ -87,7 +87,7 @@ public class Style
             if (c.ShouldContinue == false) return;
             prop?.SetValue(c, unstyledValue);
         });
-        c.SubscribeForLifetime(PropertyName, () =>
+        c.Subscribe(PropertyName, () =>
         {
             if (lt.ShouldContinue == false) return;
             prop.SetValue(c, Value);

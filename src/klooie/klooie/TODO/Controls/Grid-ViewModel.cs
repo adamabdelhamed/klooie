@@ -227,8 +227,8 @@ public partial class Grid : ConsoleControl
 
         visibleRowOffset = 0;
         SelectedIndex = 0;
-        SubscribeForLifetime(nameof(DataSource), DataSourceOrBoundsChangedListener, this);
-        SubscribeForLifetime(nameof(Bounds), DataSourceOrBoundsChangedListener, this);
+        Subscribe(nameof(DataSource), DataSourceOrBoundsChangedListener, this);
+        Subscribe(nameof(Bounds), DataSourceOrBoundsChangedListener, this);
 
         this.query = new CollectionQuery();
 

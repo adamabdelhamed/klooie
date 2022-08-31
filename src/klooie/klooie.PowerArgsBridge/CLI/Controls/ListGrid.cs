@@ -214,9 +214,9 @@ namespace PowerArgs.Cli
             this.options = options;
             highlightedControls = new List<ConsoleControl>();
             CanFocus = options.SelectionMode != DataGridSelectionMode.None;
-            Focused.SubscribeForLifetime(UpdateHighlightedRowsToReflectCurrentFocus, this);
-            Unfocused.SubscribeForLifetime(UpdateHighlightedRowsToReflectCurrentFocus, this);
-            KeyInputReceived.SubscribeForLifetime(HandleArrows, this);
+            Focused.Subscribe(UpdateHighlightedRowsToReflectCurrentFocus, this);
+            Unfocused.Subscribe(UpdateHighlightedRowsToReflectCurrentFocus, this);
+            KeyInputReceived.Subscribe(HandleArrows, this);
 
             presenter = ProtectedPanel.Add(new DataGridPresenter(new DataGridCoreOptions()
             {
@@ -226,14 +226,14 @@ namespace PowerArgs.Cli
                 EnablePagerKeyboardShortcuts = options.EnablePagerKeyboardShortcuts,
             })).Fill();
 
-            presenter.BeforeRecompose.SubscribeForLifetime(BeforeRecompose, this);
-            presenter.AfterRecompose.SubscribeForLifetime(UpdateHighlightedRowsToReflectCurrentFocus, this);
-            presenter.FirstPageClicked.SubscribeForLifetime(FirstPageClicked, this);
-            presenter.PreviousPageClicked.SubscribeForLifetime(PreviousPageClicked, this);
-            presenter.NextPageClicked.SubscribeForLifetime(NextPageClicked, this);
-            presenter.LastPageClicked.SubscribeForLifetime(LastPageClicked, this);
-            this.SubscribeForLifetime(nameof(SelectedRowIndex), SelectedRowChanged, this);
-            this.SubscribeForLifetime(nameof(SelectedColumnIndex), SelectedColumnChanged, this);
+            presenter.BeforeRecompose.Subscribe(BeforeRecompose, this);
+            presenter.AfterRecompose.Subscribe(UpdateHighlightedRowsToReflectCurrentFocus, this);
+            presenter.FirstPageClicked.Subscribe(FirstPageClicked, this);
+            presenter.PreviousPageClicked.Subscribe(PreviousPageClicked, this);
+            presenter.NextPageClicked.Subscribe(NextPageClicked, this);
+            presenter.LastPageClicked.Subscribe(LastPageClicked, this);
+            this.Subscribe(nameof(SelectedRowIndex), SelectedRowChanged, this);
+            this.Subscribe(nameof(SelectedColumnIndex), SelectedColumnChanged, this);
         }
 
    

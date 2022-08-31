@@ -26,7 +26,7 @@ public class Event
     /// </summary>
     public void Fire() => NotificationBufferPool.Notify(subscribers, subscribersWithParams);
 
-    public void SubscribeForLifetime(Action<object> handler, object param, ILifetimeManager lifetimeManager)
+    public void Subscribe(Action<object> handler, object param, ILifetimeManager lifetimeManager)
     {
         var subRecord = new SubscriptionWithParam() { Callback = handler, Lifetime = lifetimeManager, Param = param };
         subscribersWithParams.Add(subRecord);
@@ -39,7 +39,7 @@ public class Event
     /// </summary>
     /// <param name="handler">the action to run when the event fires</param>
     /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
-    public void SubscribeForLifetime(Action handler, ILifetimeManager lifetimeManager)
+    public void Subscribe(Action handler, ILifetimeManager lifetimeManager)
     {
         var subRecord = new Subscription() { Callback = handler, Lifetime = lifetimeManager };
         subscribers.Add(subRecord);
@@ -54,7 +54,7 @@ public class Event
     public void SynchronizeForLifetime(Action handler, ILifetimeManager lifetimeManager)
     {
         handler();
-        SubscribeForLifetime(handler, lifetimeManager);
+        Subscribe(handler, lifetimeManager);
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public class Event
             }
         };
 
-        SubscribeForLifetime(wrappedAction, lt);
+        Subscribe(wrappedAction, lt);
     }
 
     /// <summary>
@@ -101,7 +101,7 @@ public class Event
             }
         };
 
-        SubscribeForLifetime(wrappedAction, lt);
+        Subscribe(wrappedAction, lt);
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public class Event<T>
     /// </summary>
     /// <param name="handler">the callback</param>
     /// <param name="lt">the lifetime</param>
-    public void SubscribeForLifetime(Action<T> handler, ILifetimeManager lt) => innerEvent.SubscribeForLifetime(() => handler(args.Peek()), lt);
+    public void Subscribe(Action<T> handler, ILifetimeManager lt) => innerEvent.Subscribe(() => handler(args.Peek()), lt);
 
     /// <summary>
     /// Subscribes for one notification

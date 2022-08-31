@@ -64,7 +64,7 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     private Event<IIndexAssignment> untyped_Assigned = new Event<IIndexAssignment>();
     Event<IIndexAssignment> IObservableCollection.AssignedToIndex => untyped_Assigned;
 
-    public void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.SubscribeForLifetime(propertyName, handler, lifetimeManager);
+    public void Subscribe(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.Subscribe(propertyName, handler, lifetimeManager);
     public void SynchronizeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.SynchronizeForLifetime(propertyName, handler, lifetimeManager);
     public T Get<T>([CallerMemberName] string name = null) => observable.Get<T>(name);
     public void Set<T>(T value, [CallerMemberName] string name = null) => observable.Set<T>(value);
@@ -124,9 +124,9 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     /// <param name="manager">the lifetime of the subscriptions</param>
     public void SynchronizeForLifetime(Action<T> addAction, Action<T> removeAction, Action changedAction, ILifetimeManager manager)
     {
-        Added.SubscribeForLifetime(addAction, manager);
-        Removed.SubscribeForLifetime(removeAction, manager);
-        Changed.SubscribeForLifetime(changedAction, manager);
+        Added.Subscribe(addAction, manager);
+        Removed.Subscribe(removeAction, manager);
+        Changed.Subscribe(changedAction, manager);
 
         foreach (var obj in this.ToArray())
         {

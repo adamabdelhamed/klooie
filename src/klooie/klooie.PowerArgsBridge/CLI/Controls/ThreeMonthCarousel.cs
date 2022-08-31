@@ -39,7 +39,7 @@ namespace PowerArgs.Cli
             if (Options.AdvanceMonthBackwardKey == null || Options.AdvanceMonthForwardKey == null) return;
             this.CanFocus = true;
 
-            this.KeyInputReceived.SubscribeForLifetime(key =>
+            this.KeyInputReceived.Subscribe(key =>
             {
                 var back = Options.AdvanceMonthBackwardKey;
                 var fw = Options.AdvanceMonthForwardKey;

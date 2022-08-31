@@ -42,15 +42,15 @@ namespace PowerArgs.Cli
         private void InitUndoRedoStack()
         {
             undoRedo = new UndoRedoStack();
-            undoRedo.OnUndoRedoAction.SubscribeForLifetime(Refresh, this);
-            undoRedo.OnUndoRedoAction.SubscribeForLifetime(() =>
+            undoRedo.OnUndoRedoAction.Subscribe(Refresh, this);
+            undoRedo.OnUndoRedoAction.Subscribe(() =>
             {
                 if (undoRedo.UndoElements.FirstOrDefault() is ClearPendingChangesAction == false)
                 {
                     SetPendingChanges(true);
                 }
             }, this);
-            undoRedo.OnEmptyUndoStack.SubscribeForLifetime(() => SetPendingChanges(false), this);
+            undoRedo.OnEmptyUndoStack.Subscribe(() => SetPendingChanges(false), this);
         }
 
         private void InitLayout()
@@ -85,7 +85,7 @@ namespace PowerArgs.Cli
             };
             frameList = framePanel.Add(new ListGrid<InMemoryConsoleBitmapFrame>(options)).Fill(padding: new Thickness(1, 1, 0, 0));
 
-            refreshed.SubscribeForLifetime(() =>
+            refreshed.Subscribe(() =>
             {
                 frameList.Refresh();
             }, frameList);
@@ -93,7 +93,7 @@ namespace PowerArgs.Cli
             BorderPanel fakeDialog = null;
             Label fakeDialogLabel = null;
 
-            frameList.SelectionChanged.SubscribeForLifetime(() =>
+            frameList.SelectionChanged.Subscribe(() =>
             {
                 CurrentFrameIndex = frameList.SelectedRowIndex;
                 Refresh();
@@ -105,7 +105,7 @@ namespace PowerArgs.Cli
                 }
             }, frameList);
 
-            frameList.Focused.SubscribeForLifetime(() =>
+            frameList.Focused.Subscribe(() =>
             {
                 var fakeDialogContent = new ConsolePanel() { Background = TimespanPopupBGColor };
 
@@ -119,7 +119,7 @@ namespace PowerArgs.Cli
 
                 fakeDialogLabel = fakeDialogContent.Add(new Label() { Text = FormatTimespanForFramePopup(CurrentFrame.FrameTime) }).CenterBoth();
 
-                refreshed.SubscribeForLifetime(() =>
+                refreshed.Subscribe(() =>
                 {
                     fakeDialogLabel.Text = FormatTimespanForFramePopup(CurrentFrame.FrameTime);
                 }, fakeDialogLabel);
@@ -145,7 +145,7 @@ namespace PowerArgs.Cli
                 }, fakeDialog);
             }, frameList);
 
-            frameList.Unfocused.SubscribeForLifetime(() =>
+            frameList.Unfocused.Subscribe(() =>
             {
                 fakeDialog?.Dispose();
                 fakeDialogLabel = null;
@@ -157,11 +157,11 @@ namespace PowerArgs.Cli
         {
             previewPanel.Background = new RGB(130, 130, 130);
             editor = previewPanel.Add(new ConsoleBitmapEditor(CurrentBitmap)).CenterBoth();
-            editor.BitmapChanged.SubscribeForLifetime((action) =>
+            editor.BitmapChanged.Subscribe((action) =>
             {
                 undoRedo.Done(action);
             }, editor);
-            refreshed.SubscribeForLifetime(() =>
+            refreshed.Subscribe(() =>
             {
                 editor.UpdateBitmap(CurrentBitmap);
             }, editor);
@@ -174,33 +174,33 @@ namespace PowerArgs.Cli
             buttonStack  = commandBar.Add(new StackPanel() { X = 1, Margin = 1, Height = 1, Orientation = Orientation.Horizontal, AutoSize = true }).CenterVertically();
             
             var newCommand = buttonStack.Add(new Button() { Text = "New".ToWhite(), Shortcut = new KeyboardShortcut(ConsoleKey.N, ConsoleModifiers.Alt) });
-            newCommand.Pressed.SubscribeForLifetime(NewCommandImpl, newCommand);
+            newCommand.Pressed.Subscribe(NewCommandImpl, newCommand);
            
             var openCommand = buttonStack.Add(new Button() { Text = "Open".ToWhite(), Shortcut = new KeyboardShortcut(ConsoleKey.O, ConsoleModifiers.Alt) });
-            openCommand.Pressed.SubscribeForLifetime(OpenCommandImpl, openCommand);
+            openCommand.Pressed.Subscribe(OpenCommandImpl, openCommand);
             
             var saveCommand = buttonStack.Add(new Button() { Text = "Save".ToWhite(), Shortcut = new KeyboardShortcut(ConsoleKey.S, ConsoleModifiers.Alt) });
-            saveCommand.Pressed.SubscribeForLifetime(SaveCommandImpl, saveCommand);
+            saveCommand.Pressed.Subscribe(SaveCommandImpl, saveCommand);
             
             var saveAsCommand = buttonStack.Add(new Button() { Text = "Save as".ToWhite() });
-            saveAsCommand.Pressed.SubscribeForLifetime(SaveAsCommandImpl, saveAsCommand);
+            saveAsCommand.Pressed.Subscribe(SaveAsCommandImpl, saveAsCommand);
 
             var undoCommand = buttonStack.Add(new Button() { Text = "Undo".ToWhite(), Shortcut = new KeyboardShortcut(ConsoleKey.Z, ConsoleModifiers.Alt) });
-            undoCommand.Pressed.SubscribeForLifetime(UndoCommandImpl, undoCommand);
+            undoCommand.Pressed.Subscribe(UndoCommandImpl, undoCommand);
 
             var redoCommand = buttonStack.Add(new Button() { Text = "Redo".ToWhite(), Shortcut = new KeyboardShortcut(ConsoleKey.Y, ConsoleModifiers.Alt) });
-            redoCommand.Pressed.SubscribeForLifetime(RedoCommandImpl, redoCommand);
+            redoCommand.Pressed.Subscribe(RedoCommandImpl, redoCommand);
 
             buttonStack.Add(new Label() { Text = divider });
 
             var frameUpCommand = buttonStack.Add(new Button() { Text = "Previous Frame".ToWhite(), Shortcut = new KeyboardShortcut(ConsoleKey.PageUp) });
-            frameUpCommand.Pressed.SubscribeForLifetime(FrameUpCommandImpl , frameUpCommand);
+            frameUpCommand.Pressed.Subscribe(FrameUpCommandImpl , frameUpCommand);
             
             var frameDownCommand = buttonStack.Add(new Button() { Text = "Next Frame".ToWhite(), Shortcut = new KeyboardShortcut(ConsoleKey.PageDown) });
-            frameDownCommand.Pressed.SubscribeForLifetime(FrameDownCommandImpl, frameDownCommand);
+            frameDownCommand.Pressed.Subscribe(FrameDownCommandImpl, frameDownCommand);
 
             var duplicateCommand = buttonStack.Add(new Button() { Text = "Duplicate Frame".ToWhite(), Shortcut = new KeyboardShortcut(ConsoleKey.D, ConsoleModifiers.Alt) });
-            duplicateCommand.Pressed.SubscribeForLifetime(DuplicateFrameCommandImpl, frameUpCommand);
+            duplicateCommand.Pressed.Subscribe(DuplicateFrameCommandImpl, frameUpCommand);
 
             buttonStack.Add(new Label() { Text = divider });
 

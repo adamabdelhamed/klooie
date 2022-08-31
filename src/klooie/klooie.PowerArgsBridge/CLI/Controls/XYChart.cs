@@ -297,7 +297,7 @@ namespace PowerArgs.Cli
         {
             this.options = options;
             AddDataPoints();
-            this.SubscribeForLifetime(nameof(Bounds), PositionDataPoints, this);
+            this.Subscribe(nameof(Bounds), PositionDataPoints, this);
 
             var defaultSeriesTitle = ConsoleString.Empty;
 
@@ -308,7 +308,7 @@ namespace PowerArgs.Cli
 
             Ready.SubscribeOnce(() =>
             { 
-                ConsoleApp.Current.FocusChanged.SubscribeForLifetime((fc) =>
+                ConsoleApp.Current.FocusChanged.Subscribe((fc) =>
                 {
                      if(options.Data.Count > 1 && fc is DataPointControl == false)
                      {
@@ -324,7 +324,7 @@ namespace PowerArgs.Cli
 
             this.CanFocus = true;
             Lifetime focusLt = null;
-            this.Focused.SubscribeForLifetime(() =>
+            this.Focused.Subscribe(() =>
             {
                 (lastFocused ?? firstControl)?.Focus();
                 focusLt = new Lifetime();
@@ -336,7 +336,7 @@ namespace PowerArgs.Cli
                 Application.PushKeyForLifetime(ConsoleKey.End, HandleEndKey, focusLt);
             }, this);
 
-            ConsoleApp.Current.FocusChanged.SubscribeForLifetime((fc) =>
+            ConsoleApp.Current.FocusChanged.Subscribe((fc) =>
              {
                  if(fc == null)
                  {
@@ -471,7 +471,7 @@ namespace PowerArgs.Cli
                 {
                     var pixel = new DataPointControl() { ZIndex = DataPointsZIndex, CanFocus = series.AllowInteractivity, DataPoint = series.Points[i], Series = series, Value = series.PlotCharacter };
                     firstControl = firstControl ?? pixel;
-                    pixel.Focused.SubscribeForLifetime(() =>
+                    pixel.Focused.Subscribe(() =>
                     {
                         pixel.ZIndex = FocusedDataPointZIndex;
                         pixel.Value = new ConsoleCharacter(series.PlotCharacter.Value, ConsoleColor.Black, ConsoleColor.Cyan);
@@ -493,7 +493,7 @@ namespace PowerArgs.Cli
                         seriesTitleLabel.Text = newTitle;
                     }, pixel);
 
-                    pixel.Unfocused.SubscribeForLifetime(() =>
+                    pixel.Unfocused.Subscribe(() =>
                     {
                         pixel.Value = series.PlotCharacter;
                         pixel.BarsOrLines.ForEach(b => b.Value = pixel.Value);

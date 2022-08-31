@@ -78,8 +78,8 @@ public class Button : ConsoleControl
         this.SynchronizeForLifetime(nameof(Text), UpdateWidth, this);
         this.SynchronizeForLifetime(nameof(Shortcut), UpdateWidth, this);
 
-        this.AddedToVisualTree.SubscribeForLifetime(OnAddedToVisualTree, this);
-        this.KeyInputReceived.SubscribeForLifetime(OnKeyInputReceived, this);
+        this.AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
+        this.KeyInputReceived.Subscribe(OnKeyInputReceived, this);
     }
 
     private void UpdateWidth() => Width = GetButtonDisplayString().Length;

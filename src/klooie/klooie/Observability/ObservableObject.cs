@@ -8,7 +8,7 @@ namespace klooie;
 /// </summary>
 public interface IObservableObject
 {
-    void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager);
+    void Subscribe(string propertyName, Action handler, ILifetimeManager lifetimeManager);
     void SynchronizeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager);
     object GetPrevious(string propertyName);
 
@@ -24,7 +24,7 @@ public interface IObservableObject
         public class ObservableAdapter : IObservableObject
         {
             private ObservableObject observable = new ObservableObject();
-            public void SubscribeForLifetime(string p, Action h, ILifetimeManager l) => observable.SubscribeForLifetime(p, h, l);
+            public void Subscribe(string p, Action h, ILifetimeManager l) => observable.Subscribe(p, h, l);
             public void SynchronizeForLifetime(string p, Action h, ILifetimeManager l) => observable.SynchronizeForLifetime(p, h, l);
             public object GetPrevious(string p) => observable.GetPrevious<object>(p);
             public T Get<T>(string name) => observable.Get<T>(name);
@@ -178,7 +178,7 @@ public class ObservableObject : Lifetime, IObservableObject
     /// <param name="propertyName">The name of the property to subscribe to or ObservableObject.AnyProperty if you want to be notified of any property change.</param>
     /// <param name="handler">The action to call for notifications</param>
     /// <param name="lifetimeManager">the lifetime manager that determines when the subscription ends</param>
-    public void SubscribeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => GetEvent(propertyName).SubscribeForLifetime(handler, lifetimeManager);
+    public void Subscribe(string propertyName, Action handler, ILifetimeManager lifetimeManager) => GetEvent(propertyName).Subscribe(handler, lifetimeManager);
     
 
     /// <summary>

@@ -148,20 +148,20 @@ public partial class ConsoleApp : EventLoop
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
         cycleRateMeter = new FrameRateMeter();
-        EndOfCycle.SubscribeForLifetime(Cycle, this);
+        EndOfCycle.Subscribe(Cycle, this);
         LayoutRoot = new ConsolePanel();
         LayoutRoot.ResizeTo(lastConsoleWidth, lastConsoleHeight);
         focus = new FocusManager();
         LayoutRoot.Application = this;
-        focus.SubscribeForLifetime(nameof(focus.StackDepth), () => FocusStackDepthChanged.Fire(focus.StackDepth), this);
-        focus.SubscribeForLifetime(nameof(focus.FocusedControl), () => FocusChanged.Fire(focus.FocusedControl), this);
-        focus.SubscribeForLifetime(nameof(focus.FocusedControl), () => RequestPaintAsync(), this);
-        LayoutRoot.Controls.BeforeAdded.SubscribeForLifetime((c) => { c.Application = this; c.BeforeAddedToVisualTreeInternal(); }, this);
-        LayoutRoot.Controls.BeforeRemoved.SubscribeForLifetime((c) => { c.BeforeRemovedFromVisualTreeInternal(); }, this);
-        LayoutRoot.Controls.Added.SubscribeForLifetime(ControlAddedToVisualTree, this);
-        LayoutRoot.Controls.Removed.SubscribeForLifetime(ControlRemovedFromVisualTree, this);
+        focus.Subscribe(nameof(focus.StackDepth), () => FocusStackDepthChanged.Fire(focus.StackDepth), this);
+        focus.Subscribe(nameof(focus.FocusedControl), () => FocusChanged.Fire(focus.FocusedControl), this);
+        focus.Subscribe(nameof(focus.FocusedControl), () => RequestPaintAsync(), this);
+        LayoutRoot.Controls.BeforeAdded.Subscribe((c) => { c.Application = this; c.BeforeAddedToVisualTreeInternal(); }, this);
+        LayoutRoot.Controls.BeforeRemoved.Subscribe((c) => { c.BeforeRemovedFromVisualTreeInternal(); }, this);
+        LayoutRoot.Controls.Added.Subscribe(ControlAddedToVisualTree, this);
+        LayoutRoot.Controls.Removed.Subscribe(ControlRemovedFromVisualTree, this);
         LoopStarted.SubscribeOnce(() => _current = this);
-        EndOfCycle.SubscribeForLifetime(DrainPaints, this);
+        EndOfCycle.Subscribe(DrainPaints, this);
         Invoke(Startup);
     }
 

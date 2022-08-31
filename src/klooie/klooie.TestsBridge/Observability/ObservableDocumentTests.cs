@@ -34,7 +34,7 @@ namespace ArgsTests
             var notifyCount = 0;
             using (var lt = new Lifetime())
             {
-                observableDocument.Changed.SubscribeForLifetime(() => notifyCount++, lt);
+                observableDocument.Changed.Subscribe(() => notifyCount++, lt);
                 Assert.AreEqual(0, notifyCount);
 
                 var assertIncrement = new Action<Action>((action) =>

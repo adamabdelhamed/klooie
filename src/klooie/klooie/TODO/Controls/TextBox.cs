@@ -59,9 +59,9 @@ public class TextBox : ConsoleControl
         this.Height = 1;
         this.Width = 15;
         CanFocus = true;
-        this.Focused.SubscribeForLifetime(TextBox_Focused, this);
-        this.Unfocused.SubscribeForLifetime(TextBox_Unfocused, this);
-        KeyInputReceived.SubscribeForLifetime(OnKeyInputReceived, this);
+        this.Focused.Subscribe(TextBox_Focused, this);
+        this.Unfocused.Subscribe(TextBox_Unfocused, this);
+        KeyInputReceived.Subscribe(OnKeyInputReceived, this);
     }
 
     private void TextValueChanged()

@@ -30,9 +30,9 @@ namespace PowerArgs.Cli
             valueLabel = ProtectedPanel.Add(new Label());
             SynchronizeForLifetime(nameof(On), ()=>Update(125), this);
             SynchronizeForLifetime(nameof(IsVisible), () => Update(0), this);
-            Focused.SubscribeForLifetime(() => Update(0), this);
-            Unfocused.SubscribeForLifetime(() => Update(0), this);
-            KeyInputReceived.SubscribeForLifetime(k => On = k.Key == ConsoleKey.Enter ? !On : On, this);
+            Focused.Subscribe(() => Update(0), this);
+            Unfocused.Subscribe(() => Update(0), this);
+            KeyInputReceived.Subscribe(k => On = k.Key == ConsoleKey.Enter ? !On : On, this);
             Ready.SubscribeOnce(() => Update(0));
         }
 

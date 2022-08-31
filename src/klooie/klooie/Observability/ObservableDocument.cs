@@ -60,7 +60,7 @@ public class ObservableDocument : Lifetime
     public ObservableDocument(IObservableObject root)
     {
         Watch(root);
-        this.Changed.SubscribeForLifetime(() => undoRedoPending = false, this);
+        this.Changed.Subscribe(() => undoRedoPending = false, this);
         this.OnDisposed(trackedObservables.Clear);
     }
 
@@ -110,7 +110,7 @@ public class ObservableDocument : Lifetime
                 .WhereAs<IObservableObject>()
                 .ForEach(child => Watch(child as IObservableObject, path + "[" + Guid.NewGuid() + "]"));
 
-            collection.Added.SubscribeForLifetime((o) =>
+            collection.Added.Subscribe((o) =>
             {
                 if (undoRedoPending == false)
                 {
@@ -124,7 +124,7 @@ public class ObservableDocument : Lifetime
                 Changed.Fire();
             }, trackingLifetime);
 
-            collection.Removed.SubscribeForLifetime((o) =>
+            collection.Removed.Subscribe((o) =>
             {
                 if (undoRedoPending == false)
                 {
@@ -141,7 +141,7 @@ public class ObservableDocument : Lifetime
                 Changed.Fire();
             }, trackingLifetime);
 
-            collection.AssignedToIndex.SubscribeForLifetime((args) => throw new NotSupportedException("Index assignments are not supported by observable documents"), trackingLifetime);
+            collection.AssignedToIndex.Subscribe((args) => throw new NotSupportedException("Index assignments are not supported by observable documents"), trackingLifetime);
         }
     }
 

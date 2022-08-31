@@ -176,7 +176,7 @@ public partial class Grid : ConsoleControl
     private void InitGridView()
     {
         MoreDataMessage = "more data below".ToConsoleString(DefaultColors.H1Color);
-        this.KeyInputReceived.SubscribeForLifetime(OnKeyInputReceived, this);
+        this.KeyInputReceived.Subscribe(OnKeyInputReceived, this);
 
         this.filterTextDebouncer = new TimerActionDebouncer(TimeSpan.FromSeconds(0), () =>
         {
@@ -190,7 +190,7 @@ public partial class Grid : ConsoleControl
         });
 
         // don't accept focus unless I have at least one item in the data view
-        this.Focused.SubscribeForLifetime(() =>
+        this.Focused.Subscribe(() =>
         {
             if (DataView.Items.Count == 0)
             {
@@ -207,8 +207,8 @@ public partial class Grid : ConsoleControl
         }
 
         _filterTextBox = value;
-        _filterTextBox.SubscribeForLifetime(nameof(TextBox.Value), FilterTextValueChanged, value);
-        _filterTextBox.KeyInputReceived.SubscribeForLifetime(FilterTextKeyPressed, value);
+        _filterTextBox.Subscribe(nameof(TextBox.Value), FilterTextValueChanged, value);
+        _filterTextBox.KeyInputReceived.Subscribe(FilterTextKeyPressed, value);
         FilteringEnabled = true;
     }
 

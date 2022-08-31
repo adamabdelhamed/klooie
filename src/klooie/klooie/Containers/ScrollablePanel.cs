@@ -64,16 +64,16 @@ public class ScrollablePanel : ConsolePanel
         SynchronizeForLifetime(nameof(Background), () => ScrollableContent.Background = Background, this);
         verticalScrollbar = Add(new Scrollbar(Orientation.Vertical) { Width = 1 }).DockToRight();
         horizontalScrollbar = Add(new Scrollbar(Orientation.Horizontal) { Height = 1 }).DockToBottom();
-        AddedToVisualTree.SubscribeForLifetime(OnAddedToVisualTree, this);
+        AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
     }
 
     private void OnAddedToVisualTree()
     {
-        Application.FocusChanged.SubscribeForLifetime(FocusChanged, this);
+        Application.FocusChanged.Subscribe(FocusChanged, this);
         SynchronizeForLifetime(nameof(HorizontalScrollUnits), UpdateScrollbars, this);
         SynchronizeForLifetime(nameof(VerticalScrollUnits), UpdateScrollbars, this);
-        ScrollableContent.SubscribeForLifetime(nameof(Bounds), UpdateScrollbars, this);
-        ScrollableContent.Controls.SynchronizeForLifetime(c => c.SubscribeForLifetime(nameof(Bounds), UpdateScrollbars, c), (c) => { }, () => { }, this);
+        ScrollableContent.Subscribe(nameof(Bounds), UpdateScrollbars, this);
+        ScrollableContent.Controls.SynchronizeForLifetime(c => c.Subscribe(nameof(Bounds), UpdateScrollbars, c), (c) => { }, () => { }, this);
     }
 
     private void UpdateScrollbars()
@@ -250,7 +250,7 @@ public class Scrollbar : ConsoleControl
     {
         this.orientation = orientation;
         Background = ConsoleColor.White;
-        KeyInputReceived.SubscribeForLifetime(OnKeyInputReceived, this);
+        KeyInputReceived.Subscribe(OnKeyInputReceived, this);
     }
 
     protected override void OnPaint(ConsoleBitmap context)

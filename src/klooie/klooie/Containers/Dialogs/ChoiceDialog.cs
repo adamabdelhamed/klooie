@@ -92,7 +92,7 @@ public static class ChoiceDialog
                 {
                     var myOption = option;
                     var button = buttonStack.Add(new Button() { Text = option.DisplayText, Tag = option.Value, Shortcut = option.Shortcut });
-                    button.Pressed.SubscribeForLifetime(() =>
+                    button.Pressed.Subscribe(() =>
                     {
                         choice = myOption;
                         layout.Dispose();
@@ -100,7 +100,7 @@ public static class ChoiceDialog
 
                     // This ensures that the global enter handler on dialogs will still reflect
                     // the most recently focused button
-                    button.Focused.SubscribeForLifetime(() => choice = myOption , layout);
+                    button.Focused.Subscribe(() => choice = myOption , layout);
                 }
                 if (options.AutoFocusChoices)
                 {

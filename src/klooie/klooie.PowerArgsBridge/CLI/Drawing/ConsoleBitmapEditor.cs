@@ -62,11 +62,11 @@ namespace PowerArgs.Cli
             cursor = frame.Add(new PixelControl() { IsVisible = false, X = 1, Y = 1, Value = new ConsoleCharacter('C', ConsoleColor.White, ConsoleColor.Cyan) }); // place at top left
             frame.CanFocus = true;
 
-            frame.Focused.SubscribeForLifetime(() => cursor.IsVisible = true, cursor);
-            frame.Unfocused.SubscribeForLifetime(() => cursor.IsVisible = false, cursor);
+            frame.Focused.Subscribe(() => cursor.IsVisible = true, cursor);
+            frame.Unfocused.Subscribe(() => cursor.IsVisible = false, cursor);
             cursor.CanFocus = false;
 
-            frame.KeyInputReceived.SubscribeForLifetime((key) => HandleCursorKeyPress(key), cursor);
+            frame.KeyInputReceived.Subscribe((key) => HandleCursorKeyPress(key), cursor);
 
             
             frame.AddedToVisualTree.SubscribeOnce(()=>
@@ -115,7 +115,7 @@ namespace PowerArgs.Cli
         {
             var changeFgButton = new Button() { Shortcut = new KeyboardShortcut(ConsoleKey.F, ConsoleModifiers.Alt) };
 
-            changeFgButton.Pressed.SubscribeForLifetime(async () =>
+            changeFgButton.Pressed.Subscribe(async () =>
             {
                 var colorObj = new ColorObject() { Color = currentFg };
                 var form = ConsoleApp.Current.LayoutRoot.Add(new Form(FormOptions.FromObject(colorObj)));
@@ -137,7 +137,7 @@ namespace PowerArgs.Cli
 
             var changeBgButton = new Button() { Shortcut = new KeyboardShortcut(ConsoleKey.B, ConsoleModifiers.Alt) };
 
-            changeBgButton.Pressed.SubscribeForLifetime(() =>
+            changeBgButton.Pressed.Subscribe(() =>
             {
                 var colorObj = new ColorObject() { Color = currentBg };
                 var form = ConsoleApp.Current.LayoutRoot.Add(new Form(FormOptions.FromObject(colorObj)));

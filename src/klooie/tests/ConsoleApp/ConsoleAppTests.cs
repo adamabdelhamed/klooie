@@ -73,7 +73,7 @@ public class ConsoleAppTests
         app.Invoke(async () =>
         {
             var c = app.LayoutRoot.Add(new ConsoleControl() { CanFocus = true });
-            c.KeyInputReceived.SubscribeForLifetime(k =>
+            c.KeyInputReceived.Subscribe(k =>
             {
                 if (k.Key == ConsoleKey.Enter)
                 {

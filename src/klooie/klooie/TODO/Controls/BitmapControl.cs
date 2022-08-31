@@ -21,8 +21,8 @@ public class BitmapControl : ConsoleControl
     /// </summary>
     public BitmapControl()
     {
-        this.SubscribeForLifetime(nameof(AutoSize), BitmapOrAutoSizeChanged, this);
-        this.SubscribeForLifetime(nameof(Bitmap), BitmapOrAutoSizeChanged, this);
+        this.Subscribe(nameof(AutoSize), BitmapOrAutoSizeChanged, this);
+        this.Subscribe(nameof(Bitmap), BitmapOrAutoSizeChanged, this);
     }
 
     private void BitmapOrAutoSizeChanged()

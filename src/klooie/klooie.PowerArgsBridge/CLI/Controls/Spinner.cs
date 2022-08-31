@@ -40,8 +40,8 @@ namespace PowerArgs.Cli
         public Spinner()
         {
             currentFrameIndex = 0;
-            this.AddedToVisualTree.SubscribeForLifetime(OnAddedToVisualTree, this);
-            this.RemovedFromVisualTree.SubscribeForLifetime(OnRemovedFromVisualTree, this);
+            this.AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
+            this.RemovedFromVisualTree.Subscribe(OnRemovedFromVisualTree, this);
             this.CanFocus = false;
         }
 

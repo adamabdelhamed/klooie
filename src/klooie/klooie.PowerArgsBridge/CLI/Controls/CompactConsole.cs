@@ -19,7 +19,7 @@ namespace PowerArgs.Cli
 
         public CompactConsole()
         {
-            SubscribeForLifetime(nameof(Bounds), () => HardRefresh(), this);
+            Subscribe(nameof(Bounds), () => HardRefresh(), this);
             this.Ready.SubscribeOnce(async () =>
             {
                 await Task.Yield();
@@ -116,7 +116,7 @@ namespace PowerArgs.Cli
             {
                 if (myLt == refreshLt)
                 {
-                    InputBox.Focused.SubscribeForLifetime(() =>
+                    InputBox.Focused.Subscribe(() =>
                     {
                         if (focusLt != null && focusLt.IsExpired == false && focusLt.IsExpiring == false)
                         {
@@ -137,7 +137,7 @@ namespace PowerArgs.Cli
 
                     }, refreshLt);
 
-                    InputBox.Unfocused.SubscribeForLifetime(() =>
+                    InputBox.Unfocused.Subscribe(() =>
                     {
                         if (focusLt != null && focusLt.IsExpired == false && focusLt.IsExpiring == false)
                         {
@@ -158,7 +158,7 @@ namespace PowerArgs.Cli
                     CreateAssistiveText(), 
                  }).Fill();
             }
-            InputBox.KeyInputReceived.SubscribeForLifetime(async (keyInfo) => await OnHandleHey(keyInfo), InputBox);
+            InputBox.KeyInputReceived.Subscribe(async (keyInfo) => await OnHandleHey(keyInfo), InputBox);
         }
 
         private async Task OnHandleHey(ConsoleKeyInfo keyInfo)

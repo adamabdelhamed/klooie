@@ -54,10 +54,10 @@ public class StackPanel : ConsolePanel
     /// </summary>
     public StackPanel()
     {
-        SubscribeForLifetime(nameof(Bounds), RedoLayout, this);
-        SubscribeForLifetime(nameof(Margin), RedoLayout, this);
-        Controls.Added.SubscribeForLifetime(Controls_Added, this);
-        Controls.Changed.SubscribeForLifetime(RedoLayout, this);
+        Subscribe(nameof(Bounds), RedoLayout, this);
+        Subscribe(nameof(Margin), RedoLayout, this);
+        Controls.Added.Subscribe(Controls_Added, this);
+        Controls.Changed.Subscribe(RedoLayout, this);
     }
 
     private void Controls_Added(ConsoleControl obj) => obj.SynchronizeForLifetime(nameof(Bounds), RedoLayout, Controls.GetMembershipLifetime(obj));

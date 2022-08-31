@@ -26,8 +26,8 @@ namespace PowerArgs.CLI.Controls
             var stack = ProtectedPanel.Add(new StackPanel() { Orientation = Orientation.Vertical, Margin = 1 }).Fill();
             this.CanFocus = true;
 
-            this.Focused.SubscribeForLifetime(Sync, this);
-            this.Unfocused.SubscribeForLifetime(Sync, this);
+            this.Focused.Subscribe(Sync, this);
+            this.Unfocused.Subscribe(Sync, this);
 
             foreach (var menuItem in menuItems)
             {
@@ -36,7 +36,7 @@ namespace PowerArgs.CLI.Controls
 
             Sync();
 
-            this.KeyInputReceived.SubscribeForLifetime(OnKeyPress, this);
+            this.KeyInputReceived.Subscribe(OnKeyPress, this);
         }
 
         private void OnKeyPress(ConsoleKeyInfo obj)

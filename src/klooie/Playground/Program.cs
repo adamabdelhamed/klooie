@@ -39,7 +39,7 @@ public class EventBenchmark
             events[i] = new Event();
             for (var j = 0; j < numberOfSubscribersPerEvent; j++)
             {
-                events[i].SubscribeForLifetime(() => count++, Lifetime.Forever);
+                events[i].Subscribe(() => count++, Lifetime.Forever);
             }
         }
     }

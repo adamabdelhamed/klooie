@@ -78,7 +78,7 @@ namespace PowerArgs.Cli
                 Rows = new List<GridRowDefinition>()
             })).Fill();
 
-            SubscribeForLifetime(nameof(Bounds), Recompose, this);
+            Subscribe(nameof(Bounds), Recompose, this);
         }
 
         public void Recompose()
@@ -179,10 +179,10 @@ namespace PowerArgs.Cli
             recomposableControls.Add(pagerContainer);
             pager = pagerContainer.Add(new RandomAccessPager(Options.EnablePagerKeyboardShortcuts)).CenterHorizontally();
             pager.IsVisible = Options.ShowPager;
-            pager.FirstPageButton.Pressed.SubscribeForLifetime(FirstPageClicked.Fire, pager);
-            pager.PreviousPageButton.Pressed.SubscribeForLifetime(PreviousPageClicked.Fire, pager);
-            pager.NextPageButton.Pressed.SubscribeForLifetime(NextPageClicked.Fire, pager);
-            pager.LastPageButton.Pressed.SubscribeForLifetime(LastPageClicked.Fire, pager);
+            pager.FirstPageButton.Pressed.Subscribe(FirstPageClicked.Fire, pager);
+            pager.PreviousPageButton.Pressed.Subscribe(PreviousPageClicked.Fire, pager);
+            pager.NextPageButton.Pressed.Subscribe(NextPageClicked.Fire, pager);
+            pager.LastPageButton.Pressed.Subscribe(LastPageClicked.Fire, pager);
             pager.FirstPageButton.CanFocus = Options.PagerState.CanGoBackwards;
             pager.PreviousPageButton.CanFocus = Options.PagerState.CanGoBackwards;
             pager.NextPageButton.CanFocus = Options.PagerState.CanGoForwards;

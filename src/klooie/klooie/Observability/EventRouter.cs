@@ -177,7 +177,7 @@ public class EventRouter<T>
     /// <param name="lifetimeManager">defines the lifetime of the subscription</param>
     public void Register(string route, Action<RoutedEvent<T>> handler, ILifetimeManager lifetimeManager)
     {
-        GetOrAddRoutedEvent(route).SubscribeForLifetime(handler, lifetimeManager);
+        GetOrAddRoutedEvent(route).Subscribe(handler, lifetimeManager);
 
         lifetimeManager.OnDisposed(() =>
         {
@@ -193,7 +193,7 @@ public class EventRouter<T>
     public void RegisterOnce(string route, Action<RoutedEvent<T>> handler)
     {
         var routeLifetime = new Lifetime();
-        GetOrAddRoutedEvent(route).SubscribeForLifetime((t) =>
+        GetOrAddRoutedEvent(route).Subscribe((t) =>
         {
             handler(t);
             routes.Remove(route);

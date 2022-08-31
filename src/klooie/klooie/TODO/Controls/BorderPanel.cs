@@ -20,7 +20,7 @@ public class BorderPanel : ProtectedConsolePanel
         container.Background = content.Background;
         ProtectedPanel.Background = content.Background;
         container.Add(content);
-        this.SubscribeForLifetime(nameof(Background), () => container.Background = this.Background, this);
+        this.Subscribe(nameof(Background), () => container.Background = this.Background, this);
     }
 
     protected override void OnPaint(ConsoleBitmap context)

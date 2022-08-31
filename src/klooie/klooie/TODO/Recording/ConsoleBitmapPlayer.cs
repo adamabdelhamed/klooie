@@ -158,18 +158,18 @@ public class ConsoleBitmapPlayer : ConsolePanel
 
         if (showButtonBar)
         {
-            seekToBeginningButton.Pressed.SubscribeForLifetime(SeekToBeginningButtonPressed, this);
-            seekBack10SButton.Pressed.SubscribeForLifetime(Rewind, this);
-            playButton.Pressed.SubscribeForLifetime(PlayPressed, this);
-            seekForward10SButton.Pressed.SubscribeForLifetime(FastForward, this);
-            seekToEndButton.Pressed.SubscribeForLifetime(SeekToEndButtonPressed, this);
+            seekToBeginningButton.Pressed.Subscribe(SeekToBeginningButtonPressed, this);
+            seekBack10SButton.Pressed.Subscribe(Rewind, this);
+            playButton.Pressed.Subscribe(PlayPressed, this);
+            seekForward10SButton.Pressed.Subscribe(FastForward, this);
+            seekToEndButton.Pressed.Subscribe(SeekToEndButtonPressed, this);
         }
         else
         {
             buttonBar.IsVisible = false;
         }
 
-        this.SubscribeForLifetime(nameof(State), StateChanged, this);
+        this.Subscribe(nameof(State), StateChanged, this);
 
         this.SynchronizeForLifetime(nameof(RewindAndFastForwardIncrement), () =>
         {
@@ -178,7 +178,7 @@ public class ConsoleBitmapPlayer : ConsolePanel
         }, this);
 
         State = PlayerState.NotLoaded;
-        SubscribeForLifetime(nameof(State), () =>
+        Subscribe(nameof(State), () =>
         {
             if(State == PlayerState.Stopped)
             {

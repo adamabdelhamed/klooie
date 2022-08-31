@@ -23,7 +23,7 @@ public class ScrollablePanelTests
 
         // IMPORTANT - The ScrollableContent container is the thing that will scroll if it's bigger than the view
         //             so make sure it's height gets bigger as its content grows.
-        stack.SubscribeForLifetime(nameof(stack.Bounds), () => scrollPanel.ScrollableContent.Height = stack.Height, stack);
+        stack.Subscribe(nameof(stack.Bounds), () => scrollPanel.ScrollableContent.Height = stack.Height, stack);
 
         // Step 3 - Add 100 focusable rows to the stack panel. Making the rows focusable is critical since
         //          the scroll panel will automatically take care of scrolling to the currently focused control
@@ -32,8 +32,8 @@ public class ScrollablePanelTests
         for (var i = 1; i <= rows; i++)
         {
             var label = stack.Add(new Label() { CanFocus = true, Text = $"row {i} of {rows}".ToWhite() });
-            label.Focused.SubscribeForLifetime(() => label.Text = label.Text.ToCyan(), label);
-            label.Focused.SubscribeForLifetime(() => label.Text = label.Text.ToWhite(), label);
+            label.Focused.Subscribe(() => label.Text = label.Text.ToCyan(), label);
+            label.Focused.Subscribe(() => label.Text = label.Text.ToWhite(), label);
         }
 
         await ConsoleApp.Current.SendKey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));

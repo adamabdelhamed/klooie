@@ -27,15 +27,15 @@ public class ConsolePanel : Container
     public ConsolePanel()
     {
         Controls = new ObservableCollection<ConsoleControl>();
-        Controls.Added.SubscribeForLifetime((c) =>
+        Controls.Added.Subscribe((c) =>
         {
             c.Parent = this;
             sortedControls.Add(c);
             SortZ();
-            c.SubscribeForLifetime(nameof(c.ZIndex), () => SortZ(), Controls.GetMembershipLifetime(c));
+            c.Subscribe(nameof(c.ZIndex), () => SortZ(), Controls.GetMembershipLifetime(c));
         }, this);
-        Controls.AssignedToIndex.SubscribeForLifetime((assignment) => throw new NotSupportedException("Index assignment is not supported in Controls collection"), this);
-        Controls.Removed.SubscribeForLifetime((c) =>
+        Controls.AssignedToIndex.Subscribe((assignment) => throw new NotSupportedException("Index assignment is not supported in Controls collection"), this);
+        Controls.Removed.Subscribe((c) =>
         {
             sortedControls.Remove(c);
             c.Parent = null;

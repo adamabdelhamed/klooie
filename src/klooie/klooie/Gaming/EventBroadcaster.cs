@@ -22,7 +22,7 @@ internal class EventBroadcaster
                 matchingEvent = new Event<GameEvent>();
                 events.Add(variable, matchingEvent);
             }
-            matchingEvent.SubscribeForLifetime(handler, lt);
+            matchingEvent.Subscribe(handler, lt);
         }
     }
 

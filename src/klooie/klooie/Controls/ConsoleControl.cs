@@ -317,7 +317,7 @@ public class ConsoleControl : Rectangular
         }
         var h = this.Height;
         var w = this.Width;
-        this.SubscribeForLifetime(nameof(Bounds), () =>
+        this.Subscribe(nameof(Bounds), () =>
         {
             if (Width != w || Height != h)
             {

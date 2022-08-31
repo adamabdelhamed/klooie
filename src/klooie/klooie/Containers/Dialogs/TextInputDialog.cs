@@ -41,7 +41,7 @@ public class ShowTextInputOptions : ShowMessageOptions
         TextBox.Y = 4;
 
         content.SynchronizeForLifetime(nameof(content.Bounds), () => { TextBox.Width = Math.Max(0, content.Width - 4); }, content);
-        TextBox.SubscribeForLifetime(nameof(TextBox.Value), () => Value = TextBox.Value, TextBox);
+        TextBox.Subscribe(nameof(TextBox.Value), () => Value = TextBox.Value, TextBox);
 
         TextBox.AddedToVisualTree.SubscribeOnce(() => TextBox.Application.InvokeNextCycle(() => TextBox.Focus()));
         return content;

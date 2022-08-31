@@ -15,7 +15,7 @@ namespace PowerArgs.Cli
         {
             scrollPanel = Add(new ScrollablePanel()).Fill();
             logLabel = scrollPanel.ScrollableContent.Add(new Label(LabelRenderMode.ManualSizing) { Text = ConsoleString.Empty  }).FillHorizontally();
-            this.SubscribeForLifetime(nameof(Background),() => 
+            this.Subscribe(nameof(Background),() => 
             {
                 scrollPanel.Background = Background;
                 logLabel.Background = Background;

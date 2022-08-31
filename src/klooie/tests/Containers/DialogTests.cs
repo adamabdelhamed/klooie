@@ -26,7 +26,7 @@ public class DialogTests
     [TestMethod]
     public void Dialog_ShowMessage() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified,async (context) =>
     {
-        Dialog.Shown.SubscribeForLifetime(async () => await context.PaintAndRecordKeyFrameAsync(), ConsoleApp.Current);
+        Dialog.Shown.Subscribe(async () => await context.PaintAndRecordKeyFrameAsync(), ConsoleApp.Current);
         await context.PaintAndRecordKeyFrameAsync();
         await MessageDialog.Show(new ShowMessageOptions("Hello world".ToGreen()) { UserChoices = DialogChoice.Close, SpeedPercentage = 0, MaxLifetime = Task.Delay(300).ToLifetime() });
         await context.PaintAndRecordKeyFrameAsync();

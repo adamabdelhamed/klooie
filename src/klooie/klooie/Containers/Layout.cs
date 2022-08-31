@@ -126,8 +126,8 @@ public static class Layout
     {
         if (child.Parent == null) throw new ArgumentException("This control does yet have a parent");
         var syncAction = () => a(child, child.Parent);
-        child.SubscribeForLifetime(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
-        child.Parent.SubscribeForLifetime(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
+        child.Subscribe(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
+        child.Parent.Subscribe(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
         syncAction();
         return child;
     }
@@ -136,7 +136,7 @@ public static class Layout
     {
         if (child.Parent == null) throw new ArgumentException("This control does yet have a parent");
         var syncAction = () => a(child, child.Parent);
-        child.Parent.SubscribeForLifetime(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
+        child.Parent.Subscribe(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
         syncAction();
         return child;
     }

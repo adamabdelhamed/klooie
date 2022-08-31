@@ -16,8 +16,8 @@ namespace PowerArgs.Cli
                 Id = c.ToString()
             }))).Fill();
 
-            dropdown.SubscribeForLifetime(nameof(dropdown.Value), () => this.Value = (RGB)dropdown.Value.Value, this);
-            this.SubscribeForLifetime(nameof(Value), () => dropdown.Value = dropdown.Options.Where(o => o.Value.Equals(Value)).Single(), this);
+            dropdown.Subscribe(nameof(dropdown.Value), () => this.Value = (RGB)dropdown.Value.Value, this);
+            this.Subscribe(nameof(Value), () => dropdown.Value = dropdown.Options.Where(o => o.Value.Equals(Value)).Single(), this);
         }
     }
 }

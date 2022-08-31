@@ -98,7 +98,7 @@ namespace ArgsTests.CLI.Controls
             {
                 var selectionLabel = app.LayoutRoot.Add(new Label() { Text = "DEFAULT".ToConsoleString(), Height = 1 }).CenterHorizontally();
                 selectionLabel.Text = $"SelectedRowIndex: {dataGrid.SelectedRowIndex}, SelectedCellIndex: {dataGrid.SelectedColumnIndex}".ToConsoleString();
-                dataGrid.SelectionChanged.SubscribeForLifetime(() =>
+                dataGrid.SelectionChanged.Subscribe(() =>
                 {
                     selectionLabel.Text = $"SelectedRowIndex: {dataGrid.SelectedRowIndex}, SelectedCellIndex: {dataGrid.SelectedColumnIndex}".ToConsoleString();
                 }, dataGrid);

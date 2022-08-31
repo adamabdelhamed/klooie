@@ -78,13 +78,13 @@ public class Label : ConsoleControl
         this.CanFocus = false;
         lines = new List<List<ConsoleCharacter>>();
         Text = ConsoleString.Empty;
-        this.SubscribeForLifetime(nameof(Text), HandleTextChanged, this);
-        this.SubscribeForLifetime(nameof(Mode), HandleTextChanged, this);
-        this.SubscribeForLifetime(nameof(MaxHeight), HandleTextChanged, this);
-        this.SubscribeForLifetime(nameof(MaxWidth), HandleTextChanged, this);
-        this.SubscribeForLifetime(nameof(Bounds), HandleTextChanged, this);
-        this.SubscribeForLifetime(nameof(Foreground), HandleTextChanged, this);
-        this.SubscribeForLifetime(nameof(Background), HandleTextChanged, this);
+        this.Subscribe(nameof(Text), HandleTextChanged, this);
+        this.Subscribe(nameof(Mode), HandleTextChanged, this);
+        this.Subscribe(nameof(MaxHeight), HandleTextChanged, this);
+        this.Subscribe(nameof(MaxWidth), HandleTextChanged, this);
+        this.Subscribe(nameof(Bounds), HandleTextChanged, this);
+        this.Subscribe(nameof(Foreground), HandleTextChanged, this);
+        this.Subscribe(nameof(Background), HandleTextChanged, this);
     }
 
     public Task AnimateTextForeground(RGB to, float duration = 1000, EasingFunction ease = null, bool autoReverse = false, ILifetimeManager loop = null, IDelayProvider delayProvider = null, float autoReverseDelay = 0, Func<bool> isCancelled = null)

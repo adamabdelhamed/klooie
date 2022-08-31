@@ -17,7 +17,7 @@ public class MinimumSizeEnforcerPanel : ConsolePanel
         this.options = options;
         IsVisible = false;
         messageLabel = this.Add(new Label() { Text = "Make that screen bigger yo!".ToYellow() }).CenterBoth();
-        this.SubscribeForLifetime(nameof(Bounds), CheckSize, this);
+        this.Subscribe(nameof(Bounds), CheckSize, this);
         ZIndex = int.MaxValue;
     }
 

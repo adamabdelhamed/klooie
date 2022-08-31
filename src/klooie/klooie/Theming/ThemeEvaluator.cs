@@ -14,7 +14,7 @@ internal static class ThemeEvaluator
         // Evaluates the root, all descendents, and any future descendents
 
         EvaulateAllControls(root, lt, styles, tracker);
-        ConsoleApp.Current.ControlAdded.SubscribeForLifetime(c =>
+        ConsoleApp.Current.ControlAdded.Subscribe(c =>
         {
             if (ShouldEvaluate(c, root) == false) return;
             EvaluateControl(c, lt, styles, tracker);
@@ -115,7 +115,7 @@ internal static class ThemeEvaluator
         // invalidate if any of my parents tags change
         foreach (var parent in ParentChain(c))
         {
-            parent.TagsChanged.SubscribeForLifetime(()=>
+            parent.TagsChanged.Subscribe(()=>
             {
                 evalLifetime.Dispose();
                 EvaluateProperty(c, prop, styles, themeLt, tracker);
@@ -123,7 +123,7 @@ internal static class ThemeEvaluator
         }
 
         // invalidate if any of my tags change
-        c.TagsChanged.SubscribeForLifetime(()=>
+        c.TagsChanged.Subscribe(()=>
         {
             evalLifetime.Dispose();
             EvaluateProperty(c, prop, styles, themeLt, tracker);

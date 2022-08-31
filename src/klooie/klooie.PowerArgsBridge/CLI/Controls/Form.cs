@@ -229,7 +229,7 @@ namespace PowerArgs.Cli
                             }
                         }, textBox);
 
-                        textBox.AddedToVisualTree.SubscribeForLifetime(() =>
+                        textBox.AddedToVisualTree.Subscribe(() =>
                         {
                             var previouslyFocusedControl = textBox.Application.FocusedControl;
 
@@ -248,7 +248,7 @@ namespace PowerArgs.Cli
 
                             });
 
-                            textBox.Application.FocusChanged.SubscribeForLifetime(emptyStringAction, textBox);
+                            textBox.Application.FocusChanged.Subscribe(emptyStringAction, textBox);
                         }, textBox);
 
                         editControl = textBox;
@@ -292,7 +292,7 @@ namespace PowerArgs.Cli
                         }
                     }, textBox);
 
-                    textBox.AddedToVisualTree.SubscribeForLifetime(() =>
+                    textBox.AddedToVisualTree.Subscribe(() =>
                     {
                         var previouslyFocusedControl = textBox.Application.FocusedControl;
 
@@ -311,7 +311,7 @@ namespace PowerArgs.Cli
 
                         });
 
-                        textBox.Application.FocusChanged.SubscribeForLifetime(emptyStringAction, textBox);
+                        textBox.Application.FocusChanged.Subscribe(emptyStringAction, textBox);
                     }, textBox);
 
                     editControl = textBox;
@@ -335,7 +335,7 @@ namespace PowerArgs.Cli
 
                     var dropdown = new Dropdown(options);
                     dropdown.Width = Math.Min(40, options.Select(option => option.DisplayText.Length).Max() + 8);
-                    dropdown.SubscribeForLifetime(nameof(dropdown.Value), () => property.SetValue(o, dropdown.Value.Value), dropdown);
+                    dropdown.Subscribe(nameof(dropdown.Value), () => property.SetValue(o, dropdown.Value.Value), dropdown);
                     (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () => dropdown.Value = options.Where(option => option.Value.Equals(property.GetValue(o))).Single(), dropdown);
                     editControl = dropdown;
                 }
@@ -344,7 +344,7 @@ namespace PowerArgs.Cli
 
                     var dropdown = new ColorPicker();
                     dropdown.Width = Math.Min(40, Enums.GetEnumValues<ConsoleColor>().Select(option => option.ToString().Length).Max() + 8);
-                    dropdown.SubscribeForLifetime(nameof(dropdown.Value), () => property.SetValue(o, dropdown.Value), dropdown);
+                    dropdown.Subscribe(nameof(dropdown.Value), () => property.SetValue(o, dropdown.Value), dropdown);
                     (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () => dropdown.Value = (RGB)(property.GetValue(o)), dropdown);
                     editControl = dropdown;
                 }
@@ -358,7 +358,7 @@ namespace PowerArgs.Cli
                         toggle.OffLabel = " No  ";
                     }
 
-                    toggle.SubscribeForLifetime(nameof(toggle.On), () => property.SetValue(o, toggle.On), toggle);
+                    toggle.Subscribe(nameof(toggle.On), () => property.SetValue(o, toggle.On), toggle);
                     (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () => toggle.On = (bool)property.GetValue(o), toggle);
                     editControl = toggle;
                 }
@@ -405,7 +405,7 @@ namespace PowerArgs.Cli
         public Form(FormOptions options)
         {
             this.Options = options;
-            this.AddedToVisualTree.SubscribeForLifetime(InitializeForm, this);
+            this.AddedToVisualTree.Subscribe(InitializeForm, this);
 
         }
 
@@ -437,7 +437,7 @@ namespace PowerArgs.Cli
                 formFieldStack.Add(new FormField(element.Label, element.ValueControl) { LabelColumnWidth = ConsoleMath.Round(this.Width * this.Options.LabelColumnPercentage) }).FillHorizontally();
             }
 
-            this.Options.Elements.Added.SubscribeForLifetime((addedElement) =>
+            this.Options.Elements.Added.Subscribe((addedElement) =>
             {
                 var index = this.Options.Elements.IndexOf(addedElement);
 
@@ -446,13 +446,13 @@ namespace PowerArgs.Cli
                 formField.FillHorizontally();
             }, this);
 
-            this.Options.Elements.Removed.SubscribeForLifetime((removedElement) =>
+            this.Options.Elements.Removed.Subscribe((removedElement) =>
             {
                 var index = formFieldStack.Children.WhereAs<FormField>().Select(f => f.ValueControl).ToList().IndexOf(removedElement.ValueControl);
                 formFieldStack.Controls.RemoveAt(index);
             }, this);
 
-            this.Options.Elements.AssignedToIndex.SubscribeForLifetime((assignment) => throw new NotSupportedException("Index assignments not supported in form elements"), this);
+            this.Options.Elements.AssignedToIndex.Subscribe((assignment) => throw new NotSupportedException("Index assignments not supported in form elements"), this);
         }
 
         private void EnsureSizing(FormElement element)
@@ -489,7 +489,7 @@ namespace PowerArgs.Cli
             valueControl.Height = valueControl.Height == 0 ? 1 : valueControl.Height;
             valueControl.X = LabelColumnWidth;
             ProtectedPanel.Add(valueControl);
-            SubscribeForLifetime(nameof(LabelColumnWidth), () => valueControl.X = LabelColumnWidth, this);
+            Subscribe(nameof(LabelColumnWidth), () => valueControl.X = LabelColumnWidth, this);
         }
     }
 }
