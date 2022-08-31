@@ -40,7 +40,7 @@ public class ShowTextInputOptions : ShowMessageOptions
         content.Add(TextBox).CenterHorizontally();
         TextBox.Y = 4;
 
-        content.SynchronizeForLifetime(nameof(content.Bounds), () => { TextBox.Width = Math.Max(0, content.Width - 4); }, content);
+        content.Sync(nameof(content.Bounds), () => { TextBox.Width = Math.Max(0, content.Width - 4); }, content);
         TextBox.Subscribe(nameof(TextBox.Value), () => Value = TextBox.Value, TextBox);
 
         TextBox.AddedToVisualTree.SubscribeOnce(() => TextBox.Application.InvokeNextCycle(() => TextBox.Focus()));

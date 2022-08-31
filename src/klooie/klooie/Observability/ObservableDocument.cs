@@ -79,7 +79,7 @@ public class ObservableDocument : Lifetime
         {
             if (obj is IObservableCollection && property.Name == "Item") { continue; }
             bool isSyncing = true;
-            obj.SynchronizeForLifetime(property.Name, () =>
+            obj.Sync(property.Name, () =>
             {
                 var myProp = property;
                 var val = myProp.GetValue(obj);

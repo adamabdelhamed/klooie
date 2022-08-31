@@ -171,7 +171,7 @@ public class ConsoleBitmapPlayer : ConsolePanel
 
         this.Subscribe(nameof(State), StateChanged, this);
 
-        this.SynchronizeForLifetime(nameof(RewindAndFastForwardIncrement), () =>
+        this.Sync(nameof(RewindAndFastForwardIncrement), () =>
         {
             seekBack10SButton.Text = $"< {RewindAndFastForwardIncrement.TotalSeconds}s".ToConsoleString();
             seekForward10SButton.Text = $"{RewindAndFastForwardIncrement.TotalSeconds}s >".ToConsoleString();

@@ -351,7 +351,7 @@ public partial class ConsoleApp : EventLoop
         if (c is ConsolePanel)
         {
             var childPanel = c as ConsolePanel;
-            childPanel.Controls.SynchronizeForLifetime((cp) => { ControlAddedToVisualTree(cp); }, (cp) => { ControlRemovedFromVisualTree(cp); }, () => { }, c);
+            childPanel.Controls.Sync((cp) => { ControlAddedToVisualTree(cp); }, (cp) => { ControlRemovedFromVisualTree(cp); }, () => { }, c);
         }
         else if (c is ProtectedConsolePanel)
         {

@@ -31,7 +31,7 @@ namespace PowerArgs.Cli
             Height = 1;
             valueLabel = ProtectedPanel.Add(new Label());
 
-            SynchronizeForLifetime(AnyProperty, SyncValueLabel, this);
+            Sync(AnyProperty, SyncValueLabel, this);
             Focused.Subscribe(SyncValueLabel, this);
             Unfocused.Subscribe(SyncValueLabel, this);
 

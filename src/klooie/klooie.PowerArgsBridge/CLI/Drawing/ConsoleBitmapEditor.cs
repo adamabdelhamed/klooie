@@ -157,12 +157,12 @@ namespace PowerArgs.Cli
                 });
             }, this);
 
-            this.SynchronizeForLifetime(nameof(currentFg), () =>
+            this.Sync(nameof(currentFg), () =>
             {
                 var displayColor = Foreground;
                 changeFgButton.Text = "FG: ".ToConsoleString() + currentFg.ToString().ToConsoleString(displayColor);
             }, this);
-            this.SynchronizeForLifetime(nameof(currentBg), () =>
+            this.Sync(nameof(currentBg), () =>
             {
                 var displayColor = Foreground;
                 changeBgButton.Text = "BG: ".ToConsoleString() + currentBg.ToString().ToConsoleString(displayColor);

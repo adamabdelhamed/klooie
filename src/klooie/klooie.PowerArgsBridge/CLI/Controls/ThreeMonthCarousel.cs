@@ -30,7 +30,7 @@ namespace PowerArgs.Cli
             options = options ?? new ThreeMonthCarouselOptions();
             this.Options = options;
             SetupInvisiblePlaceholders();
-            this.SynchronizeForLifetime(nameof(Bounds), Refresh, this);
+            this.Sync(nameof(Bounds), Refresh, this);
             SetupKeyboardHandling();
         }
 

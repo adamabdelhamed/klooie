@@ -65,7 +65,7 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     Event<IIndexAssignment> IObservableCollection.AssignedToIndex => untyped_Assigned;
 
     public void Subscribe(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.Subscribe(propertyName, handler, lifetimeManager);
-    public void SynchronizeForLifetime(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.SynchronizeForLifetime(propertyName, handler, lifetimeManager);
+    public void Sync(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.Sync(propertyName, handler, lifetimeManager);
     public T Get<T>([CallerMemberName] string name = null) => observable.Get<T>(name);
     public void Set<T>(T value, [CallerMemberName] string name = null) => observable.Set<T>(value);
     public ILifetimeManager GetPropertyValueLifetime(string propertyName) => observable.GetPropertyValueLifetime(propertyName);
@@ -122,7 +122,7 @@ public class ObservableCollection<T> : IList<T>, IObservableCollection, IObserva
     /// <param name="removeAction">the remove handler</param>
     /// <param name="changedAction">the changed handler</param>
     /// <param name="manager">the lifetime of the subscriptions</param>
-    public void SynchronizeForLifetime(Action<T> addAction, Action<T> removeAction, Action changedAction, ILifetimeManager manager)
+    public void Sync(Action<T> addAction, Action<T> removeAction, Action changedAction, ILifetimeManager manager)
     {
         Added.Subscribe(addAction, manager);
         Removed.Subscribe(removeAction, manager);

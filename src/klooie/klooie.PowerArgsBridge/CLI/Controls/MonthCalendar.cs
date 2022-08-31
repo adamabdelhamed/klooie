@@ -90,7 +90,7 @@ namespace PowerArgs.Cli
         {
             var now = DateTime.Today;
             this.Options = options ?? new MonthCalendarOptions() { Year = now.Year, Month = now.Month };
-            SynchronizeForLifetime(nameof(Bounds), Refresh, this);
+            Sync(nameof(Bounds), Refresh, this);
             SetupKeyboardInput();
         }
 

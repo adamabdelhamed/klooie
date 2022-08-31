@@ -61,7 +61,7 @@ public class ScrollablePanel : ConsolePanel
     public ScrollablePanel()
     {
         ScrollableContent = Add(new ConsolePanel()).Fill();
-        SynchronizeForLifetime(nameof(Background), () => ScrollableContent.Background = Background, this);
+        Sync(nameof(Background), () => ScrollableContent.Background = Background, this);
         verticalScrollbar = Add(new Scrollbar(Orientation.Vertical) { Width = 1 }).DockToRight();
         horizontalScrollbar = Add(new Scrollbar(Orientation.Horizontal) { Height = 1 }).DockToBottom();
         AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
@@ -70,10 +70,10 @@ public class ScrollablePanel : ConsolePanel
     private void OnAddedToVisualTree()
     {
         Application.FocusChanged.Subscribe(FocusChanged, this);
-        SynchronizeForLifetime(nameof(HorizontalScrollUnits), UpdateScrollbars, this);
-        SynchronizeForLifetime(nameof(VerticalScrollUnits), UpdateScrollbars, this);
+        Sync(nameof(HorizontalScrollUnits), UpdateScrollbars, this);
+        Sync(nameof(VerticalScrollUnits), UpdateScrollbars, this);
         ScrollableContent.Subscribe(nameof(Bounds), UpdateScrollbars, this);
-        ScrollableContent.Controls.SynchronizeForLifetime(c => c.Subscribe(nameof(Bounds), UpdateScrollbars, c), (c) => { }, () => { }, this);
+        ScrollableContent.Controls.Sync(c => c.Subscribe(nameof(Bounds), UpdateScrollbars, c), (c) => { }, () => { }, this);
     }
 
     private void UpdateScrollbars()

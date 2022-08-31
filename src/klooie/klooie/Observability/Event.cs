@@ -51,7 +51,7 @@ public class Event
     /// </summary>
     /// <param name="handler">the callback</param>
     /// <param name="lifetimeManager">the lifetime of the subscription</param>
-    public void SynchronizeForLifetime(Action handler, ILifetimeManager lifetimeManager)
+    public void Sync(Action handler, ILifetimeManager lifetimeManager)
     {
         handler();
         Subscribe(handler, lifetimeManager);

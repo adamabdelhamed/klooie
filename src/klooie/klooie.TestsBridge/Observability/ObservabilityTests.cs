@@ -188,7 +188,7 @@ namespace ArgsTests.CLI.Observability
 
             using (var lifetime = new Lifetime())
             {
-                observable.Strings.SynchronizeForLifetime((s) => { addCalls++; }, (s) => { removeCalls++; }, () => { changedCalls++; }, lifetime);
+                observable.Strings.Sync((s) => { addCalls++; }, (s) => { removeCalls++; }, () => { changedCalls++; }, lifetime);
 
                 Assert.AreEqual(2, addCalls);
                 Assert.AreEqual(0, removeCalls);
@@ -222,9 +222,9 @@ namespace ArgsTests.CLI.Observability
             int numChildrenChanged = 0;
             int numChildrenAdded = 0;
             int numChildrenRemoved = 0;
-            observable.Children.SynchronizeForLifetime((c) =>
+            observable.Children.Sync((c) =>
             {
-                c.SynchronizeForLifetime(nameof(SomeOtherObservable.Name), () => 
+                c.Sync(nameof(SomeOtherObservable.Name), () => 
                 {
                     numChildrenChanged++;
                 }

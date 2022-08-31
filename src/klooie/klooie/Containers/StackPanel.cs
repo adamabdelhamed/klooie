@@ -60,7 +60,7 @@ public class StackPanel : ConsolePanel
         Controls.Changed.Subscribe(RedoLayout, this);
     }
 
-    private void Controls_Added(ConsoleControl obj) => obj.SynchronizeForLifetime(nameof(Bounds), RedoLayout, Controls.GetMembershipLifetime(obj));
+    private void Controls_Added(ConsoleControl obj) => obj.Sync(nameof(Bounds), RedoLayout, Controls.GetMembershipLifetime(obj));
     
     private void RedoLayout()
     {

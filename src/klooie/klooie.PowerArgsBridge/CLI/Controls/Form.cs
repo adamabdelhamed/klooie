@@ -159,8 +159,8 @@ namespace PowerArgs.Cli
                         textBox.Foreground = RGB.Black;
                     }
                     
-                    textBox.SynchronizeForLifetime(nameof(textBox.Value), () => property.SetValue(o, textBox.Value.ToString()), textBox);
-                    (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () =>
+                    textBox.Sync(nameof(textBox.Value), () => property.SetValue(o, textBox.Value.ToString()), textBox);
+                    (o as IObservableObject)?.Sync(property.Name, () =>
                     {
                         var valueRead = property.GetValue(o);
                         if (valueRead is ICanBeAConsoleString)
@@ -181,11 +181,11 @@ namespace PowerArgs.Cli
                         var value = (int)property.GetValue(o);
                         var slider = property.Attr<FormSliderAttribute>().Factory();
                         slider.Value = value;
-                        slider.SynchronizeForLifetime(nameof(slider.Value), () =>
+                        slider.Sync(nameof(slider.Value), () =>
                         {
                             property.SetValue(o, (int)slider.Value);
                         }, slider);
-                        (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () =>
+                        (o as IObservableObject)?.Sync(property.Name, () =>
                         {
                             var valueRead = (int)property.GetValue(o);
                             slider.Value = valueRead;
@@ -201,7 +201,7 @@ namespace PowerArgs.Cli
                             textBox.Background = RGB.White;
                             textBox.Foreground = RGB.Black;
                         }
-                        textBox.SynchronizeForLifetime(nameof(textBox.Value), () =>
+                        textBox.Sync(nameof(textBox.Value), () =>
                         {
                             if (textBox.Value.Length == 0)
                             {
@@ -216,7 +216,7 @@ namespace PowerArgs.Cli
                                 textBox.Value = property.GetValue(o).ToString().ToConsoleString();
                             }
                         }, textBox);
-                        (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () =>
+                        (o as IObservableObject)?.Sync(property.Name, () =>
                         {
                             var valueRead = property.GetValue(o);
                             if (valueRead is ICanBeAConsoleString)
@@ -264,7 +264,7 @@ namespace PowerArgs.Cli
                         textBox.Background = RGB.White;
                         textBox.Foreground = RGB.Black;
                     }
-                    textBox.SynchronizeForLifetime(nameof(textBox.Value), () =>
+                    textBox.Sync(nameof(textBox.Value), () =>
                     {
                         if (textBox.Value.Length == 0)
                         {
@@ -279,7 +279,7 @@ namespace PowerArgs.Cli
                             textBox.Value = property.GetValue(o).ToString().ToConsoleString();
                         }
                     }, textBox);
-                    (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () =>
+                    (o as IObservableObject)?.Sync(property.Name, () =>
                     {
                         var valueRead = property.GetValue(o);
                         if (valueRead is ICanBeAConsoleString)
@@ -336,7 +336,7 @@ namespace PowerArgs.Cli
                     var dropdown = new Dropdown(options);
                     dropdown.Width = Math.Min(40, options.Select(option => option.DisplayText.Length).Max() + 8);
                     dropdown.Subscribe(nameof(dropdown.Value), () => property.SetValue(o, dropdown.Value.Value), dropdown);
-                    (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () => dropdown.Value = options.Where(option => option.Value.Equals(property.GetValue(o))).Single(), dropdown);
+                    (o as IObservableObject)?.Sync(property.Name, () => dropdown.Value = options.Where(option => option.Value.Equals(property.GetValue(o))).Single(), dropdown);
                     editControl = dropdown;
                 }
                 else if (property.HasAttr<FormReadOnlyAttribute>() == false && property.PropertyType == typeof(RGB))
@@ -345,7 +345,7 @@ namespace PowerArgs.Cli
                     var dropdown = new ColorPicker();
                     dropdown.Width = Math.Min(40, Enums.GetEnumValues<ConsoleColor>().Select(option => option.ToString().Length).Max() + 8);
                     dropdown.Subscribe(nameof(dropdown.Value), () => property.SetValue(o, dropdown.Value), dropdown);
-                    (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () => dropdown.Value = (RGB)(property.GetValue(o)), dropdown);
+                    (o as IObservableObject)?.Sync(property.Name, () => dropdown.Value = (RGB)(property.GetValue(o)), dropdown);
                     editControl = dropdown;
                 }
                 else if (property.HasAttr<FormReadOnlyAttribute>() == false && property.PropertyType == typeof(bool))
@@ -359,7 +359,7 @@ namespace PowerArgs.Cli
                     }
 
                     toggle.Subscribe(nameof(toggle.On), () => property.SetValue(o, toggle.On), toggle);
-                    (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () => toggle.On = (bool)property.GetValue(o), toggle);
+                    (o as IObservableObject)?.Sync(property.Name, () => toggle.On = (bool)property.GetValue(o), toggle);
                     editControl = toggle;
                 }
                 else
@@ -367,7 +367,7 @@ namespace PowerArgs.Cli
                     var value = property.GetValue(o);
                     var valueString = value != null ? value.ToString().ToDarkGray() : "<null>".ToDarkGray();
                     var valueLabel = new Label() { CompositionMode = CompositionMode.BlendBackground, CanFocus = false, Text = valueString + " (read only)".ToDarkGray() };
-                    (o as IObservableObject)?.SynchronizeForLifetime(property.Name, () => valueLabel.Text = (property.GetValue(o) + "").ToConsoleString() + " (read only)".ToDarkGray(), valueLabel);
+                    (o as IObservableObject)?.Sync(property.Name, () => valueLabel.Text = (property.GetValue(o) + "").ToConsoleString() + " (read only)".ToDarkGray(), valueLabel);
 
                     editControl = valueLabel;
                 }
@@ -413,7 +413,7 @@ namespace PowerArgs.Cli
         {
             var formFieldStack = Add(new StackPanel() { Background = this.Background, Orientation = Orientation.Vertical, Margin = 1 }).Fill();
 
-            this.SynchronizeForLifetime(nameof(this.Bounds), () =>
+            this.Sync(nameof(this.Bounds), () =>
             {
                 var labelColumnWidth = ConsoleMath.Round(this.Width * this.Options.LabelColumnPercentage);
                 var valueColumnWidth = ConsoleMath.Round(this.Width * (1 - this.Options.LabelColumnPercentage));
@@ -480,7 +480,7 @@ namespace PowerArgs.Cli
             this.labelText = label;
             this.valueControl = valueControl;
             Ready.SubscribeOnce(Init);
-            valueControl.SynchronizeForLifetime(nameof(valueControl.Bounds), () => this.Height = Math.Max(1,valueControl.Height) , valueControl);
+            valueControl.Sync(nameof(valueControl.Bounds), () => this.Height = Math.Max(1,valueControl.Height) , valueControl);
         }
 
         private void Init()

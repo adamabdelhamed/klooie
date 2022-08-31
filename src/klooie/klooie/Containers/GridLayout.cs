@@ -148,7 +148,7 @@ public class GridLayout : ProtectedConsolePanel
             Rows = ParseSpec<GridRowDefinition>(rowSpec),
             Columns = ParseSpec<GridColumnDefinition>(columnSpec),
         };
-        this.SynchronizeForLifetime(nameof(Bounds), RefreshLayout, this);
+        this.Sync(nameof(Bounds), RefreshLayout, this);
         ProtectedPanel.Controls.Removed.Subscribe(HandleControlRemoved, this);
     }
 

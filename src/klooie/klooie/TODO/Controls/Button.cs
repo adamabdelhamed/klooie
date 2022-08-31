@@ -75,8 +75,8 @@ public class Button : ConsoleControl
     public Button()
     {
         Height = 1;
-        this.SynchronizeForLifetime(nameof(Text), UpdateWidth, this);
-        this.SynchronizeForLifetime(nameof(Shortcut), UpdateWidth, this);
+        this.Sync(nameof(Text), UpdateWidth, this);
+        this.Sync(nameof(Shortcut), UpdateWidth, this);
 
         this.AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
         this.KeyInputReceived.Subscribe(OnKeyInputReceived, this);
