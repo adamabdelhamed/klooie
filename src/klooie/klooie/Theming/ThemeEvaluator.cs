@@ -4,36 +4,40 @@ using System.Reflection;
 namespace klooie.Theming;
 internal static class ThemeEvaluator
 {
-    public static void Apply(Style[] styles, ConsolePanel root = null, ILifetimeManager lt = null)
+    public static ThemeApplicationTracker Apply(Style[] styles, ConsolePanel root = null, ILifetimeManager lt = null)
     {
+        styles.For((s, i) => s.Index = i);
+        var tracker = new ThemeApplicationTracker(styles);
         root = root ?? ConsoleApp.Current.LayoutRoot;
         lt = lt ?? root.Manager;
 
         // Evaluates the root, all descendents, and any future descendents
 
-        EvaulateAllControls(root, lt, styles);
+        EvaulateAllControls(root, lt, styles, tracker);
         ConsoleApp.Current.ControlAdded.SubscribeForLifetime(c =>
         {
-            if (IsInsideRoot(c, root) == false) return;
-            EvaluateControl(c, lt, styles);
+            if (ShouldEvaluate(c, root) == false) return;
+            EvaluateControl(c, lt, styles, tracker);
         }, lt);
+        return tracker;
     }
 
-    private static void EvaulateAllControls(ConsolePanel root, ILifetimeManager applyLifetime, Style[] styles)
+    private static void EvaulateAllControls(ConsolePanel root, ILifetimeManager applyLifetime, Style[] styles, ThemeApplicationTracker tracker)
     {
         foreach (var control in GetAllControls())
         {
-            if (control != root && IsInsideRoot(control, root) == false) continue;
-            EvaluateControl(control, applyLifetime, styles);
+            if (ShouldEvaluate(control,root) == false) continue;
+          
+            EvaluateControl(control, applyLifetime, styles, tracker);
         }
     }
 
-    private static void EvaluateControl(ConsoleControl c, ILifetimeManager lt, Style[] styles) => c.GetType()
+    private static void EvaluateControl(ConsoleControl c, ILifetimeManager lt, Style[] styles, ThemeApplicationTracker tracker) => c.GetType()
         .GetProperties()
         .Where(p => p.GetGetMethod() != null && p.GetSetMethod() != null)
-        .ForEach(p => EvaluateProperty(c, p, styles, lt));
+        .ForEach(p => EvaluateProperty(c, p, styles, lt, tracker));
 
-    private static void EvaluateProperty(ConsoleControl c, PropertyInfo property, Style[] styles, ILifetimeManager lt)
+    private static void EvaluateProperty(ConsoleControl c, PropertyInfo property, Style[] styles, ILifetimeManager lt, ThemeApplicationTracker tracker)
     {
         var applicableStyles = styles
             .Select(style => new { Style = style, Score = ScoreForSpecificity(style,c, property.Name) })
@@ -48,12 +52,14 @@ internal static class ThemeEvaluator
 
             if (tagsNeedToBeMonitored)
             {
+                tracker.MonitoredApplicationCounts[mostSpecificStyle.Style.Index]++;
                 var evalLifetime = Lifetime.EarliestOf(lt);
-                MonitorTags(c, property, styles, lt, evalLifetime);
+                MonitorTags(c, property, styles, lt, evalLifetime, tracker);
                 mostSpecificStyle.Style.ApplyPropertyValue(c, evalLifetime);
             }
             else if(mostSpecificStyle.Score > 0)
             {
+                tracker.RawApplicationCounts[mostSpecificStyle.Style.Index]++;
                 mostSpecificStyle.Style.ApplyPropertyValue(c, lt);
             }
             else
@@ -61,6 +67,13 @@ internal static class ThemeEvaluator
 
             }
         }
+    }
+
+    private static bool ShouldEvaluate(ConsoleControl c, ConsolePanel root)
+    {
+        var isInScope = c == root || IsInsideRoot(c, root);
+        var shouldBeIgnored = ShouldBeIgnored(c, root);
+         return isInScope == true && shouldBeIgnored == false;
     }
 
     private static int? ScoreForSpecificity(Style s, ConsoleControl c, string propertyName)
@@ -97,7 +110,7 @@ internal static class ThemeEvaluator
         return ConsoleMath.Round(score);
     }
 
-    private static void MonitorTags(ConsoleControl c, PropertyInfo prop, Style[] styles, ILifetimeManager themeLt, Lifetime evalLifetime)
+    private static void MonitorTags(ConsoleControl c, PropertyInfo prop, Style[] styles, ILifetimeManager themeLt, Lifetime evalLifetime, ThemeApplicationTracker tracker)
     {
         // invalidate if any of my parents tags change
         foreach (var parent in ParentChain(c))
@@ -105,7 +118,7 @@ internal static class ThemeEvaluator
             parent.TagsChanged.SubscribeForLifetime(()=>
             {
                 evalLifetime.Dispose();
-                EvaluateProperty(c, prop, styles, themeLt);
+                EvaluateProperty(c, prop, styles, themeLt, tracker);
             }, evalLifetime);
         }
 
@@ -113,7 +126,7 @@ internal static class ThemeEvaluator
         c.TagsChanged.SubscribeForLifetime(()=>
         {
             evalLifetime.Dispose();
-            EvaluateProperty(c, prop, styles, themeLt);
+            EvaluateProperty(c, prop, styles, themeLt, tracker);
         }, evalLifetime);
     }
 
@@ -200,6 +213,20 @@ internal static class ThemeEvaluator
         }
     }
 
+    private static bool ShouldBeIgnored(ConsoleControl c, ConsolePanel root)
+    {
+        var currentParent = c.Parent;
+        while (currentParent != null && currentParent != root.Parent)
+        {
+            if(currentParent.GetType().Attrs<ThemeIgnoreAttribute>().Where(attr => Is(c,attr.ToIgnore)).Any())
+            {
+                return true;
+            }
+            currentParent = currentParent.Parent;
+        }
+        return false;
+    }
+
     private static int? InsideOfDelta(ConsoleControl c, string ifInsideOfTag)
     {
         var parent = c.Parent;
@@ -227,4 +254,38 @@ internal static class ThemeEvaluator
     }
 
     private static bool Is(ConsoleControl c, Type t) => c.GetType() == t || c.GetType().IsSubclassOf(t);
+}
+
+internal class ThemeApplicationTracker
+{
+    public int[] MonitoredApplicationCounts { get; private set; }
+    public int[] RawApplicationCounts { get; private set; }
+
+    private Style[] styles;
+    public ThemeApplicationTracker(Style[] styles)
+    {
+        this.styles = styles;
+        MonitoredApplicationCounts = new int[styles.Length];
+        RawApplicationCounts = new int[styles.Length];
+        for (var i = 0; i < styles.Length; i++)
+        {
+            MonitoredApplicationCounts[i] =0;
+            RawApplicationCounts[i] = 0;
+        }
+    }
+
+    public IEnumerable<(Style Style, int MonitoredCount, int RawCount, int TotalCount)> GetUsage()
+    {
+        for (var i = 0; i < styles.Length; i++)
+        {
+            var mon = MonitoredApplicationCounts[i];
+            var raw=RawApplicationCounts[i];
+            var total = mon + raw;
+            yield return (styles[i], mon, raw, total);
+        }
+    }
+
+    public IEnumerable<Style> WhereNeverApplied() => GetUsage()
+        .Where(u => u.TotalCount == 0)
+        .Select(u => u.Style);
 }

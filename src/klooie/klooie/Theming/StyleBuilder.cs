@@ -24,7 +24,7 @@ public class StyleBuilder
 
     private List<Style> styles = new List<Style>();
 
-    private StyleBuilder() { }
+    internal StyleBuilder() { }
 
     /// <summary>
     /// Creates a new StyleBuilder
@@ -78,7 +78,7 @@ public class StyleBuilder
     /// <typeparam name="T">the anscestor type</typeparam>
     /// <returns>this builder</returns>
     /// <exception cref="InvalidOperationException">If a target is not set or if a previous Within is still pending</exception>
-    public StyleBuilder Within<T>() where T : Container
+    public virtual StyleBuilder Within<T>() where T : Container
     {
         if (currentType == null)
         {
@@ -101,7 +101,7 @@ public class StyleBuilder
     /// <param name="tag">the anscestor tag</param>
     /// <returns>this builder</returns>
     /// <exception cref="InvalidOperationException">If a target is not set or if a previous WithinTag is still pending</exception>
-    public StyleBuilder WithinTag(string tag)
+    public virtual StyleBuilder WithinTag(string tag)
     {
         if (currentType == null)
         {
@@ -123,28 +123,28 @@ public class StyleBuilder
     /// </summary>
     /// <param name="color">the foreground color</param>
     /// <returns>this builder</returns>
-    public StyleBuilder FG(RGB color) => Property(nameof(ConsoleControl.Foreground), color);
+    public virtual StyleBuilder FG(RGB color) => Property(nameof(ConsoleControl.Foreground), color);
 
     /// <summary>
     /// Adds a style for the Background property with the given value
     /// </summary>
     /// <param name="color">the background color</param>
     /// <returns>this builder</returns>
-    public StyleBuilder BG(RGB color) => Property(nameof(ConsoleControl.Background), color);
+    public virtual StyleBuilder BG(RGB color) => Property(nameof(ConsoleControl.Background), color);
 
     /// <summary>
     /// Adds a style for the BorderColor property with the given value
     /// </summary>
     /// <param name="color">the border color</param>
     /// <returns>this builder</returns>
-    public StyleBuilder Border(RGB color) => Property(nameof(BorderPanel.BorderColor), color);
+    public virtual StyleBuilder Border(RGB color) => Property(nameof(BorderPanel.BorderColor), color);
 
     /// <summary>
     /// Adds a style for the FocusColor property with the given value
     /// </summary>
     /// <param name="color">the focus color</param>
     /// <returns>this builder</returns>
-    public StyleBuilder Focus(RGB color) => Property(nameof(ConsoleControl.FocusColor), color);
+    public virtual StyleBuilder Focus(RGB color) => Property(nameof(ConsoleControl.FocusColor), color);
 
     /// <summary>
     /// Adds a style for the given property with the given value
@@ -153,7 +153,7 @@ public class StyleBuilder
     /// <param name="value">the style value</param>
     /// <returns>this builder</returns>
     /// <exception cref="InvalidOperationException">if no target is set</exception>
-    public StyleBuilder Property(string name, object value)
+    public virtual StyleBuilder Property(string name, object value)
     {
         if (currentType == null)
         {
@@ -171,7 +171,7 @@ public class StyleBuilder
     /// </summary>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public StyleBuilder Clear()
+    public virtual StyleBuilder Clear()
     {
         if (currentType == null)
         {
@@ -203,7 +203,7 @@ public class StyleBuilder
     /// so that you can return to the previous scope
     /// </summary>
     /// <returns>this builder</returns>
-    public StyleBuilder Pop() => Pop(true, out int ignored, skip: 1);
+    public virtual StyleBuilder Pop() => Pop(true, out int ignored, skip: 1);
 
     private StyleBuilder Pop(bool assertNoPendingStyles, out int advanced, int skip = 0)
     {
@@ -257,7 +257,7 @@ public class StyleBuilder
         return this;
     }
 
-    public Style[] ToArray() => styles.ToArray();
+    public virtual Style[] ToArray() => styles.ToArray();
 
 
     private bool ArePendingStyles()
@@ -278,4 +278,22 @@ public class StyleBuilder
         currentWithin = null;
         currentWithinTag = null;
     }
+}
+
+public class StyleBuilder<T> : StyleBuilder where T : StyleBuilder<T>
+{
+    private StyleBuilder wrapped;
+    public StyleBuilder(StyleBuilder toWrap) => this.wrapped = toWrap;
+    public new T BG(RGB color) { wrapped.BG(color); return (T)this; }
+    public new StyleBuilder<T> FG(RGB color) { wrapped.FG(color); return this; }
+    public new T For<T2>() where T2 : ConsoleControl { wrapped.For<T2>(); return (T)this; }
+    public new T Border(RGB color) { wrapped.Border(color); return (T)this; }
+    public new T Clear() { wrapped.Clear(); return (T)this; }
+    public new T Focus(RGB color) { wrapped.Focus(color); return (T)this; }
+    public new T Pop() { wrapped.Pop(); return (T)this; }
+    public new T Property(string name, object value) { wrapped.Property(name,value); return (T)this; }
+    public new T Within<T2>() where T2 : Container { wrapped.Within<T2>(); return (T)this; }
+    public new T Tag(string tag) { wrapped.Tag(tag); return (T)this; }
+    public new T WithinTag(string tag) { wrapped.WithinTag(tag); return (T)this; }
+    public override Style[] ToArray() => wrapped.ToArray();
 }

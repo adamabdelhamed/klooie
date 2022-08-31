@@ -2,6 +2,7 @@
 using PowerArgs;
 using PowerArgs.Cli;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace klooie.tests;
@@ -97,4 +98,12 @@ public class ConsoleControlTests
         });
         app.Run();
     }
+
+    [TestMethod]
+    public void ConsoleControl_TestIds() => AppTest.RunHeadless(async () =>
+    {
+        var control = ConsoleApp.Current.LayoutRoot.Add(new ConsoleControl("1234"));
+        Assert.AreSame(control, ConsoleApp.Current.LayoutRoot.Controls.Where(c => c.Id == "1234").Single());
+        ConsoleApp.Current.Stop();
+    });
 }

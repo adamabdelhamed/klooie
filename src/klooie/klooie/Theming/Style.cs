@@ -8,6 +8,10 @@ namespace klooie.Theming;
 public class Style
 {
     /// <summary>
+    /// used internally for usage tracking
+    /// </summary>
+    internal int Index { get; set; }
+    /// <summary>
     /// the type of control that the style applies to
     /// </summary>
     public Type Type { get; private set; }

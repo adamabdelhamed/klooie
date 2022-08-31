@@ -62,6 +62,7 @@ public class ConsoleControl : Rectangular
     private bool _canFocus;
     private bool _isVisible;
     private object _tag;
+    private string _id;
     private bool hasBeenAddedToVisualTree;
     private HashSet<string> tags;
 
@@ -75,6 +76,18 @@ public class ConsoleControl : Rectangular
     /// Controls how controls are painted when multiple controls overlap
     /// </summary>
     public CompositionMode CompositionMode { get; set; } = CompositionMode.PaintOver;
+
+    /// <summary>
+    /// Gets the Id of the control which can only be set at initialization time
+    /// </summary>
+    public string Id { get => _id; 
+        set
+        {
+            if (_id != null) throw new ArgumentException("Id already set");
+            if (value == null) throw new ArgumentNullException("value cannot be null");
+            SetHardIf(ref _id, value, _id != value);
+        }
+    }
 
     /// <summary>
     /// An event that fires after this control gets focus
@@ -244,6 +257,35 @@ public class ConsoleControl : Rectangular
     /// Gets this controls bitmap, which can be painted onto its parent
     /// </summary>
     public ConsoleBitmap Bitmap { get; internal set; }
+
+    /// <summary>
+    /// Creates a ConsoleControl with an Id
+    /// </summary>
+    /// <param name="id">the id</param>
+    public ConsoleControl(string id) : this()
+    {
+        this._id = id;
+    }
+
+    /// <summary>
+    /// Creates a ConsoleControl with an initial set of tags
+    /// </summary>
+    /// <param name="initialTags">the tags</param>
+    public ConsoleControl(IEnumerable<string> initialTags) : this()
+    {
+        AddTags(initialTags);
+    }
+
+    /// <summary>
+    /// Creates a ConsoleControl with an Id and an initial set of tags
+    /// </summary>
+    /// <param name="id">the id</param>
+    /// <param name="initialTags">the tags</param>
+    public ConsoleControl(string id, IEnumerable<string> initialTags) : this()
+    {
+        this._id = id;
+        AddTags(initialTags);
+    }
 
     /// <summary>
     /// Creates a 1x1 ConsoleControl

@@ -7,17 +7,29 @@ namespace klooie.Theming;
 /// </summary>
 public abstract class Theme
 {
+    private ThemeApplicationTracker tracker;
+
     /// <summary>
     /// Gets the styles that will be applied
     /// </summary>
     public abstract Style[] Styles { get; }
-
+    
     /// <summary>
     /// Applies this theme to the current console app
     /// </summary>
     /// <param name="root">the panel to theme, defaults to the app's layout root</param>
     /// <param name="lt">how long should this theme be applied, defaults to the current root's lifetime</param>
-    public virtual void Apply(ConsolePanel root = null, ILifetimeManager lt = null) => ThemeEvaluator.Apply(Styles, root, lt);
+    public virtual void Apply(ConsolePanel root = null, ILifetimeManager lt = null)
+    {
+        tracker = ThemeEvaluator.Apply(Styles, root, lt);
+        (lt ?? root)?.OnDisposed(() => tracker = null);
+    }
+
+    /// <summary>
+    /// Gets all styles that have never been applied
+    /// </summary>
+    /// <returns>an enumerable of styles that have never been applied</returns>
+    public IEnumerable<Style> WhereNeverApplied() => tracker?.WhereNeverApplied() ?? Styles;
 
     /// <summary>
     /// Creates a theme given a set of styles.
