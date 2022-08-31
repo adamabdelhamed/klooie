@@ -78,7 +78,7 @@ public class ConsolePanel : Container
     {
         foreach (var control in sortedControls)
         {
-            if (control.Width > 0 && control.Height > 0 && control.IsVisible)
+            if (control.Width > 0 && control.Height > 0 && control.IsVisible && IsInView(control))
             {
                 Compose(control);
             }

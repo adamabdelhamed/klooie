@@ -143,4 +143,12 @@ public class Camera : ConsolePanel
     /// <returns>the control coordinates, transformed by the camera position</returns>
     protected override (int X, int Y) Transform(ConsoleControl c) =>
         (ConsoleMath.Round(c.Bounds.Left - cameraLocation.Left), ConsoleMath.Round(c.Bounds.Top - cameraLocation.Top));
+
+    /// <summary>
+    /// Returns true if the control is within the camera bounds
+    /// </summary>
+    /// <param name="c">the control to test</param>
+    /// <returns>true if the control is within the camera bounds</returns>
+    protected override bool IsInView(ConsoleControl c) => 
+        new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height).Touches(c.Bounds);
 }

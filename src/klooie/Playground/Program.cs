@@ -1,59 +1,21 @@
-﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Running;
-using klooie;
+﻿using klooie;
 using PowerArgs;
+using PowerArgs.Cli;
 
+var app = new ConsoleApp();
+app.Invoke(()=>
+{ 
+var camera = app.LayoutRoot.Add(new Camera()).Fill();
+camera.EnableKeyboardPanning();
+var small = camera.Add(new ConsoleControl() { Background = RGB.Red }).CenterBoth();
+var slow = camera.Add(new SlowControl() { X = 2, Y = 2, Background = RGB.Green });
+});
+app.Run();
 
-public class Program
+public class SlowControl : ConsoleControl
 {
-    public static void Main(string[] args)
+    protected override void OnPaint(ConsoleBitmap context)
     {
-        //BenchmarkRunner.Run<EventBenchmark>();
-        //return;
-        var b = new EventBenchmark();
-        b.Setup();
-        for(var i = 0; i < 100000; i++)
-        {
-            b.BenchmarkFire();
-        }
+        Thread.Sleep(300);
     }
 }
-
-[MemoryDiagnoser]
-public class EventBenchmark
-{
-    public int Count => count;
-
-    int numberOfEvents = 1;
-    int numberOfSubscribersPerEvent = 100;
-    int numberOfFires = 50;
-    int count = 0;
-    private Event[] events;
-
-    [GlobalSetup]
-    public void Setup()
-    {
-        events = new Event[numberOfEvents];
-        for(var i = 0; i < numberOfEvents; i++)
-        {
-            events[i] = new Event();
-            for (var j = 0; j < numberOfSubscribersPerEvent; j++)
-            {
-                events[i].Subscribe(() => count++, Lifetime.Forever);
-            }
-        }
-    }
-
-    [Benchmark]
-    public void BenchmarkFire()
-    {
-        for(var i = 0; i < events.Length; i++)
-        {
-            for (var j = 0; j < numberOfFires; j++)
-            {
-                events[i].Fire();
-            }
-        }
-    }
-}
-
