@@ -116,6 +116,13 @@ public class Rectangular : ObservableObject, ICollider
         Bounds = new RectF(Bounds.Left, Bounds.Top, w, h);
     }
 
+    public void MoveCenterTo(float x, float y)
+    {
+        var left = x - Width / 2f;
+        var top = y - Height / 2f;
+        MoveTo(left, top);
+    }
+
     public void ResizeBy(float w, float h)
     {
         Bounds = new RectF(Bounds.Left, Bounds.Top, Width + w, Height + h);

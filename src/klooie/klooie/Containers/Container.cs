@@ -50,7 +50,7 @@ public abstract class Container : ConsoleControl
     /// </summary>
     /// <param name="c">the control</param>
     /// <returns>true if the control is in view and should be painted</returns>
-    protected virtual bool IsInView(ConsoleControl c) => new RectF(0, 0, Width, Height).Touches(c.Bounds);
+    public virtual bool IsInView(ConsoleControl c) => new RectF(0, 0, Width, Height).Touches(c.Bounds);
 
     /// <summary>
     /// Visits every control in the control tree, recursively, using the visit action provided

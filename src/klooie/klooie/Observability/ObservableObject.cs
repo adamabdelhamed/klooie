@@ -163,12 +163,13 @@ public class ObservableObject : Lifetime, IObservableObject
     /// <param name="value">the new value</param>
     /// <param name="condition">false causes this method to exit early</param>
     /// <param name="name">the name of the property to set</param>
-    public void SetHardIf<T>(ref T current, T value, bool condition, [CallerMemberName] string name = "")
+    public bool SetHardIf<T>(ref T current, T value, bool condition, [CallerMemberName] string name = "")
     {
-        if (condition == false) return;
+        if (condition == false) return false;
         current = value;
         CurrentlyChangingPropertyName = name;
         FirePropertyChanged(name);
+        return true;
     }
 
     /// <summary>

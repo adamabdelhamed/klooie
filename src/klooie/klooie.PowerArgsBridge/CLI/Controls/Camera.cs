@@ -29,7 +29,10 @@ public class Camera : ConsolePanel
                 if (top + Height > BigBounds.Height) top = BigBounds.Bottom - Height;
             }
             var newVal = new LocF(left, top);
-            SetHardIf(ref cameraLocation, newVal, cameraLocation != newVal);
+            if(SetHardIf(ref cameraLocation, newVal, cameraLocation != newVal))
+            {
+                FirePropertyChanged(nameof(CameraBounds));
+            }
         } 
     }
 
@@ -149,6 +152,6 @@ public class Camera : ConsolePanel
     /// </summary>
     /// <param name="c">the control to test</param>
     /// <returns>true if the control is within the camera bounds</returns>
-    protected override bool IsInView(ConsoleControl c) => 
+    public override bool IsInView(ConsoleControl c) => 
         new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height).Touches(c.Bounds);
 }

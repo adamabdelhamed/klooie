@@ -76,7 +76,7 @@ public partial class ConsoleApp : EventLoop
     /// <summary>
     /// Gets the current paint rate for the app
     /// </summary>
-    public int PaintRequestsProcessedPerSecond => paintRateMeter != null ? paintRateMeter.CurrentFPS : 0;
+    public int FramesPerSecond => paintRateMeter != null ? paintRateMeter.CurrentFPS : 0;
 
     /// <summary>
     /// Gets the total number of times a paint actually happened
@@ -317,8 +317,6 @@ public partial class ConsoleApp : EventLoop
             {
                 paintRequestsCopy[i].SetResult(true);
             }
-
-            paintRateMeter.Increment();
             paintRequested = false;
         }
         else if (paintRequested)
@@ -460,6 +458,7 @@ public partial class ConsoleApp : EventLoop
         {
             Bitmap.Paint();
         }
+        paintRateMeter.Increment();
         AfterPaint.Fire();
     }
 
