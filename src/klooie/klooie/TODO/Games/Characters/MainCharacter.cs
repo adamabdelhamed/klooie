@@ -1,10 +1,6 @@
-﻿using PowerArgs;
-using System;
-using System.Threading.Tasks;
+﻿namespace klooie.Gaming;
 
-namespace klooie.Gaming;
-
-    public enum AimMode
+public enum AimMode
     {
         Auto,
         Manual

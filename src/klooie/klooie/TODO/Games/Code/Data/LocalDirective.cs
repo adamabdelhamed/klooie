@@ -1,7 +1,4 @@
-﻿using PowerArgs;
-using System.Collections.Generic;
-using System.Linq;
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public class LocalDirective : Directive
 {
     [ArgRequired]

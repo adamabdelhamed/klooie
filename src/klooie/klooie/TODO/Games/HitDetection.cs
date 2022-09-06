@@ -1,10 +1,4 @@
-﻿using klooie;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 public enum HitType
 {
     None = 0,

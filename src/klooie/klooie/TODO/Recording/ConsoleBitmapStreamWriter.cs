@@ -1,7 +1,4 @@
-﻿using System.Text;
-
-using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 /// <summary>
 /// An object that can write console bitmap video data to a stream
 /// </summary>

@@ -1,6 +1,4 @@
-﻿using PowerArgs;
-
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 
 public class Process
 {

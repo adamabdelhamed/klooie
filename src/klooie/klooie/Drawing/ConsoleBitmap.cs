@@ -1,6 +1,4 @@
-﻿using PowerArgs;
-
-namespace klooie;
+﻿namespace klooie;
 /// <summary>
 /// A data structure representing a 2d image that can be pained in
 /// a console window

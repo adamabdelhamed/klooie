@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 
 /// <summary>
 /// Options for a dialog that shows a text box

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
     /// <summary>
     /// A control that toggles between on and off

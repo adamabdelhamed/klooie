@@ -1,6 +1,4 @@
-﻿using PowerArgs;
-
-namespace klooie.Gaming;
+﻿namespace klooie.Gaming;
 
 public class GameCollider : ConsolePanel
 {
@@ -171,4 +169,6 @@ public static class IColliderExtensions
         return c.GetObstacles();
     }
 }
+
+
 

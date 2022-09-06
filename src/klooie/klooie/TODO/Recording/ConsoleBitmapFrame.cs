@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 /// <summary>
 /// The base class for a console bitmap frame
 /// </summary>

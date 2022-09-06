@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 
 /// <summary>
 /// A panel that can scroll its content. Your responsibility is to

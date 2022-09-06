@@ -1,9 +1,4 @@
 ﻿using PowerArgs;
-using PowerArgs.Cli;
-using PowerArgs.Cli.Physics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace PowerArgs.Cli
 {

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Text.RegularExpressions;
-using PowerArgs;
+﻿using System.Text.RegularExpressions;
 namespace klooie;
 /// <summary>
 /// A class that represents a keyboard shortcut that can be activate a control that does not have focus

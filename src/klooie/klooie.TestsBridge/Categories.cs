@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace ArgsTests
+﻿namespace ArgsTests
 {
     public static class Categories
     {

@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public class LineNumberControl : GameCollider
 {
     public CodeDisplayState State { get; set; } = CodeDisplayState.Normal;

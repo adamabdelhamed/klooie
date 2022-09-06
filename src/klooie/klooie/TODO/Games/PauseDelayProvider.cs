@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie.Gaming;
+﻿namespace klooie.Gaming;
 internal class PauseDelayProvider : IDelayProvider
 {
     private PauseManager manager;

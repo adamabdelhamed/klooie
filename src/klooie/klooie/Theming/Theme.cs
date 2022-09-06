@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie.Theming;
+﻿namespace klooie.Theming;
 
 /// <summary>
 /// A base for all themes that can be used to style ConsoleApps in a way that makes it

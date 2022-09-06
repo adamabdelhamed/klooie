@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
     public abstract class CompactConsole : ConsolePanel
     {

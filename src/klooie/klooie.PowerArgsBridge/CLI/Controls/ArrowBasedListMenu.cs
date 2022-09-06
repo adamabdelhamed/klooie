@@ -1,9 +1,4 @@
-﻿using PowerArgs.Cli;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace PowerArgs.CLI.Controls
+﻿namespace PowerArgs.CLI.Controls
 {
     public class ArrowBasedListMenu<T> : ProtectedConsolePanel where T : class
     {

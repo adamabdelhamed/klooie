@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace klooie;
+﻿namespace klooie;
 
 public class PropertyChangedSubscription : Lifetime
 {

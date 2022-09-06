@@ -1,8 +1,6 @@
 ﻿
 using klooie.Gaming;
-using klooie;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PowerArgs;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

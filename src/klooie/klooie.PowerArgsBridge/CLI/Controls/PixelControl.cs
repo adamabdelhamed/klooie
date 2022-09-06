@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
     /// <summary>
     /// A control that renders a single pixel

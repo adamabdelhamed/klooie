@@ -1,7 +1,6 @@
 ﻿using klooie.Gaming;
 using System.Diagnostics;
 namespace klooie;
-using PowerArgs;
 public class Velocity
 {
     internal bool haveMovedSinceLastHitDetection = true;

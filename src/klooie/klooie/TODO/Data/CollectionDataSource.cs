@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace klooie;
+﻿namespace klooie;
 public abstract class CollectionDataSource
 {
     public event Action DataChanged;

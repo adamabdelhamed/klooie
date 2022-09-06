@@ -1,6 +1,4 @@
-﻿using PowerArgs;
-
-namespace klooie.Theming;
+﻿namespace klooie.Theming;
 
 /// <summary>
 /// A rule that targets a property on a ConsoleControl's property

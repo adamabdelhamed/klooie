@@ -1,8 +1,4 @@
-﻿using PowerArgs;
-using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text.RegularExpressions;
 
 namespace klooie.Gaming.Code;
 public class TimeThreadOptions

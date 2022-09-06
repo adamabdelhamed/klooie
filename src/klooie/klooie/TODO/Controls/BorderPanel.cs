@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 /// <summary>
 /// A panel that will have a uniform colored border around it
 /// </summary>

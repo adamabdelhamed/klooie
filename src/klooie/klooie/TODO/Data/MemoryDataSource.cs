@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 public class MemoryDataSource : CollectionDataSource
 {
     public List<object> Items { get; set; }

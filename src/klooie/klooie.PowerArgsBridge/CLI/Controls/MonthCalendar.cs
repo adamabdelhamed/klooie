@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
     /// <summary>
     /// Options for the MonthCalendar control

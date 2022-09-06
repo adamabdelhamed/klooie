@@ -1,6 +1,4 @@
-﻿using PowerArgs;
-
-namespace klooie;
+﻿namespace klooie;
 public class Force2 : Lifetime
 {
     public float Accelleration { get; set; }

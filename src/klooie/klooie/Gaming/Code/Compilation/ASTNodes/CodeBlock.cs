@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public class CodeBlock : Block
 {
     private List<IStatement> ExecutableStatements => Statements

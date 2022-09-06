@@ -1,9 +1,4 @@
-﻿using PowerArgs;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public abstract class FunctionDirective : Directive
 {
     public string Name { get; set; }

@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie.tests;
+﻿namespace klooie.tests;
 
 public static class AppTest
 {

@@ -1,10 +1,6 @@
-﻿using PowerArgs;
-using System.Collections.Generic;
-using System.Linq;
+﻿namespace klooie.Gaming;
 
-namespace klooie.Gaming;
-
-    public class AutoTargetingOptions
+public class AutoTargetingOptions
     {
         public Character Source { get; set; }
         public string TargetTag { get; set; }

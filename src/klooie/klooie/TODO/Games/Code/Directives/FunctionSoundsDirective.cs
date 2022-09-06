@@ -1,8 +1,4 @@
-﻿using PowerArgs;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public class FunctionSoundsDirective : FunctionDirective
 {
     [ArgIgnore]

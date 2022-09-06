@@ -1,13 +1,10 @@
-using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using PowerArgs;
 namespace klooie;
 
-    /// <summary>
-    /// Options for doing animations
-    /// </summary>
-    public abstract class AnimatorOptions
+/// <summary>
+/// Options for doing animations
+/// </summary>
+public abstract class AnimatorOptions
     {
         /// <summary>
         /// The starting value of the animated property

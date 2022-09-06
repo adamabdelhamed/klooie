@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 
 /// <summary>
 /// A console control that has nested control within its bounds

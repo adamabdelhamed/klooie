@@ -1,12 +1,8 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace PowerArgs
-{  
+﻿namespace PowerArgs
+{
     /// <summary>
-   /// A class that can be used to ensure an action only executes after a burst of triggers ends.
-   /// </summary>
+    /// A class that can be used to ensure an action only executes after a burst of triggers ends.
+    /// </summary>
     public class AwaitActionDebouncer
     {
         private TimeSpan burstTimeWindow;

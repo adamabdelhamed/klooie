@@ -1,13 +1,10 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
-using PowerArgs.Cli;
 using PowerArgs;
 using System.Threading;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using System.Text;
-using klooie;
 using klooie.tests;
 
 namespace ArgsTests.CLI.Recording

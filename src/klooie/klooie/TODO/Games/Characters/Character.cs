@@ -1,10 +1,7 @@
-﻿using PowerArgs;
-using System.Runtime.CompilerServices;
-
-namespace klooie.Gaming;
+﻿namespace klooie.Gaming;
 
 
-    public interface IAmMass
+public interface IAmMass
     {
         GameCollider Parent { get; }
     }

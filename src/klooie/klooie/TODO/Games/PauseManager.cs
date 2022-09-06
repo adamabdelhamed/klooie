@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using PowerArgs;
 namespace klooie.Gaming;
 internal class PauseManager
 {

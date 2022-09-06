@@ -1,5 +1,4 @@
 ﻿namespace klooie;
-using PowerArgs;
 public class Friction2 : Lifetime
 {
     public const int DefaultFrictionEvalFrequency = 50;

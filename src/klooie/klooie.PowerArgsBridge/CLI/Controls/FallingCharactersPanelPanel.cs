@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
     public class FallingCharactersPanel : ConsolePanel
     {

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
     /// <summary>
     /// A control that animates (or spins). It can be used to let the user know that the system

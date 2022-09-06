@@ -1,9 +1,6 @@
-﻿using PowerArgs;
-using System.Linq;
+﻿namespace klooie.Gaming;
 
-namespace klooie.Gaming;
-
-    public interface IInventoryItem
+public interface IInventoryItem
     {
         ConsoleString DisplayName { get; }
         Character Holder { get; set; }

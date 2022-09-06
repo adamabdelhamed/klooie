@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 /// <summary>
 /// A control that lets the user provide text input
 /// </summary>

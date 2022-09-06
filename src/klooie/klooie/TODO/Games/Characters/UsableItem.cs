@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie.Gaming;
+﻿namespace klooie.Gaming;
 public abstract class UsableItem : IInventoryItem
 {
     public abstract ConsoleString DisplayName { get; }

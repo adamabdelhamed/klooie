@@ -1,7 +1,4 @@
-﻿using PowerArgs;
-using System.Threading.Tasks;
-
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public class CodeHPDirective : EventDrivenDirective
 {
     [ArgDefaultValue(10)]

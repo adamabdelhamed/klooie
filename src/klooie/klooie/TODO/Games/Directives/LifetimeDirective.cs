@@ -1,6 +1,4 @@
-﻿using PowerArgs;
-
-namespace klooie.Gaming;
+﻿namespace klooie.Gaming;
 public class CrossLevelLifetime : Lifetime { }
 
 public abstract class LifetimeDirective : EventDrivenDirective

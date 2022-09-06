@@ -1,10 +1,4 @@
-﻿using PowerArgs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public class DisableFunctionDirective : EventDrivenDirective
 {
     private Function myFunction;

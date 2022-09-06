@@ -1,9 +1,4 @@
-﻿using PowerArgs.Cli.Physics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
     /// <summary>
     /// The options for the XYChart control

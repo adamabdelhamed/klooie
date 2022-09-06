@@ -1,9 +1,6 @@
-﻿using PowerArgs;
-using System;
+﻿namespace klooie.Gaming.Code;
 
-namespace klooie.Gaming.Code;
-
-    public enum EvalOperator
+public enum EvalOperator
     {
         Equals,
         NotEquals,

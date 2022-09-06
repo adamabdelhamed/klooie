@@ -1,8 +1,5 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
-
-using PowerArgs;
 namespace klooie;
 /// <summary>
 /// The code that converts console bitmap frames from their in memory structure to lines of text, and vice versa

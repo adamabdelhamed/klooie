@@ -1,7 +1,4 @@
-﻿using PowerArgs;
-using System.Collections.Generic;
-
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public class ContainsDirective : Directive
 {
     [ArgPosition(0)]

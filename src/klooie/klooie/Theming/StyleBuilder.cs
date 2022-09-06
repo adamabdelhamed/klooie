@@ -1,5 +1,4 @@
-﻿using PowerArgs;
-namespace klooie.Theming;
+﻿namespace klooie.Theming;
 
 /// <summary>
 /// A fluent API for defining styles

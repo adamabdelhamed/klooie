@@ -1,6 +1,4 @@
-﻿using PowerArgs;
-
-namespace klooie.tests;
+﻿namespace klooie.tests;
 internal class KlooieTestConsole : IConsoleProvider
 {
     public ConsoleColor ForegroundColor { get; set; }

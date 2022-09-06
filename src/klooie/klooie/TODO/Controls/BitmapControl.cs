@@ -1,6 +1,4 @@
-﻿using System;
-using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 /// <summary>
 /// A control that displays a ConsoleBitmap
 /// </summary>

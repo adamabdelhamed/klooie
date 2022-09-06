@@ -1,7 +1,4 @@
-﻿using PowerArgs.Cli.Physics;
-using System;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
     public class Slider : ConsoleControl
     {

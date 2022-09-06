@@ -1,9 +1,4 @@
-﻿using PowerArgs.Cli.Physics;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace PowerArgs.Cli
+﻿namespace PowerArgs.Cli
 {
 
     public class ThreeMonthCarouselOptions : MonthCalendarOptions

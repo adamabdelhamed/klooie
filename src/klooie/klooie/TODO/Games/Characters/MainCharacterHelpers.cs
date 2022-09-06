@@ -1,9 +1,4 @@
-﻿using PowerArgs;
-
-using System;
-using System.Threading.Tasks;
-
-namespace klooie.Gaming;
+﻿namespace klooie.Gaming;
 public static class MainCharacterHelpers
 {
     public static void ApplyWhenMainCharacterEnters(Action syncAction)

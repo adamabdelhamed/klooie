@@ -1,7 +1,5 @@
-﻿using klooie;
-using klooie.tests;
+﻿using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PowerArgs.Cli;
 using System;
 using System.Collections.Generic;
 

@@ -1,7 +1,4 @@
-﻿using System;
-
-using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 /// <summary>
 /// A progress bar designed for use with the console bitmap player.  It shows the current play cursor and indicates loading progress
 /// </summary>

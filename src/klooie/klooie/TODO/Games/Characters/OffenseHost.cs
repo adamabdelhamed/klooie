@@ -1,12 +1,8 @@
 ﻿using klooie.Gaming.Code;
-using PowerArgs;
-
-using System;
-using System.Threading.Tasks;
 
 namespace klooie.Gaming;
 
-    public class OffenseOptions
+public class OffenseOptions
     {
         public string TargetTag { get; set; }
         public float Sleep { get; set; } = 1000;

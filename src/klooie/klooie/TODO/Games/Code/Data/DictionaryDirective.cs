@@ -1,8 +1,4 @@
-﻿using PowerArgs;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public class DictionaryDirective : Directive
 {
     [ArgRequired]

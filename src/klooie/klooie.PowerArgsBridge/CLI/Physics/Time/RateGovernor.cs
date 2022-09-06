@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace PowerArgs.Cli.Physics
+﻿namespace PowerArgs.Cli.Physics
 {
     /// <summary>
     /// A rate regulator

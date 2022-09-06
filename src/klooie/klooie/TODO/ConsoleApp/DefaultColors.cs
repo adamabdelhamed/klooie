@@ -1,6 +1,4 @@
-﻿using System;
-using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 public static class DefaultColors
 {
     public static RGB BackgroundColor { get; set; }

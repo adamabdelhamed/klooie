@@ -1,5 +1,4 @@
-﻿using PowerArgs.Cli.Physics;
-namespace PowerArgs.Cli;
+﻿namespace PowerArgs.Cli;
 
 /// <summary>
 /// A panel that can pan like a camera.

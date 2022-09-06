@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-
-namespace klooie;
+﻿namespace klooie;
 public class CollectionDataView
 {
     public bool IsViewComplete { get; private set; }

@@ -1,7 +1,4 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
-using PowerArgs;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading;
 
 namespace ArgsTests.CLI.Observability

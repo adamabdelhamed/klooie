@@ -1,6 +1,4 @@
-﻿
-using PowerArgs;
-namespace klooie;
+﻿namespace klooie;
 /// <summary>
 /// All states that the player can be in
 /// </summary>
