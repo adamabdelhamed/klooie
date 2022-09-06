@@ -1,16 +1,8 @@
 ﻿using PowerArgs;
-using System.Collections.Generic;
-using System.Linq;
 namespace klooie.Gaming.Code;
-public abstract class StatementExecutionResult
-{
 
-}
-
-public class NoOpStatementExecutionResult : StatementExecutionResult
-{
-
-}
+public abstract class StatementExecutionResult { }
+public class NoOpStatementExecutionResult : StatementExecutionResult { }
 
 public interface IStatement
 {

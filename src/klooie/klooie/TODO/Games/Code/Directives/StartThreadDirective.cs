@@ -19,7 +19,7 @@ public class StartThreadDirective : EventDrivenDirective
         }
 
         var function = Process.Current.AST.Functions
-            .Where(f => f.CanRun && f.Name == EntryPoint)
+            .Where(f => f.CanExecute && f.Name == EntryPoint)
             .SingleOrDefault();
 
         if (function == null && FireAndForget)
@@ -31,6 +31,6 @@ public class StartThreadDirective : EventDrivenDirective
             throw new ArgException("No function called " + EntryPoint);
         }
 
-        await function.StartThread().ToTask();
+        await function.Execute().AsTask();
     }
 }

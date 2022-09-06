@@ -36,22 +36,22 @@ public class FunctionHPDirective : FunctionDirective
                 codeEl.Power.Subscribe(nameof(PowerInfo.HP), () =>
                 {
                     var completeness = myCode.Where(c => c.Power.HP > 0).Count() / (float)myCode.Count;
-                    var couldRun = myFunction.CanRun;
-                    myFunction.CanRun = completeness >= RunnableThreshold;
+                    var couldRun = myFunction.CanExecute;
+                    myFunction.CanExecute = completeness >= RunnableThreshold;
 
                     var healthPercentage = completeness - RunnableThreshold;
                     if (healthPercentage > 0)
                     {
                         Game.Current.GamePanel.Add(new HPUpdate(healthPercentage * 100, 100, myCode.First(), 0));
                     }
-                    if (myFunction.CanRun && couldRun == false)
+                    if (myFunction.CanExecute && couldRun == false)
                     {
                         foreach (var el in myCode)
                         {
                             el.IsDimmed = false;
                         }
                     }
-                    else if (myFunction.CanRun == false && couldRun)
+                    else if (myFunction.CanExecute == false && couldRun)
                     {
                         Game.Current.Publish(OnDisabled, myFunction);
                         foreach (var el in myCode)

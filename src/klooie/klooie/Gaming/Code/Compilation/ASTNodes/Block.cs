@@ -20,8 +20,8 @@ public abstract class Block : Statement
     public string Path { get; set; }
     public int Id { get; set; }
     public int Depth { get; set; }
-    public CodeToken OpenCurly => Tokens.Where(t => t.Value == "{").FirstOrDefault();
-    public CodeToken CloseCurly => Tokens.Where(t => t.Value == "}").LastOrDefault();
+    public CodeToken? OpenCurly => Tokens.Where(t => t.Value == "{").FirstOrDefault();
+    public CodeToken? CloseCurly => Tokens.Where(t => t.Value == "}").LastOrDefault();
     public List<IStatement> Statements { get; private set; } = new List<IStatement>();
 
     public IEnumerable<Function> Functions
@@ -44,10 +44,7 @@ public abstract class Block : Statement
     public virtual StatementExecutionResult Enter(TimeThread thread)
     {
         thread.Options.Log.Fire($"{ToString()} entered".ToConsoleString());
-        thread.CallStack.Push(new CallStackFrame()
-        {
-            Statement = this,
-        });
+        thread.CallStack.Push(new CallStackFrame() { Statement = this });
         thread.Set(InitializedAddress, true);
         return new BlockEnteredExecutionResult() { Block = this };
     }
@@ -58,7 +55,6 @@ public abstract class Block : Statement
         thread.Options.Log.Fire($"{ToString()} exited".ToConsoleString());
         return new BlockExitedExecutionResult() { Block = this };
     }
-
 
     public void Visit(Func<IStatement, bool> visitor)
     {
@@ -82,26 +78,4 @@ public abstract class Block : Statement
             }
         }
     }
-    /*
-    public void PurgeNoOps()
-    {
-        for (var i = 0; i < Statements.Count; i++)
-        {
-            var statement = Statements[i];
-
-            if (statement is NoOpStatement)
-            {
-                Statements.RemoveAt(i--);
-            }
-            else if (statement is Block)
-            {
-                (statement as Block).PurgeNoOps();
-
-                if (statement is NoOpBlock && (statement as NoOpBlock).Statements.Count == 0)
-                {
-                    Statements.RemoveAt(i--);
-                }
-            }
-        }
-    }*/
 }

@@ -61,7 +61,7 @@ public class VisualizerTests
         var process = new Process(Game.Current, ast);
         process.RenderCode(ast.Root, true, 0, 0);
         Game.Current.LayoutRoot.Background = RGB.Red;
-        await process.AST.Functions.Single().StartThread().AsTask();
+        await process.AST.Functions.Single().Execute().AsTask();
         Assert.AreEqual(1, Heap.Current.Get<int>("foo"));
         Assert.AreEqual(2, Heap.Current.Get<int>("bar"));
         Game.Current.Stop();

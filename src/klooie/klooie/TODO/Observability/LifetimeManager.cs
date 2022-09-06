@@ -47,7 +47,7 @@ public static class ILifetimeManagerEx
     /// Delays until this lifetime is complete
     /// </summary>
     /// <returns>an async task</returns>
-    public static Task ToTask(this ILifetimeManager manager)
+    public static Task AsTask(this ILifetimeManager manager)
     {
         var tcs = new TaskCompletionSource();
         manager.OnDisposed(() => tcs.SetResult());

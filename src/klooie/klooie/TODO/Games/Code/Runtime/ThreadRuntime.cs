@@ -4,7 +4,6 @@ namespace klooie.Gaming.Code;
 public class ThreadFunctionOptions
 {
     public Function EntryPoint { get; set; }
-    public CodeControl InitialDestination { get; set; }
     public string LocalGroupId { get; set; }
 }
 

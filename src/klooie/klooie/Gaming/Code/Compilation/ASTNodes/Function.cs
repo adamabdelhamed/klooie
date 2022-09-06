@@ -1,7 +1,7 @@
 ﻿namespace klooie.Gaming.Code;
 public class Function : CodeBlock
 {
-    public bool CanRun { get; set; } = true;
+    public bool CanExecute { get; set; } = true;
     public List<Parameter> Parameters { get; private set; } = new List<Parameter>();
 
     public string Name
@@ -19,19 +19,11 @@ public class Function : CodeBlock
         }
     }
 
-    public Lifetime StartThread(string localGroupId = null)
+    public ILifetimeManager Execute(string localGroupId = null)
     {
-        if (CanRun == false)
-        {
-            throw new System.Exception("Can't run this function");
-        }
+        if (CanExecute == false) throw new Exception("Can't run this function");
 
-        var rt = new ThreadRuntime(new ThreadFunctionOptions()
-        {
-            EntryPoint = this,
-            LocalGroupId = localGroupId,
-            InitialDestination = CodeControl.CodeElements.Where(c => c.Token?.Statement == this).OrderByDescending(c => c.Left + c.Width).First()
-        });
+        var rt = new ThreadRuntime(new ThreadFunctionOptions() { EntryPoint = this, LocalGroupId = localGroupId });
         Process.Current.Threads.Add(rt);
         return rt;
     }

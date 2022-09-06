@@ -15,8 +15,7 @@ public delegate Task FunctionImplementation(RunningCodeStatement statement, obje
 
 public class RunningCodeStatement : Statement
 {
-    public AwaitDirective AsyncInfo { get; set; }
-
+    public AwaitDirective? AsyncInfo { get; set; }
 
     public Task ImplementationTask { get; private set; }
     private static readonly string Whitespace = "\\s*";

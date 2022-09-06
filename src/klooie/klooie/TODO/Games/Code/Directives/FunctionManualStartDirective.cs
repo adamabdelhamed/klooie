@@ -43,7 +43,7 @@ public class FunctionManualStarter : Character
         if (i.Angle.Value > 90 && i.Angle.Value < 270 && IsEnabled)
         {
             lastStartedTime = Game.Current.MainColliderGroup.Now;
-            directive.Function.StartThread();
+            directive.Function.Execute();
             FirePropertyChanged(nameof(Bounds));
             Game.Current.Invoke(async () =>
             {

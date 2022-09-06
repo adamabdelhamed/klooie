@@ -22,7 +22,7 @@ public class DisableFunctionDirective : EventDrivenDirective
             throw new ArgException("There was no function below this directive");
         }
 
-        myFunction.CanRun = false;
+        myFunction.CanExecute = false;
 
 
         myCode = Game.Current.GamePanel.Controls

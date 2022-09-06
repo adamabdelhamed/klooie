@@ -20,9 +20,5 @@ public class Else : Loop
         return base.Execute(thread);
     }
 
-    public override string ToString()
-    {
-        var ret = Iterations;
-        return $"Else statement that will resolve to  {ret}: {base.ToString()}";
-    }
+    public override string ToString() => $"Else statement that will resolve to a loop with Iterations == {Iterations}: {base.ToString()}";
 }

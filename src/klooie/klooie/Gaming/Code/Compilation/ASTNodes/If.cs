@@ -1,13 +1,9 @@
-﻿using System.Collections.Generic;
-
-namespace klooie.Gaming.Code;
+﻿namespace klooie.Gaming.Code;
 public class If : Loop
 {
-    public bool? Hack { get; set; }
-
     public override StatementExecutionResult Execute(TimeThread thread)
     {
-        if (base.IsInitialized(thread) == false)
+        if (IsInitialized(thread) == false)
         {
             Iterations = 0;
             var maxDirectiveIndex = Parent.Statements.IndexOf(this) - 1;
@@ -21,23 +17,10 @@ public class If : Loop
             }
         }
 
-        if (Hack.HasValue && Hack.Value)
-        {
-            Iterations = 1;
-        }
-        else if (Hack.HasValue && Hack.Value == false)
-        {
-            Iterations = 0;
-        }
-
         return base.Execute(thread);
     }
 
-    public override string ToString()
-    {
-        var ret = Iterations;
-        return $"If statement that will resolve to  {ret}: {base.ToString()}";
-    }
+    public override string ToString() => $"If statement that will resolve to a loop with iterations: {Iterations}: {base.ToString()}";
 
     public IEnumerable<CodeToken> GetTokensFromIfToOpenCurlyTrimmed()
     {

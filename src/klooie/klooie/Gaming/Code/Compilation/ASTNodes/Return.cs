@@ -14,6 +14,7 @@ public class Return : RunningCodeStatement
         var current = Parent;
         while (current is Function == false)
         {
+            if(current == null) throw new NotSupportedException("Return statements must exist within functions");
             current = current.Parent;
         }
 

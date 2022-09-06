@@ -1,10 +1,5 @@
 ﻿using PowerArgs;
-
 namespace klooie.Gaming.Code;
-public class LoopIteratedExecutionResult : StatementExecutionResult
-{
-    public Loop Loop { get; set; }
-}
 
 public class Loop : Function
 {
@@ -63,8 +58,10 @@ public class Loop : Function
         }
     }
 
-    public override string ToString()
-    {
-        return $"Loop with {Iterations} iterations: {base.ToString()}";
-    }
+    public override string ToString() => $"Loop with {Iterations} iterations: {base.ToString()}";
+}
+
+public class LoopIteratedExecutionResult : StatementExecutionResult
+{
+    public Loop Loop { get; set; }
 }

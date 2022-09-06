@@ -1,7 +1,4 @@
-﻿using klooie.Gaming;
-using PowerArgs;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using PowerArgs;
 
 namespace klooie.Gaming.Code;
 public class Directive : Statement, IRule
@@ -16,13 +13,8 @@ public class Directive : Statement, IRule
     [ArgIgnore]
     public string CommandString => CommandLineSerializer.Serialize(this, new CommandLineArgumentsDefinition(GetType()).Arguments);
 
-    public string Serialize()
-    {
-        if (this.GetType() == typeof(Directive)) return "//##";
-
-        var ret = "//#" + GetType().Name.Replace("Directive", "") + " " + CommandString;
-        return ret;
-    }
+    public string Serialize() => GetType() == typeof(Directive) ? "//##" : "//#" + GetType().Name.Replace("Directive", "") + " " + CommandString;
+    
 
     public static bool IsDirective(string line)
     {
