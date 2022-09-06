@@ -105,10 +105,13 @@ public abstract class Game : ConsoleApp, IDelayProvider
     /// <returns>an async task</returns>
     protected override async Task Startup()
     {
+        PaintEnabled = false;
         this.mainColliderGroup = new ColliderGroup(this) { PauseManager = this.pauseManager };
         this.ruleManager = new RuleManager(RuleProvider);
         await ruleManager.Startup();
         Publish(ReadyEventId);
+        PaintEnabled = true;
+        await RequestPaintAsync();
     }
 
     /// <summary>
