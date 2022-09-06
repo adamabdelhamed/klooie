@@ -133,11 +133,7 @@ public class TimeThread : Lifetime
             var variableName = replacement.Groups["variable"].Value;
 
             object resolved = value;
-            if (Current != null)
-            {
-                Current?.TryResolve(variableName, out resolved);
-            }
-            else
+            if (Current == null || Current.TryResolve(variableName, out resolved) == false)
             {
                 resolved = Heap.Current.Get<object>(variableName);
             }

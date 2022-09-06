@@ -1,52 +1,47 @@
 ﻿using PowerArgs;
 
-using System;
-using System.Threading.Tasks;
-
 namespace klooie.Gaming.Code;
 public class IncrementDirective : EventDrivenDirective
 {
     [ArgPosition(0)]
-    public string VariableName { get; set; }
+    public DynamicArg VariableName { get; set; }
 
     [ArgPosition(1)]
     [ArgDefaultValue("1")]
     public DynamicArg Amount { get; set; }
 
-    private string currentEventId;
+    public bool Heap { get; set; }
+
+    [ArgShortcut(ArgShortcutPolicy.NoShortcut)]
+    public bool OnlyIfNull { get; set; }
+
     public override StatementExecutionResult Execute(TimeThread thread)
     {
-        if (ShouldRun())
+        if(ShouldRun())
         {
-            if (On == null || On?.StringValue == "demand" || currentEventId == On?.StringValue)
-            {
-                var currentValue = Convert.ToSingle(TimeThread.ResolveStatic("{{" + VariableName + "}}").ToString());
-                thread.Set(VariableName, currentValue + Amount.FloatValue);
-            }
+            var currentValue = thread.ResolveNumber("{{"+VariableName.StringValue+"}}");
+            var newValue = currentValue + Amount.FloatValue;
+            return SetFactory(newValue).Execute(thread);
         }
-        return new NoOpStatementExecutionResult();
+        else
+        {
+            return new NoOpStatementExecutionResult();
+        }
     }
 
     public override Task OnEventFired(object args)
     {
-        var thread = args as TimeThread ?? TimeThread.Current;
-        if (thread != null)
+        if(ShouldRun())
         {
-            currentEventId = On?.StringValue;
-            try
-            {
-                Execute(thread);
-            }
-            finally
-            {
-                currentEventId = null;
-            }
+            var currentValue = Evaluator.ToSingle(TimeThread.ResolveStatic("{{" + VariableName + "}}"));
+            var newValue = currentValue + Amount.FloatValue;
+            return SetFactory(newValue).OnEventFired(args);
         }
         else
         {
-            var currentValue = Evaluator.ToSingle(TimeThread.ResolveStatic("{{" + VariableName + "}}"));
-            Game.Current.RuleVariables.Set(currentValue + Amount.FloatValue, VariableName);
+            return Task.CompletedTask;
         }
-        return Task.CompletedTask;
     }
+
+    private SetDirective SetFactory(float newValue) => new SetDirective() { OnlyIfNull = OnlyIfNull, Heap = Heap, VariableName = VariableName, VariableValue = newValue.ToDynamicArg() };
 }
