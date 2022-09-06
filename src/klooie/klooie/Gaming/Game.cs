@@ -33,12 +33,12 @@ public abstract class Game : ConsoleApp, IDelayProvider
     /// <summary>
     /// Pauses the game
     /// </summary>
-    public void Pause() => pauseManager.State = PauseManager.PauseState.Paused;
+    public virtual void Pause() => pauseManager.State = PauseManager.PauseState.Paused;
 
     /// <summary>
     /// Pauses the game
     /// </summary>
-    public void Resume() => pauseManager.State = PauseManager.PauseState.Running;
+    public virtual void Resume() => pauseManager.State = PauseManager.PauseState.Running;
 
     /// <summary>
     /// Gets the rules
