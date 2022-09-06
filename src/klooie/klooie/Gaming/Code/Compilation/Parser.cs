@@ -14,7 +14,7 @@ public enum TokenType
     Newline,
 }
 
-public static class Parser
+internal static class Parser
 {
     public static void Parse(List<CodeToken> tokens)
     {

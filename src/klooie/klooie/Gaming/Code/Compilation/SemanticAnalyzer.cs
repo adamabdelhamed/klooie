@@ -1,10 +1,7 @@
 ﻿using PowerArgs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace klooie.Gaming.Code;
-public static class SemanticAnalyzer
+internal static class SemanticAnalyzer
 {
     private class Context
     {

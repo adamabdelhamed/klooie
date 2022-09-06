@@ -24,6 +24,22 @@ public abstract class Block : Statement
     public CodeToken CloseCurly => Tokens.Where(t => t.Value == "}").LastOrDefault();
     public List<IStatement> Statements { get; private set; } = new List<IStatement>();
 
+    public IEnumerable<Function> Functions
+    {
+        get
+        {
+            var functions = new List<Function>();
+            this.Visit((s) =>
+            {
+                if (s.GetType() == typeof(Function))
+                {
+                    functions.Add(s as Function);
+                }
+                return false;
+            });
+            return functions;
+        }
+    }
 
     public virtual StatementExecutionResult Enter(TimeThread thread)
     {
