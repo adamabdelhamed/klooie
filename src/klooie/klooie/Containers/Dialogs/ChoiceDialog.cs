@@ -62,7 +62,7 @@ public static class ChoiceDialog
             options.UserChoices = DialogChoice.Close;
         }
 
-        if(options.AllowEscapeToClose && options.UserChoices.Where(c => c.Shortcut.Key == ConsoleKey.Escape).Any())
+        if(options.AllowEscapeToClose && options.UserChoices.Where(c => c.Shortcut?.Key == ConsoleKey.Escape).Any())
         {
             throw new ArgumentException($"You cannot use the Escape key as a dialog choice shortcut if you also set the {nameof(options.AllowEscapeToClose)} option to true");
         }
