@@ -870,9 +870,9 @@ public class ConsoleBitmap
         {
             for (var y = 0; y < this.Height; y++)
             {
-                var thisVal = this.GetPixel(x, y).Value;
-                var otherVal = other.GetPixel(x, y).Value;
-                if (thisVal != otherVal) return false;
+                var thisVal = this.GetPixel(x, y);
+                var otherVal = other.GetPixel(x, y);
+                if (thisVal.Equals(otherVal) == false) return false;
             }
         }
 

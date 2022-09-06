@@ -208,4 +208,33 @@ public class ConsoleBitmapTests
         clone.SetPixel(1, 1, new ConsoleCharacter('e'));
         Assert.AreNotEqual(b, clone);
     }
+
+    [TestMethod]
+    public void ConsoleBitmap_Equality()
+    {
+        var a = new ConsoleBitmap(2, 1);
+        var b = new ConsoleBitmap(2, 1);
+
+        Assert.AreEqual(a, b);
+        a.Fill(RGB.Green);
+        Assert.AreNotEqual(a, b);
+        b.Fill(RGB.Green);
+        Assert.AreEqual(a, b);
+
+        var small = new ConsoleBitmap(1, 1);
+        var big = new ConsoleBitmap(2, 2);
+        Assert.AreNotEqual(small, big);
+
+        var aRed = new ConsoleBitmap(1, 1);
+        var aGreen = new ConsoleBitmap(1, 1);
+        aRed.DrawPoint(new ConsoleCharacter('a', RGB.Red), 0, 0);
+        aGreen.DrawPoint(new ConsoleCharacter('a', RGB.Green), 0, 0);
+        Assert.AreNotEqual(aRed, aGreen);
+
+        var aRedBG = new ConsoleBitmap(1, 1);
+        var aGreenBG = new ConsoleBitmap(1, 1);
+        aRedBG.DrawPoint(new ConsoleCharacter('a', backgroundColor: RGB.Red), 0, 0);
+        aGreenBG.DrawPoint(new ConsoleCharacter('a', backgroundColor: RGB.Green), 0, 0);
+        Assert.AreNotEqual(aRedBG, aGreenBG);
+    }
 }
