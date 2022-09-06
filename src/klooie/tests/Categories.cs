@@ -8,6 +8,7 @@
         public const string Physics = "Physics tests";
         public const string Drawing = "ConsoleBitmap and recording tests";
         public const string Gaming = "Gaming";
+        public const string Code = "Gaming.Code";
         public const string Slow = "Slow";
     }
 }
