@@ -14,12 +14,15 @@ public class BorderPanel : ProtectedConsolePanel
 
     public ConsoleString Adornment { get => Get<ConsoleString>(); set => Set(value); }
 
-    public BorderPanel(ConsoleControl content)
+    public BorderPanel(ConsoleControl content = null)
     {
         container = ProtectedPanel.Add(new ConsolePanel()).Fill(padding: new Thickness(2, 2, 1, 1));
-        container.Background = content.Background;
-        ProtectedPanel.Background = content.Background;
-        container.Add(content);
+        if (content != null)
+        {
+            container.Background = content.Background;
+            ProtectedPanel.Background = content.Background;
+            container.Add(content);
+        }
         this.Subscribe(nameof(Background), () => container.Background = this.Background, this);
     }
 
