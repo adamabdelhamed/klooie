@@ -77,7 +77,7 @@ public class SetDirective : EventDrivenDirective
     {
         if (OnlyIfNull == false || Game.Current.RuleVariables.TryGetValue(VariableName.StringValue, out object _) == false)
         {
-            Game.Current.RuleVariables.Set(ResolvedValue, VariableName.StringValue);
+            klooie.Gaming.Code.Heap.Current.Set(ResolvedValue, VariableName.StringValue);
         }
     }
 

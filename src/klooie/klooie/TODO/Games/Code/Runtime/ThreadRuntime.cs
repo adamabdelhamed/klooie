@@ -3,7 +3,6 @@ namespace klooie.Gaming.Code;
 
 public class ThreadFunctionOptions
 {
-    public ExternalEndpointElement Source { get; set; }
     public Function EntryPoint { get; set; }
     public CodeControl InitialDestination { get; set; }
     public string LocalGroupId { get; set; }
@@ -43,32 +42,7 @@ public class ThreadRuntime : Lifetime
     private async Task ExecuteAsync()
     {
         OnThreadStart.Fire();
-        if (Options.Source != null)
-        {
-            using (var entryLifetime = Game.Current.CreateChildLifetime())
-            {
-                var wireHandle = Wire.Connect(new WireOptions()
-                {
-                    LeftConnection = Options.InitialDestination.Bounds,
-                    RightConnection = Options.Source.SpoutLocation,
-                    LifetimeManager = Lifetime.EarliestOf(entryLifetime, this),
-                });
-                var sourceDirective = Options.Source.Options.DirectiveOptions;
-                ConsoleString display = ConsoleString.Empty;
-                SetResolutionContext(() =>
-                {
-                    display = sourceDirective.Display.ConsoleStringValue;
-                });
-                if (FunctionSoundsDirective.IsSoundEnabled(Options.EntryPoint))
-                {
-                    Game.Current.Publish("AsyncStatementReturn");
-                }
-                await wireHandle.TransmitAsync(display, false, TimeSpan.FromMilliseconds(WireLatency()), Game.Current);
-            }
-            await ActivateThenDeactivateAsync(Options.InitialDestination.Token.Statement.Tokens);
-            await ShortCPUDelay();
-        }
-
+        
         var returnValue = "$".ToGreen();
         IStatement returnStatement = null;
         var openBlockPaths = new List<string>();
@@ -198,31 +172,6 @@ public class ThreadRuntime : Lifetime
                 if (IsExpired) return;
             }
         }
-
-        if (throwResult == null && returnStatement != null && Options.Source != null && returnValue != null && returnValue.Length > 0)
-        {
-            if (returnStatement != null)
-            {
-                if (FunctionSoundsDirective.IsSoundEnabled(Options.EntryPoint))
-                {
-                    Game.Current.Publish("FunctionReturningData");
-                }
-            }
-
-            using (var returnLifetime = Game.Current.CreateChildLifetime())
-            {
-                var token = returnStatement.Tokens.OrderBy(t => t.Column).Last();
-                var wireHandle = Wire.Connect(new WireOptions()
-                {
-                    LeftConnection = CodeControl.CodeElements.Where(c => c.Token == token)
-                        .Single().Bounds,
-                    RightConnection = Options.Source.SpoutLocation,
-                    LifetimeManager = EarliestOf(this, returnLifetime),
-                });
-                await wireHandle.TransmitAsync(returnValue, true, TimeSpan.FromMilliseconds(WireLatency()), Game.Current);
-                if (IsExpired) return;
-            }
-        }
     }
 
     private async Task HandleRunningStatementAsync(IStatement statement, string throwMessage = null)
@@ -254,12 +203,7 @@ public class ThreadRuntime : Lifetime
 
                 lineElement.LineOfCode = lineElement.LineOfCode.StringValue.ToConsoleString(ActiveLineElement.AwaitForegroundColor, ActiveLineElement.AwaitBackgroundColor);
 
-                var wireHandle = Wire.Connect(new WireOptions()
-                {
-                    LeftConnection = lastTokenElement.Bounds,
-                    RightConnection = asyncInfo.DataSource.SpoutLocation,
-                    LifetimeManager = EarliestOf(this, asyncLifetime),
-                });
+               
 
                 ConsoleString outputData = null, returnData = null;
                 SetResolutionContext(() =>
@@ -271,7 +215,7 @@ public class ThreadRuntime : Lifetime
                 var outputString = outputData is ICanBeAConsoleString ? (outputData as ICanBeAConsoleString).ToConsoleString() : outputData.ToString().ToCyan();
                 var returnString = returnData is ICanBeAConsoleString ? (returnData as ICanBeAConsoleString).ToConsoleString() : returnData.ToString().ToCyan();
 
-                await wireHandle.TransmitAsync(outputString, true, TimeSpan.FromMilliseconds(asyncInfo.AsyncDuration + WireLatency()), Game.Current);
+                await Game.Current.Delay(TimeSpan.FromMilliseconds(asyncInfo.AsyncDuration + WireLatency()));
                 if (IsExpired) return;
                 if (runningCodeStatement.AsyncInfo.Log)
                 {
@@ -286,7 +230,7 @@ public class ThreadRuntime : Lifetime
                 {
                     Game.Current.Publish("AsyncStatementReturn");
                 }
-                await wireHandle.TransmitAsync(returnString, false, TimeSpan.FromMilliseconds(asyncInfo.AsyncDuration + WireLatency()), Game.Current);
+                await Game.Current.Delay(TimeSpan.FromMilliseconds(asyncInfo.AsyncDuration + WireLatency()));
                 if (IsExpired) return;
 
                 if (runningCodeStatement.AsyncInfo.Log)
