@@ -6,14 +6,11 @@ namespace klooie.Gaming;
 public class DamageDirective : EventDrivenDirective
 {
     public const int MaxPlayerHP = 100;
-    public const string GameStatePropertyPrefix = "GameStateProperty.";
-    public const string DamageReadyEventId = "DamageReady";
     public const string OnEnemyDestroyedEventId = "OnEnemyDestroyed";
     public const string RespawningTag = "Respawning";
     public const string DamageableTag = "damageable";
     public const string CustomDisposalOnKilledTag = "CustomDispose";
-    public const string HPVariableName = "HP";
-    public const string MaxHPVariableName = "MaxHP";
+
     public string RespawnOnKilledEvent { get; set; }
 
     public List<Func<DamageEventArgs, Impact?, bool>> DamageSuppressors = new List<Func<DamageEventArgs, Impact?, bool>>();
@@ -32,30 +29,12 @@ public class DamageDirective : EventDrivenDirective
     [ThreadStatic]
     private static DamageDirective _current;
     public static DamageDirective Current  { get => _current; private set => _current = value; }
-    private bool noKnocks;
 
     public override async Task OnEventFired(object args)
     {
-        noKnocks = Game.Current.Rules.WhereAs<NoKnockBacksDirective>().Any();
         Current = this;
         Game.Current.OnDisposed(() => Current = null);
-        Game.Current.RuleVariables.Set(100, HPVariableName);
-        Game.Current.RuleVariables.Set(MaxPlayerHP, MaxHPVariableName);
-
-        Game.Current.GamePanel.Controls.Added.Subscribe(f =>
-        {
-            var el = f as GameCollider;
-            if (el != null)
-            {
-                ProcessElementForDamage(el);
-            }
-        }, Game.Current);
-        foreach (var element in Game.Current.GamePanel.Controls.WhereAs<GameCollider>())
-        {
-            ProcessElementForDamage(element);
-        }
-
-        Game.Current.Publish(DamageReadyEventId);
+        Game.Current.MainColliderGroup.ImpactOccurred.Subscribe(ReportImpact, Game.Current);
     }
        
     public void ReportImpact(Impact impact)
@@ -71,7 +50,6 @@ public class DamageDirective : EventDrivenDirective
     }
 
     public bool IsDamageable(ICollider el) => el is GameCollider && (el as GameCollider).HasSimpleTag(DamageableTag);
-
 
     public void ReportDamage(DamageEventArgs args, Impact? impact = null)
     {
@@ -210,18 +188,8 @@ public class DamageDirective : EventDrivenDirective
         });
     }
 
-
-    private void ProcessElementForDamage(GameCollider element)
-    {
-        if (element.Id != null)
-        {
-            Game.Current.RuleVariables.Set(element.Power.HP, element.Id + "HP");
-        }
-    }
-
     private void DoKnockBackEffectIfAppropriate(WeaponElement responsible, GameCollider element, Impact? impact = null)
     {
-        if (noKnocks) return;
         Angle? angle = null;
         if (impact.HasValue)
         {
@@ -251,12 +219,6 @@ public class DamageEventArgs
     public GameCollider Damagee { get; set; }
 }
 
-public interface IDamageEnforcer
-{
-    void ReportDamage(DamageEventArgs args);
-    float GetHP(GameCollider element);
-    void RegisterHPChangedForLifetime(GameCollider element, Action<float> hpChangedHandler, ILifetimeManager lifetime);
-}
 
  
 
@@ -349,8 +311,6 @@ public class HPUpdate : GameCollider
     }
 }
 
-// todo - since i made this observable I can probably remove
-// some of the helpers on damage enforcer
 public class PowerInfo : ObservableObject
 {
     public float HP { get => Get<float>(); set => Set(value); }
@@ -365,11 +325,4 @@ public class PowerInfo : ObservableObject
     }
 }
 
-public class NoKnockBacksDirective : Directive { }
-
-public enum RewardType
-{
-    MP,
-    HP
-}
 
