@@ -6,6 +6,7 @@ public class Process
 {
     public const int LineNumberWidth = 3;
     public static Process Current { get; private set; }
+    public Heap Heap { get; private set; }
 
     public AST AST { get; private set; }
 
@@ -13,21 +14,22 @@ public class Process
 
     public Process(ILifetimeManager lt, AST ast)
     {
+        Heap = new Heap(lt);
         if (Current != null) throw new NotSupportedException("There can only be one Process at a time");
         Current = this;
         lt.OnDisposed(() => Current = null);
 
         this.AST = ast;
-        InitializeCodeFunctions();
+        InitializeCodeFunctions(lt);
     }
 
-    private void InitializeCodeFunctions()
+    private void InitializeCodeFunctions(ILifetimeManager lt)
     {
         RegisterFunction("Sleep", async (statement, parameters) =>
         {
             var duration = int.Parse("" + parameters[0]);
             await Game.Current.Delay(duration);
-        });
+        }, lt);
     }
 
     public void RegisterFunction(string name, FunctionImplementation impl, ILifetimeManager lt = null)
@@ -49,11 +51,12 @@ public class Process
 
         if (lineNumbers)
         {
-            var linesNeeded = elements.Select(e => e.Top()).Max() - elements.Select(e => e.Top()).Min();
+            var topElement = elements.Select(e => e.Top()).Min();
+            var linesNeeded = (elements.Select(e => e.Top()).Max()+1) - elements.Select(e => e.Top()).Min();
             for (var i = 0; i < linesNeeded; i++)
             {
                 var lineElement = Game.Current.GamePanel.Add(new LineNumberControl(i + 1));
-                lineElement.MoveTo(leftOfDocument, topOfDocument + i);
+                lineElement.MoveTo(leftOfDocument, topElement + i);
             }
         }
     }

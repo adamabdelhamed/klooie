@@ -60,6 +60,7 @@ public class CodeControl : GameCollider, IGhost
 
     public CodeControl(CodeToken token)
     {
+        CompositionMode = CompositionMode.BlendBackground;
         this.MoveTo(this.Left, this.Top);
         this.ResizeTo(token.Value.Length, 1);
         this.AddTag(DamageDirective.DamageableTag);

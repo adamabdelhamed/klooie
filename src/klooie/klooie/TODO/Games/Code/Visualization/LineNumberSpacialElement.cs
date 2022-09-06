@@ -8,6 +8,7 @@ public class LineNumberControl : GameCollider
 
     public LineNumberControl(int line)
     {
+        CompositionMode = CompositionMode.BlendBackground;
         this.MoveTo(Left, Top);
         this.Line = line;
         this.ResizeTo(line.ToString().Length, 1);
