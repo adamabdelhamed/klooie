@@ -340,7 +340,7 @@ public class ColliderGroup
         }
     }
 
-    public IEnumerable<ICollider> EnumerateCollidersSlow(List<ICollider> list = null)
+    public IEnumerable<ICollider> EnumerateCollidersSlow(List<ICollider> list)
     {
         list = list ?? new List<ICollider>(Count);
         colliderBufferLength = 0;
@@ -358,7 +358,7 @@ public class ColliderGroup
         return list;
     }
 
-    public IEnumerable<ICollider> EnumerateCollidersSlow(List<ICollider> list = null, ICollider except = null)
+    public IEnumerable<ICollider> EnumerateCollidersSlow(List<ICollider> list, ICollider except)
     {
         list = list ?? new List<ICollider>(Count);
         colliderBufferLength = 0;

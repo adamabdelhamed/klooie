@@ -238,9 +238,9 @@ public class NoFrillsLabel : ConsoleControl
         }
     }
 
-    public NoFrillsLabel()
+    public NoFrillsLabel(ConsoleString initialContent = null)
     {
-        Text = ConsoleString.Empty;
+        Text = initialContent ?? ConsoleString.Empty;
         CanFocus = false;
     }
 

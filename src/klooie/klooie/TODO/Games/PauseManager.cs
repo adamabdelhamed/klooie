@@ -39,7 +39,9 @@ internal class PauseManager
     public Task Delay(TimeSpan span) => Delay(span.TotalMilliseconds);
     public async Task Delay(float ms)
     {
-        while(state == PauseState.Paused)
+        if (float.IsNaN(ms)) throw new ArgumentException("Delay time is not a number");
+        if (ms == 0) throw new ArgumentException("Delay time cannot be zero");
+        while (state == PauseState.Paused)
         {
             await Task.Yield();
         }

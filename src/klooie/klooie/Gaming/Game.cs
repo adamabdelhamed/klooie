@@ -1,12 +1,15 @@
-﻿using PowerArgs;
-
-namespace klooie.Gaming;
+﻿namespace klooie.Gaming;
 
 /// <summary>
 /// The base class for a game built with klooie. These games are event driven.
 /// </summary>
 public abstract class Game : ConsoleApp, IDelayProvider
 {
+    /// <summary>
+    /// The id for the Ready event that fires after all initial rules are executed
+    /// </summary>
+    public const string ReadyEventId = "Ready";
+
     private EventBroadcaster eventBroadcaster;
     private RuleManager ruleManager;
     private PauseManager pauseManager;
@@ -53,6 +56,16 @@ public abstract class Game : ConsoleApp, IDelayProvider
     public ColliderGroup MainColliderGroup => mainColliderGroup;
 
     /// <summary>
+    /// The main panel where game controls will be placed
+    /// </summary>
+    public virtual ConsolePanel GamePanel => LayoutRoot;
+
+    /// <summary>
+    /// Variables that can be referenced by rules
+    /// </summary>
+    public ObservableObject RuleVariables { get; protected set; }
+
+    /// <summary>
     /// Subscribes to a game event for some amount of time. You can use boolean expressions using and ('&'), or ('|') and
     /// grouping with parentheses. If an event is published that mathces then your handler will be called.
     /// </summary>
@@ -83,6 +96,7 @@ public abstract class Game : ConsoleApp, IDelayProvider
     {
         this.eventBroadcaster = new EventBroadcaster();
         this.pauseManager = new PauseManager();
+        RuleVariables = new ObservableObject();
     }
 
     /// <summary>
@@ -94,6 +108,7 @@ public abstract class Game : ConsoleApp, IDelayProvider
         this.mainColliderGroup = new ColliderGroup(this) { PauseManager = this.pauseManager };
         this.ruleManager = new RuleManager(RuleProvider);
         await ruleManager.Startup();
+        Publish(ReadyEventId);
     }
 
     /// <summary>

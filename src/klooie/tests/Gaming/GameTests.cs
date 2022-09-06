@@ -80,14 +80,16 @@ public class GameTests
     public void Rules_Basic()
     {
         int count = 0;
-
+        int readyCount = 0;
         GamingTest.RunCustomSize(new ArrayRulesProvider(new IRule[]
         {
             new TestRule(async() => count++),
             new TestRule(async() => count++),
+            new TestRule(async() => Game.Current.Subscribe(Game.ReadyEventId,e=> readyCount++,Game.Current)),
         }), TestContext.TestId(), 1, 1, UITestMode.Headless);
 
         Assert.AreEqual(2, count);
+        Assert.AreEqual(1, readyCount);
     }
 
     [TestMethod]
