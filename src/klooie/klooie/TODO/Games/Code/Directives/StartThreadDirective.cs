@@ -19,7 +19,7 @@ public class StartThreadDirective : EventDrivenDirective
         }
 
         var function = Process.Current.AST.Functions
-            .Where(f => f.CanRun && f.Tokens.Where(t => t.Value == EntryPoint).Count() == 1)
+            .Where(f => f.CanRun && f.Name == EntryPoint)
             .SingleOrDefault();
 
         if (function == null && FireAndForget)

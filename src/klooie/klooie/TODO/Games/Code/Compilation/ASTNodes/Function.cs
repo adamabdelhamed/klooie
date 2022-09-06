@@ -5,6 +5,21 @@ public class Function : CodeBlock
     public List<Parameter> Parameters { get; private set; } = new List<Parameter>();
     public ExternalEndpointElement Source { get; set; }
 
+    public string Name
+    {
+        get
+        {
+            for(var i = 0; i < Tokens.Count-1; i++)
+            {
+                if(Tokens[i+1].Value == "(")
+                {
+                    return Tokens[i].Value;
+                }
+            }
+            throw new Exception("Could not parse function name");
+        }
+    }
+
     public Lifetime StartThread(string localGroupId = null)
     {
         if (CanRun == false)

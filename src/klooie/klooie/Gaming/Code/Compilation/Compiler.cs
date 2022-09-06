@@ -77,20 +77,20 @@ public static class Compiler
 
     private static IEnumerable<string> GetCleanLines(string s)
     {
-        var builder = new StringBuilder();
-
+        List<string> lines = new List<string>();
+        var currentLine = string.Empty;
         for (var i = 0; i < s.Length; i++)
         {
             var c = s[i];
             if (c == '\n')
             {
-                yield return builder.ToString();
-                builder.Clear();
+                lines.Add(currentLine);
+                currentLine = string.Empty;
             }
             else if (c == '\r')
             {
-                yield return builder.ToString();
-                builder.Clear();
+                lines.Add(currentLine);
+                currentLine = string.Empty;
                 if (i < s.Length - 1 && s[i + 1] == '\n')
                 {
                     i++;
@@ -98,9 +98,16 @@ public static class Compiler
             }
             else
             {
-                builder.Append(c);
+                currentLine += c;
             }
         }
+
+        if(string.IsNullOrEmpty(currentLine) == false)
+        {
+            lines.Add(currentLine);
+        }
+
+        return lines;
     }
 
     private static bool TryLoadScript(string line, CompilerOptions options, StringBuilder builder)
@@ -120,7 +127,7 @@ public static class Compiler
             }
             var tempBuilder = new StringBuilder();
             var codeToInsert = options.ScriptProvider.LoadScriptById(id);
-            var codeToInsertLines = GetCleanLines(codeToInsert);
+            var codeToInsertLines = GetCleanLines(codeToInsert).ToArray();
             RenderLines(codeToInsertLines, options, tempBuilder);
             var finalScriptText = tempBuilder.ToString();
             builder.Append(finalScriptText);
