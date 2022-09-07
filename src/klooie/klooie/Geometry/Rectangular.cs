@@ -127,5 +127,17 @@ public class Rectangular : ObservableObject, ICollider
         Bounds = new RectF(Bounds.Left, Bounds.Top, Width + w, Height + h);
     }
 
+    /// <summary>
+    /// Moves the object forward by 0.1, down by 0.1, thinner by 0.2 and shorter by 0.2.
+    /// This is useful when you want an object to appear to take up an entire pixel but to
+    /// leave a little wiggle room for things like collision detection.
+    /// 
+    /// </summary>
+    public void GiveWiggleRoom()
+    {
+        MoveBy(.1f, .1f);
+        ResizeTo(Width - .2f, Height - .2f);
+    }
+
     public virtual RectF MassBounds => new RectF(X, Y, Width, Height);
 }
