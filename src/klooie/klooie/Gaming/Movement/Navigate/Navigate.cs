@@ -21,7 +21,7 @@ public class Navigate : Movement
 
     public List<RectF> ObstaclesPadded => Velocity
         .GetObstaclesSlow()
-            .Select(e => e.Bounds.Grow(.15f))
+            .Select(e => e.Bounds.Grow(.1f))
             .ToList();
 
     private Navigate(Velocity v, SpeedEval speed, Func<ICollider> destination, NavigateOptions options) : base(v, speed)
@@ -116,13 +116,6 @@ public class Navigate : Movement
 
     private async Task<List<LocF>> FindPathAdjusted(RectF from, RectF to)
     {
-        // So this is not going to work.
-        // First we'll need to get the true width and height of the scene.
-        // Next we'll have to normalize the bounds of all the items so that they are positive and fit
-        //   in the AStar grid
-        // Finally, when AStar returns we'll need to readjust all the locations in the path.
-        // this will suck.
-
         var sceneW = (int)Game.Current.GameBounds.Width;
         var sceneH = (int)Game.Current.GameBounds.Height;
         var inBounds = new RectF(0, 0, sceneW, sceneH);

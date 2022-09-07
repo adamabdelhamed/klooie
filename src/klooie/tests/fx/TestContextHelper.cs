@@ -3,5 +3,5 @@ namespace klooie.tests;
 
 public static class TestContextHelper
 {
-    public static string TestId(this TestContext context) => $"{context.FullyQualifiedTestClassName}.{context.TestName}";
+    public static string TestId(this TestContext context) => context == null ? "Unknown" : $"{context.FullyQualifiedTestClassName}.{context.TestName}";
 }

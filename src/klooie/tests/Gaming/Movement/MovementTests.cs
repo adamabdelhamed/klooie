@@ -76,24 +76,34 @@ public class MovementTests
     });
 
     [TestMethod]
-    public void Movement_WanderCamera() => GamingTest.Run(new GamingTestOptions()
+    public void Movement_WanderCamera()
     {
-        TestId = TestContext.TestId(),
-        Mode = UITestMode.RealTimeFYI,
-        GameWidth = 120,
-        GameHeight = 40,
-        Camera = true,
-        CameraFocalPoint = ()=> Game.Current.GamePanel.Children.WhereAs<Character>().SingleOrDefault()?.Center(),
-        Test = async (context) =>
+        var ev = new Event<LocF>();
+        Character c = null;
+        var factory = () =>
         {
-            Game.Current.LayoutRoot.IsVisible = false;
-            await WanderTest(20, 8000, true);
-            await Game.Current.RequestPaintAsync();
-            await Game.Current.Delay(500);
-            Game.Current.Stop();
-        }
-    });
-
+            c = new Character();
+            c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
+            return c;
+        };
+        GamingTest.Run(new GamingTestOptions()
+        {
+            TestId = TestContext.TestId(),
+            Mode = UITestMode.RealTimeFYI,
+            GameWidth = 120,
+            GameHeight = 40,
+            Camera = true,
+            FocalPointChanged = ev,
+            Test = async (context) =>
+            {
+                Game.Current.LayoutRoot.IsVisible = false;
+                await WanderTest(20, 8000, true, factory);
+                await Game.Current.RequestPaintAsync();
+                await Game.Current.Delay(500);
+                Game.Current.Stop();
+            }
+        });
+    }
     [TestMethod]
     public void Movement_WanderVariousSpeeds() => GamingTest.Run(new GamingTestOptions()
     {
@@ -113,7 +123,7 @@ public class MovementTests
         }
     });
  
-    private async Task WanderTest(float speed, float duration, bool camera)
+    private async Task WanderTest(float speed, float duration, bool camera, Func<Character> factory = null)
     {
         Console.WriteLine("Speed: " + speed);
         if (camera)
@@ -125,7 +135,7 @@ public class MovementTests
             AddTerrain(15, 6, 3);
         }
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
-        var cMover = Game.Current.GamePanel.Add(new Character());
+        var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new Character());
         cMover.Background = RGB.Red;
         cMover.ResizeTo(3, 1);
         cMover.MoveTo(Game.Current.Width / 2f, Game.Current.Height / 2f);

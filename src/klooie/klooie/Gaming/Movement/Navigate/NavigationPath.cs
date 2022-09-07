@@ -23,11 +23,13 @@ public class NavigationPath : Lifetime
     public ICollider FindLocalTarget()
     {
         var bounds = options.Element.MassBounds;
-        foreach (var step in ReverseTail())
+        var obstacles = options.ObstaclesPadded;
+        var lookAhead = Math.Min(10, tail.Count - 1);
+        for (var i = lookAhead; i >= 0; i--)
         {
-            if (bounds.HasLineOfSight(step, options.ObstaclesPadded))
+            if (bounds.HasLineOfSight(tail[i], obstacles))
             {
-                return new ColliderBox(step);
+                return new ColliderBox(tail[i]);
             }
         }
         return tail.Count > 0 ? new ColliderBox(tail[0]) : null;
@@ -55,22 +57,15 @@ public class NavigationPath : Lifetime
         }
     }
 
-    private IEnumerable<RectF> ReverseTail()
-    {
-        for (var i = tail.Count - 1; i >= 0; i--)
-        {
-            var curr = tail[i];
-            yield return curr;
-        }
-    }
-
+   
     public void ShowPath(int z = -5000)
     {
         for (var i = 0; i < tail.Count; i++)
         {
             var el = tail[i];
-            var display = Game.Current.GamePanel.Add(new TextCollider(("" + i).ToConsoleString(ConsoleColor.Black, ConsoleColor.Green)));
+            var display = Game.Current.GamePanel.Add(new ConsoleControl() { Background = RGB.Green });
             display.MoveTo(el.Left, el.Top, int.MaxValue);
+            display.ResizeTo(el.Width, el.Height);
             EarliestOf(this, tail.GetMembershipLifetime(el)).OnDisposed(display.Dispose);
         }
     }

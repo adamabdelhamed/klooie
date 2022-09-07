@@ -3,7 +3,7 @@
 /// <summary>
 /// The base class for a game built with klooie. These games are event driven.
 /// </summary>
-public abstract class Game : ConsoleApp, IDelayProvider
+public class Game : ConsoleApp, IDelayProvider
 {
     /// <summary>
     /// The id for the Ready event that fires after all initial rules are executed
@@ -48,7 +48,7 @@ public abstract class Game : ConsoleApp, IDelayProvider
     /// <summary>
     /// Gets the rule provider used to drive the game
     /// </summary>
-    protected abstract IRuleProvider RuleProvider { get; }
+    protected virtual IRuleProvider RuleProvider => ArrayRulesProvider.Empty;
 
     /// <summary>
     /// Gets access to the primary, pause-aware collider group

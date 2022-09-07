@@ -23,9 +23,35 @@ public class NavigateTests
         Game.Current.Stop();
     });
 
-    private async Task NavigateTest(float speed, bool camera)
+    [TestMethod]
+    public void Navigate_Camera()
     {
-        Console.WriteLine("Speed: " + speed);
+        var ev = new Event<LocF>();
+        Character c = null;
+        var factory = () =>
+        {
+            c = new Character();
+            c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
+            return c;
+        };
+        GamingTest.Run(new GamingTestOptions()
+        {
+            Camera = true,
+            FocalPointChanged = ev,
+            Mode = UITestMode.RealTimeFYI,
+            TestId = TestContext.TestId(),
+            Test = async (c) =>
+            {
+                Game.Current.GamePanel.Background = new RGB(20, 20, 20);
+                await NavigateTest(50, true, factory);
+                Game.Current.Stop();
+            }
+        });
+    }
+
+
+    public async Task NavigateTest(float speed, bool camera, Func<Character> factory = null)
+    {
         if (camera)
         {
             AddTerrain(15, 60, 30);
@@ -35,22 +61,18 @@ public class NavigateTests
             AddTerrain(8, 10, 5);
         }
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
-        var cMover = Game.Current.GamePanel.Add(new Character());
+        var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new Character());
         cMover.Background = RGB.Red;
-        cMover.ResizeTo(3, 1);
+        cMover.ResizeTo(1, 1);
         cMover.MoveTo(Game.Current.GameBounds.Top+4,Game.Current.GameBounds.Left+2);
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
-        cMover.Velocity.ImpactOccurred.SubscribeOnce((impact) =>
-        {
-           // Assert.Fail($"Collision: "+ impact);
-        });
 
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
         var success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => speed, () => new ColliderBox(Game.Current.GameBounds.BottomRight.Offset(-(4+cMover.Width), -(2+cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
         {
             Show = true
-        }), Task.Delay(10000).ToLifetime());
+        }), Task.Delay(camera ? 60000 : 10000).ToLifetime());
         Assert.IsTrue(success);
         await Task.Delay(250);
         await Game.Current.RequestPaintAsync();
@@ -83,9 +105,9 @@ public class NavigateTests
         bottonWall.ResizeTo(Game.Current.GameBounds.Width, 1);
         bottonWall.GiveWiggleRoom();
 
-        for (var x = bounds.Left + spacing; x < bounds.Right - spacing; x += w + spacing)
+        for (var x = bounds.Left + spacing; x < bounds.Right - (spacing+w); x += w + spacing)
         {
-            for (var y = bounds.Top + spacing / 2f; y < bounds.Bottom - spacing / 2; y += h + (spacing / 2f))
+            for (var y = bounds.Top + spacing / 2f; y < bounds.Bottom - (spacing+h) / 2; y += h + (spacing / 2f))
             {
                 var collider = Game.Current.GamePanel.Add(new GameCollider());
                 collider.ResizeTo(w, h);

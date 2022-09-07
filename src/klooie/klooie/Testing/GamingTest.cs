@@ -11,11 +11,12 @@ public class GamingTestOptions
     public Func<UITestManager,Task> Test { get; set; }
     public UITestMode Mode { get; set; }
     public bool Camera { get; set; } = false;
-    public Func<LocF?> CameraFocalPoint { get; set; } = null;
+    public Event<LocF>? FocalPointChanged { get; set; }
 }
 
 public static class GamingTest
 {
+    public static UITestMode? TestModeOverride;
     public static void Run(IRule theOnlyRule, string testId, UITestMode mode) =>
         RunCustomSize(new ArrayRulesProvider(new IRule[] { theOnlyRule }), testId,80,50, mode, null);
 
@@ -38,6 +39,11 @@ public static class GamingTest
 
     public static void Run(GamingTestOptions options)
     {
+        if(TestModeOverride.HasValue)
+        {
+            options.Mode = TestModeOverride.Value;
+        }
+
         ConsoleProvider.Current = new KlooieTestConsole()
         {
             BufferWidth = options.GameWidth,
@@ -92,22 +98,7 @@ public class TestGame : Game
                 camera.BigBounds = new RectF(-500, -500, 1000, 1000);
                 camera.PointAt(camera.BigBounds.Center);
 
-                if (options.CameraFocalPoint != null)
-                {
-                    Invoke(async () =>
-                    {
-                        while (ShouldContinue)
-                        {
-                            await this.DelayOrYield(0);
-                            var fp = options.CameraFocalPoint();
-                            if (fp.HasValue)
-                            {
-                                camera.PointAt(fp.Value);
-                            }
-                        }
-                    });
-                }
-
+                options.FocalPointChanged?.Subscribe((b) => camera.PointAt(b), this);
             }
         });
 
@@ -120,6 +111,20 @@ public class TestGame : Game
         {
             this.provider = options.Rules;
         }
+    }
+
+    protected override async Task Startup()
+    {
+        await base.Startup();
+        var fr = LayoutRoot.Add(new NoFrillsLabel() { Foreground = RGB.White, Background = RGB.Black }).DockToRight(padding: 2).DockToTop(padding: 1);
+        Invoke(async () =>
+        {
+            while (ShouldContinue)
+            {
+                await Task.Delay(100);
+                fr.Text = (FramesPerSecond + " FPS").ToConsoleString();
+            }
+        });
     }
 
     public TestGame() { }

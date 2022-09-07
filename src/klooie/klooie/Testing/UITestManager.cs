@@ -7,7 +7,8 @@ public enum UITestMode
     KeyFramesVerified,
     KeyFramesFYI,
     RealTimeFYI,
-    Headless
+    Headless,
+    HeadOnly,
 }
 
 public class UITestManager
@@ -54,6 +55,12 @@ public class UITestManager
 
     public UITestManager(ConsoleApp app, string testId, UITestMode mode)
     {
+        if(mode == UITestMode.HeadOnly)
+        {
+            ConsoleProvider.Current = new StdConsoleProvider();
+            return;
+        }
+
         this.testId = testId;
         this.app = app;
         this.mode = mode;
@@ -97,6 +104,8 @@ public class UITestManager
 
     public void Finish()
     {
+        if (mode == UITestMode.HeadOnly) return;
+
         this.keyFrameRecorder?.Finish();
 
         if (mode == UITestMode.Headless) return;
