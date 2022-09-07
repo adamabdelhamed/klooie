@@ -24,6 +24,16 @@ internal class EventBroadcaster
         }
     }
 
+    public void SubscribeOnce(string expressionText, Action<GameEvent> handler)
+    {
+        var lt = new Lifetime();
+        Subscribe(expressionText, ev =>
+        {
+            handler(ev);
+            lt.Dispose();
+        }, lt);
+    }
+
     public void Publish(string eventName, object? args)
     {
         if (events.TryGetValue(eventName, out Event<GameEvent> toFire) == false) return;

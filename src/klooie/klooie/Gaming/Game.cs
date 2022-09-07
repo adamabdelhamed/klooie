@@ -61,6 +61,12 @@ public abstract class Game : ConsoleApp, IDelayProvider
     public virtual ConsolePanel GamePanel => LayoutRoot;
 
     /// <summary>
+    /// Gets the main gaming area, which by default is the size of LayoutRoot, but
+    /// can be replaced with a camera.
+    /// </summary>
+    public virtual RectF GameBounds => LayoutRoot.Bounds;
+
+    /// <summary>
     /// Variables that can be referenced by rules
     /// </summary>
     public ObservableObject RuleVariables { get; protected set; }
@@ -74,6 +80,15 @@ public abstract class Game : ConsoleApp, IDelayProvider
     /// <param name="lt">the duration of the subscription</param>
     public void Subscribe(string expressionText, Action<GameEvent> handler, ILifetimeManager lt) =>
         eventBroadcaster.Subscribe(expressionText, handler, lt);
+
+    /// <summary>
+    /// Subscribes to a game event for up to one occurrance. You can use boolean expressions using and ('&'), or ('|') and
+    /// grouping with parentheses. If an event is published that mathces then your handler will be called.
+    /// </summary>
+    /// <param name="expressionText">the subscription expression</param>
+    /// <param name="handler">the handler to call when a matching event is published</param>
+    public void SubscribeOnce(string expressionText, Action<GameEvent> handler) =>
+        eventBroadcaster.SubscribeOnce(expressionText, handler);
 
     /// <summary>
     /// Publishes a game event with optional args.

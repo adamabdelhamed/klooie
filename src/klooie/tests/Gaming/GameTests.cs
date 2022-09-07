@@ -1,6 +1,7 @@
 ﻿
 using klooie.Gaming;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PowerArgs;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,6 +19,17 @@ public class GameTests
         private Func<Task> body;
         public TestRule(Func<Task> body) => this.body = body;
         public Task ExecuteAsync() => body();
+    }
+
+    [TestInitialize]
+    public void Setup()
+    {
+        ConsoleProvider.Current = new KlooieTestConsole()
+        {
+            BufferWidth = 80,
+            WindowWidth = 80,
+            WindowHeight = 51
+        };
     }
 
     [TestMethod]
@@ -39,6 +51,33 @@ public class GameTests
                 game.Publish("Ready");
                 Assert.AreEqual(1, receiveCount);
             }
+
+            // lifetime is over, subscription should be terminated
+            game.Publish("Ready");
+            Assert.AreEqual(1, receiveCount);
+            game.Stop();
+        });
+        game.Run();
+    }
+
+
+    [TestMethod]
+    public void EventBroadcaster_SingleVariableOnce()
+    {
+        var game = new TestGame();
+        game.Invoke(() =>
+        {
+            var receiveCount = 0;
+            game.SubscribeOnce("Ready", (e) =>
+            {
+                Assert.AreEqual("Ready", e.Id);
+                receiveCount++;
+            });
+
+            Assert.AreEqual(0, receiveCount);
+            game.Publish("Ready");
+            Assert.AreEqual(1, receiveCount);
+            
 
             // lifetime is over, subscription should be terminated
             game.Publish("Ready");
