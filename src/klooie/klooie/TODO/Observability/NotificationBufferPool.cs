@@ -93,7 +93,7 @@ internal class NotificationBufferPool
 
             for (var i = 0; i < subscriberCountWithParams; i++)
             {
-                if (subSpan[i].Lifetime.IsExpired == false)
+                if (paramSpan[i].Lifetime.IsExpired == false)
                 {
                     paramSpan[i].Callback(paramSpan[i].Param);
                 }
