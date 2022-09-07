@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <Folder Include="CLI\Physics\Space\" />
+    <Folder Include="CLI\Physics\Time\" />
   </ItemGroup>
 
 </Project>

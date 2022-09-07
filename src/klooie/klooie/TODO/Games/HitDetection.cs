@@ -12,6 +12,8 @@ public struct Impact
     public ICollider ColliderHit { get; set; }
     public HitType HitType { get; set; }
     public HitPrediction Prediction { get; set; }
+
+    public override string ToString() => $"{Prediction.LKGX},{Prediction.LKGY} - {ColliderHit?.GetType().Name}";
 }
 
 public class HitPrediction

@@ -142,7 +142,7 @@ public class MovementTests
                 var newPosition = cMover.Center();
                 var d = lastPosition.CalculateNormalizedDistanceTo(newPosition);
 
-                failed = failed || d < speed * .25f; // we didn't get stuck
+                failed = failed || d == 0; // we didn't get stuck
                 Console.WriteLine(failed ? d + " fail" : d + " ok");
                 lastPosition = newPosition;
             }

@@ -56,6 +56,8 @@ public class Velocity
             _onSpeedChanged?.Fire();
         }
     }
+    public float MinEvalSeconds => this.lastEvalTime + EvalFreqnencySeconds;
+    public float EvalFreqnencySeconds => Group.SpeedRatio* this.SpeedRatio* (this.Speed > ColliderGroup.HighestSpeedForEvalCalc? .025f : ColliderGroup.EvalFrequencySlope* this.speed + ColliderGroup.LeastFrequentEval);
 
     public TimeSpan NextCollisionETA
     {
@@ -114,11 +116,11 @@ public class ColliderGroup
 
     // these properties model a linear progression that determines the appropriate min
     // evaluation time period for an object given it's current speed
-    private const float LeastFrequentEval = .1f; // y1
-    private const float LowestSpeedForEvalCalc = 0; // x1
-    private const float MostFrequentEval = .025f; // y2
-    private const float HighestSpeedForEvalCalc = 60; // x2
-    private const float EvalFrequencySlope = (MostFrequentEval - LeastFrequentEval) / (HighestSpeedForEvalCalc - LowestSpeedForEvalCalc);
+    internal const float LeastFrequentEval = .05f; // y1
+    internal const float LowestSpeedForEvalCalc = 0; // x1
+    internal const float MostFrequentEval = .002f; // y2
+    internal const float HighestSpeedForEvalCalc = 60; // x2
+    internal const float EvalFrequencySlope = (MostFrequentEval - LeastFrequentEval) / (HighestSpeedForEvalCalc - LowestSpeedForEvalCalc);
 
     private int colliderBufferLength;
     private ICollider[] colliderBuffer;
@@ -229,14 +231,20 @@ public class ColliderGroup
 
                 // no need to evaluate this velocity if it's not moving
                 var velocity = item.Velocity;
-                if (velocity.Speed <= 0) continue;
+                if (velocity.Speed <= 0)
+                {
+                    velocity._onVelocityEnforced?.Fire();
+                    continue;
+                }
 
                 // Tick can happen very frequently, but velocities that are moving slowly don't
                 // need to be evaluated as frequently. These next few lines will use a linear model to determine
                 // the appropriate time to wait between evaluations, based on the object's speed
-                var evalFrequency = SpeedRatio * velocity.SpeedRatio * (velocity.Speed > HighestSpeedForEvalCalc ? .025f : EvalFrequencySlope * velocity.speed + LeastFrequentEval);
-                var minEvalTime = velocity.lastEvalTime + evalFrequency;
-                if (now < minEvalTime) continue;
+                if (now < velocity.MinEvalSeconds)
+                {
+                    velocity._onVelocityEnforced?.Fire();
+                    continue;
+                }
                 var dt = ((float)now - velocity.lastEvalTime) * SpeedRatio * velocity.SpeedRatio;
                 velocity.lastEvalTime = now;
 
@@ -317,7 +325,7 @@ public class ColliderGroup
             }
         }
     }
-
+ 
     private void CalcObstacles()
     {
         colliderBufferLength = 0;
