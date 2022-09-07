@@ -27,9 +27,9 @@ public class GameCollider : ConsolePanel
         return base.CanCollideWith(other) && other.ZIndex == this.ZIndex;
     }
 
+  
 
 
- 
 
     public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstaclesSlow(this).WhereAs<GameCollider>();
 
@@ -92,7 +92,7 @@ public class ParentGameCollider : GameCollider
 
     public ParentGameCollider()
     {
-        DamageDirective.Current.OnDamageEnforced.Subscribe((args) =>
+        DamageDirective.Current?.OnDamageEnforced.Subscribe((args) =>
         {
             if (SharedHPMode == false) return;
             var damagee = args.RawArgs.Damagee as ChildCharacter;
@@ -166,7 +166,7 @@ public static class IColliderExtensions
     public static IEnumerable<ICollider> GetObstacles(this ICollider c)
     {
         var e = c as GameCollider;
-        return c.GetObstacles();
+        return Game.Current.MainColliderGroup.GetObstaclesSlow(c);
     }
 }
 
