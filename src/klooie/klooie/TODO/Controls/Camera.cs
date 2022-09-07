@@ -1,4 +1,4 @@
-﻿namespace PowerArgs.Cli;
+﻿namespace klooie;
 
 /// <summary>
 /// A panel that can pan like a camera.
@@ -42,6 +42,11 @@ public class Camera : ConsolePanel
     /// </summary>
     public RectF BigBounds { get; set; }
 
+    /// <summary>
+    /// Points the camera at the location so that it appears at the center of the panel
+    /// </summary>
+    /// <param name="location">the location to point to</param>
+    public void PointAt(LocF location) => CameraLocation = location.Offset(-Width / 2f, -Height / 2f);
 
     /// <summary>
     /// Animates the camera to an offset that is relative to its current position

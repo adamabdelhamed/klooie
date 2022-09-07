@@ -2,25 +2,54 @@
 
 namespace klooie.tests;
 
+public class GamingTestOptions
+{
+    public IRuleProvider Rules { get; set; } = ArrayRulesProvider.Empty;
+    public string TestId { get; set; }
+    public int GameWidth { get; set; } = 80;
+    public int GameHeight { get; set; } = 50;
+    public Func<UITestManager,Task> Test { get; set; }
+    public UITestMode Mode { get; set; }
+    public bool Camera { get; set; } = false;
+    public Func<LocF?> CameraFocalPoint { get; set; } = null;
+}
+
 public static class GamingTest
 {
     public static void Run(IRule theOnlyRule, string testId, UITestMode mode) =>
         RunCustomSize(new ArrayRulesProvider(new IRule[] { theOnlyRule }), testId,80,50, mode, null);
 
-    public static void RunCustomSize(IRuleProvider rules, string testId, int width, int height, UITestMode mode, Func<UITestManager,Task> test = null)
+    public static void Run(string testId, UITestMode mode, Func<UITestManager, Task> test = null) =>
+        RunCustomSize(ArrayRulesProvider.Empty, testId, 80, 50, mode, test);
+
+    public static void RunCustomSize(string testId, UITestMode mode, int w, int h, Func<UITestManager, Task> test = null) =>
+        RunCustomSize(ArrayRulesProvider.Empty, testId, w, h, mode, test);
+
+    public static void RunCustomSize(IRuleProvider rules, string testId, int width, int height, UITestMode mode, Func<UITestManager, Task> test = null) => Run(new GamingTestOptions()
+    {
+        Rules = rules,
+        Mode = mode,
+        TestId = testId,
+        Test = test,
+        GameWidth = width,
+        GameHeight = height,
+    });
+    
+
+    public static void Run(GamingTestOptions options)
     {
         ConsoleProvider.Current = new KlooieTestConsole()
         {
-            BufferWidth = width,
-            WindowWidth = width,
-            WindowHeight = height + 1
+            BufferWidth = options.GameWidth,
+            WindowWidth = options.GameWidth,
+            WindowHeight = options.GameHeight + 1
         };
 
-        var game = new TestGame(rules);
-        var testManager = new UITestManager(game, testId, mode);
-        if (test != null)
+        var game = new TestGame(options);
+        var testManager = new UITestManager(game, options.TestId, options.Mode);
+        if (options.Test != null)
         {
-            game.Invoke(() => test?.Invoke(testManager));
+            game.Invoke(() => options.Test?.Invoke(testManager));
         }
         else
         {
@@ -42,8 +71,71 @@ public class TestGame : Game
 {
     protected override IRuleProvider RuleProvider => provider ?? ArrayRulesProvider.Empty;
     private IRuleProvider provider;
+    private Camera camera;
+    public TestGame(GamingTestOptions options)
+    {
+        var myRule = FuncRule.Create(async () =>
+        {
+            if (options.Camera)
+            {
+                camera = LayoutRoot.Add(new Camera()).Fill();
+                LayoutRoot.Sync(nameof(LayoutRoot.Background), () =>
+                {
+                    camera.Background = LayoutRoot.Background;
+                }, camera);
+
+                camera.Subscribe(nameof(camera.Background), () =>
+                {
+                    var bg = camera.Background;
+                }, camera);
+
+                camera.BigBounds = new RectF(-500, -500, 1000, 1000);
+                camera.PointAt(camera.BigBounds.Center);
+
+                if (options.CameraFocalPoint != null)
+                {
+                    Invoke(async () =>
+                    {
+                        while (ShouldContinue)
+                        {
+                            await this.DelayOrYield(0);
+                            var fp = options.CameraFocalPoint();
+                            if (fp.HasValue)
+                            {
+                                camera.PointAt(fp.Value);
+                            }
+                        }
+                    });
+                }
+
+            }
+        });
+
+        if(options.Camera)
+        {
+            this.provider = options.Rules != null ? new RuleWrapper(options.Rules, new IRule[] { myRule })
+                : new ArrayRulesProvider(new IRule[] { myRule });
+        }
+        else
+        {
+            this.provider = options.Rules;
+        }
+    }
 
     public TestGame() { }
-    public TestGame(IRule[] rules) => this.provider = new ArrayRulesProvider(rules);
-    public TestGame(IRuleProvider ruleProvider) => this.provider = ruleProvider;
+
+    public override ConsolePanel GamePanel => camera ?? base.GamePanel;
+    public override RectF GameBounds => camera?.BigBounds ?? base.GameBounds;
+}
+
+public class RuleWrapper : IRuleProvider
+{
+    private IRuleProvider wrapped;
+    private IEnumerable<IRule> additions;
+    public RuleWrapper(IRuleProvider provider, IEnumerable<IRule> additions)
+    {
+        this.wrapped = provider;
+        this.additions = additions;
+    }
+    public IRule[] Rules => wrapped.Rules.Concat(additions).ToArray();
 }
