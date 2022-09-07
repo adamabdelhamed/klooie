@@ -26,6 +26,7 @@ public class Navigate : Movement
 
     private Navigate(Velocity v, SpeedEval speed, Func<ICollider> destination, NavigateOptions options) : base(v, speed)
     {
+        AssertSupported();
         this.Options = options ?? new NavigateOptions();
         this.destination = destination;
     }
@@ -92,10 +93,10 @@ public class Navigate : Movement
         if (_CurrentPath == null || _CurrentPath?.IsReallyStuck == true || effectiveDestination == null || effectiveDestination.Bounds.Equals(dest.Bounds) == false)
         {
             effectiveDestination = dest;
-
-            var from = Element.MassBounds;
+            AssertSupported();
+            var from = Element.Bounds;
             var to = effectiveDestination;
-            var path = await FindPathAdjusted(from, to.Bounds);
+            var path = await FindPathAdjusted(from, to.Bounds, ObstaclesPadded);
             var r = path == null ? null : path.Select(l =>new RectF(l.Left, l.Top, 1, 1)).ToList();
 
             _CurrentPath?.Dispose();
@@ -114,7 +115,7 @@ public class Navigate : Movement
         }
     }
 
-    private async Task<List<LocF>> FindPathAdjusted(RectF from, RectF to)
+    public static async Task<List<LocF>> FindPathAdjusted(RectF from, RectF to, IEnumerable<RectF> obstacles)
     {
         var sceneW = (int)Game.Current.GameBounds.Width;
         var sceneH = (int)Game.Current.GameBounds.Height;
@@ -123,7 +124,7 @@ public class Navigate : Movement
         var sceneX = Game.Current.GameBounds.Left;
         var sceneY = Game.Current.GameBounds.Top;
 
-        var adjustedObstacles = ObstaclesPadded
+        var adjustedObstacles = obstacles
             .Select(o => o.Offset(-sceneX, -sceneY))
             .Where(o => inBounds.Contains(o))
             .ToList();
@@ -162,5 +163,13 @@ public class Navigate : Movement
             ret = false;
         }
         return ret;
+    }
+
+    private void AssertSupported()
+    {
+        if (Element.Width > 1 || Element.Height > 1)
+        {
+            throw new NotSupportedException("Navigate is only supported for 1x1 elements");
+        }
     }
 }

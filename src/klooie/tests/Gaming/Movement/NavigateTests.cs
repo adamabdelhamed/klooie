@@ -24,6 +24,14 @@ public class NavigateTests
     });
 
     [TestMethod]
+    public void Puppet_Basic() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 50, async (context) =>
+    {
+        Game.Current.GamePanel.Background = new RGB(20, 20, 20);
+        await PuppetTest(30, false);
+        Game.Current.Stop();
+    });
+
+    [TestMethod]
     public void Navigate_Camera()
     {
         var ev = new Event<LocF>();
@@ -43,14 +51,49 @@ public class NavigateTests
             Test = async (c) =>
             {
                 Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-                await NavigateTest(50, true, factory);
+                await NavigateTest(150, true, factory);
                 Game.Current.Stop();
             }
         });
     }
 
+    [TestMethod]
+    public void Puppet_Camera()
+    {
+        var ev = new Event<LocF>();
+        Character c = null;
+        var factory = () =>
+        {
+            c = new Character();
+            c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
+            return c;
+        };
+        GamingTest.Run(new GamingTestOptions()
+        {
+            Camera = true,
+            FocalPointChanged = ev,
+            Mode = UITestMode.RealTimeFYI,
+            TestId = TestContext.TestId(),
+            Test = async (c) =>
+            {
+                Game.Current.GamePanel.Background = new RGB(20, 20, 20);
+                await PuppetTest(100, true, factory);
+                Game.Current.Stop();
+            }
+        });
+    }
 
-    public async Task NavigateTest(float speed, bool camera, Func<Character> factory = null)
+    public Task PuppetTest(float speed, bool camera, Func<Character> factory = null)
+    {
+        return NavOrPuppetTest(false, speed, camera, factory);
+    }
+
+    public Task NavigateTest(float speed, bool camera, Func<Character> factory = null)
+    {
+        return NavOrPuppetTest(true, speed, camera, factory);
+    }
+
+    public async Task NavOrPuppetTest(bool nav, float speed, bool camera, Func<Character> factory = null)
     {
         if (camera)
         {
@@ -64,15 +107,23 @@ public class NavigateTests
         var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new Character());
         cMover.Background = RGB.Red;
         cMover.ResizeTo(1, 1);
-        cMover.MoveTo(Game.Current.GameBounds.Top+4,Game.Current.GameBounds.Left+2);
+        cMover.MoveTo(Game.Current.GameBounds.Top + 4, Game.Current.GameBounds.Left + 2);
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
 
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
-        var success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => speed, () => new ColliderBox(Game.Current.GameBounds.BottomRight.Offset(-(4+cMover.Width), -(2+cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
+        bool success;
+        if (nav)
         {
-            Show = true
-        }), Task.Delay(camera ? 60000 : 10000).ToLifetime());
+            success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => speed, () => new ColliderBox(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
+            {
+                Show = true
+            }), Task.Delay(camera ? 60000 : 10000).ToLifetime());
+        }
+        else
+        {
+            success = await Mover.InvokeOrTimeout(Puppet.Create(cMover.Velocity, () => speed, Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), Task.Delay(camera ? 60000 : 10000).ToLifetime());
+        }
         Assert.IsTrue(success);
         await Task.Delay(250);
         await Game.Current.RequestPaintAsync();
