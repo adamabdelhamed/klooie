@@ -58,6 +58,53 @@ public class NavigateTests
     }
 
     [TestMethod]
+    public void Navigate_Colliders() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 50, async (context) =>
+    {
+        Game.Current.GamePanel.Background = new RGB(20, 20, 20);
+        var cMover = Game.Current.GamePanel.Add(new Character());
+        cMover.Background = RGB.Red;
+        cMover.ResizeTo(1, 1);
+        cMover.MoveTo(Game.Current.GameBounds.Top + 4, Game.Current.GameBounds.Left + 2);
+        Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
+        var r = new Random(12);
+        var left = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.Blue });
+        var right = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.Blue });
+        var top = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.Blue });
+        var bottom = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.Blue });
+
+        left.MoveTo(0, 0);
+        left.ResizeTo(2, Game.Current.GameBounds.Height);
+
+        right.MoveTo(Game.Current.GameBounds.Width - 2, 0);
+        right.ResizeTo(2, Game.Current.GameBounds.Height);
+
+        top.MoveTo(0, 0);
+        top.ResizeTo(Game.Current.GameBounds.Width, 1);
+
+        bottom.MoveTo(0, Game.Current.GameBounds.Bottom - 1);
+        bottom.ResizeTo(Game.Current.GameBounds.Width, 1);
+
+        for (var i = 0; i < 50; i++)
+        {
+            var collider = Game.Current.GamePanel.Add(new TextCollider("O".ToRed()) { CompositionMode = CompositionMode.BlendBackground });
+            collider.MoveTo(r.Next(Game.Current.Width / 2, Game.Current.Width - 5),
+                r.Next(Game.Current.Height / 2, Game.Current.Height - 5));
+            collider.NudgeFree();
+            collider.Velocity.Bounce = true;
+            collider.Velocity.Angle = r.Next(0, 360);
+            collider.Velocity.Speed = r.Next(10,50);
+        }
+
+        await Game.Current.RequestPaintAsync();
+        Game.Current.LayoutRoot.IsVisible = true;
+        bool success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => 25, () => new ColliderBox(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
+        {
+            Show = true
+        }), Task.Delay(10000).ToLifetime());
+    
+        Game.Current.Stop();
+    });
+    [TestMethod]
     public void Puppet_Camera()
     {
         var ev = new Event<LocF>();
