@@ -116,7 +116,7 @@ public class DamageDirective : EventDrivenDirective
         elementPower.MaxHP = float.IsFinite(newHP) == false ? float.PositiveInfinity :
                              newHP > elementPower.MaxHP ? newHP : elementPower.MaxHP;
         var oldHp = elementPower.HP;
-        var wasDecrease = oldHp > newHP;
+        var wasDecrease = oldHp > newHP && float.IsFinite(oldHp);
         newHP = Math.Min(elementPower.MaxHP, newHP);
         elementPower.HP = newHP;
 
