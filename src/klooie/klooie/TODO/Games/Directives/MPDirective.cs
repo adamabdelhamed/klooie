@@ -3,6 +3,7 @@ namespace klooie.Gaming;
 
 public class MPDirective : Directive
 {
+    public const string NoRewardsTag = "NoRewards";
     private static MPDirective Current { get; set; }
     private Event changed = new Event();
 
