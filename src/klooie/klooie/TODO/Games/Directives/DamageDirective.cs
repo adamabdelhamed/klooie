@@ -2,7 +2,7 @@
 
 namespace klooie.Gaming;
 
-public class DamageDirective : EventDrivenDirective
+public class DamageDirective : Directive
 {
     public const int MaxPlayerHP = 100;
     public const string OnEnemyDestroyedEventId = "OnEnemyDestroyed";
@@ -15,10 +15,12 @@ public class DamageDirective : EventDrivenDirective
 
     public List<Func<DamageEventArgs, Impact?, bool>> DamageSuppressors = new List<Func<DamageEventArgs, Impact?, bool>>();
 
+    [ArgIgnore]
+    public Event<DamageEnforcementEvent> OnEnemyDestroyed { get; private set; } = new Event<DamageEnforcementEvent>();
 
     [ArgIgnore]
     public Event<DamageEnforcementEvent> OnDamageEnforced { get; private set; } = new Event<DamageEnforcementEvent>();
-
+ 
 
     private Dictionary<ConsoleControl, List<Action<float>>> hpChangeHandlers = new Dictionary<ConsoleControl, List<Action<float>>>();
 
@@ -30,11 +32,12 @@ public class DamageDirective : EventDrivenDirective
     private static DamageDirective _current;
     public static DamageDirective Current  { get => _current; private set => _current = value; }
 
-    public override async Task OnEventFired(object args)
+    public override Task ExecuteAsync()
     {
         Current = this;
         Game.Current.OnDisposed(() => Current = null);
         Game.Current.MainColliderGroup.ImpactOccurred.Subscribe(ReportImpact, Game.Current);
+        return Task.CompletedTask;
     }
        
     public void ReportImpact(Impact impact)
@@ -79,16 +82,17 @@ public class DamageDirective : EventDrivenDirective
 
         if (damageAmount != 0)
         {
-            AddHP(args.Damagee, -damageAmount, args.Damager as WeaponElement, impact);
-            OnDamageEnforced.Fire(new DamageEnforcementEvent() { RawArgs = args, DamageAmount = -damageAmount, Impact = impact });
+            var damageArgs = new DamageEnforcementEvent() { RawArgs = args, DamageAmount = -damageAmount, Impact = impact };
+            AddHP(args.Damagee, -damageAmount, args.Damager as WeaponElement, impact, damageArgs);
+            OnDamageEnforced.Fire(damageArgs);
         }
     }
 
-    public void AddHP(ConsoleControl element, float amount, WeaponElement responsible = null, Impact? impact = null)
+    public void AddHP(ConsoleControl element, float amount, WeaponElement responsible = null, Impact? impact = null, DamageEnforcementEvent args = null)
     {
         var currentHp = GetHP(element);
         var newHP = currentHp + amount;
-        SetHP(element, newHP, responsible, impact);
+        SetHP(element, newHP, responsible, impact, args);
     }
 
     public void SetDamageInfo(ConsoleControl element, DamageInfo power)
@@ -98,7 +102,7 @@ public class DamageDirective : EventDrivenDirective
         HPInfo[element].Strength = power.Strength;
     }
 
-    public void SetHP(ConsoleControl element, float newHP, WeaponElement responsible = null, Impact? impact = null)
+    public void SetHP(ConsoleControl element, float newHP, WeaponElement responsible = null, Impact? impact = null, DamageEnforcementEvent args = null)
     {
         newHP = newHP < 0 ? 0 : newHP;
 
@@ -137,6 +141,7 @@ public class DamageDirective : EventDrivenDirective
         {
             if (element.HasSimpleTag("enemy"))
             {
+                if(args != null) OnEnemyDestroyed.Fire(args);
                 Game.Current.Publish(OnEnemyDestroyedEventId, element);
             }
             if (element is IGhost)
