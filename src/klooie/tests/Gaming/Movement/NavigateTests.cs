@@ -90,7 +90,7 @@ public class NavigateTests
             collider.MoveTo(r.Next(Game.Current.Width / 2, Game.Current.Width - 5),
                 r.Next(Game.Current.Height / 2, Game.Current.Height - 5));
             collider.NudgeFree();
-            collider.Velocity.Bounce = true;
+            collider.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
             collider.Velocity.Angle = r.Next(0, 360);
             collider.Velocity.Speed = r.Next(10,50);
         }

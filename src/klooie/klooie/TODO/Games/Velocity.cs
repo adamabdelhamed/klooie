@@ -3,6 +3,13 @@ using System.Diagnostics;
 namespace klooie;
 public class Velocity
 {
+    public enum CollisionBehaviorMode
+    {
+        Bounce,
+        Stop,
+        DoNothing
+    }
+
     internal bool haveMovedSinceLastHitDetection = true;
     internal Angle angle;
     internal float speed;
@@ -20,7 +27,7 @@ public class Velocity
     public Event<Impact> ImpactOccurred { get => _impactOccurred ?? (_impactOccurred = new Event<Impact>()); }
 
     public Impact LastImpact { get; internal set; }
-    public bool Bounce { get; set; }
+    public CollisionBehaviorMode CollisionBehavior { get; set; } = Velocity.CollisionBehaviorMode.Stop;
     public HitPrediction NextCollision { get; internal set; }
 
     public Func<RectF> BoundsTransform { get; set; }
@@ -284,7 +291,7 @@ public class ColliderGroup
 
                         if (velocities.TryGetValue(obstacleHit, out Velocity vOther))
                         {
-                            if(vOther.Bounce)
+                            if(vOther.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
                             {
                                 var topOrBottomEdgeWasHit = hitPrediction.Edge == obstacleHit.Bounds.TopEdge || hitPrediction.Edge == obstacleHit.Bounds.BottomEdge;
                                 vOther.Angle = topOrBottomEdgeWasHit ? Angle.Right.Add(-vOther.Angle.Value) : Angle.Left.Add(-vOther.Angle.Value);
@@ -304,12 +311,12 @@ public class ColliderGroup
                         velocity.haveMovedSinceLastHitDetection = false;
                     }
 
-                    if (velocity.Bounce)
+                    if (velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
                     {
                         var topOrBottomEdgeWasHit = hitPrediction.Edge == obstacleHit.Bounds.TopEdge || hitPrediction.Edge == obstacleHit.Bounds.BottomEdge;
                         velocity.Angle = topOrBottomEdgeWasHit ? Angle.Right.Add(-velocity.Angle.Value) : Angle.Left.Add(-velocity.Angle.Value);
                     }
-                    else
+                    else if(velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Stop)
                     {
                         velocity.Stop();
                     }
