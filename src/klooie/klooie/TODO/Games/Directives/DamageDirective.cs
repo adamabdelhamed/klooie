@@ -172,8 +172,6 @@ public class DamageDirective : Directive
         }
         else if(wasDecrease)
         {
-            DoKnockBackEffectIfAppropriate(responsible, element, impact);
-
             var update = Game.Current.GamePanel.Controls.WhereAs<HPUpdate>().Where(e => e.Target == element).FirstOrDefault();
 
             if (update == null)
@@ -228,25 +226,7 @@ public class DamageDirective : Directive
         });
     }
 
-    private void DoKnockBackEffectIfAppropriate(WeaponElement responsible, ConsoleControl e, Impact? impact = null)
-    {
-        var element = e as GameCollider;
-        if (element == null) return;
-        Angle? angle = null;
-        if (impact.HasValue)
-        {
-            angle = impact.Value.Angle;
-        }
-        else if (responsible != null)
-        {
-            angle = responsible.CalculateAngleTo(element.Bounds);
-        }
 
-        if (angle.HasValue)
-        {
-            Game.Current.Invoke(() => DramaticImpact.KnockBackAsync(element.GetRoot(), angle.Value, 30, RGB.Gray, ""));
-        }
-    }
 
     public class DamageEnforcementEvent
     {
