@@ -27,13 +27,13 @@ public class FunctionHPDirective : FunctionDirective
                 code.AddTags(Tags);
             }
 
-            code.Power.HP = HP;
+            DamageDirective.Current.SetHP(code, HP);
             if (RunnableThreshold < 1)
             {
                 var codeEl = code;
-                codeEl.Power.Subscribe(nameof(PowerInfo.HP), () =>
-                {
-                    var completeness = myCode.Where(c => c.Power.HP > 0).Count() / (float)myCode.Count;
+                DamageDirective.Current.RegisterHPChangedForLifetime(code,(newHp) =>
+                { 
+                    var completeness = myCode.Where(c => c.GetHP() > 0).Count() / (float)myCode.Count;
                     var couldRun = myFunction.CanExecute;
                     myFunction.CanExecute = completeness >= RunnableThreshold;
 

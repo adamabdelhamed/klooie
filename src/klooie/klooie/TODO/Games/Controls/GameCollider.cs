@@ -5,13 +5,11 @@ public class GameCollider : ConsolePanel
     public ConsoleCharacter? Pen { get; set; }
     
     public Velocity Velocity { get; private set; }
-    public PowerInfo Power { get; set; }
 
 
 
     public GameCollider()
     {
-        Power = new PowerInfo();
         Velocity = new Velocity(this, Game.Current.MainColliderGroup);
         Velocity.OnAngleChanged.Subscribe(() => FirePropertyChanged(nameof(Bounds)), this);
     }

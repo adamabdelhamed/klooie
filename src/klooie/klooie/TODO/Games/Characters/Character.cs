@@ -84,7 +84,6 @@ public class Character : ParentGameCollider
     public Character()
     {
         CompositionMode = CompositionMode.BlendBackground;
-        this.AddTag(DamageDirective.DamageableTag);
         IsVisible = true;
         this.Subscribe(nameof(Inventory), () => this.Inventory.Owner = this, this);
         Inventory = new Inventory();

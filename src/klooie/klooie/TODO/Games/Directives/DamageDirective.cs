@@ -7,8 +7,9 @@ public class DamageDirective : EventDrivenDirective
     public const int MaxPlayerHP = 100;
     public const string OnEnemyDestroyedEventId = "OnEnemyDestroyed";
     public const string RespawningTag = "Respawning";
-    public const string DamageableTag = "damageable";
     public const string CustomDisposalOnKilledTag = "CustomDispose";
+
+    private Dictionary<ConsoleControl, PowerInfo> HPInfo = new Dictionary<ConsoleControl, PowerInfo>();
 
     public string RespawnOnKilledEvent { get; set; }
 
@@ -38,7 +39,7 @@ public class DamageDirective : EventDrivenDirective
        
     public void ReportImpact(Impact impact)
     {
-        if (IsDamageable(impact.ColliderHit))
+        if (IsDamageable(impact.ColliderHit as ConsoleControl))
         {
             ReportDamage(new DamageEventArgs()
             {
@@ -48,7 +49,7 @@ public class DamageDirective : EventDrivenDirective
         }
     }
 
-    public bool IsDamageable(ICollider el) => el is GameCollider && (el as GameCollider).HasSimpleTag(DamageableTag);
+    public bool IsDamageable(ConsoleControl el) => el != null && HPInfo.ContainsKey(el);
 
     public void ReportDamage(DamageEventArgs args, Impact? impact = null)
     {
@@ -63,6 +64,8 @@ public class DamageDirective : EventDrivenDirective
             return;
         }
 
+        if (HPInfo.TryGetValue(args.Damagee, out PowerInfo hpForDamagee) == false) return;
+
         foreach(var suppressor in DamageSuppressors)
         {
             if(suppressor(args,impact))
@@ -70,9 +73,9 @@ public class DamageDirective : EventDrivenDirective
                 return;
             }
         }
-
+        var damagerStrength = HPInfo.TryGetValue(args.Damager, out PowerInfo p) ? p.Strength : 0;
         var damageAmount = args.Damager is WeaponElement && (args.Damager as WeaponElement)?.Weapon != null ?
-            (args.Damager as WeaponElement).Weapon.Strength : args.Damager.Power.Strength;
+            (args.Damager as WeaponElement).Weapon.Strength : damagerStrength;
 
         if (damageAmount != 0)
         {
@@ -81,14 +84,21 @@ public class DamageDirective : EventDrivenDirective
         }
     }
 
-    public void AddHP(GameCollider element, float amount, WeaponElement responsible = null, Impact? impact = null)
+    public void AddHP(ConsoleControl element, float amount, WeaponElement responsible = null, Impact? impact = null)
     {
         var currentHp = GetHP(element);
         var newHP = currentHp + amount;
         SetHP(element, newHP, responsible, impact);
     }
 
-    public void SetHP(GameCollider element, float newHP, WeaponElement responsible = null, Impact? impact = null)
+    public void SetPower(ConsoleControl element, PowerInfo power)
+    {
+        SetHP(element, power.HP);
+        HPInfo[element].MaxHP = power.MaxHP;
+        HPInfo[element].Strength = power.Strength;
+    }
+
+    public void SetHP(ConsoleControl element, float newHP, WeaponElement responsible = null, Impact? impact = null)
     {
         newHP = newHP < 0 ? 0 : newHP;
 
@@ -97,10 +107,18 @@ public class DamageDirective : EventDrivenDirective
             throw new InvalidOperationException("negative HP detected");
         }
 
-        var oldHp = element.Power.HP;
+        if(HPInfo.TryGetValue(element, out PowerInfo elementPower) == false)
+        {
+            elementPower = new PowerInfo();
+            HPInfo.Add(element, elementPower);
+            element.OnDisposed(() => HPInfo.Remove(element));
+        }
+        elementPower.MaxHP = float.IsFinite(newHP) == false ? float.PositiveInfinity :
+                             newHP > elementPower.MaxHP ? newHP : elementPower.MaxHP;
+        var oldHp = elementPower.HP;
         var wasDecrease = oldHp > newHP;
-        newHP = Math.Min(element.Power.MaxHP, newHP);
-        element.Power.HP = newHP;
+        newHP = Math.Min(elementPower.MaxHP, newHP);
+        elementPower.HP = newHP;
 
         if (hpChangeHandlers.TryGetValue(element, out List<Action<float>> handlers))
         {
@@ -131,7 +149,7 @@ public class DamageDirective : EventDrivenDirective
                 if (element.HasSimpleTag(RespawningTag) == false)
                 {
                     element.AddTag(RespawningTag);
-                    element.Power.HP = 0;
+                    elementPower.HP = 0;
                     Game.Current.Publish(RespawnOnKilledEvent);
                 }
             }
@@ -155,17 +173,35 @@ public class DamageDirective : EventDrivenDirective
 
             if (update == null)
             {
-                update = Game.Current.GamePanel.Add(new HPUpdate(newHP, element.Power.MaxHP, element, newHP - oldHp));
+                update = Game.Current.GamePanel.Add(new HPUpdate(newHP, elementPower.MaxHP, element, newHP - oldHp));
             }
             else
             {
-                update.Refresh(newHP, element.Power.MaxHP);
+                update.Refresh(newHP, elementPower.MaxHP);
             }
         }
     }
 
-    public float GetHP(GameCollider element) => element.Power != null ? element.Power.HP : float.PositiveInfinity;
+    public float GetHP(ConsoleControl element) => HPInfo.TryGetValue(element, out PowerInfo elementPower) ? elementPower.HP : float.PositiveInfinity;
+    public bool TryGetPower(ConsoleControl element, out PowerInfo info)
+    {
+        if(HPInfo.TryGetValue(element, out PowerInfo elementPower))
+        {
+            info = elementPower;
+            return true;
+        }
+        info = null;
+        return false;
+    }
 
+    public PowerInfo GetPower(ConsoleControl element)
+    {
+        if(TryGetPower(element, out PowerInfo ret) == false)
+        {
+            throw new ArgumentException("Element has no power");
+        }
+        return ret;
+    }
 
     public void RegisterHPChangedForLifetime(GameCollider element, Action<float> hpChangedHandler, ILifetimeManager lifetime)
     {
@@ -187,8 +223,10 @@ public class DamageDirective : EventDrivenDirective
         });
     }
 
-    private void DoKnockBackEffectIfAppropriate(WeaponElement responsible, GameCollider element, Impact? impact = null)
+    private void DoKnockBackEffectIfAppropriate(WeaponElement responsible, ConsoleControl e, Impact? impact = null)
     {
+        var element = e as GameCollider;
+        if (element == null) return;
         Angle? angle = null;
         if (impact.HasValue)
         {
@@ -211,6 +249,21 @@ public class DamageDirective : EventDrivenDirective
         public float DamageAmount { get; set; }
         public Impact? Impact { get; set; }
     }
+
+
+    public class PowerInfo : ObservableObject
+    {
+        public float HP { get => Get<float>(); set => Set(value); }
+        public float MaxHP { get => Get<float>(); set => Set(value); }
+        public float Strength { get => Get<float>(); set => Set(value); }
+
+        public PowerInfo()
+        {
+            HP = float.PositiveInfinity;
+            MaxHP = float.PositiveInfinity;
+            Strength = 0;
+        }
+    }
 }
 public class DamageEventArgs
 {
@@ -225,10 +278,10 @@ public class HPUpdate : GameCollider
 {
     public float Percentage { get; private set; }
     public float CurrentHP { get; private set; }
-    public GameCollider Target { get; set; }
+    public ConsoleControl Target { get; set; }
 
     private DateTime removeTime;
-    public HPUpdate(float current, float max, GameCollider target, float delta)
+    public HPUpdate(float current, float max, ConsoleControl target, float delta)
     {
         if (target.IsExpired)
         {
@@ -308,20 +361,26 @@ public class HPUpdate : GameCollider
         context.FillRect(fillColor, 0, 0, fill, (int)Height);
         context.DrawString(new ConsoleString(buffer), hpStringLeft, 0);
     }
+
 }
 
-public class PowerInfo : ObservableObject
+public static class DamageExtensions
 {
-    public float HP { get => Get<float>(); set => Set(value); }
-    public float MaxHP { get => Get<float>(); set => Set(value); }
-    public float Strength { get => Get<float>(); set => Set(value); }
-
-    public PowerInfo()
+    public static void SetHP(this ConsoleControl c, float hp) => DamageDirective.Current.SetHP(c, hp);
+    public static void SetPower(this ConsoleControl c, DamageDirective.PowerInfo power) => DamageDirective.Current.SetPower(c, power);
+    public static void SetPower(this ConsoleControl c, float hp, float maxHp, float? strength = null) => DamageDirective.Current.SetPower(c, new DamageDirective.PowerInfo()
     {
-        HP = float.PositiveInfinity;
-        MaxHP = float.PositiveInfinity;
-        Strength = 0;
-    }
+        HP = hp,
+        MaxHP = maxHp,
+        Strength = strength.HasValue ? strength.Value : hp
+    });
+
+
+    public static float GetHP(this ConsoleControl c) => DamageDirective.Current.GetHP(c);
+    public static float GetMaxHP(this ConsoleControl c) => DamageDirective.Current.GetPower(c).MaxHP;
+    public static float GetStrength(this ConsoleControl c) => DamageDirective.Current.GetPower(c).Strength;
+    public static DamageDirective.PowerInfo GetPower(this ConsoleControl c) => DamageDirective.Current.GetPower(c);
+    public static bool TryGetPower(this ConsoleControl c, out DamageDirective.PowerInfo p) => DamageDirective.Current.TryGetPower(c, out p);
+
+    public static bool IsDamageable(this ConsoleControl c) => DamageDirective.Current.IsDamageable(c);
 }
-
-

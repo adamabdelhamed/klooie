@@ -43,12 +43,10 @@ public class MaliciousCodeElement : CodeControl
         if (Hint != MaliciousCodeHint.Comment && this.HasSimpleTag("enemy") == false)
         {
             this.AddTag("enemy");
-            this.AddTag(DamageDirective.DamageableTag);
         }
         else if (Hint == MaliciousCodeHint.Comment && this.HasSimpleTag("enemy"))
         {
             this.RemoveTag("enemy");
-            this.RemoveTag(DamageDirective.DamageableTag);
         }
 
         IsBeingTargeted = MainCharacter.Current != null && MainCharacter.Current.Target == this;
