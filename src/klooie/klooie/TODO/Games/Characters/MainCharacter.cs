@@ -29,7 +29,7 @@ public class MainCharacter : Character
     public static Event<Weapon> OnEquipWeapon { get; private set; } = new Event<Weapon>();
 
 
-    public ConsoleColor Color { get; set; } = ConsoleColor.Magenta;
+    public RGB Color { get; set; } = RGB.Magenta;
 
     [ThreadStatic]
     private static MainCharacter _current;

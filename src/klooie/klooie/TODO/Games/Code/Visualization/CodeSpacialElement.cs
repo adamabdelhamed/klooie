@@ -105,55 +105,55 @@ public class CodeControl : GameCollider, IGhost
         state = state.HasValue ? state.Value : State;
         var token = Token;
 
-        ConsoleColor fg = RGB.Gray, bg = RGB.Black;
+        RGB fg = RGB.Gray, bg = RGB.Black;
 
         if (state == CodeDisplayState.Normal)
         {
             if (token.Statement is Directive)
             {
-                bg = ConsoleColor.DarkGreen;
+                bg = RGB.DarkGreen;
             }
 
             if (token.Type == TokenType.Comment)
             {
-                fg = ConsoleColor.Green;
+                fg = RGB.Green;
             }
             else if (token.Type == TokenType.Keyword)
             {
-                fg = ConsoleColor.Cyan;
+                fg = RGB.Cyan;
             }
             else if (token.Type == TokenType.DoubleQuotedStringLiteral)
             {
                 return DoubleQuotedStringFormat();
-                fg = ConsoleColor.DarkYellow;
+                fg = RGB.DarkYellow;
             }
             else if (token.Type == TokenType.TrailingWhitespace)
             {
-                bg = ConsoleColor.White;
+                bg = RGB.White;
             }
             else if (token.Type == TokenType.NonTrailingWhitespace)
             {
-                bg = ConsoleColor.White;
+                bg = RGB.White;
             }
         }
         else if (state == CodeDisplayState.Infected)
         {
-            fg = ConsoleColor.Red;
+            fg = RGB.Red;
         }
         else if (state == CodeDisplayState.InfectedWithHotfixReady)
         {
-            fg = ConsoleColor.Black;
-            bg = ConsoleColor.White;
+            fg = RGB.Black;
+            bg = RGB.White;
         }
         else if (state == CodeDisplayState.TrainingData)
         {
-            fg = ConsoleColor.Yellow;
+            fg = RGB.Yellow;
         }
 
         if (IsDimmed)
         {
-            fg = ConsoleColor.DarkGray;
-            bg = ConsoleColor.Black;
+            fg = RGB.DarkGray;
+            bg = RGB.Black;
         }
 
         return token.Value.ToConsoleString(fg, bg);
@@ -178,7 +178,7 @@ public class CodeControl : GameCollider, IGhost
         {
             return new ConsoleString("}", RGB.DarkGray);
         }
-        else if (Enum.TryParse(Token.Value, out ConsoleColor color))
+        else if (RGB.TryParse(Token.Value, out RGB color))
         {
             return new ConsoleString(Token.Value, color);
         }
@@ -202,7 +202,7 @@ public class CodeControl : GameCollider, IGhost
     protected override void OnPaint(ConsoleBitmap context)
     {
         var str = FormatToken();
-        if (IsTargeted) str = str.StringValue.ToConsoleString(ConsoleColor.Black, ConsoleColor.Cyan);
+        if (IsTargeted) str = str.StringValue.ToConsoleString(RGB.Black, RGB.Cyan);
         context.DrawString(str, 0, 0);
     }
 }

@@ -204,22 +204,14 @@ internal class ConsoleBitmapFrameSerializer
 
                     if (isForeground)
                     {
-                        if (Enum.TryParse(match.Groups["color"].Value, out ConsoleColor c))
-                        {
-                            lastForeground = (RGB)c;
-                        }
-                        else if (RGB.TryParse(match.Groups["color"].Value, out lastForeground) == false)
+                        if (RGB.TryParse(match.Groups["color"].Value, out lastForeground) == false)
                         {
                             throw new ArgumentException($"Expected a color @ {reader.Position}");
                         }
                     }
                     else
                     {
-                        if (Enum.TryParse(match.Groups["color"].Value, out ConsoleColor c))
-                        {
-                            lastBackground = (RGB)c;
-                        }
-                        else if (RGB.TryParse(match.Groups["color"].Value, out lastBackground) == false)
+                        if (RGB.TryParse(match.Groups["color"].Value, out lastBackground) == false)
                         {
                             throw new ArgumentException($"Expected a color @ {reader.Position}");
                         }
@@ -279,22 +271,14 @@ internal class ConsoleBitmapFrameSerializer
                     if (isForeground)
                     {
 
-                        if (Enum.TryParse<ConsoleColor>(match.Groups["color"].Value, out ConsoleColor c))
-                        {
-                            lastFg = c;
-                        }
-                        else if (RGB.TryParse(match.Groups["color"].Value, out lastFg) == false)
+                        if (RGB.TryParse(match.Groups["color"].Value, out lastFg) == false)
                         {
                             throw new ArgumentException($"Expected a color @ {reader.Position}");
                         }
                     }
                     else
                     {
-                        if (Enum.TryParse<ConsoleColor>(match.Groups["color"].Value, out ConsoleColor c))
-                        {
-                            lastBg = c;
-                        }
-                        else if (RGB.TryParse(match.Groups["color"].Value, out lastBg) == false)
+                        if (RGB.TryParse(match.Groups["color"].Value, out lastBg) == false)
                         {
                             throw new ArgumentException($"Expected a color @ {reader.Position}");
                         }

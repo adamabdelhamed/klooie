@@ -38,11 +38,11 @@ namespace ArgsTests.CLI.Controls
                 }
                 })).Fill();
 
-                var colorWheel = new List<ConsoleColor>()
+                var colorWheel = new List<RGB>()
             {
-                ConsoleColor.Red, ConsoleColor.DarkRed, ConsoleColor.Red,
-                ConsoleColor.Black, ConsoleColor.White, ConsoleColor.Black,
-                ConsoleColor.Green, ConsoleColor.DarkGreen, ConsoleColor.Green
+                RGB.Red, RGB.DarkRed, RGB.Red,
+                RGB.Black, RGB.White, RGB.Black,
+                RGB.Green, RGB.DarkGreen, RGB.Green
             };
                 var colorIndex = 0;
                 for (var y = 0; y < gridLayout.NumRows; y++)

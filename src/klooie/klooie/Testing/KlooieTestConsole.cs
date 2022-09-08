@@ -1,8 +1,8 @@
 ﻿namespace klooie.tests;
 public class KlooieTestConsole : IConsoleProvider
 {
-    public ConsoleColor ForegroundColor { get; set; }
-    public ConsoleColor BackgroundColor { get; set; }
+    public RGB ForegroundColor { get; set; }
+    public RGB BackgroundColor { get; set; }
     public bool KeyAvailable => false;
     public void Append(string text) { }
     public void Clear() { }

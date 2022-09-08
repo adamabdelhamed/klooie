@@ -17,7 +17,7 @@ internal class PlayerProgressBar : ConsoleControl
     /// <summary>
     /// The color of the portion of the bar that represents loaded content, defaults to white
     /// </summary>
-    public ConsoleColor LoadingProgressColor { get { return Get<ConsoleColor>(); } set { Set(value); } }
+    public RGB LoadingProgressColor { get { return Get<RGB>(); } set { Set(value); } }
 
     /// <summary>
     /// True if you want to render the play cursor, false otherwise
@@ -27,14 +27,14 @@ internal class PlayerProgressBar : ConsoleControl
     /// <summary>
     /// The color of the play cursor, defaults to green
     /// </summary>
-    public ConsoleColor PlayCursorColor { get { return Get<ConsoleColor>(); } set { Set(value); } }
+    public RGB PlayCursorColor { get { return Get<RGB>(); } set { Set(value); } }
 
     public PlayerProgressBar()
     {
         this.Height = 1;
-        this.Background = ConsoleColor.Gray;
-        this.LoadingProgressColor = ConsoleColor.White;
-        this.PlayCursorColor = ConsoleColor.Green;
+        this.Background = RGB.Gray;
+        this.LoadingProgressColor = RGB.White;
+        this.PlayCursorColor = RGB.Green;
         this.ShowPlayCursor = true;
         this.CanFocus = false;
     }

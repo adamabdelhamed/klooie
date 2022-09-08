@@ -248,7 +248,7 @@ public class Scrollbar : ConsoleControl
     internal Scrollbar(Orientation orientation)
     {
         this.orientation = orientation;
-        Background = ConsoleColor.White;
+        Background = RGB.White;
         KeyInputReceived.Subscribe(OnKeyInputReceived, this);
     }
 

@@ -89,7 +89,7 @@ public class Button : ConsoleControl
         var shortcut = ConsoleString.Empty;
         if (Text != null)
         {
-            ConsoleColor fg, bg;
+            RGB fg, bg;
 
             if (effectiveText.IsUnstyled)
             {

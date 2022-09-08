@@ -35,7 +35,7 @@ public class ShowTextInputOptions : ShowMessageOptions
         content.SubscribeOnce(nameof(content.Parent), () => content.Fill());
 
         Label messageLabel = content.Add(new Label() { Text = Message, X = 2, Y = 1 });
-        var TextBox = TextBoxFactory?.Invoke() ?? new TextBox() { Foreground = ConsoleColor.Black, Background = ConsoleColor.White };
+        var TextBox = TextBoxFactory?.Invoke() ?? new TextBox() { Foreground = RGB.Black, Background = RGB.White };
         content.Add(TextBox).CenterHorizontally();
         TextBox.Y = 4;
 

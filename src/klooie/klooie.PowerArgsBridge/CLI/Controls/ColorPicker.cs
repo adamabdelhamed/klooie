@@ -6,11 +6,11 @@
 
         public ColorPicker()
         {
-            var dropdown = ProtectedPanel.Add(new Dropdown(Enums.GetEnumValues<ConsoleColor>().Select(c => new DialogChoice
+            var dropdown = ProtectedPanel.Add(new Dropdown(RGB.ColorsToNames.Select(c => new DialogChoice
             {
-                DisplayText = c.ToString().ToConsoleString((RGB)c),
-                Value = (RGB)c,
-                Id = c.ToString()
+                DisplayText = c.Value.ToConsoleString(),
+                Value = c.Key,
+                Id = c.Value
             }))).Fill();
 
             dropdown.Subscribe(nameof(dropdown.Value), () => this.Value = (RGB)dropdown.Value.Value, this);

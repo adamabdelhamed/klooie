@@ -2,7 +2,7 @@
 
 public class Cursor : GameCollider
 {
-    private static readonly ConsoleString DefaultStyle = new ConsoleString("X", ConsoleColor.DarkCyan, ConsoleColor.Cyan);
+    private static readonly ConsoleString DefaultStyle = new ConsoleString("X", RGB.DarkCyan, RGB.Cyan);
     public Cursor()
     {
         this.MoveTo(0, 0, int.MaxValue);

@@ -142,7 +142,7 @@ public class ConsoleBitmapPlayer : ConsolePanel
         pictureInTheFrame = new BitmapControl() { AutoSize = true, CanFocus = false };
         pictureFrame = Add(new BorderPanel(pictureInTheFrame)).Fill(padding: new Thickness(0, 0, 0, 2));
         pictureInTheFrame.CenterBoth();
-        pictureFrame.BorderColor = ConsoleColor.DarkGray;
+        pictureFrame.BorderColor = RGB.DarkGray;
 
         playerProgressBar = Add(new PlayerProgressBar() { ShowPlayCursor = false }).FillHorizontally(padding: new Thickness(0, 0, 0, 0)).DockToBottom(padding: 1);
 
@@ -323,7 +323,7 @@ public class ConsoleBitmapPlayer : ConsolePanel
         }
         else if (State == PlayerState.Stopped)
         {
-            pictureFrame.BorderColor = ConsoleColor.Yellow;
+            pictureFrame.BorderColor = RGB.Yellow;
             playButton.Text = "Play".ToConsoleString();
         }
         else if (State == PlayerState.Paused)
@@ -341,7 +341,7 @@ public class ConsoleBitmapPlayer : ConsolePanel
         }
         else if (State == PlayerState.Failed)
         {
-            pictureFrame.BorderColor = ConsoleColor.Red;
+            pictureFrame.BorderColor = RGB.Red;
             MessageDialog.Show(failedMessage.ToRed());
         }
         else

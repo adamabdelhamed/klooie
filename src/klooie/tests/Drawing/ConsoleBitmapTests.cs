@@ -23,52 +23,52 @@ public class ConsoleBitmapTests
             ConsoleApp.Current.LayoutRoot.Add(new BitmapControl() { Bitmap = bitmap }).Fill();
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Gray), centerX, centerY, 0, centerY / 2);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Gray), centerX, centerY, 0, centerY / 2);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Red), centerX, centerY, 0, 0);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Red), centerX, centerY, 0, 0);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Yellow), centerX, centerY, centerX / 2, 0);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Yellow), centerX, centerY, centerX / 2, 0);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Green), centerX, centerY, centerX, 0);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Green), centerX, centerY, centerX, 0);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Magenta), centerX, centerY, (int)(bitmap.Width * .75), 0);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Magenta), centerX, centerY, (int)(bitmap.Width * .75), 0);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Cyan), centerX, centerY, bitmap.Width - 1, 0);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Cyan), centerX, centerY, bitmap.Width - 1, 0);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Gray), centerX, centerY, bitmap.Width - 1, centerY / 2);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Gray), centerX, centerY, bitmap.Width - 1, centerY / 2);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.White), centerX, centerY, 0, bitmap.Height / 2);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.White), centerX, centerY, 0, bitmap.Height / 2);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Blue), centerX, centerY, bitmap.Width - 1, bitmap.Height / 2);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Blue), centerX, centerY, bitmap.Width - 1, bitmap.Height / 2);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Gray), centerX, centerY, 0, (int)(bitmap.Height * .75));
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Gray), centerX, centerY, 0, (int)(bitmap.Height * .75));
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Red), centerX, centerY, 0, bitmap.Height - 1);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Red), centerX, centerY, 0, bitmap.Height - 1);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Yellow), centerX, centerY, centerX / 2, bitmap.Height - 1);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Yellow), centerX, centerY, centerX / 2, bitmap.Height - 1);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Green), centerX, centerY, centerX, bitmap.Height - 1);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Green), centerX, centerY, centerX, bitmap.Height - 1);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Magenta), centerX, centerY, (int)(bitmap.Width * .75), bitmap.Height - 1);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Magenta), centerX, centerY, (int)(bitmap.Width * .75), bitmap.Height - 1);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Cyan), centerX, centerY, bitmap.Width - 1, bitmap.Height - 1);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Cyan), centerX, centerY, bitmap.Width - 1, bitmap.Height - 1);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Gray), centerX, centerY, bitmap.Width - 1, (int)(bitmap.Height * .75));
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Gray), centerX, centerY, bitmap.Width - 1, (int)(bitmap.Height * .75));
 
             await context.PaintAndRecordKeyFrameAsync();
             ConsoleApp.Current.Stop();
@@ -89,45 +89,45 @@ public class ConsoleBitmapTests
             app.LayoutRoot.Add(new BitmapControl() { Bitmap = bitmap }).Fill();
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Gray), 0, centerY / 2, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Gray), 0, centerY / 2, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Red), 0, 0, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Red), 0, 0, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Yellow), centerX / 2, 0, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Yellow), centerX / 2, 0, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Green), centerX, centerY, centerX, 0);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Green), centerX, centerY, centerX, 0);
             await context.PaintAndRecordKeyFrameAsync();
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Magenta), (int)(bitmap.Width * .75), 0, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Magenta), (int)(bitmap.Width * .75), 0, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Cyan), bitmap.Width - 1, 0, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Cyan), bitmap.Width - 1, 0, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Gray), bitmap.Width - 1, centerY / 2, centerX, centerY);
-            await context.PaintAndRecordKeyFrameAsync();
-
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.White), 0, bitmap.Height / 2, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Gray), bitmap.Width - 1, centerY / 2, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Blue), bitmap.Width - 1, bitmap.Height / 2, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.White), 0, bitmap.Height / 2, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Gray), 0, (int)(bitmap.Height * .75), centerX, centerY);
-            await context.PaintAndRecordKeyFrameAsync();
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Red), 0, bitmap.Height - 1, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Blue), bitmap.Width - 1, bitmap.Height / 2, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Yellow), centerX / 2, bitmap.Height - 1, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Gray), 0, (int)(bitmap.Height * .75), centerX, centerY);
+            await context.PaintAndRecordKeyFrameAsync();
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Red), 0, bitmap.Height - 1, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Green), centerX, bitmap.Height - 1, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Yellow), centerX / 2, bitmap.Height - 1, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Magenta), (int)(bitmap.Width * .75), bitmap.Height - 1, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Green), centerX, bitmap.Height - 1, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Cyan), bitmap.Width - 1, bitmap.Height - 1, centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Magenta), (int)(bitmap.Width * .75), bitmap.Height - 1, centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
 
-            bitmap.DrawLine(new ConsoleCharacter('X', ConsoleColor.Gray), bitmap.Width - 1, (int)(bitmap.Height * .75), centerX, centerY);
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Cyan), bitmap.Width - 1, bitmap.Height - 1, centerX, centerY);
+            await context.PaintAndRecordKeyFrameAsync();
+
+            bitmap.DrawLine(new ConsoleCharacter('X', RGB.Gray), bitmap.Width - 1, (int)(bitmap.Height * .75), centerX, centerY);
             await context.PaintAndRecordKeyFrameAsync();
             app.Stop();
         });
@@ -141,7 +141,7 @@ public class ConsoleBitmapTests
         AppTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified,80,30,async (context) =>
         {
             ConsoleApp.Current.LayoutRoot.Add(new BitmapControl() { Bitmap = bitmap }).Fill();
-            var pen = new ConsoleCharacter('X', ConsoleColor.Green);
+            var pen = new ConsoleCharacter('X', RGB.Green);
             for (var i = 0; i < 500000; i++)
             {
                 bitmap.DrawRect(pen, 0, 0, bitmap.Width, bitmap.Height);

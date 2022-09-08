@@ -119,22 +119,20 @@ public interface IAbility : IInventoryItem
         public static Type GetAbilityType(string typeName)
         {
             var comparison = StringComparison.OrdinalIgnoreCase;
-            foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
+            foreach (var assembly in new Assembly[] { Assembly.GetEntryAssembly(), Assembly.GetExecutingAssembly() })
             {
-                if (type.Name.Equals(typeName, comparison))
+                foreach (var type in assembly.GetTypes())
                 {
-                    return type;
-                }
-                if (type.Name.Equals(typeName + "Ability", comparison))
-                {
-                    return type;
-                }
-                if (DynamicArg.AbilityConsoleName(type).Equals(typeName, comparison))
-                {
-                    return type;
+                    if (type.Name.Equals(typeName, comparison))
+                    {
+                        return type;
+                    }
+                    if (type.Name.Equals(typeName + "Ability", comparison))
+                    {
+                        return type;
+                    }
                 }
             }
-
             return null;
         }
     }

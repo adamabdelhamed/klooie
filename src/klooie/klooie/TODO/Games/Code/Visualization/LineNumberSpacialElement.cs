@@ -17,11 +17,11 @@ public class LineNumberControl : GameCollider
 
     protected override void OnPaint(ConsoleBitmap context)
     {
-        var color = State == CodeDisplayState.Normal ? ConsoleColor.Gray
-            : State == CodeDisplayState.Infected ? ConsoleColor.Red
-            : ConsoleColor.Black;
+        var color = State == CodeDisplayState.Normal ? RGB.Gray
+            : State == CodeDisplayState.Infected ? RGB.Red
+            : RGB.Black;
 
-        var bg = State == CodeDisplayState.InfectedWithHotfixReady ? ConsoleColor.White : ConsoleColor.Black;
+        var bg = State == CodeDisplayState.InfectedWithHotfixReady ? RGB.White : RGB.Black;
         context.DrawString(Line.ToString().ToConsoleString(color, bg), 0, 0);
     }
 }

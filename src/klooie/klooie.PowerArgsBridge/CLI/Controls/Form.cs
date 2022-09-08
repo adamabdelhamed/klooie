@@ -190,7 +190,7 @@ namespace PowerArgs.Cli
                     else
                     {
                         var value = (int)property.GetValue(o);
-                        var textBox = new TextBox() { SelectAllOnFocus = property.HasAttr<FormSelectAllOnFocusAttribute>(), Foreground = ConsoleColor.White, Value = value.ToString().ToWhite() };
+                        var textBox = new TextBox() { SelectAllOnFocus = property.HasAttr<FormSelectAllOnFocusAttribute>(), Foreground = RGB.White, Value = value.ToString().ToWhite() };
                         if (property.HasAttr<FormContrastAttribute>())
                         {
                             textBox.Background = RGB.White;
@@ -338,7 +338,7 @@ namespace PowerArgs.Cli
                 {
 
                     var dropdown = new ColorPicker();
-                    dropdown.Width = Math.Min(40, Enums.GetEnumValues<ConsoleColor>().Select(option => option.ToString().Length).Max() + 8);
+                    dropdown.Width = Math.Min(40, RGB.NamesToColors.Keys.Select(option => option.ToString().Length).Max() + 8);
                     dropdown.Subscribe(nameof(dropdown.Value), () => property.SetValue(o, dropdown.Value), dropdown);
                     (o as IObservableObject)?.Sync(property.Name, () => dropdown.Value = (RGB)(property.GetValue(o)), dropdown);
                     editControl = dropdown;

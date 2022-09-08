@@ -1,12 +1,12 @@
 ﻿namespace klooie.Gaming.Code;
 public class ActiveLineElement : GameCollider
 {
-    public const ConsoleColor ActiveForegroundColor = ConsoleColor.Black;
-    public const ConsoleColor ActiveBackgroundColor = ConsoleColor.Yellow;
-    public const ConsoleColor ThrowBackgroundColor = ConsoleColor.Red;
+    public static readonly RGB ActiveForegroundColor = RGB.Black;
+    public static readonly RGB ActiveBackgroundColor = RGB.Yellow;
+    public static readonly RGB ThrowBackgroundColor = RGB.Red;
 
-    public const ConsoleColor AwaitForegroundColor = ConsoleColor.White;
-    public const ConsoleColor AwaitBackgroundColor = ConsoleColor.DarkRed;
+    public static readonly RGB AwaitForegroundColor = RGB.White;
+    public static readonly RGB AwaitBackgroundColor = RGB.DarkRed;
 
     private ConsoleString _lineOfCode;
     public ConsoleString LineOfCode

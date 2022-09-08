@@ -2,8 +2,8 @@
 public class WorstCasePerfTestPanel : ConsoleControl
 {
     private bool _even;
-    private ConsoleCharacter evenPen = new ConsoleCharacter('O', ConsoleColor.Black, ConsoleColor.White);
-    private ConsoleCharacter oddPen = new ConsoleCharacter('O', ConsoleColor.White, ConsoleColor.Black);
+    private ConsoleCharacter evenPen = new ConsoleCharacter('O', RGB.Black, RGB.White);
+    private ConsoleCharacter oddPen = new ConsoleCharacter('O', RGB.White, RGB.Black);
     protected override void OnPaint(ConsoleBitmap context)
     {
         for (var x = 0; x < context.Width; x++)

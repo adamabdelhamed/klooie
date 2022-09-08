@@ -52,9 +52,9 @@
             currentFg = ConsoleString.DefaultForegroundColor;
             currentBg = ConsoleString.DefaultBackgroundColor;
 
-            frame = Add(new ConsolePanel() { Background = ConsoleColor.White }).Fill();
+            frame = Add(new ConsolePanel() { Background = RGB.White }).Fill();
             viewer = frame.Add(new ConsoleBitmapViewer() { Bitmap = bitmap }).Fill(padding: new Thickness(1, 1, 1, 1));
-            cursor = frame.Add(new PixelControl() { IsVisible = false, X = 1, Y = 1, Value = new ConsoleCharacter('C', ConsoleColor.White, ConsoleColor.Cyan) }); // place at top left
+            cursor = frame.Add(new PixelControl() { IsVisible = false, X = 1, Y = 1, Value = new ConsoleCharacter('C', RGB.White, RGB.Cyan) }); // place at top left
             frame.CanFocus = true;
 
             frame.Focused.Subscribe(() => cursor.IsVisible = true, cursor);
@@ -80,7 +80,7 @@
         private class ColorObject
         {
             [FormLabel("")]
-            public ConsoleColor Color { get; set; }
+            public RGB Color { get; set; }
         }
 
         public void UpdateBitmap(ConsoleBitmap bitmap)

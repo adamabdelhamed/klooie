@@ -424,7 +424,7 @@ namespace PowerArgs.Cli
                 {
                     var label = (cellDisplayControl as Label);
                     var originalText = label.Text;
-                    label.Text = label.Text.ToBlack().ToDifferentBackground(HasFocus ? ConsoleColor.Cyan : ConsoleColor.DarkGray);
+                    label.Text = label.Text.ToBlack().ToDifferentBackground(HasFocus ? RGB.Cyan : RGB.DarkGray);
                     highlightLifetime.OnDisposed(() =>
                     {
                         if (label.IsExpired == false)
@@ -437,8 +437,8 @@ namespace PowerArgs.Cli
                 {
                     var originalFg = cellDisplayControl.Foreground;
                     var originalBg = cellDisplayControl.Background;
-                    cellDisplayControl.Foreground = ConsoleColor.White;
-                    cellDisplayControl.Background = HasFocus ? ConsoleColor.Cyan : ConsoleColor.DarkGray;
+                    cellDisplayControl.Foreground = RGB.White;
+                    cellDisplayControl.Background = HasFocus ? RGB.Cyan : RGB.DarkGray;
                     highlightLifetime.OnDisposed(() =>
                     {
                         if (cellDisplayControl.IsExpired == false)

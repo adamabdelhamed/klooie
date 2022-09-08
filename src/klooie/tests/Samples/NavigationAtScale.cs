@@ -6,24 +6,6 @@ using System.Threading.Tasks;
 
 namespace klooie.tests;
 
-[TestClass]
-public class NavigationAtScale
-{
-    public TestContext TestContext { get; set; }
-
-    [TestMethod]
-    public void ShowNavigationAtScale()
-    {
-        UITestManager.SetConsoleSize(120, 40);
-        using (var game = new NavigationAtScaleGame())
-        {
-            UITestManager mgr = new UITestManager(game, TestContext.TestId(), UITestMode.RealTimeFYI);
-            game.Run();
-            mgr.Finish();
-        }
-    }
-}
-
 public class NavigationAtScaleGame : Game
 {
     private const int Margin = 6;
@@ -58,6 +40,7 @@ public class NavigationAtScaleGame : Game
         SendCharactersTo(redCharacters, topLeftArea);
 
         new CameraOperator(camera, greenCharacters[0], greenCharacters[0].Velocity, this, new AlwaysCenteredMovement());
+        await Delay(10000);
     }
 
 

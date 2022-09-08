@@ -4,11 +4,11 @@
     {
         private static Random r = new Random();
 
-        private ConsoleColor primaryColor;
-        private ConsoleColor accentColor;
-        private ConsoleColor bgColor;
+        private RGB primaryColor;
+        private RGB accentColor;
+        private RGB bgColor;
 
-        public FallingCharactersPanel(ConsoleColor primaryColor, ConsoleColor accentColor, ConsoleColor bgColor)
+        public FallingCharactersPanel(RGB primaryColor, RGB accentColor, RGB bgColor)
         {
             this.primaryColor = primaryColor;
             this.accentColor = accentColor;

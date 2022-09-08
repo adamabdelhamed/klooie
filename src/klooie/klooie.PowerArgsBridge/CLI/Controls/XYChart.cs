@@ -94,7 +94,7 @@
         /// <summary>
         /// The character to use to visually represent a point in this data series
         /// </summary>
-        public ConsoleCharacter PlotCharacter { get; set; } = new ConsoleCharacter('X', ConsoleColor.White);
+        public ConsoleCharacter PlotCharacter { get; set; } = new ConsoleCharacter('X', RGB.White);
 
         /// <summary>
         /// When set to true the user will be able to focus on the data points in this series using the tab and arrow keys.
@@ -469,7 +469,7 @@
                     pixel.Focused.Subscribe(() =>
                     {
                         pixel.ZIndex = FocusedDataPointZIndex;
-                        pixel.Value = new ConsoleCharacter(series.PlotCharacter.Value, ConsoleColor.Black, ConsoleColor.Cyan);
+                        pixel.Value = new ConsoleCharacter(series.PlotCharacter.Value, RGB.Black, RGB.Cyan);
                         pixel.BarsOrLines.ForEach(b => b.Value = pixel.Value);
                         pixel.BarsOrLines.ForEach(b => b.ZIndex = pixel.ZIndex);
                         var newTitle = pixel.Series.Title.ToConsoleString(pixel.Series.PlotCharacter.ForegroundColor);

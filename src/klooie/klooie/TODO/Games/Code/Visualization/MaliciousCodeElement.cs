@@ -66,7 +66,7 @@ public class MaliciousCodeElement : CodeControl
 
         if (IsBeingTargeted)
         {
-            str = str.ToBlack().ToDifferentBackground(ConsoleColor.Cyan);
+            str = str.ToBlack().ToDifferentBackground(RGB.Cyan);
         }
 
         context.DrawString(str, 0, 0);

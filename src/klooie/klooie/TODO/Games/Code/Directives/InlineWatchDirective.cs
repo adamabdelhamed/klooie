@@ -114,11 +114,11 @@ public class InlineWatchDirective : Directive
             {
                 var evalResult = TimeThread.ResolveStatic("{{" + d.EvalVariable + "}}");
                 var isTrue = ("" + (true.Equals(evalResult) || ("" + evalResult).Equals("true", StringComparison.OrdinalIgnoreCase))).ToLower();
-                return ($" {d.Eval.StringValue} == {isTrue}").ToConsoleString(ConsoleColor.Black, isTrue == "true" ? ConsoleColor.Green : ConsoleColor.Gray);
+                return ($" {d.Eval.StringValue} == {isTrue}").ToConsoleString(RGB.Black, isTrue == "true" ? RGB.Green : RGB.Gray);
             }
             else
             {
-                return ($" {d.EffectiveDisplay} = {value} ").ToConsoleString(ConsoleColor.Black, ConsoleColor.Gray);
+                return ($" {d.EffectiveDisplay} = {value} ").ToConsoleString(RGB.Black, RGB.Gray);
             }
         }
     }

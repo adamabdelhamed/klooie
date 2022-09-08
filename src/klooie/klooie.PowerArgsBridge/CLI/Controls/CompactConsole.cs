@@ -103,7 +103,7 @@
 
             var inputPanel = gridLayout.Add(new ConsolePanel() { }, 1, top++);
             inputPanel.Add(new Label() { Text = "CMD> ".ToConsoleString() });
-            InputBox = inputPanel.Add(new TextBox() { X = "CMD> ".Length, Width = inputPanel.Width - "CMD> ".Length, Foreground = ConsoleColor.Gray, Background = ConsoleColor.Black });
+            InputBox = inputPanel.Add(new TextBox() { X = "CMD> ".Length, Width = inputPanel.Width - "CMD> ".Length, Foreground = RGB.Gray, Background = RGB.Black });
             InputBox.RichTextEditor.TabHandler.TabCompletionHandlers.Add(new PowerArgsRichCommandLineReader(def, new List<ConsoleString>(), false));
             OnInputBoxReady();
             top++;
@@ -146,7 +146,7 @@
 
             if (SuperCompact == false)
             {
-                var outputPanel = gridLayout.Add(new ConsolePanel() { Background = ConsoleColor.Black }, 1, top);
+                var outputPanel = gridLayout.Add(new ConsolePanel() { Background = RGB.Black }, 1, top);
                 outputLabel = outputPanel.Add(new Label(LabelRenderMode.MultiLineSmartWrap) { Text = 
                     string.IsNullOrWhiteSpace(outputValue?.StringValue) == false ? outputValue : 
                     string.IsNullOrWhiteSpace(outputLabel?.Text?.StringValue) == false ? outputLabel?.Text : 

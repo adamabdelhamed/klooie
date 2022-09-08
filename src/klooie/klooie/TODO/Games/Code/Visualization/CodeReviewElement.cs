@@ -9,11 +9,11 @@ namespace CLIborg
 {
     public class CodeReviewElement : SpacialElement_REPLACE
     {
-        public const ConsoleColor AddedForegroundColor = ConsoleColor.Black;
-        public const ConsoleColor AddedBackgroundColor = ConsoleColor.Green;
+        public static readonly RGB AddedForegroundColor = RGB.Black;
+        public static readonly RGB AddedBackgroundColor = RGB.Green;
 
-        public const ConsoleColor RemovedForegroundColor = ConsoleColor.Black;
-        public const ConsoleColor RemovedBackgroundColor = ConsoleColor.Red;
+        public static readonly RGB RemovedForegroundColor = RGB.Black;
+        public static readonly RGB RemovedBackgroundColor = RGB.Red;
 
 
         public ConsoleBitmap Visual { get; private set; }

@@ -108,7 +108,7 @@ public class AST : ICanBeAConsoleString, IRuleProvider
             }
             else if (token.Type == TokenType.TrailingWhitespace)
             {
-                buffer.AddRange(token.Value.ToConsoleString(bg: ConsoleColor.White));
+                buffer.AddRange(token.Value.ToConsoleString(bg: RGB.White));
             }
             else
             {

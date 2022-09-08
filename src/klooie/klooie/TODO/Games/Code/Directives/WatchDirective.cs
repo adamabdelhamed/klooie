@@ -26,8 +26,8 @@ public class WatchDirective : EventDrivenDirective
     [ArgDefaultValue("Thread")]
     public ConsoleString ThreadDisplay { get; set; }
 
-    public ConsoleColor? ValueForeground { get; set; }
-    public ConsoleColor? ValueBackground { get; set; }
+    public RGB? ValueForeground { get; set; }
+    public RGB? ValueBackground { get; set; }
 
     [ArgDefaultValue("Watches")]
     public string Category { get; set; } = "Watches";
@@ -130,36 +130,36 @@ public class WatchDirective : EventDrivenDirective
         //PlayerDirective.Current.CreateOrUpdateProperty(label, displayValue, thread, category: Category, fullness: fullness);
     }
 
-    private ConsoleColor ThresholdColor(float value)
+    private RGB ThresholdColor(float value)
     {
         if (LargerIsWorse)
         {
             if (RedThreshold.HasValue && value >= RedThreshold)
             {
-                return ConsoleColor.Red;
+                return RGB.Red;
             }
             else if (YellowThreshold.HasValue && value >= YellowThreshold)
             {
-                return ConsoleColor.Yellow;
+                return RGB.Yellow;
             }
             else
             {
-                return ConsoleColor.Green;
+                return RGB.Green;
             }
         }
         else
         {
             if (RedThreshold.HasValue && value <= RedThreshold)
             {
-                return ConsoleColor.Red;
+                return RGB.Red;
             }
             else if (YellowThreshold.HasValue && value <= YellowThreshold)
             {
-                return ConsoleColor.Yellow;
+                return RGB.Yellow;
             }
             else
             {
-                return ConsoleColor.Green;
+                return RGB.Green;
             }
         }
     }

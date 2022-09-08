@@ -87,9 +87,9 @@
             score = (float)ConsoleMath.Round(score * 100);
             if (score == 100) return "$".ToGreen();
 
-            var color = score > 70 ? ConsoleColor.Green :
-                        score > 40 ? ConsoleColor.Yellow
-                        : ConsoleColor.Red;
+            var color = score > 70 ? RGB.Green :
+                        score > 40 ? RGB.Yellow
+                        : RGB.Red;
 
             return ("" + score).Replace("0.", "0").ToConsoleString(color);
         }
