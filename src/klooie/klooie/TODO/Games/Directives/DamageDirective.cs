@@ -9,7 +9,7 @@ public class DamageDirective : EventDrivenDirective
     public const string RespawningTag = "Respawning";
     public const string CustomDisposalOnKilledTag = "CustomDispose";
 
-    private Dictionary<ConsoleControl, PowerInfo> HPInfo = new Dictionary<ConsoleControl, PowerInfo>();
+    private Dictionary<ConsoleControl, DamageInfo> HPInfo = new Dictionary<ConsoleControl, DamageInfo>();
 
     public string RespawnOnKilledEvent { get; set; }
 
@@ -64,7 +64,7 @@ public class DamageDirective : EventDrivenDirective
             return;
         }
 
-        if (HPInfo.TryGetValue(args.Damagee, out PowerInfo hpForDamagee) == false) return;
+        if (HPInfo.TryGetValue(args.Damagee, out DamageInfo hpForDamagee) == false) return;
 
         foreach(var suppressor in DamageSuppressors)
         {
@@ -73,7 +73,7 @@ public class DamageDirective : EventDrivenDirective
                 return;
             }
         }
-        var damagerStrength = HPInfo.TryGetValue(args.Damager, out PowerInfo p) ? p.Strength : 0;
+        var damagerStrength = HPInfo.TryGetValue(args.Damager, out DamageInfo p) ? p.Strength : 0;
         var damageAmount = args.Damager is WeaponElement && (args.Damager as WeaponElement)?.Weapon != null ?
             (args.Damager as WeaponElement).Weapon.Strength : damagerStrength;
 
@@ -91,7 +91,7 @@ public class DamageDirective : EventDrivenDirective
         SetHP(element, newHP, responsible, impact);
     }
 
-    public void SetPower(ConsoleControl element, PowerInfo power)
+    public void SetDamageInfo(ConsoleControl element, DamageInfo power)
     {
         SetHP(element, power.HP);
         HPInfo[element].MaxHP = power.MaxHP;
@@ -107,9 +107,9 @@ public class DamageDirective : EventDrivenDirective
             throw new InvalidOperationException("negative HP detected");
         }
 
-        if(HPInfo.TryGetValue(element, out PowerInfo elementPower) == false)
+        if(HPInfo.TryGetValue(element, out DamageInfo elementPower) == false)
         {
-            elementPower = new PowerInfo();
+            elementPower = new DamageInfo();
             HPInfo.Add(element, elementPower);
             element.OnDisposed(() => HPInfo.Remove(element));
         }
@@ -182,10 +182,10 @@ public class DamageDirective : EventDrivenDirective
         }
     }
 
-    public float GetHP(ConsoleControl element) => HPInfo.TryGetValue(element, out PowerInfo elementPower) ? elementPower.HP : float.PositiveInfinity;
-    public bool TryGetPower(ConsoleControl element, out PowerInfo info)
+    public float GetHP(ConsoleControl element) => HPInfo.TryGetValue(element, out DamageInfo elementPower) ? elementPower.HP : float.PositiveInfinity;
+    public bool TryGetDamageInfo(ConsoleControl element, out DamageInfo info)
     {
-        if(HPInfo.TryGetValue(element, out PowerInfo elementPower))
+        if(HPInfo.TryGetValue(element, out DamageInfo elementPower))
         {
             info = elementPower;
             return true;
@@ -194,9 +194,9 @@ public class DamageDirective : EventDrivenDirective
         return false;
     }
 
-    public PowerInfo GetPower(ConsoleControl element)
+    public DamageInfo GetDamageInfo(ConsoleControl element)
     {
-        if(TryGetPower(element, out PowerInfo ret) == false)
+        if(TryGetDamageInfo(element, out DamageInfo ret) == false)
         {
             throw new ArgumentException("Element has no power");
         }
@@ -251,13 +251,13 @@ public class DamageDirective : EventDrivenDirective
     }
 
 
-    public class PowerInfo : ObservableObject
+    public class DamageInfo : ObservableObject
     {
         public float HP { get => Get<float>(); set => Set(value); }
         public float MaxHP { get => Get<float>(); set => Set(value); }
         public float Strength { get => Get<float>(); set => Set(value); }
 
-        public PowerInfo()
+        public DamageInfo()
         {
             HP = float.PositiveInfinity;
             MaxHP = float.PositiveInfinity;
@@ -367,8 +367,8 @@ public class HPUpdate : GameCollider
 public static class DamageExtensions
 {
     public static void SetHP(this ConsoleControl c, float hp) => DamageDirective.Current.SetHP(c, hp);
-    public static void SetPower(this ConsoleControl c, DamageDirective.PowerInfo power) => DamageDirective.Current.SetPower(c, power);
-    public static void SetPower(this ConsoleControl c, float hp, float maxHp, float? strength = null) => DamageDirective.Current.SetPower(c, new DamageDirective.PowerInfo()
+    public static void SetDamageInfo(this ConsoleControl c, DamageDirective.DamageInfo power) => DamageDirective.Current.SetDamageInfo(c, power);
+    public static void SetDamageInfo(this ConsoleControl c, float hp, float maxHp, float? strength = null) => DamageDirective.Current.SetDamageInfo(c, new DamageDirective.DamageInfo()
     {
         HP = hp,
         MaxHP = maxHp,
@@ -377,10 +377,10 @@ public static class DamageExtensions
 
 
     public static float GetHP(this ConsoleControl c) => DamageDirective.Current.GetHP(c);
-    public static float GetMaxHP(this ConsoleControl c) => DamageDirective.Current.GetPower(c).MaxHP;
-    public static float GetStrength(this ConsoleControl c) => DamageDirective.Current.GetPower(c).Strength;
-    public static DamageDirective.PowerInfo GetPower(this ConsoleControl c) => DamageDirective.Current.GetPower(c);
-    public static bool TryGetPower(this ConsoleControl c, out DamageDirective.PowerInfo p) => DamageDirective.Current.TryGetPower(c, out p);
+    public static float GetMaxHP(this ConsoleControl c) => DamageDirective.Current.GetDamageInfo(c).MaxHP;
+    public static float GetStrength(this ConsoleControl c) => DamageDirective.Current.GetDamageInfo(c).Strength;
+    public static DamageDirective.DamageInfo GetDamageInfo(this ConsoleControl c) => DamageDirective.Current.GetDamageInfo(c);
+    public static bool TryGetDamageInfo(this ConsoleControl c, out DamageDirective.DamageInfo p) => DamageDirective.Current.TryGetDamageInfo(c, out p);
 
     public static bool IsDamageable(this ConsoleControl c) => DamageDirective.Current.IsDamageable(c);
 }
