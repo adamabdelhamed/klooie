@@ -41,5 +41,5 @@ public class IncrementDirective : EventDrivenDirective
         }
     }
 
-    private SetDirective SetFactory(float newValue) => new SetDirective() { OnlyIfNull = OnlyIfNull, Heap = Heap, VariableName = VariableName, VariableValue = newValue.ToDynamicArg() };
+    private SetDirective SetFactory(float newValue) => new SetDirective() { On = null, OnlyIfNull = OnlyIfNull, Heap = Heap, VariableName = VariableName, VariableValue = newValue.ToDynamicArg() };
 }
