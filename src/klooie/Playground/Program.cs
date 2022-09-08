@@ -1,25 +1,36 @@
-﻿using klooie;
+﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+using klooie;
 using klooie.Gaming;
 using klooie.tests;
-using PowerArgs;
 
-var ev = new Event<LocF>();
-Character c = null;
-var factory = () =>
+
+
+public class Program
 {
-    c = new Character();
-    c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
-    return c;
-};
-var game = new TestGame(new GamingTestOptions()
+    public static void Main(string [] args)
+    {
+        new NavigationAtScaleGame().Run();
+        //BenchmarkRunner.Run<Benchmarks>();
+    }
+}
+
+[MemoryDiagnoser]
+public class Benchmarks
 {
-    Camera = true,
-    FocalPointChanged = ev,
-});
-game.Invoke(async () =>
-{
-    Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-    await new NavigateTests().NavigateTest(100, true, factory);
-    Game.Current.Stop();
-});
-game.Run();
+    private List<RectF> obstacles;
+    public Benchmarks()
+    {
+        var rand = new Random(454);
+        obstacles = Enumerable.Range(0, 500)
+            .Select(i => new RectF(rand.Next(100, 900), rand.Next(100, 900), 1, 1))
+            .ToList();
+        AStar.FindPath(1000, 1000, new RectF(0, 0, 1, 1), new RectF(900, 900, 1, 1), obstacles);
+    }
+
+    [Benchmark]
+    public void BenchAStar()
+    {
+        AStar.FindPath(1000, 1000, new RectF(0, 0, 1, 1), new RectF(900, 900, 1, 1), obstacles);
+    }
+}

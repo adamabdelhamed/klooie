@@ -56,8 +56,8 @@ public class Velocity
             _onSpeedChanged?.Fire();
         }
     }
-    public float MinEvalSeconds => this.lastEvalTime + EvalFreqnencySeconds;
-    public float EvalFreqnencySeconds => Group.SpeedRatio* this.SpeedRatio* (this.Speed > ColliderGroup.HighestSpeedForEvalCalc? .025f : ColliderGroup.EvalFrequencySlope* this.speed + ColliderGroup.LeastFrequentEval);
+    public float MinEvalSeconds => this.lastEvalTime + EvalFrequencySeconds;
+    public float EvalFrequencySeconds =>  (this.Speed > ColliderGroup.HighestSpeedForEvalCalc? .025f : ColliderGroup.EvalFrequencySlope* this.speed + ColliderGroup.LeastFrequentEval);
 
     public TimeSpan NextCollisionETA
     {

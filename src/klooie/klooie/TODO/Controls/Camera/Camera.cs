@@ -1,4 +1,4 @@
-﻿namespace klooie;
+﻿namespace klooie.Gaming;
 
 /// <summary>
 /// A panel that can pan like a camera.
@@ -61,6 +61,20 @@ public class Camera : ConsolePanel
         AnimateTo(CameraLocation.Offset(dx, dy), duration, ease, lt);
 
     /// <summary>
+    /// Animates the camera to the specified centered location 
+    /// </summary>
+    /// <param name="dest">the desired destination for the camera (top left)</param>
+    /// <param name="duration">the time in milliseconds to spend on the animation</param>
+    /// <param name="ease">the easing function to use</param>
+    /// <param name="lt">a lifetime that can be used to cancel the animation</param>
+    /// <param name="delayProvider">the delay provider to use</param>
+    /// <returns>an async task that completes when the animation is finished or cancelled</returns>
+    public Task PointAnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetimeManager lt = null, IDelayProvider delayProvider = null)
+    {
+        return AnimateTo(dest.Offset(Width / 2f, Height / 2f), duration, ease, lt, delayProvider);
+    }
+
+    /// <summary>
     /// Animates the camera to the specified location 
     /// </summary>
     /// <param name="dest">the desired destination for the camera (top left)</param>
@@ -87,7 +101,7 @@ public class Camera : ConsolePanel
                 var yDelta = dest.Top - startY;
                 var frameX = startX + (v * xDelta);
                 var frameY = startY + (v * yDelta);
-                if (lt.IsExpiring == false && lt.IsExpired == false)
+                if (lt == null ||(lt.IsExpiring == false && lt.IsExpired == false))
                 {
                     CameraLocation = new LocF(frameX, frameY);
                 }

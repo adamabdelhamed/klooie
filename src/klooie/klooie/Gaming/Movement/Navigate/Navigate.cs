@@ -131,7 +131,13 @@ public class Navigate : Movement
 
         from = from.Offset(-sceneX, -sceneY);
         to = to.Offset(-sceneX, -sceneY);
-        var path = await AStar.FindPath(sceneW, sceneH, from, to, adjustedObstacles, false);
+
+        if(inBounds.Contains(from) == false || inBounds.Contains(to) == false)
+        {
+            return null;
+        }
+
+        var path = AStar.FindPath(sceneW, sceneH, from, to, adjustedObstacles);
         if (path != null)
         {
             path = path.Select(l => l.Offset(sceneX, sceneY)).ToList();

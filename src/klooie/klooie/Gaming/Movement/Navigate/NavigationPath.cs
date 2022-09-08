@@ -1,14 +1,23 @@
 ﻿namespace klooie.Gaming;
 public class NavigationPath : Lifetime
 {
+#if DEBUG
     private ObservableCollection<RectF> tail;
+#else
+    private List<RectF> tail;
+#endif
     private Navigate options;
     private TimeSpan lastProgressTime = Game.Current.MainColliderGroup.Now;
 
     public NavigationPath(Navigate options, List<RectF> steps)
     {
         this.options = options;
+#if DEBUG
         this.tail = new ObservableCollection<RectF>();
+#else
+        tail = new List<RectF>();
+#endif
+
         foreach(var step in steps)
         {
             tail.Add(step);
@@ -16,7 +25,7 @@ public class NavigationPath : Lifetime
 
 #if DEBUG
         if(options.Options.Show) ShowPath();
-#endif 
+#endif
     }
     public bool IsReallyStuck => Game.Current.MainColliderGroup.Now - lastProgressTime > TimeSpan.FromSeconds(7);
 
@@ -60,6 +69,7 @@ public class NavigationPath : Lifetime
    
     public void ShowPath(int z = -5000)
     {
+#if DEBUG
         for (var i = 0; i < tail.Count; i++)
         {
             var el = tail[i];
@@ -68,5 +78,6 @@ public class NavigationPath : Lifetime
             display.ResizeTo(el.Width, el.Height);
             EarliestOf(this, tail.GetMembershipLifetime(el)).OnDisposed(display.Dispose);
         }
+#endif
     }
 }

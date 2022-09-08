@@ -165,7 +165,7 @@ public class Wander : Movement
             await Options.OnDelay();
             await AssertAlive();
         }
-        var delay = Velocity.EvalFreqnencySeconds * 1100;
+        var delay = Velocity.EvalFrequencySeconds * 1025;
          await Game.Current.Delay(delay);
         await AssertAlive();
     }

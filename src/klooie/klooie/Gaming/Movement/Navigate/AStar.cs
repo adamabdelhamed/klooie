@@ -1,75 +1,70 @@
 ﻿namespace klooie.Gaming;
 public static class AStar
 {
+#if DEBUG
+	public static int CallCount = 0;
+#endif
+
+	static HashSet<Node> closedSet = new HashSet<Node>();
+
 	/*
 		todo - this currently only works because the grid units are 1 x 1,
 			   but if a larger rectangle comes in we could scale the grid so
 			   that each grid unit is the size of the incoming rectangle and
 	           then leave the algorithm as is
 	*/
-	public static async Task<List<LocF>> FindPath(int worldWidth, int worldHeight, RectF startPos, RectF targetPos, List<RectF> obstacles, bool debug)
+	public static List<LocF> FindPath(int worldWidth, int worldHeight, RectF startPos, RectF targetPos, List<RectF> obstacles)
 	{
-		using (var algoLt = Game.Current.CreateChildLifetime())
+#if DEBUG
+		CallCount++;
+#endif
+
+		var grid = GridPool.Instance.Get(worldWidth, worldHeight, obstacles);
+		var startNode = grid.nodes[(int)startPos.CenterX][(int)startPos.CenterY];
+		var targetNode = grid.nodes[(int)targetPos.CenterX][(int)targetPos.CenterY];
+
+		Heap openSet = HeapPool.Instance.Get(grid.MaxSize);
+		closedSet.Clear();
+		openSet.Add(startNode);
+
+		while (openSet.Count > 0)
 		{
-			if (debug)
+			Node currentNode = openSet.RemoveFirst();
+			closedSet.Add(currentNode);
+
+			if (currentNode == targetNode)
 			{
-				Debugger.HighlightCell((int)startPos.CenterX, (int)startPos.CenterY, algoLt, new ConsoleCharacter('A', RGB.Green), z: int.MaxValue);
-				Debugger.HighlightCell((int)targetPos.CenterX, (int)targetPos.CenterY, algoLt, new ConsoleCharacter('B', RGB.Red), z: int.MaxValue);
-				await Game.Current.Delay(100);
+				HeapPool.Instance.Return(openSet);
+				GridPool.Instance.Return(grid);
+				return RetracePath(startNode, targetNode);
 			}
 
-			var grid = new Grid(worldWidth, worldHeight, obstacles, debug ? algoLt : null);
-			var startNode = grid.nodes[(int)startPos.CenterX, (int)startPos.CenterY];
-			var targetNode = grid.nodes[(int)targetPos.CenterX, (int)targetPos.CenterY];
-
-			Heap<Node> openSet = new Heap<Node>(grid.MaxSize);
-			HashSet<Node> closedSet = new HashSet<Node>();
-			openSet.Add(startNode);
-			var iters = 0;
-			while (openSet.Count > 0)
+			var neighbors = grid.GetNeighbours(currentNode).AsSpan();
+			for(var i = 0; i < neighbors.Length; i++)
 			{
-				Node currentNode = openSet.RemoveFirst();
-
-				if (debug)
+				var neighbour = neighbors[i];
+				if (neighbour == null || !neighbour.walkable || closedSet.Contains(neighbour))
 				{
-					Debugger.HighlightCell(currentNode.Left, currentNode.Top, algoLt, new ConsoleCharacter('.', RGB.Gray), z: -1000);
-					iters++;
-					if (iters % 20 == 0)
-					{
-						await Task.Yield();
-					}
+					continue;
 				}
 
-				closedSet.Add(currentNode);
-
-				if (currentNode == targetNode)
+				int newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour);
+				if (newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour))
 				{
-					return RetracePath(startNode, targetNode);
-				}
+					neighbour.gCost = newMovementCostToNeighbour;
+					neighbour.hCost = GetDistance(neighbour, targetNode);
+					neighbour.parent = currentNode;
 
-				foreach (Node neighbour in grid.GetNeighbours(currentNode))
-				{
-					if (!neighbour.walkable || closedSet.Contains(neighbour))
+					if (!openSet.Contains(neighbour))
 					{
-						continue;
-					}
-
-					int newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour);
-					if (newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour))
-					{
-						neighbour.gCost = newMovementCostToNeighbour;
-						neighbour.hCost = GetDistance(neighbour, targetNode);
-						neighbour.parent = currentNode;
-
-						if (!openSet.Contains(neighbour))
-						{
-							openSet.Add(neighbour);
-						}
+						openSet.Add(neighbour);
 					}
 				}
 			}
-			return null;
 		}
+		HeapPool.Instance.Return(openSet);
+		GridPool.Instance.Return(grid);
+		return null;
 	}
 
 	private static List<LocF> RetracePath(Node startNode, Node endNode)
@@ -100,77 +95,86 @@ public static class AStar
 
 	private class Grid
 	{
-		public Node[,] nodes;
-		private ILifetimeManager algoLt;
-		private int w;
-		private int h;
-		public Grid(int w, int h, List<RectF> obstacles, ILifetimeManager algoLt)
+		public Node[][] nodes;
+		public int w;
+		public int h;
+		public Grid(int w, int h, List<RectF> obstacles)
 		{
 			this.w = w;
 			this.h = h;
-			this.algoLt = algoLt;
-			CreateGrid(obstacles);
+			CreateGrid();
+			InitializeGrid(obstacles);
+		}
+
+		public void Reset(List<RectF> obstacles)
+		{
+			for (int x = 0; x < w; x++)
+			{
+				var xSpan = nodes[x].AsSpan();
+				for (int y = 0; y < h; y++)
+				{
+					xSpan[y].Reset();
+				}
+			}
+
+			InitializeGrid(obstacles);
 		}
 
 		public int MaxSize => w * h;
 
-		void CreateGrid(List<RectF> obstacles)
+		void CreateGrid()
 		{
-			nodes = new Node[w, h];
-				 
+			nodes = new Node[w][];
+
 			for (int x = 0; x < w; x++)
 			{
+				nodes[x] = new Node[h];
 				for (int y = 0; y < h; y++)
 				{
-					nodes[x, y] = new Node(x, y);
+					nodes[x][y] = new Node(x, y);
 				}
 			}
+		}
 
-			foreach (var obstacle in obstacles)
-            {
-				for(var x = (int)Math.Floor(obstacle.Left); x <= (int)Math.Ceiling(obstacle.Right); x++)
-                {
+		public void InitializeGrid(List<RectF> obstacles)
+		{
+            for (int i = 0; i < obstacles.Count; i++)
+			{
+                RectF obstacle = obstacles[i];
+                for (var x = (int)Math.Floor(obstacle.Left); x <= (int)Math.Ceiling(obstacle.Right); x++)
+				{
+					var xSpan = nodes[x].AsSpan();
 					for (var y = (int)Math.Floor(obstacle.Top); y <= (int)Math.Ceiling(obstacle.Bottom); y++)
 					{
 						if (x >= 0 && y >= 0 && x < w && y < h)
 						{
-							nodes[x, y].walkable = false;
-							if(algoLt != null)
-                            {
-								Debugger.HighlightCell(x, y, algoLt, new ConsoleCharacter(' ', backgroundColor: RGB.Red), z: int.MaxValue);
-                            }
+							xSpan[y].walkable = false;
 						}
 					}
 				}
-            }
+			}
 		}
-
-		public List<Node> GetNeighbours(Node node)
+		Node[] neighbors = new Node[8];
+		public Node[] GetNeighbours(Node node)
 		{
-			List<Node> neighbours = new List<Node>();
-
+			var ni = 0;
 			for (int x = -1; x <= 1; x++)
 			{
 				for (int y = -1; y <= 1; y++)
 				{
-					if (x == 0 && y == 0)
-						continue;
+					if (x == 0 && y == 0) continue;
 
 					int checkX = node.Left + x;
 					int checkY = node.Top + y;
 
-					if (checkX >= 0 && checkX < w && checkY >= 0 && checkY < h)
-					{
-						neighbours.Add(nodes[checkX, checkY]);
-					}
+					neighbors[ni++] = checkX >= 0 && checkX < w && checkY >= 0 && checkY < h ? nodes[checkX][checkY] : null;
 				}
 			}
-
-			return neighbours;
+			return neighbors;
 		}
 	}
 
-	private class Node : IHeapItem<Node>
+	private class Node
 	{
 		public bool walkable;
 		public int Left;
@@ -178,6 +182,7 @@ public static class AStar
 		public int gCost;
 		public int hCost;
 		public Node parent;
+		public int HeapIndex;
 		public Node(int left, int top)
 		{
 			Left = left;
@@ -185,19 +190,18 @@ public static class AStar
 			walkable = true;
 		}
 
-		public int fCost
+		public void Reset()
 		{
-			get
-			{
-				return gCost + hCost;
-			}
+			walkable = true;
+			gCost = default;
+			hCost = default;
+			parent = null;
+			HeapIndex = default;
 		}
-
-		public int HeapIndex { get; set; }
 
 		public int CompareTo(Node nodeToCompare)
 		{
-			int compare = fCost.CompareTo(nodeToCompare.fCost);
+			int compare = (gCost + hCost).CompareTo(nodeToCompare.gCost + nodeToCompare.hCost);
 			if (compare == 0)
 			{
 				compare = hCost.CompareTo(nodeToCompare.hCost);
@@ -206,18 +210,23 @@ public static class AStar
 		}
 	}
 
-	private class Heap<T> where T : IHeapItem<T>
+	private class Heap
 	{
-
-		T[] items;
+		public Node[] items;
 		int currentItemCount;
 
 		public Heap(int maxHeapSize)
 		{
-			items = new T[maxHeapSize];
+			items = new Node[maxHeapSize];
 		}
 
-		public void Add(T item)
+		public void Reset()
+        {
+			Array.Clear(items);
+			currentItemCount = default;
+		}
+
+		public void Add(Node item)
 		{
 			item.HeapIndex = currentItemCount;
 			items[currentItemCount] = item;
@@ -225,9 +234,9 @@ public static class AStar
 			currentItemCount++;
 		}
 
-		public T RemoveFirst()
+		public Node RemoveFirst()
 		{
-			T firstItem = items[0];
+			Node firstItem = items[0];
 			currentItemCount--;
 			items[0] = items[currentItemCount];
 			items[0].HeapIndex = 0;
@@ -235,7 +244,7 @@ public static class AStar
 			return firstItem;
 		}
 
-		public void UpdateItem(T item)
+		public void UpdateItem(Node item)
 		{
 			SortUp(item);
 		}
@@ -248,12 +257,12 @@ public static class AStar
 			}
 		}
 
-		public bool Contains(T item)
+		public bool Contains(Node item)
 		{
 			return Equals(items[item.HeapIndex], item);
 		}
 
-		void SortDown(T item)
+		void SortDown(Node item)
 		{
 			while (true)
 			{
@@ -291,13 +300,13 @@ public static class AStar
 			}
 		}
 
-		void SortUp(T item)
+		void SortUp(Node item)
 		{
 			int parentIndex = (item.HeapIndex - 1) / 2;
 
 			while (true)
 			{
-				T parentItem = items[parentIndex];
+				Node parentItem = items[parentIndex];
 				if (item.CompareTo(parentItem) > 0)
 				{
 					Swap(item, parentItem);
@@ -311,7 +320,7 @@ public static class AStar
 			}
 		}
 
-		void Swap(T itemA, T itemB)
+		void Swap(Node itemA, Node itemB)
 		{
 			items[itemA.HeapIndex] = itemB;
 			items[itemB.HeapIndex] = itemA;
@@ -321,12 +330,83 @@ public static class AStar
 		}
 	}
 
-	private interface IHeapItem<T> : IComparable<T>
+	private class HeapPool
 	{
-		int HeapIndex
+#if DEBUG
+    internal static int HitCount = 0;
+    internal static int MissCount = 0;
+    internal static int PartialHitCount = 0;
+#endif
+		private List<Heap> pool = new List<Heap>();
+		public static readonly HeapPool Instance = new HeapPool();
+
+		public Heap Get(int maxSize)
 		{
-			get;
-			set;
+			// try to find an existing buffer that is big enough
+			for (var i = 0; i < pool.Count; i++)
+			{
+				if (pool[i].items.Length == maxSize)
+				{
+					var toRent = pool[i];
+					pool.RemoveAt(i);
+#if DEBUG
+                    HitCount++;
+#endif
+					toRent.Reset();
+					return toRent;
+				}
+			}
+
+#if DEBUG
+                MissCount++;
+#endif
+			return new Heap(maxSize);
+
+		}
+
+		public void Return(Heap h)
+		{
+			pool.Add(h);
+		}
+	}
+
+	private class GridPool
+	{
+#if DEBUG
+    internal static int HitCount = 0;
+    internal static int MissCount = 0;
+    internal static int PartialHitCount = 0;
+#endif
+		private List<Grid> pool = new List<Grid>();
+		public static readonly GridPool Instance = new GridPool();
+
+		public Grid Get(int w, int h, List<RectF> obstacles)
+		{
+			// try to find an existing buffer that is big enough
+			for (var i = 0; i < pool.Count; i++)
+			{
+				if (pool[i].w == w && pool[i].h == h)
+				{
+					var toRent = pool[i];
+					pool.RemoveAt(i);
+#if DEBUG
+                    HitCount++;
+#endif
+					toRent.Reset(obstacles);
+					return toRent;
+				}
+			}
+
+#if DEBUG
+                MissCount++;
+#endif
+			return new Grid(w, h, obstacles);
+
+		}
+
+		public void Return(Grid g)
+		{
+			pool.Add(g);
 		}
 	}
 }

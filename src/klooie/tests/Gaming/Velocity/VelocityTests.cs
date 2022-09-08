@@ -37,7 +37,7 @@ public class VelocityTests
                 for (var s = 0; s < 200; s += 5)
                 {
                     v.Speed = s;
-                    Console.WriteLine($"Speed = {s}, EvalFrequency = {v.EvalFreqnencySeconds} s");
+                    Console.WriteLine($"Speed = {s}, EvalFrequency = {v.EvalFrequencySeconds} s");
                 }
             }
             Game.Current.Stop();
