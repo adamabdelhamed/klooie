@@ -1,6 +1,12 @@
 ﻿namespace klooie.Gaming;
 public static class AStar
 {
+	/*
+		todo - this currently only works because the grid units are 1 x 1,
+			   but if a larger rectangle comes in we could scale the grid so
+			   that each grid unit is the size of the incoming rectangle and
+	           then leave the algorithm as is
+	*/
 	public static async Task<List<LocF>> FindPath(int worldWidth, int worldHeight, RectF startPos, RectF targetPos, List<RectF> obstacles, bool debug)
 	{
 		using (var algoLt = Game.Current.CreateChildLifetime())
