@@ -26,8 +26,15 @@ public class Camera : ConsolePanel
         } 
     }
 
+    /// <summary>
+    /// Given a rectangle, returns a rectangle that is sure to fit within BigBounds, if BigBounds are set.
+    /// </summary>
+    /// <param name="given">the rectangle to check</param>
+    /// <returns>a rectangle that is sure to fit within BigBounds, if BigBounds are set.</returns>
     public RectF EnsureWithinBigBounds(RectF given)
     {
+        if (BigBounds.Width == 0) return given;
+        if (given.Width != Width || given.Height != Height) throw new ArgumentException("given rect must be the same size and width as the camera");
         var bounds = BigBounds;
 
         float x = given.Left < bounds.Left ? bounds.Left : given.Left;
@@ -40,6 +47,9 @@ public class Camera : ConsolePanel
         return ret;
     }
 
+    /// <summary>
+    /// Gets the current camera boundaries
+    /// </summary>
     public RectF CameraBounds => new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height);
      
     /// <summary>
