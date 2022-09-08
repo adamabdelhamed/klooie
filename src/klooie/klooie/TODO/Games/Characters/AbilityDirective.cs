@@ -17,13 +17,15 @@ public interface IAbility : IInventoryItem
             Game.Current.Subscribe(Game.ReadyEventId, (ev) =>
             {
                 var allAbilities = new List<IAbility>();
-                foreach (var type in Assembly.GetExecutingAssembly().GetTypes().Where(t => t.IsAbstract == false && t.IsInterface == false && t.GetInterfaces().Contains(typeof(IAbility))))
+                foreach (var assembly in new Assembly[] { Assembly.GetEntryAssembly(), Assembly.GetExecutingAssembly() })
                 {
-                    var ability = (Activator.CreateInstance(type) as IAbility);
-                    ability.Initialize();
-                    allAbilities.Add(ability);
+                    foreach (var type in assembly.GetTypes().Where(t => t.IsAbstract == false && t.IsInterface == false && t.GetInterfaces().Contains(typeof(IAbility))))
+                    {
+                        var ability = (Activator.CreateInstance(type) as IAbility);
+                        ability.Initialize();
+                        allAbilities.Add(ability);
+                    }
                 }
-
                 MainCharacterHelpers.ApplyWhenMainCharacterEnters(() =>
                 {
                     foreach (var ability in allAbilities.Where(a => a.AutoEarned))

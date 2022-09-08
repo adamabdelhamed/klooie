@@ -369,7 +369,8 @@ public class ConsoleControl : Rectangular
     /// <param name="tags">the tags to add</param>
     public void AddTags(IEnumerable<string> tags)
     {
-        GetTagsLazy(true).ForEach(t => this.tags.Add(t));
+        GetTagsLazy(true);
+        tags.ForEach(t => this.tags.Add(t));
         _tagsChanged?.Fire();
     }
 
