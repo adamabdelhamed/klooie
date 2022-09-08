@@ -36,6 +36,7 @@ internal class EventBroadcaster
 
     public void Publish(string eventName, object? args)
     {
+        if (eventName == null) return;
         if (events.TryGetValue(eventName, out Event<GameEvent> toFire) == false) return;
         toFire.Fire(new GameEvent() { Id = eventName, Args = args });
     }
