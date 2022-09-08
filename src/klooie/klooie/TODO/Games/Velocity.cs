@@ -282,6 +282,7 @@ public class ColliderGroup
                     {
                         velocity.LastImpact = new Impact()
                         {
+                            MovingObjectSpeed = velocity.speed,
                             Angle = angle,
                             MovingObject = item.Collider,
                             ColliderHit = obstacleHit,
@@ -299,6 +300,7 @@ public class ColliderGroup
 
                             vOther._impactOccurred?.Fire(new Impact()
                             {
+                                MovingObjectSpeed = velocity.speed,
                                 Angle = angle.Opposite(),
                                 MovingObject = obstacleHit,
                                 ColliderHit = item.Collider,

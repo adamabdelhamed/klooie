@@ -7,6 +7,7 @@ public enum HitType
 
 public struct Impact
 {
+    public float MovingObjectSpeed { get; set; }
     public Angle Angle { get; set; }
     public ICollider MovingObject { get; set; }
     public ICollider ColliderHit { get; set; }

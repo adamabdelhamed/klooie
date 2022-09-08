@@ -26,7 +26,7 @@ public class MPDirective : Directive
         if (newMP < 0) throw new InvalidOperationException("MP cannot be negative");
 
         Game.Current.RuleVariables.Set(newMP, "MP");
-        Current.changed.Fire();
+        Current?.changed.Fire();
     }
 }
 

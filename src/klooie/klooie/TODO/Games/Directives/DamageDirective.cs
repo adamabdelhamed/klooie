@@ -42,6 +42,7 @@ public class DamageDirective : Directive
        
     public void ReportImpact(Impact impact)
     {
+        if (impact.MovingObject is Character) return;
         if (IsDamageable(impact.ColliderHit as ConsoleControl))
         {
             ReportDamage(new DamageEventArgs()
