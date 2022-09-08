@@ -17,22 +17,27 @@ public class Camera : ConsolePanel
         get => cameraLocation; 
         set 
         {
-            var left = value.Left;
-            var top = value.Top;
-            if (BigBounds.Width > 0 || BigBounds.Height > 0)
-            {
-                if (BigBounds.Width < Width || BigBounds.Height < Height) throw new NotSupportedException("BigBounds too small");
-                left = Math.Max(BigBounds.Left, value.Left);
-                top = Math.Max(BigBounds.Top, value.Top);
-                if (left + Width > BigBounds.Width) left = BigBounds.Right - Width;
-                if (top + Height > BigBounds.Height) top = BigBounds.Bottom - Height;
-            }
-            var newVal = new LocF(left, top);
-            if(SetHardIf(ref cameraLocation, newVal, cameraLocation != newVal))
+            var proposed = new RectF(value.Left, value.Top, Width, Height);
+            var final = EnsureWithinBigBounds(proposed).TopLeft;
+            if(SetHardIf(ref cameraLocation, final, cameraLocation != final))
             {
                 FirePropertyChanged(nameof(CameraBounds));
             }
         } 
+    }
+
+    public RectF EnsureWithinBigBounds(RectF given)
+    {
+        var bounds = BigBounds;
+
+        float x = given.Left < bounds.Left ? bounds.Left : given.Left;
+        float y = given.Top < bounds.Top ? bounds.Top : given.Top;
+
+        x = given.Right > bounds.Right ? bounds.Right - given.Width : x;
+        y = given.Bottom > bounds.Bottom ? bounds.Bottom - given.Height : y;
+
+        var ret = new RectF(x, y, given.Width, given.Height);
+        return ret;
     }
 
     public RectF CameraBounds => new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height);

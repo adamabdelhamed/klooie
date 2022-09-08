@@ -16,19 +16,5 @@ public abstract class CameraMovement : Lifetime
 
     public virtual void Init() { }
 
-
-    protected RectF EnsureWithinBigBounds(RectF given)
-    {
-        var bounds = Camera.BigBounds;
-
-        float x = given.Left < bounds.Left ? bounds.Left : given.Left;
-        float y = given.Top < bounds.Top ? bounds.Top : given.Top;
-
-        x = given.Right > bounds.Right ? bounds.Right - given.Width : x;
-        y = given.Bottom > bounds.Bottom ? bounds.Bottom - given.Height : y;
-
-        var ret = new RectF(x, y, given.Width, given.Height);
-        return ret;
-    }
 }
 

@@ -41,7 +41,7 @@ public class CinematicMovement : CameraMovement
         return TimeSpan.FromSeconds(seconds);
     }
 
-    private RectF DesiredCameraBounds => EnsureWithinBigBounds(FocalElement.Center().OffsetByAngleAndDistance(FocalVelocity.Angle, Camera.Bounds.Hypotenous *.25f).ToRect(Camera.Width, Camera.Height));
+    private RectF DesiredCameraBounds => Camera.EnsureWithinBigBounds(FocalElement.Center().OffsetByAngleAndDistance(FocalVelocity.Angle, Camera.Bounds.Hypotenous *.25f).ToRect(Camera.Width, Camera.Height));
 
     public override async Task Move()
     {
@@ -64,7 +64,7 @@ public class CinematicMovement : CameraMovement
         var camYDelta = FocalElement.Top - Camera.CameraBounds.Top;
         while (lt != null && lt.IsExpired == false)
         {
-            Camera.CameraLocation = EnsureWithinBigBounds(new RectF(FocalElement.Left - camXDelta, FocalElement.Top - camYDelta, Camera.Width, Camera.Height)).TopLeft;
+            Camera.CameraLocation = Camera.EnsureWithinBigBounds(new RectF(FocalElement.Left - camXDelta, FocalElement.Top - camYDelta, Camera.Width, Camera.Height)).TopLeft;
             await DelayProvider.DelayOrYield(0);
         }
     }
