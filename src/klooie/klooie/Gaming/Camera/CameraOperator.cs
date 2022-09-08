@@ -1,16 +1,31 @@
 ﻿namespace klooie.Gaming;
+
+/// <summary>
+/// An exception that is thrown when a camera movement needs to be short circuited
+/// </summary>
 public class CameraOperationShortCircuitException : Exception { }
+
+/// <summary>
+/// A utility for operating a camera
+/// </summary>
 public class CameraOperator : Lifetime
 {
-    private int currentMovementPriority = int.MaxValue;
-    private ILifetime currentMovementLifetime;
+    private int currentPri = int.MaxValue;
+    private ILifetime moveLt;
 
-
+    /// <summary>
+    /// Creates a camera operator
+    /// </summary>
+    /// <param name="camera">the camera to operate</param>
+    /// <param name="focalElement">the control to focus on</param>
+    /// <param name="focalVelocity">the velocity of the control to focus on</param>
+    /// <param name="delayProvider">the delay provider to use for animated movements</param>
+    /// <param name="movements">the movements this operator knows how to perform</param>
     public CameraOperator(Camera camera, ConsoleControl focalElement, Velocity focalVelocity, IDelayProvider delayProvider, params CameraMovement[] movements)
     {
+        if (focalElement == null || focalVelocity == null) throw new ArgumentNullException("focalElement and focalVelocity cannot be null");
         camera.CameraLocation = new LocF();
         camera.CameraLocation = focalElement.Center().Offset(-camera.Width/2, -camera.Height/2);
-       
 
         foreach (CameraMovement m in movements)
         {
@@ -24,28 +39,25 @@ public class CameraOperator : Lifetime
         }
     }
 
-    private async Task OnSituationDetected(CameraMovement interruptingMovement, int newSituationPriority)
+    private async Task OnSituationDetected(CameraMovement detector, int newPri)
     {
-        if (newSituationPriority < currentMovementPriority)
+        if (newPri < currentPri)
         {
-            currentMovementLifetime?.TryDispose();
-            currentMovementPriority = newSituationPriority;
-            currentMovementLifetime = this.CreateChildLifetime();
-            interruptingMovement.MovementLifetime = currentMovementLifetime;
+            moveLt?.TryDispose();
+            currentPri = newPri;
+            moveLt = this.CreateChildLifetime();
+            detector.MovementLifetime = moveLt;
             try
             {
-                await interruptingMovement.Move();
+                await detector.Move();
             }
-            catch (CameraOperationShortCircuitException)
-            {
-
-            }
+            catch (CameraOperationShortCircuitException) { }
             finally
             {
-                currentMovementLifetime?.TryDispose();
-                currentMovementLifetime = null;
-                currentMovementPriority = int.MaxValue;
-                interruptingMovement.MovementLifetime = null;
+                moveLt?.TryDispose();
+                moveLt = null;
+                currentPri = int.MaxValue;
+                detector.MovementLifetime = null;
             }
         }
     }

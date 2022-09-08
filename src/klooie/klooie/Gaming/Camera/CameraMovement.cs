@@ -1,20 +1,65 @@
 ﻿namespace klooie.Gaming;
+/// <summary>
+/// A movement that can be performed by a camera operator
+/// </summary>
 public abstract class CameraMovement : Lifetime
 {
-    public Camera Camera { get; set; }
-    public int CheckPriority { get; protected set; } = int.MaxValue;
+    /// <summary>
+    /// Gets the camera
+    /// </summary>
+    public Camera Camera { get; internal set; }
+
+    /// <summary>
+    /// An event that the movement should fire when it believes it should take over
+    /// as the current movement. The event argument is the priority (lower is more important)
+    /// </summary>
     public Event<int> SituationDetected { get; private set; } = new Event<int>();
-    public ILifetimeManager MovementLifetime { get; set; }
+
+    /// <summary>
+    /// A lifetime that will be set for you before Move is called. It will be
+    /// cleaned up for you as well.
+    /// </summary>
+    public ILifetimeManager MovementLifetime { get; internal set; }
+
+    /// <summary>
+    /// Derived classes are free to move the camera during this call
+    /// </summary>
+    /// <returns></returns>
     public abstract Task Move();
+
+    /// <summary>
+    /// true if this move's Move method is currently running
+    /// </summary>
     public bool IsMoving => MovementLifetime != null;
-    public ConsoleControl FocalElement { get; set; }
-    public Velocity FocalVelocity { get; set; }
+
+    /// <summary>
+    /// An optional control to focus on
+    /// </summary>
+    public ConsoleControl FocalElement { get; internal set; }
+
+    /// <summary>
+    /// An optional velocity to focus on
+    /// </summary>
+    public Velocity FocalVelocity { get; internal set; }
+
+    /// <summary>
+    /// The center of the FocalElement
+    /// </summary>
     public LocF FocalPoint => FocalElement.Bounds.Center;
+
+    /// <summary>
+    /// returns true if the current camera position cannot see the entire FocalElement
+    /// </summary>
     public bool IsOutOfBounds => Camera.CameraBounds.OverlapPercentage(FocalElement.Bounds) < 1;
 
-    public IDelayProvider DelayProvider { get; set; }
+    /// <summary>
+    /// Gets the delay provider that derived classes should use for all async delays
+    /// </summary>
+    public IDelayProvider DelayProvider { get; internal set; }
 
+    /// <summary>
+    /// Initialized your movement. It is not safe to operate the camera during this call.
+    /// </summary>
     public virtual void Init() { }
-
 }
 

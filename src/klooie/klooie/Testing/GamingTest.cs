@@ -78,8 +78,10 @@ public class TestGame : Game
     protected override IRuleProvider RuleProvider => provider ?? ArrayRulesProvider.Empty;
     private IRuleProvider provider;
     private Camera camera;
+    private GamingTestOptions options;
     public TestGame(GamingTestOptions options)
     {
+        this.options = options;
         var myRule = FuncRule.Create(async () =>
         {
             if (options.Camera)
@@ -116,15 +118,18 @@ public class TestGame : Game
     protected override async Task Startup()
     {
         await base.Startup();
-        var fr = LayoutRoot.Add(new NoFrillsLabel() { Foreground = RGB.White, Background = RGB.Black }).DockToRight(padding: 2).DockToTop(padding: 1);
-        Invoke(async () =>
+        if (options.Mode == UITestMode.RealTimeFYI)
         {
-            while (ShouldContinue)
+            var fr = LayoutRoot.Add(new NoFrillsLabel() { Foreground = RGB.White, Background = RGB.Black }).DockToRight(padding: 2).DockToTop(padding: 1);
+            Invoke(async () =>
             {
-                await Task.Delay(100);
-                fr.Text = (FramesPerSecond + " FPS").ToConsoleString();
-            }
-        });
+                while (ShouldContinue)
+                {
+                    await Task.Delay(100);
+                    fr.Text = (FramesPerSecond + " FPS").ToConsoleString();
+                }
+            });
+        }
     }
 
     public TestGame() { }
