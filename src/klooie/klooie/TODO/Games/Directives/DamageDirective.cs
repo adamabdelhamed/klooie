@@ -260,7 +260,7 @@ public class DamageEventArgs
 
  
 
-public class HPUpdate : GameCollider
+public class HPUpdate : NoFrillsLabel
 {
     public float Percentage { get; private set; }
     public float CurrentHP { get; private set; }

@@ -67,7 +67,7 @@ public readonly struct RectF
         var center = Center;
         var newW = Width * (1 + percentage);
         var newH = Height * (1 + percentage);
-        return new RectF(center.Left - newW / 2, center.Top - newH / 2, newW, newH);
+        return new RectF(center.Left - newW / 2f, center.Top - newH / 2f, newW, newH);
     }
 
     public RectF Shrink(float percentage)
@@ -75,7 +75,15 @@ public readonly struct RectF
         var center = Center;
         var newW = Width * (1 - percentage);
         var newH = Height * (1 - percentage);
-        return new RectF(center.Left - newW / 2, center.Top - newH / 2, newW, newH);
+        return new RectF(center.Left - newW / 2f, center.Top - newH / 2f, newW, newH);
+    }
+
+    public RectF ShrinkBy(float dx, float dy)
+    {
+        var center = Center;
+        var newW = Width -dx;
+        var newH = Height -dy;
+        return new RectF(center.Left - newW / 2f, center.Top - newH / 2f, newW, newH);
     }
 
     public Angle CalculateAngleTo(in RectF other) => CalculateAngleTo(this, other);

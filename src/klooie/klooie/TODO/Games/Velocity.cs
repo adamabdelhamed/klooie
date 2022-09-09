@@ -18,10 +18,11 @@ public class Velocity
     public ColliderGroup Group { get; private set; }
 
 
-    internal Event _onAngleChanged, _onSpeedChanged, _beforeMove, _onVelocityEnforced;
+    internal Event _onAngleChanged, _onSpeedChanged, _beforeMove, _onVelocityEnforced, _beforeEvaluate;
     internal Event<Impact> _impactOccurred;
     public Event OnAngleChanged { get => _onAngleChanged ?? (_onAngleChanged = new Event()); }
     public Event OnSpeedChanged { get => _onSpeedChanged ?? (_onSpeedChanged = new Event()); }
+    public Event BeforeEvaluate { get => _beforeEvaluate ?? (_beforeEvaluate = new Event()); }
     public Event BeforeMove { get => _beforeMove ?? (_beforeMove = new Event()); }
     public Event OnVelocityEnforced { get => _onVelocityEnforced ?? (_onVelocityEnforced = new Event()); }
     public Event<Impact> ImpactOccurred { get => _impactOccurred ?? (_impactOccurred = new Event<Impact>()); }
@@ -29,8 +30,6 @@ public class Velocity
     public Impact LastImpact { get; internal set; }
     public CollisionBehaviorMode CollisionBehavior { get; set; } = Velocity.CollisionBehaviorMode.Stop;
     public HitPrediction NextCollision { get; internal set; }
-
-    public Func<RectF> BoundsTransform { get; set; }
     public GameCollider Collider { get; private set; }
 
     public float SpeedRatio { get; set; } = 1;
@@ -231,6 +230,7 @@ public class ColliderGroup
 
                 // no need to evaluate this velocity if it's not moving
                 var velocity = item.Velocity;
+                item.Velocity._beforeEvaluate?.Fire();
                 if (velocity.Speed <= 0)
                 {
                     velocity._onVelocityEnforced?.Fire();
@@ -250,7 +250,7 @@ public class ColliderGroup
 
                 // before moving the object, see if the movement would impact another object
                 float d = velocity.Speed * dt;
-                var bounds = velocity.BoundsTransform != null ? velocity.BoundsTransform() : item.Collider.Bounds;
+                var bounds = item.Collider.MassBounds;
                 hitPrediction.Clear();
                 HitDetection.PredictHitFast(velocity.Collider, bounds, obstacleBuffer, velocity.Angle, colliderBuffer, 1.5f * d, CastingMode.Precise, colliderBufferLength, hitPrediction);
                 velocity.NextCollision = hitPrediction;
@@ -259,15 +259,13 @@ public class ColliderGroup
                 if (hitPrediction.Type != HitType.None && hitPrediction.LKGD <= d)
                 {
                     var obstacleHit = hitPrediction.ColliderHit;
-                    var dx = velocity.BoundsTransform != null ? bounds.Left - item.Collider.Left() : 0;
-                    var dy = velocity.BoundsTransform != null ? bounds.Top - item.Collider.Top() : 0;
 
-                    var proposedBounds = velocity.BoundsTransform != null ? velocity.BoundsTransform() : item.Collider.Bounds;
+                    var proposedBounds = item.Collider.Bounds;
                     var distanceToObstacleHit = proposedBounds.CalculateDistanceTo(obstacleHit.Bounds);
                    
-                        proposedBounds = proposedBounds.OffsetByAngleAndDistance(velocity.Angle, distanceToObstacleHit - .5f, false);
-                        item.Collider.Bounds = new RectF(proposedBounds.Left - dx, proposedBounds.Top - dy, item.Collider.Width(), item.Collider.Height());
-                        velocity.haveMovedSinceLastHitDetection = true;
+                    proposedBounds = proposedBounds.OffsetByAngleAndDistance(velocity.Angle, distanceToObstacleHit - .5f, false);
+                    item.Collider.Bounds = new RectF(proposedBounds.Left, proposedBounds.Top, item.Collider.Width(), item.Collider.Height());
+                    velocity.haveMovedSinceLastHitDetection = true;
                     
                     var angle = bounds.CalculateAngleTo(obstacleHit.Bounds);
 

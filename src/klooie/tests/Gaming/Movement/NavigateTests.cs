@@ -89,10 +89,20 @@ public class NavigateTests
             var collider = Game.Current.GamePanel.Add(new TextCollider("O".ToRed()) { CompositionMode = CompositionMode.BlendBackground });
             collider.MoveTo(r.Next(Game.Current.Width / 2, Game.Current.Width - 5),
                 r.Next(Game.Current.Height / 2, Game.Current.Height - 5));
-            collider.NudgeFree();
+            if (collider.NudgeFree() == false) Assert.Fail("Failed to nudge");
             collider.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
+        }
+        foreach(var collider in Game.Current.GamePanel.Controls.WhereAs<TextCollider>())
+        {
+            collider.Sync(nameof(collider.Bounds), () =>
+            {
+                if (collider.OverlapPercentage(left) > 0 || collider.OverlapPercentage(top) > 0 || collider.OverlapPercentage(right) > 0 || collider.OverlapPercentage(bottom) > 0)
+                {
+                    //Assert.Fail();
+                }
+            }, collider);
             collider.Velocity.Angle = r.Next(0, 360);
-            collider.Velocity.Speed = r.Next(10,50);
+            collider.Velocity.Speed = r.Next(10, 50);
         }
 
         await Game.Current.RequestPaintAsync();
@@ -101,7 +111,7 @@ public class NavigateTests
         {
             Show = true
         }), Task.Delay(10000).ToLifetime());
-    
+        Assert.IsTrue(success);
         Game.Current.Stop();
     });
     [TestMethod]

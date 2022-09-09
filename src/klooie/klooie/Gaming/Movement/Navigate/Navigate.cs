@@ -119,7 +119,7 @@ public class Navigate : Movement
     {
         var sceneW = (int)Game.Current.GameBounds.Width;
         var sceneH = (int)Game.Current.GameBounds.Height;
-        var inBounds = new RectF(0, 0, sceneW, sceneH);
+        var inBounds = new RectF(0, 0, sceneW, sceneH).ShrinkBy(1,1);
 
         var sceneX = Game.Current.GameBounds.Left;
         var sceneY = Game.Current.GameBounds.Top;
