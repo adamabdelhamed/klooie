@@ -127,6 +127,7 @@ public class ChildCharacter : Character
     public ChildCharacter(Character parent)
     {
         this.parent = parent;
+        parent.OnDisposed(() => this.TryDispose());
     }
 
     public override bool CanCollideWith(GameCollider other)
