@@ -23,7 +23,7 @@ public class WeaponElement : GameCollider
         _added?.Fire(this);
     }
 
-    public override bool CanCollideWith(ICollider other)
+    public override bool CanCollideWith(GameCollider other)
     {
         if (base.CanCollideWith(other) == false) return false;
         if (other == Weapon.Holder) return false;

@@ -31,14 +31,11 @@ public class VelocityTests
     {
         Test = async(context)=>
         {
-            using (var testLt = new Lifetime())
+            var v = new GameCollider().Velocity;
+            for (var s = 0; s < 200; s += 5)
             {
-                var v = new Velocity(new ConsoleControl(), new ColliderGroup(testLt));
-                for (var s = 0; s < 200; s += 5)
-                {
-                    v.Speed = s;
-                    Console.WriteLine($"Speed = {s}, EvalFrequency = {v.EvalFrequencySeconds} s");
-                }
+                v.Speed = s;
+                Console.WriteLine($"Speed = {s}, EvalFrequency = {v.EvalFrequencySeconds} s");
             }
             Game.Current.Stop();
         },

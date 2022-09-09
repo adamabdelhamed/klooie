@@ -31,7 +31,7 @@ public class Velocity
     public HitPrediction NextCollision { get; internal set; }
 
     public Func<RectF> BoundsTransform { get; set; }
-    public ICollider Collider { get; private set; }
+    public GameCollider Collider { get; private set; }
 
     public float SpeedRatio { get; set; } = 1;
 
@@ -77,39 +77,22 @@ public class Velocity
         }
     }
 
-    public Velocity(ICollider collider, ColliderGroup group)
+    public Velocity(GameCollider collider, ColliderGroup group)
     {
         this.Group = group;
         this.Collider = collider;
-        group.Add(collider, this);
+        if (collider is ColliderBox == false)
+        {
+            group.Add(collider, this);
+        }
     }
 
-    public Velocity(ConsoleControl collider, ColliderGroup group) 
-    {
-        this.Group = group;
-        this.Collider = collider;
-        group.Add(collider, this);
-        collider.OnDisposed(()=>
-        {
-           /*
-            var lookup = this.Group.EnumerateCollidersSlow2(null).Where(c => c.c == collider).FirstOrDefault();
-            if (lookup.c != Collider)
-            {
-                throw new NotSupportedException("OOPS, not there");
-            }
-           */
-            if (this.Group.Remove(Collider) == false)
-            {
-                throw new InvalidOperationException($"Failed to remove myself from group after dispose: {collider.GetType().Name}-{collider.ColliderHashCode}");
-            }
-        });
-    }
 
     public ILifetimeManager CreateVelocityChangedLifetime() => 
         Lifetime.EarliestOf(OnSpeedChanged.CreateNextFireLifetime(), OnAngleChanged.CreateNextFireLifetime()).Manager;
     
 
-    public IEnumerable<ICollider> GetObstaclesSlow(List<ICollider> buffer = null) => Group.GetObstaclesSlow(Collider, buffer);
+    public IEnumerable<GameCollider> GetObstaclesSlow(List<GameCollider> buffer = null) => Group.GetObstaclesSlow(Collider, buffer);
     public void Stop() => Speed = 0;
 }
 
@@ -130,18 +113,18 @@ public class ColliderGroup
     internal const float EvalFrequencySlope = (MostFrequentEval - LeastFrequentEval) / (HighestSpeedForEvalCalc - LowestSpeedForEvalCalc);
 
     private int colliderBufferLength;
-    private ICollider[] colliderBuffer;
+    private GameCollider[] colliderBuffer;
     private RectF[] obstacleBuffer;
     private HitPrediction hitPrediction;
     private ILifetimeManager lt;
     private TimeSpan lastExecuteTime;
 
 
-    private Event<(Velocity Velocity, ICollider Collider)> _added;
-    public Event<(Velocity Velocity, ICollider Collider)> Added { get => _added ?? (_added = new Event<(Velocity Velocity, ICollider Collider)>()); }
+    private Event<(Velocity Velocity, GameCollider Collider)> _added;
+    public Event<(Velocity Velocity, GameCollider Collider)> Added { get => _added ?? (_added = new Event<(Velocity Velocity, GameCollider Collider)>()); }
 
-    private Event<(Velocity Velocity, ICollider Collider)> _removed;
-    public Event<(Velocity Velocity, ICollider Collider)> Removed { get => _removed ?? (_removed = new Event<(Velocity Velocity, ICollider Collider)>()); }
+    private Event<(Velocity Velocity, GameCollider Collider)> _removed;
+    public Event<(Velocity Velocity, GameCollider Collider)> Removed { get => _removed ?? (_removed = new Event<(Velocity Velocity, GameCollider Collider)>()); }
 
     public float SpeedRatio { get; set; } = 1;
 
@@ -154,9 +137,9 @@ public class ColliderGroup
         ConsoleApp.Current.Invoke(ExecuteAsync);
     }
 
-    public bool TryLookupVelocity(ICollider c, out Velocity v) => velocities.TryGetValue(c, out v);
+    public bool TryLookupVelocity(GameCollider c, out Velocity v) => velocities.TryGetValue(c, out v);
 
-    internal (int RowIndex, int ColIndex) Add(ICollider c, Velocity v)
+    internal (int RowIndex, int ColIndex) Add(GameCollider c, Velocity v)
     {
         if(c.ColliderHashCode >= 0)
         {
@@ -166,7 +149,7 @@ public class ColliderGroup
         if (Count == colliderBuffer.Length)
         {
             var tmp = colliderBuffer;
-            colliderBuffer = new ICollider[tmp.Length * 2];
+            colliderBuffer = new GameCollider[tmp.Length * 2];
             Array.Copy(tmp, colliderBuffer, tmp.Length);
 
             var tmp2 = obstacleBuffer;
@@ -180,7 +163,7 @@ public class ColliderGroup
         return ret;
     }
 
-    public bool Remove(ICollider c)
+    public bool Remove(GameCollider c)
     {
         if(velocities.Remove(c, out Velocity v))
         {
@@ -197,7 +180,7 @@ public class ColliderGroup
     {
         velocities = new VelocityHashTable();
         colliderBufferLength = 0;
-        colliderBuffer = new ICollider[100];
+        colliderBuffer = new GameCollider[100];
         obstacleBuffer = new RectF[100];
         stopwatch = Stopwatch.StartNew();
         lastExecuteTime = TimeSpan.Zero;
@@ -356,9 +339,9 @@ public class ColliderGroup
         }
     }
 
-    public IEnumerable<ICollider> EnumerateCollidersSlow(List<ICollider> list)
+    public IEnumerable<GameCollider> EnumerateCollidersSlow(List<GameCollider> list)
     {
-        list = list ?? new List<ICollider>(Count);
+        list = list ?? new List<GameCollider>(Count);
         colliderBufferLength = 0;
         var span = velocities.Table.AsSpan();
         for (var i = 0; i < span.Length; i++)
@@ -374,9 +357,9 @@ public class ColliderGroup
         return list;
     }
 
-    public IEnumerable<ICollider> EnumerateCollidersSlow(List<ICollider> list, ICollider except)
+    public IEnumerable<GameCollider> EnumerateCollidersSlow(List<GameCollider> list, GameCollider except)
     {
-        list = list ?? new List<ICollider>(Count);
+        list = list ?? new List<GameCollider>(Count);
         colliderBufferLength = 0;
         var span = velocities.Table.AsSpan();
         for (var i = 0; i < span.Length; i++)
@@ -392,9 +375,9 @@ public class ColliderGroup
         return list;
     }
 
-    public IEnumerable<ICollider> GetObstaclesSlow(ICollider owner, List<ICollider> list = null)
+    public IEnumerable<GameCollider> GetObstaclesSlow(GameCollider owner, List<GameCollider> list = null)
     {
-        list = list ?? new List<ICollider>(Count);
+        list = list ?? new List<GameCollider>(Count);
         colliderBufferLength = 0;
         var span = velocities.Table.AsSpan();
         for (var i = 0; i < span.Length; i++)
@@ -403,7 +386,13 @@ public class ColliderGroup
             for (var j = 0; j < entry.Length; j++)
             {
                 var item = entry[j];
-                if (item == null || item.Collider == owner || owner.CanCollideWith(item.Collider) == false) continue;
+
+                if (item == null) continue;
+
+                if (item.Collider == owner) continue;
+
+                if (owner.CanCollideWith(item.Collider) == false) continue;
+
                 list.Add(item.Collider);
             }
         }
@@ -414,10 +403,10 @@ public class ColliderGroup
     {
         public class Item
         {
-            public readonly ICollider Collider;
+            public readonly GameCollider Collider;
             public readonly Velocity Velocity;
 
-            public Item(ICollider c, Velocity v)
+            public Item(GameCollider c, Velocity v)
             {
                 Collider = c;
                 Velocity = v;
@@ -453,7 +442,7 @@ public class ColliderGroup
             }
         }
 
-        internal (int RowIndex, int ColIndex) Add(ICollider c, Velocity v)
+        internal (int RowIndex, int ColIndex) Add(GameCollider c, Velocity v)
         {
             var i = c.ColliderHashCode % Table.Length;
             var myArray = Table[i].AsSpan();
@@ -472,7 +461,7 @@ public class ColliderGroup
             return (i, myArray.Length);
         }
 
-        public bool Remove(ICollider c, out Velocity v)
+        public bool Remove(GameCollider c, out Velocity v)
         {
             var i = c.ColliderHashCode % Table.Length;
             var myArray = Table[i].AsSpan();
@@ -495,7 +484,7 @@ public class ColliderGroup
             return false;
         }
 
-        public bool TryGetValue(ICollider c, out Velocity v)
+        public bool TryGetValue(GameCollider c, out Velocity v)
         {
             var i = c.ColliderHashCode % Table.Length;
             var myArray = Table[i].AsSpan();
@@ -520,89 +509,69 @@ public class ColliderGroup
     }
 }
 
-public interface ICollider : ILifetime
+
+
+
+public static class GameColliderEx
 {
-    public int ColliderHashCode { get; set; }
-    public int ZIndex { get; }
-    public RectF Bounds { get; set; }
-    public RectF MassBounds { get; }
+    public static float NumberOfPixelsThatOverlap(this GameCollider c, RectF other) => c.Bounds.NumberOfPixelsThatOverlap(other);
+    public static float NumberOfPixelsThatOverlap(this GameCollider c, GameCollider other) => c.Bounds.NumberOfPixelsThatOverlap(other.Bounds);
 
-    public bool CanCollideWith(ICollider other);
-}
+    public static float OverlapPercentage(this GameCollider c, RectF other) => c.Bounds.OverlapPercentage(other);
+    public static float OverlapPercentage(this GameCollider c, GameCollider other) => c.Bounds.OverlapPercentage(other.Bounds);
 
+    public static bool Touches(this GameCollider c, RectF other) => c.Bounds.Touches(other);
+    public static bool Touches(this GameCollider c, GameCollider other) => c.Bounds.Touches(other.Bounds);
 
-public static class IColliderEx
-{
-    public static float NumberOfPixelsThatOverlap(this ICollider c, RectF other) => c.Bounds.NumberOfPixelsThatOverlap(other);
-    public static float NumberOfPixelsThatOverlap(this ICollider c, ICollider other) => c.Bounds.NumberOfPixelsThatOverlap(other.Bounds);
+    public static bool Contains(this GameCollider c, RectF other) => c.Bounds.Contains(other);
+    public static bool Contains(this GameCollider c, GameCollider other) => c.Bounds.Contains(other.Bounds);
 
-    public static float OverlapPercentage(this ICollider c, RectF other) => c.Bounds.OverlapPercentage(other);
-    public static float OverlapPercentage(this ICollider c, ICollider other) => c.Bounds.OverlapPercentage(other.Bounds);
+    public static float Top(this GameCollider c) => c.Bounds.Top;
+    public static float Left(this GameCollider c) => c.Bounds.Left;
 
-    public static bool Touches(this ICollider c, RectF other) => c.Bounds.Touches(other);
-    public static bool Touches(this ICollider c, ICollider other) => c.Bounds.Touches(other.Bounds);
+    public static float Bottom(this GameCollider c) => c.Bounds.Bottom;
+    public static float Right(this GameCollider c) => c.Bounds.Right;
 
-    public static bool Contains(this ICollider c, RectF other) => c.Bounds.Contains(other);
-    public static bool Contains(this ICollider c, ICollider other) => c.Bounds.Contains(other.Bounds);
+    public static float Width(this GameCollider c) => c.Bounds.Width;
+    public static float Height(this GameCollider c) => c.Bounds.Height;
 
-    public static float Top(this ICollider c) => c.Bounds.Top;
-    public static float Left(this ICollider c) => c.Bounds.Left;
+    public static LocF TopRight(this GameCollider c) => c.Bounds.TopRight;
+    public static LocF BottomRight(this GameCollider c) => c.Bounds.BottomRight;
+    public static LocF TopLeft(this GameCollider c) => c.Bounds.TopLeft;
+    public static LocF BottomLeft(this GameCollider c) => c.Bounds.BottomLeft;
 
-    public static float Bottom(this ICollider c) => c.Bounds.Bottom;
-    public static float Right(this ICollider c) => c.Bounds.Right;
+    public static LocF Center(this GameCollider c) => c.Bounds.Center;
+    public static float CenterX(this GameCollider c) => c.Bounds.CenterX;
+    public static float CenterY(this GameCollider c) => c.Bounds.CenterY;
 
-    public static float Width(this ICollider c) => c.Bounds.Width;
-    public static float Height(this ICollider c) => c.Bounds.Height;
+    public static RectF Round(this GameCollider c) => c.Bounds.Round();
 
-    public static LocF TopRight(this ICollider c) => c.Bounds.TopRight;
-    public static LocF BottomRight(this ICollider c) => c.Bounds.BottomRight;
-    public static LocF TopLeft(this ICollider c) => c.Bounds.TopLeft;
-    public static LocF BottomLeft(this ICollider c) => c.Bounds.BottomLeft;
+    public static RectF OffsetByAngleAndDistance(this GameCollider c, Angle a, float d, bool normalized = true) => c.Bounds.OffsetByAngleAndDistance(a, d, normalized);
+    public static RectF Offset(this GameCollider c, float dx, float dy) => c.Bounds.Offset(dx, dy);
 
-    public static LocF Center(this ICollider c) => c.Bounds.Center;
-    public static float CenterX(this ICollider c) => c.Bounds.CenterX;
-    public static float CenterY(this ICollider c) => c.Bounds.CenterY;
+    public static Angle CalculateAngleTo(this GameCollider c, RectF other) => c.Bounds.CalculateAngleTo(other);
+    public static Angle CalculateAngleTo(this GameCollider c, GameCollider other) => c.Bounds.CalculateAngleTo(other.Bounds);
 
-    public static RectF Round(this ICollider c) => c.Bounds.Round();
+    public static float CalculateDistanceTo(this GameCollider c, RectF other) => c.Bounds.CalculateDistanceTo(other);
+    public static float CalculateDistanceTo(this GameCollider c, GameCollider other) => c.Bounds.CalculateDistanceTo(other.Bounds);
 
-    public static RectF OffsetByAngleAndDistance(this ICollider c, Angle a, float d, bool normalized = true) => c.Bounds.OffsetByAngleAndDistance(a, d, normalized);
-    public static RectF Offset(this ICollider c, float dx, float dy) => c.Bounds.Offset(dx, dy);
-
-    public static Angle CalculateAngleTo(this ICollider c, RectF other) => c.Bounds.CalculateAngleTo(other);
-    public static Angle CalculateAngleTo(this ICollider c, ICollider other) => c.Bounds.CalculateAngleTo(other.Bounds);
-
-    public static float CalculateDistanceTo(this ICollider c, RectF other) => c.Bounds.CalculateDistanceTo(other);
-    public static float CalculateDistanceTo(this ICollider c, ICollider other) => c.Bounds.CalculateDistanceTo(other.Bounds);
-
-    public static float CalculateNormalizedDistanceTo(this ICollider c, RectF other) => c.Bounds.CalculateNormalizedDistanceTo(other);
-    public static float CalculateNormalizedDistanceTo(this ICollider c, ICollider other) => c.Bounds.CalculateNormalizedDistanceTo(other.Bounds);
-}
-
-public class ColliderBox : Lifetime, ICollider
-{
-    public int ColliderHashCode { get; set; }
-    public int ZIndex { get; }
-    public RectF Bounds { get; set; }
-    public RectF MassBounds { get; private set; }
-    public ColliderBox(RectF f)
-    {
-        Bounds = f;
-        MassBounds = f;
-    }
-
-    public bool CanCollideWith(ICollider other)
-    {
-        return true;
-    }
+    public static float CalculateNormalizedDistanceTo(this GameCollider c, RectF other) => c.Bounds.CalculateNormalizedDistanceTo(other);
+    public static float CalculateNormalizedDistanceTo(this GameCollider c, GameCollider other) => c.Bounds.CalculateNormalizedDistanceTo(other.Bounds);
 }
 
 public static class ColliderEx
 {
-    public static ICollider Box(this RectF rect) => new ColliderBox(rect);
-
-    public static float CalculateDistanceTo(this RectF rect, ICollider collider) =>
+    public static float CalculateDistanceTo(this RectF rect, GameCollider collider) =>
         rect.CalculateDistanceTo(collider.Left(), collider.Top(), collider.Width(), collider.Height());
 
-    public static Angle CalculateAngleTo(this RectF rect, ICollider collider) =>
+    public static Angle CalculateAngleTo(this RectF rect, GameCollider collider) =>
         rect.CalculateAngleTo(collider.Left(), collider.Top(), collider.Width(), collider.Height());
+}
+
+public class ColliderBox : GameCollider
+{
+    public ColliderBox(RectF bounds) : base(bounds) { }
+
+    public ColliderBox(float x, float y, float w, float h) : this(new RectF(x, y, w, h)) { }
+
 }

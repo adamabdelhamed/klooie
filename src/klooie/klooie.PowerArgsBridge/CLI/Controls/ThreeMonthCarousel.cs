@@ -106,8 +106,8 @@
                 }
                 else
                 {
-                    var rightAnimationDest = ((ICollider)center).Bounds;
-                    var centerAnimationDest = ((ICollider)left).Bounds;
+                    var rightAnimationDest = center.Bounds;
+                    var centerAnimationDest = left.Bounds;
                     var leftAnimationDest = new RectF(-2, Height / 2, 2, 1);
 
                     await Task.WhenAll

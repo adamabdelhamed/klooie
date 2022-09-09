@@ -1,7 +1,7 @@
 ﻿namespace klooie.Gaming;
 public static class NudgeHelper
 {
-    public static bool NudgeFree(this ConsoleControl el, RectF? desiredLocation = null, Angle optimalAngle = default, float maxSearch = 15f)
+    public static bool NudgeFree(this GameCollider el, RectF? desiredLocation = null, Angle optimalAngle = default, float maxSearch = 15f)
     {
         var loc = GetNudgeLocation(el, desiredLocation, optimalAngle, maxSearch);
         if (loc.HasValue)
@@ -16,7 +16,7 @@ public static class NudgeHelper
         return false;
     }
 
-    private static LocF? GetNudgeLocation(this ConsoleControl el, RectF? desiredLoc = null, Angle optimalAngle = default, float maxSearch = 15f)
+    private static LocF? GetNudgeLocation(this GameCollider el, RectF? desiredLoc = null, Angle optimalAngle = default, float maxSearch = 15f)
     {
         var desiredLocation = desiredLoc.HasValue ? desiredLoc.Value : el.MassBounds;
         var obstacles = el.GetObstacles();

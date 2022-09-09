@@ -139,6 +139,15 @@ public class MovementTests
         cMover.Background = RGB.Red;
         cMover.ResizeTo(3, 1);
         cMover.MoveTo(Game.Current.Width / 2f, Game.Current.Height / 2f);
+        cMover.Subscribe(nameof(cMover.Bounds), () =>
+        {
+            var overlaps = cMover.GetObstacles()
+            .Where(o => o.OverlapPercentage(cMover) > 0).ToArray();
+            if(overlaps.Any())
+            {
+
+            }
+        }, cMover);
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
         cMover.Velocity.Angle = 45;
         var failed = false;
@@ -171,22 +180,22 @@ public class MovementTests
     {
         var bounds = Game.Current.GameBounds;
 
-        var leftWall = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.White });
+        var leftWall = Game.Current.GamePanel.Add(new OuterWall() { Background = RGB.White });
         leftWall.MoveTo(bounds.Left, bounds.Top);
         leftWall.ResizeTo(2, bounds.Height);
         leftWall.GiveWiggleRoom();
 
-        var rightWall = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.White });
+        var rightWall = Game.Current.GamePanel.Add(new OuterWall() { Background = RGB.White });
         rightWall.MoveTo(bounds.Right - 2, bounds.Top);
         rightWall.ResizeTo(2, bounds.Height);
         rightWall.GiveWiggleRoom();
 
-        var topWall = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.White });
+        var topWall = Game.Current.GamePanel.Add(new OuterWall() { Background = RGB.White });
         topWall.MoveTo(bounds.Left, bounds.Top);
         topWall.ResizeTo(bounds.Width, 1);
         topWall.GiveWiggleRoom();
 
-        var bottonWall = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.White });
+        var bottonWall = Game.Current.GamePanel.Add(new OuterWall() { Background = RGB.White });
         bottonWall.MoveTo(bounds.Left, bounds.Bottom - 1);
         bottonWall.ResizeTo(Game.Current.GameBounds.Width, 1);
         bottonWall.GiveWiggleRoom();
@@ -195,13 +204,16 @@ public class MovementTests
         {
             for (var y = bounds.Top + spacing / 2f; y < bounds.Bottom - spacing / 2; y += h + (spacing / 2f))
             {
-                var collider = Game.Current.GamePanel.Add(new GameCollider());
+                var collider = Game.Current.GamePanel.Add(new Terrain());
                 collider.ResizeTo(w, h);
                 collider.MoveTo(x, y);
                 collider.Background = RGB.DarkGreen;
             }
         }
     }
+
+    public class Terrain : GameCollider { }
+    public class OuterWall : GameCollider { }
 
     public class Right : Movement
     {

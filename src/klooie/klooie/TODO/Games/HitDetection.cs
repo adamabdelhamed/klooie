@@ -1,4 +1,4 @@
-﻿namespace klooie;
+﻿namespace klooie.Gaming;
 public enum HitType
 {
     None = 0,
@@ -9,8 +9,8 @@ public struct Impact
 {
     public float MovingObjectSpeed { get; set; }
     public Angle Angle { get; set; }
-    public ICollider MovingObject { get; set; }
-    public ICollider ColliderHit { get; set; }
+    public GameCollider MovingObject { get; set; }
+    public GameCollider ColliderHit { get; set; }
     public HitType HitType { get; set; }
     public HitPrediction Prediction { get; set; }
 
@@ -21,7 +21,7 @@ public class HitPrediction
 {
     public HitType Type { get; set; }
     public RectF ObstacleHitBounds { get; set; }
-    public ICollider ColliderHit { get; set; }
+    public GameCollider ColliderHit { get; set; }
     public float LKGX { get; set; }
     public float LKGY { get; set; }
     public float LKGD { get; set; }
@@ -49,7 +49,7 @@ public class HitDetectionOptions
     public RectF MovingObject { get; set; }
     public RectF[] Obstacles { get; set; }
 
-    internal ICollider[] Colliders { get; set; }
+    internal GameCollider[] Colliders { get; set; }
 
     public Angle Angle { get; set; }
     public float Visibility { get; set; }
@@ -65,7 +65,7 @@ public class HitDetectionOptions
 
     }
 
-    public HitDetectionOptions(ICollider c, IEnumerable<ICollider> obstacles)
+    public HitDetectionOptions(GameCollider c, IEnumerable<GameCollider> obstacles)
     {
         MovingObject = c.Bounds;
         Colliders = obstacles.ToArray();
@@ -76,7 +76,7 @@ public class HitDetectionOptions
         }
     }
 
-    public HitDetectionOptions(ICollider c, ICollider[] colliders, RectF[] obstacles, int length)
+    public HitDetectionOptions(GameCollider c, GameCollider[] colliders, RectF[] obstacles, int length)
     {
         MovingObject = c.Bounds;
         Colliders = colliders;
@@ -96,14 +96,14 @@ public enum CastingMode
 
 public static class HitDetection
 {
-    public static bool HasLineOfSight(this Velocity from, ICollider to) => HasLineOfSight(from.Collider, to, from.GetObstaclesSlow());
+    public static bool HasLineOfSight(this Velocity from, GameCollider to) => HasLineOfSight(from.Collider, to, from.GetObstaclesSlow());
 
-    public static bool HasLineOfSight(this ICollider from, ICollider to, IEnumerable<ICollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
-    public static bool HasLineOfSight(this ICollider from, RectF to, IEnumerable<ICollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
-    public static bool HasLineOfSight(this RectF from, ICollider to, IEnumerable<ICollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
-    public static bool HasLineOfSight(this RectF from, RectF to, IEnumerable<ICollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
+    public static bool HasLineOfSight(this GameCollider from, GameCollider to, IEnumerable<GameCollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
+    public static bool HasLineOfSight(this GameCollider from, RectF to, IEnumerable<GameCollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
+    public static bool HasLineOfSight(this RectF from, GameCollider to, IEnumerable<GameCollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
+    public static bool HasLineOfSight(this RectF from, RectF to, IEnumerable<GameCollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
     public static bool HasLineOfSight(this RectF from, RectF to, IEnumerable<RectF> obstacles) => GetLineOfSightObstruction(from, to, obstacles.Select(o => new ColliderBox(o))) == null;
-    public static ICollider GetLineOfSightObstruction(this ICollider from, ICollider to, IEnumerable<ICollider> obstacles, CastingMode castingMode = CastingMode.Rough)
+    public static GameCollider GetLineOfSightObstruction(this GameCollider from, GameCollider to, IEnumerable<GameCollider> obstacles, CastingMode castingMode = CastingMode.Rough)
     {
         var options = new HitDetectionOptions(from, obstacles.Union(new[] { to }));
         options.Mode = castingMode;
@@ -123,19 +123,19 @@ public static class HitDetection
         }
     }
 
-    public static ICollider GetLineOfSightObstruction(this RectF from, ICollider to, IEnumerable<ICollider> obstacles, CastingMode castingMode = CastingMode.Rough)
+    public static GameCollider GetLineOfSightObstruction(this RectF from, GameCollider to, IEnumerable<GameCollider> obstacles, CastingMode castingMode = CastingMode.Rough)
     {
         var fromBox = new ColliderBox(from);
         return GetLineOfSightObstruction(fromBox, to, obstacles, castingMode);
     }
 
-    public static ICollider GetLineOfSightObstruction(this ICollider from, RectF to, IEnumerable<ICollider> obstacles, CastingMode castingMode = CastingMode.Rough)
+    public static GameCollider GetLineOfSightObstruction(this GameCollider from, RectF to, IEnumerable<GameCollider> obstacles, CastingMode castingMode = CastingMode.Rough)
     {
         var toBox = new ColliderBox(to);
         return GetLineOfSightObstruction(from, toBox, obstacles, castingMode);
     }
 
-    public static ICollider GetLineOfSightObstruction(this RectF from, RectF to, IEnumerable<ICollider> obstacles, CastingMode castingMode = CastingMode.Rough)
+    public static GameCollider GetLineOfSightObstruction(this RectF from, RectF to, IEnumerable<GameCollider> obstacles, CastingMode castingMode = CastingMode.Rough)
     {
         var fromBox = new ColliderBox(from);
         var toBox = new ColliderBox(to);
@@ -150,7 +150,7 @@ public static class HitDetection
         return PredictHit(options.MovingObject, options.Obstacles.ToArray(), options.Angle, options.Colliders, options.Visibility, options.Mode, options.EdgesHitOutput, options.ObstacleBufferLength);
     }
 
-    public static HitPrediction PredictHit(in RectF movingObject, RectF[] obstacles, Angle angle, ICollider[] colliders = null, float visibility = 10000f, CastingMode mode = CastingMode.Precise, List<Edge> edgesHitOutput = null, int? bufferLen = null, HitPrediction toReuse = null)
+    public static HitPrediction PredictHit(in RectF movingObject, RectF[] obstacles, Angle angle, GameCollider[] colliders = null, float visibility = 10000f, CastingMode mode = CastingMode.Precise, List<Edge> edgesHitOutput = null, int? bufferLen = null, HitPrediction toReuse = null)
     {
         var prediction = toReuse ?? new HitPrediction();
         prediction.LKGX = movingObject.Left;
@@ -253,7 +253,7 @@ public static class HitDetection
     }
 
 
-    internal static HitPrediction PredictHitFast(ICollider c, RectF movingObject, RectF[] obstacles, Angle angle, ICollider[] colliders, float visibility, CastingMode mode, int bufferLen, HitPrediction toReuse)
+    internal static HitPrediction PredictHitFast(GameCollider c, RectF movingObject, RectF[] obstacles, Angle angle, GameCollider[] colliders, float visibility, CastingMode mode, int bufferLen, HitPrediction toReuse)
     {
         var prediction = toReuse;
         prediction.LKGX = movingObject.Left;

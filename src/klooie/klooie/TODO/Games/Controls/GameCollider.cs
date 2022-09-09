@@ -14,16 +14,20 @@ public class GameCollider : ConsolePanel
         Velocity.OnAngleChanged.Subscribe(() => FirePropertyChanged(nameof(Bounds)), this);
     }
 
+    public GameCollider(RectF bounds) : this()
+    {
+        this.Bounds = bounds;
+    }
+
+    public GameCollider(float x, float y, float w, float h) : this(new RectF(x, y, w, h)) { } 
+
     public GameCollider GetObstacleIfMovedTo(RectF area) =>  
             Velocity.GetObstaclesSlow()
             .Where(c => c.MassBounds.Touches(area))
             .WhereAs<GameCollider>()
             .FirstOrDefault();
 
-    public override bool CanCollideWith(ICollider other)
-    {
-        return base.CanCollideWith(other) && other.ZIndex == this.ZIndex;
-    }
+    public virtual bool CanCollideWith(GameCollider other) => object.ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
 
   
 
@@ -60,7 +64,7 @@ public class ParentGameCollider : GameCollider
 {
     public List<GameCollider> Children { get; private set; } = new List<GameCollider>();
     public bool SharedHPMode { get; protected set; }
-    public override bool CanCollideWith(ICollider other)
+    public override bool CanCollideWith(GameCollider other)
     {
         return base.CanCollideWith(other) && Children.Contains(other) == false;
     }
@@ -127,7 +131,7 @@ public class ChildCharacter : Character
         this.parent = parent;
     }
 
-    public override bool CanCollideWith(ICollider other)
+    public override bool CanCollideWith(GameCollider other)
     {
         if (base.CanCollideWith(other) == false) return false;
         if (other == parent) return false;
@@ -137,9 +141,9 @@ public class ChildCharacter : Character
     }
 }
 
-public static class IColliderExtensions
+public static class GameColliderExtensions
 {
-    public static void MoveTo(this ICollider c, float x, float y, int? z = null)
+    public static void MoveTo(this GameCollider c, float x, float y, int? z = null)
     {
         var e = c as ConsoleControl;
         if(z.HasValue)
@@ -150,7 +154,7 @@ public static class IColliderExtensions
         c.Bounds = new RectF(x, y, e.Bounds.Width, e.Bounds.Height);
     }
 
-    public static void MoveBy(this ICollider c, float x, float y, int? z = null)
+    public static void MoveBy(this GameCollider c, float x, float y, int? z = null)
     {
         var e = c as ConsoleControl;
         if (z.HasValue)
@@ -161,7 +165,7 @@ public static class IColliderExtensions
         c.Bounds = new RectF(e.Bounds.Left + x, e.Bounds.Top + y, e.Bounds.Width, e.Bounds.Height);
     }
 
-    public static IEnumerable<ICollider> GetObstacles(this ICollider c)
+    public static IEnumerable<GameCollider> GetObstacles(this GameCollider c)
     {
         var e = c as GameCollider;
         return Game.Current.MainColliderGroup.GetObstaclesSlow(c);

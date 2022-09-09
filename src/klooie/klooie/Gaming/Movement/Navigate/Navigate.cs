@@ -10,13 +10,13 @@ public class NavigateOptions
 
 public class Navigate : Movement
 {
-    public ICollider effectiveDestination { get; set; }
-    public ICollider _LocalTarget { get; set; }
+    public GameCollider effectiveDestination { get; set; }
+    public GameCollider _LocalTarget { get; set; }
     public NavigationPath _CurrentPath { get; set; }
     public Lifetime _ResultLifetime { get; private set; } = Game.Current.CreateChildLifetime();
     public RateGovernor _TargetUpdateRateGovernor { get; set; } = new RateGovernor(TimeSpan.FromSeconds(.2));
 
-    private Func<ICollider> destination;
+    private Func<GameCollider> destination;
     public NavigateOptions Options { get; private set; }
 
     public List<RectF> ObstaclesPadded => Velocity
@@ -24,14 +24,14 @@ public class Navigate : Movement
             .Select(e => e.Bounds.Grow(.1f))
             .ToList();
 
-    private Navigate(Velocity v, SpeedEval speed, Func<ICollider> destination, NavigateOptions options) : base(v, speed)
+    private Navigate(Velocity v, SpeedEval speed, Func<GameCollider> destination, NavigateOptions options) : base(v, speed)
     {
         AssertSupported();
         this.Options = options ?? new NavigateOptions();
         this.destination = destination;
     }
 
-    public static Movement Create(Velocity v, SpeedEval speed, Func<ICollider> destination, NavigateOptions options = null) => new Navigate(v, speed, destination, options);
+    public static Movement Create(Velocity v, SpeedEval speed, Func<GameCollider> destination, NavigateOptions options = null) => new Navigate(v, speed, destination, options);
 
     protected override async Task Move()
     {

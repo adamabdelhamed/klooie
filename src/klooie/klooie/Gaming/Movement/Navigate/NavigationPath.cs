@@ -29,7 +29,7 @@ public class NavigationPath : Lifetime
     }
     public bool IsReallyStuck => Game.Current.MainColliderGroup.Now - lastProgressTime > TimeSpan.FromSeconds(7);
 
-    public ICollider FindLocalTarget()
+    public GameCollider FindLocalTarget()
     {
         var bounds = options.Element.MassBounds;
         var obstacles = options.ObstaclesPadded;

@@ -5,14 +5,10 @@ public static class SpacialAwareness
         public const string PassThruTag = "passthru";
         public const string WeaponsPassThruTag = "WeaponsPassThru";
 
-        public static Task AnimateAsync(this RectF rectangular, RectangularAnimationOptions options)
+        public static async Task AnimateAsync(this Rectangular rectangular, RectangularAnimationOptions options)
         {
-            return AnimateAsync(new ColliderBox(rectangular), options);
-        }
-        public static async Task AnimateAsync(this ICollider rectangular, RectangularAnimationOptions options)
-        {
-            var startX = rectangular.Left();
-            var startY = rectangular.Top();
+            var startX = rectangular.Left;
+            var startY = rectangular.Top;
             var startW = rectangular.Bounds.Width;
             var startH = rectangular.Bounds.Height;
 
@@ -71,22 +67,22 @@ public static class SpacialAwareness
         }
     }
 
-    public class ConsoleControlAnimationOptions : RectangularAnimationOptions
+public class ConsoleControlAnimationOptions : RectangularAnimationOptions
+{
+    public override void Setter(Rectangular target, in RectF bounds)
     {
-        public override void Setter(ICollider target, in RectF bounds)
-        {
-            (target as ConsoleControl).X = ConsoleMath.Round(bounds.Left);
-            (target as ConsoleControl).Y = ConsoleMath.Round(bounds.Top);
-            (target as ConsoleControl).Width = ConsoleMath.Round(bounds.Width);
-            (target as ConsoleControl).Height = ConsoleMath.Round(bounds.Height);
-        }
+        (target as ConsoleControl).X = ConsoleMath.Round(bounds.Left);
+        (target as ConsoleControl).Y = ConsoleMath.Round(bounds.Top);
+        (target as ConsoleControl).Width = ConsoleMath.Round(bounds.Width);
+        (target as ConsoleControl).Height = ConsoleMath.Round(bounds.Height);
     }
+}
 
 public abstract class RectangularAnimationOptions
 {
     public Func<RectF> Destination { get; set; }
 
-    public abstract void Setter(ICollider target, in RectF bounds);
+    public abstract void Setter(Rectangular target, in RectF bounds);
 
     public EasingFunction EasingFunction { get; set; } = new FloatAnimatorOptions().EasingFunction;
     public double Duration { get; set; } = new FloatAnimatorOptions().Duration;

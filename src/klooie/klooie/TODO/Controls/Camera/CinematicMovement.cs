@@ -9,11 +9,11 @@ public class CinematicMovement : CameraMovement
     private bool IsAboutToGoOutOfBounds()
     {
         var camBounds = Camera.CameraBounds;
-        var obstacles = new List<ICollider>();
-        obstacles.Add(new RectF(camBounds.Left, camBounds.Top - 1, Camera.Width, 1).Box()); // top boundary
-        obstacles.Add(new RectF(camBounds.Left, camBounds.Top + Camera.Height, Camera.Width, 1).Box()); // bottom boundary
-        obstacles.Add(new RectF(camBounds.Left - 1, camBounds.Top, 1, Camera.Height).Box()); // left boundary
-        obstacles.Add(new RectF(camBounds.Left + Camera.Width, camBounds.Top, 1, Camera.Height).Box()); // right boundary
+        var obstacles = new List<GameCollider>();
+        obstacles.Add(new ColliderBox(camBounds.Left, camBounds.Top - 1, Camera.Width, 1)); // top boundary
+        obstacles.Add(new ColliderBox(camBounds.Left, camBounds.Top + Camera.Height, Camera.Width, 1)); // bottom boundary
+        obstacles.Add(new ColliderBox(camBounds.Left - 1, camBounds.Top, 1, Camera.Height)); // left boundary
+        obstacles.Add(new ColliderBox(camBounds.Left + Camera.Width, camBounds.Top, 1, Camera.Height)); // right boundary
 
         var prediction = HitDetection.PredictHit(new HitDetectionOptions(FocalVelocity.Collider, obstacles)
         {

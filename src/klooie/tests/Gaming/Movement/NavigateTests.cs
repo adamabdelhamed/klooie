@@ -97,7 +97,7 @@ public class NavigateTests
 
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
-        bool success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => 25, () => new ColliderBox(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
+        bool success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => 25, () => new GameCollider(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
         {
             Show = true
         }), Task.Delay(10000).ToLifetime());
@@ -162,7 +162,7 @@ public class NavigateTests
         bool success;
         if (nav)
         {
-            success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => speed, () => new ColliderBox(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
+            success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => speed, () => new GameCollider(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
             {
                 Show = true
             }), Task.Delay(camera ? 60000 : 10000).ToLifetime());

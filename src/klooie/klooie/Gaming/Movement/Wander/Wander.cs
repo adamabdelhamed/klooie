@@ -4,7 +4,7 @@ public class WanderOptions
 {
     public float AnglePrecision { get; set; } = 45;
     public float Visibility { get; set; } = 8;
-    public Func<ICollider> CuriousityPoint { get; set; }
+    public Func<GameCollider> CuriousityPoint { get; set; }
     public float CloseEnough { get; set; } = Mover.DefaultCloseEnough;
     public TimeSpan ReactionTime { get; set; } = TimeSpan.FromSeconds(.2);
 
@@ -30,9 +30,9 @@ public class Wander : Movement
     public Angle? _LastGoodAngle { get; set; }
     public Angle _OptimalAngle { get; set; }
     public Lifetime _IterationLifetime { get; set; }
-    public IEnumerable<ICollider> _Obstacles { get; set; }
+    public IEnumerable<GameCollider> _Obstacles { get; set; }
     public WanderScore _BestScore { get; set; }
-    public ICollider _CuriosityPoint { get; set; }
+    public GameCollider _CuriosityPoint { get; set; }
 
     public IWanderSense _VisibilitySense { get; set; }
     public IWanderSense _CloserToTargetSense { get; set; }
@@ -175,7 +175,7 @@ public class Wander : Movement
     {
         var cpBox = new ColliderBox(cp);
         var a = Element.MassBounds.Center.CalculateAngleTo(cp.Center);
-        var prediction = HitDetection.PredictHit(new HitDetectionOptions(new ColliderBox(Element.MassBounds), _Obstacles.Union(new ICollider[] { cpBox }))
+        var prediction = HitDetection.PredictHit(new HitDetectionOptions(new ColliderBox(Element.MassBounds), _Obstacles.Union(new GameCollider[] { cpBox }))
         {
             Angle = a,
             MovingObject = Element.MassBounds,

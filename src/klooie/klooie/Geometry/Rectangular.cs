@@ -1,6 +1,6 @@
 ﻿namespace klooie;
 
-public class Rectangular : ObservableObject, ICollider
+public class Rectangular : ObservableObject
 {
     private int x, y, w, h;
     private RectF fBounds;
@@ -32,8 +32,6 @@ public class Rectangular : ObservableObject, ICollider
             FirePropertyChanged(nameof(Bounds));
         }
     }
-
-    public virtual bool CanCollideWith(ICollider other) => object.ReferenceEquals(this, other) == false;
 
     public int Width
     {
@@ -140,4 +138,43 @@ public class Rectangular : ObservableObject, ICollider
     }
 
     public virtual RectF MassBounds => new RectF(X, Y, Width, Height);
+
+    public float NumberOfPixelsThatOverlap(RectF other) => this.Bounds.NumberOfPixelsThatOverlap(other);
+    public float NumberOfPixelsThatOverlap(Rectangular other) => this.Bounds.NumberOfPixelsThatOverlap(other.Bounds);
+
+    public float OverlapPercentage(RectF other) => this.Bounds.OverlapPercentage(other);
+    public float OverlapPercentage(Rectangular other) => this.Bounds.OverlapPercentage(other.Bounds);
+
+    public bool Touches(RectF other) => this.Bounds.Touches(other);
+    public bool Touches(Rectangular other) => this.Bounds.Touches(other.Bounds);
+
+    public bool Contains(RectF other) => this.Bounds.Contains(other);
+    public bool Contains(Rectangular other) => this.Bounds.Contains(other.Bounds);
+
+    public float Bottom() => this.Bounds.Bottom;
+    public float Right() => this.Bounds.Right;
+
+
+    public LocF TopRight() => this.Bounds.TopRight;
+    public LocF BottomRight() => this.Bounds.BottomRight;
+    public LocF TopLeft() => this.Bounds.TopLeft;
+    public LocF BottomLeft() => this.Bounds.BottomLeft;
+
+    public LocF Center() => this.Bounds.Center;
+    public float CenterX() => this.Bounds.CenterX;
+    public float CenterY() => this.Bounds.CenterY;
+
+    public RectF Round() => this.Bounds.Round();
+
+    public RectF OffsetByAngleAndDistance(Angle a, float d, bool normalized = true) => this.Bounds.OffsetByAngleAndDistance(a, d, normalized);
+    public RectF Offset(float dx, float dy) => this.Bounds.Offset(dx, dy);
+
+    public Angle CalculateAngleTo(RectF other) => this.Bounds.CalculateAngleTo(other);
+    public Angle CalculateAngleTo(Rectangular other) => this.Bounds.CalculateAngleTo(other.Bounds);
+
+    public float CalculateDistanceTo(RectF other) => this.Bounds.CalculateDistanceTo(other);
+    public float CalculateDistanceTo(Rectangular other) => this.Bounds.CalculateDistanceTo(other.Bounds);
+
+    public float CalculateNormalizedDistanceTo(RectF other) => this.Bounds.CalculateNormalizedDistanceTo(other);
+    public float CalculateNormalizedDistanceTo(Rectangular other) => this.Bounds.CalculateNormalizedDistanceTo(other.Bounds);
 }

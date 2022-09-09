@@ -15,7 +15,7 @@ public interface IAmMass
     {
         public static RectF CalculateMassBounds(this IHaveMassBounds mass) => CalculateMassBounds(mass.Elements.Concat(new GameCollider[] { mass as GameCollider }));
 
-        public static RectF CalculateMassBounds(IEnumerable<ICollider> colliders) => colliders.Select(c => c.Bounds).CalculateMassBounds();
+        public static RectF CalculateMassBounds(IEnumerable<GameCollider> colliders) => colliders.Select(c => c.Bounds).CalculateMassBounds();
         public static RectF CalculateMassBounds(params RectF[] parts) => parts.CalculateMassBounds();
 
         public static RectF CalculateMassBounds(this IEnumerable<RectF> parts)
@@ -90,7 +90,7 @@ public class Character : ParentGameCollider
         this.ResizeTo(1, 1);
     }
 
-    public virtual bool CanCollideWith(ICollider other)
+    public virtual bool CanCollideWith(GameCollider other)
     {
         if (base.CanCollideWith(other) == false) return false;
 
