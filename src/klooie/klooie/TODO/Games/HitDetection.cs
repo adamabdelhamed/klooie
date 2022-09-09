@@ -9,8 +9,8 @@ public struct Impact
 {
     public float MovingObjectSpeed { get; set; }
     public Angle Angle { get; set; }
-    public GameCollider MovingObject { get; set; }
-    public GameCollider ColliderHit { get; set; }
+    public ConsoleControl MovingObject { get; set; }
+    public ConsoleControl ColliderHit { get; set; }
     public HitType HitType { get; set; }
     public HitPrediction Prediction { get; set; }
 
@@ -21,7 +21,7 @@ public class HitPrediction
 {
     public HitType Type { get; set; }
     public RectF ObstacleHitBounds { get; set; }
-    public GameCollider ColliderHit { get; set; }
+    public ConsoleControl ColliderHit { get; set; }
     public float LKGX { get; set; }
     public float LKGY { get; set; }
     public float LKGD { get; set; }
@@ -49,7 +49,7 @@ public class HitDetectionOptions
     public RectF MovingObject { get; set; }
     public RectF[] Obstacles { get; set; }
 
-    internal GameCollider[] Colliders { get; set; }
+    internal ConsoleControl[] Colliders { get; set; }
 
     public Angle Angle { get; set; }
     public float Visibility { get; set; }
@@ -65,7 +65,7 @@ public class HitDetectionOptions
 
     }
 
-    public HitDetectionOptions(GameCollider c, IEnumerable<GameCollider> obstacles)
+    public HitDetectionOptions(ConsoleControl c, IEnumerable<ConsoleControl> obstacles)
     {
         MovingObject = c.Bounds;
         Colliders = obstacles.ToArray();
@@ -76,7 +76,7 @@ public class HitDetectionOptions
         }
     }
 
-    public HitDetectionOptions(GameCollider c, GameCollider[] colliders, RectF[] obstacles, int length)
+    public HitDetectionOptions(ConsoleControl c, ConsoleControl[] colliders, RectF[] obstacles, int length)
     {
         MovingObject = c.Bounds;
         Colliders = colliders;
@@ -96,14 +96,14 @@ public enum CastingMode
 
 public static class HitDetection
 {
-    public static bool HasLineOfSight(this Velocity from, GameCollider to) => HasLineOfSight(from.Collider, to, from.GetObstaclesSlow());
+    public static bool HasLineOfSight(this Velocity from, ConsoleControl to) => HasLineOfSight(from.Collider, to, from.GetObstaclesSlow());
 
-    public static bool HasLineOfSight(this GameCollider from, GameCollider to, IEnumerable<GameCollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
-    public static bool HasLineOfSight(this GameCollider from, RectF to, IEnumerable<GameCollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
-    public static bool HasLineOfSight(this RectF from, GameCollider to, IEnumerable<GameCollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
-    public static bool HasLineOfSight(this RectF from, RectF to, IEnumerable<GameCollider> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
+    public static bool HasLineOfSight(this ConsoleControl from, ConsoleControl to, IEnumerable<ConsoleControl> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
+    public static bool HasLineOfSight(this ConsoleControl from, RectF to, IEnumerable<ConsoleControl> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
+    public static bool HasLineOfSight(this RectF from, ConsoleControl to, IEnumerable<ConsoleControl> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
+    public static bool HasLineOfSight(this RectF from, RectF to, IEnumerable<ConsoleControl> obstacles) => GetLineOfSightObstruction(from, to, obstacles) == null;
     public static bool HasLineOfSight(this RectF from, RectF to, IEnumerable<RectF> obstacles) => GetLineOfSightObstruction(from, to, obstacles.Select(o => new ColliderBox(o))) == null;
-    public static GameCollider GetLineOfSightObstruction(this GameCollider from, GameCollider to, IEnumerable<GameCollider> obstacles, CastingMode castingMode = CastingMode.Rough)
+    public static ConsoleControl GetLineOfSightObstruction(this ConsoleControl from, ConsoleControl to, IEnumerable<ConsoleControl> obstacles, CastingMode castingMode = CastingMode.Rough) 
     {
         var options = new HitDetectionOptions(from, obstacles.Union(new[] { to }));
         options.Mode = castingMode;
@@ -123,19 +123,19 @@ public static class HitDetection
         }
     }
 
-    public static GameCollider GetLineOfSightObstruction(this RectF from, GameCollider to, IEnumerable<GameCollider> obstacles, CastingMode castingMode = CastingMode.Rough)
+    public static ConsoleControl GetLineOfSightObstruction(this RectF from, ConsoleControl to, IEnumerable<ConsoleControl> obstacles, CastingMode castingMode = CastingMode.Rough)
     {
         var fromBox = new ColliderBox(from);
         return GetLineOfSightObstruction(fromBox, to, obstacles, castingMode);
     }
 
-    public static GameCollider GetLineOfSightObstruction(this GameCollider from, RectF to, IEnumerable<GameCollider> obstacles, CastingMode castingMode = CastingMode.Rough)
+    public static ConsoleControl GetLineOfSightObstruction(this ConsoleControl from, RectF to, IEnumerable<ConsoleControl> obstacles, CastingMode castingMode = CastingMode.Rough)
     {
         var toBox = new ColliderBox(to);
         return GetLineOfSightObstruction(from, toBox, obstacles, castingMode);
     }
 
-    public static GameCollider GetLineOfSightObstruction(this RectF from, RectF to, IEnumerable<GameCollider> obstacles, CastingMode castingMode = CastingMode.Rough)
+    public static ConsoleControl GetLineOfSightObstruction(this RectF from, RectF to, IEnumerable<ConsoleControl> obstacles, CastingMode castingMode = CastingMode.Rough)
     {
         var fromBox = new ColliderBox(from);
         var toBox = new ColliderBox(to);
@@ -150,7 +150,7 @@ public static class HitDetection
         return PredictHit(options.MovingObject, options.Obstacles.ToArray(), options.Angle, options.Colliders, options.Visibility, options.Mode, options.EdgesHitOutput, options.ObstacleBufferLength);
     }
 
-    public static HitPrediction PredictHit(in RectF movingObject, RectF[] obstacles, Angle angle, GameCollider[] colliders = null, float visibility = 10000f, CastingMode mode = CastingMode.Precise, List<Edge> edgesHitOutput = null, int? bufferLen = null, HitPrediction toReuse = null)
+    public static HitPrediction PredictHit(in RectF movingObject, RectF[] obstacles, Angle angle, ConsoleControl[] colliders = null, float visibility = 10000f, CastingMode mode = CastingMode.Precise, List<Edge> edgesHitOutput = null, int? bufferLen = null, HitPrediction toReuse = null)
     {
         var prediction = toReuse ?? new HitPrediction();
         prediction.LKGX = movingObject.Left;
@@ -253,7 +253,7 @@ public static class HitDetection
     }
 
 
-    internal static HitPrediction PredictHitFast(GameCollider c, RectF movingObject, RectF[] obstacles, Angle angle, GameCollider[] colliders, float visibility, CastingMode mode, int bufferLen, HitPrediction toReuse)
+    internal static HitPrediction PredictHitFast(ConsoleControl c, RectF movingObject, RectF[] obstacles, Angle angle, ConsoleControl[] colliders, float visibility, CastingMode mode, int bufferLen, HitPrediction toReuse)
     {
         var prediction = toReuse;
         prediction.LKGX = movingObject.Left;
@@ -329,7 +329,17 @@ public static class HitDetection
         for (var i = 0; i < len; i++)
         {
             ref var obstacle = ref obstacles[i];
-            if (c == colliders[i] || c.CanCollideWith(colliders[i]) == false || colliders[i].CanCollideWith(c) == false) continue;
+
+            if (c == colliders[i]) continue;
+
+            if(c is GameCollider && colliders[i] is GameCollider)
+            {
+                var cc = (GameCollider)c;
+                var ci = (GameCollider)colliders[i];
+
+                if (cc.CanCollideWith(ci) == false || ci.CanCollideWith(cc) == false) continue;
+            }
+
             if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obstacle) > visibility) continue;
 
             ProcessEdge(i, obstacle.TopEdge, rayIndex, null, visibility, ref closestIntersectionDistance, ref closestIntersectingObstacleIndex, ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);

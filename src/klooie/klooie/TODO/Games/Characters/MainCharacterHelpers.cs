@@ -24,7 +24,7 @@ public static class MainCharacterHelpers
     }
 
 
-    public static void ConfigureNPCApproach(GameCollider thingBeingApproached, Action action, int maxApproaches = -1)
+    public static void ConfigureNPCApproach(ConsoleControl thingBeingApproached, Action action, int maxApproaches = -1)
     {
         Game.Current.Invoke(async () =>
        {

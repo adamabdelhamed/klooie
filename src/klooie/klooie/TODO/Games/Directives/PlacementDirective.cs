@@ -28,12 +28,12 @@ public abstract class PlacementDirective : EventDrivenDirective
     public bool? NudgeAfterPlacement { get; set; }
 
     [ArgIgnore]
-    public GameCollider Placed { get; private set; }
+    public ConsoleControl Placed { get; private set; }
 
     [ArgIgnore]
-    public Event<GameCollider> OnPlaced { get; private set; } = new Event<GameCollider>();
+    public Event<ConsoleControl> OnPlaced { get; private set; } = new Event<ConsoleControl>();
 
-    public void Place(GameCollider element)
+    public void Place(ConsoleControl element)
     {
         this.Placed = element;
         if (Tags != null && Tags.Count > 0)
@@ -51,9 +51,9 @@ public abstract class PlacementDirective : EventDrivenDirective
         var explicitNudge = NudgeAfterPlacement.HasValue && NudgeAfterPlacement.Value;
         var implicitNudge = NudgeAfterPlacement.HasValue == false && element.ZIndex == 0;
 
-        if (implicitNudge || explicitNudge)
+        if (element is GameCollider && (implicitNudge || explicitNudge))
         {
-            element.NudgeFree();
+            ((GameCollider)element).NudgeFree();
         }
         OnPlaced.Fire(element);
     }

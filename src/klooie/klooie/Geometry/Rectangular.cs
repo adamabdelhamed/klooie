@@ -103,9 +103,10 @@ public class Rectangular : ObservableObject
         }
     }
 
-    public void MoveBy(float x, float y)
+    public void MoveBy(float x, float y, int z = 0)
     {
         Bounds = new RectF(Bounds.Left + x, Bounds.Top + y, Bounds.Width, Bounds.Height);
+        ZIndex = ZIndex + z;
     }
 
     public void ResizeTo(float w, float h)

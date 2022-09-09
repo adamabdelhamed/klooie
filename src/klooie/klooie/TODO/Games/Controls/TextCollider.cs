@@ -13,3 +13,9 @@ public class TextCollider : GameCollider
 
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);
 }
+
+public class NoCollisionTextCollider : TextCollider
+{
+    public NoCollisionTextCollider(ConsoleString content) : base(content) { }
+    public override bool CanCollideWith(GameCollider other) => false;
+}

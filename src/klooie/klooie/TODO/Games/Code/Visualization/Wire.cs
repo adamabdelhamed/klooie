@@ -72,7 +72,7 @@ public class WireHandle
         for (var i = 0; i < data.Length; i++)
         {
             var start = i;
-            var dataElement = Game.Current.GamePanel.Add(new GameCollider() { Pen = data[start] });
+            var dataElement = Game.Current.GamePanel.Add(new GameCollider());
             dataElement.MoveTo(orderedList[start].Left, orderedList[start].Top, 2);
             dataElements.Add(dataElement);
             Lifetime.EarliestOf(owner, wireElementsOrdered.First()).OnDisposed(() =>

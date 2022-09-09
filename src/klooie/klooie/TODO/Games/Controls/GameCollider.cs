@@ -1,9 +1,7 @@
 ﻿namespace klooie.Gaming;
 
 public class GameCollider : ConsolePanel
-{
-    public ConsoleCharacter? Pen { get; set; }
-    
+{   
     public Velocity Velocity { get; private set; }
 
 

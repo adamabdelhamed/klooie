@@ -84,6 +84,16 @@ public class Velocity
         if (collider is ColliderBox == false)
         {
             group.Add(collider, this);
+
+            this.Group = group;
+            this.Collider = collider;
+            collider.OnDisposed(() =>
+            {
+                if (this.Group.Remove(Collider) == false)
+                {
+                    throw new InvalidOperationException($"Failed to remove myself from group after dispose: {collider.GetType().Name}-{collider.ColliderHashCode}");
+                }
+            });
         }
     }
 
@@ -273,7 +283,7 @@ public class ColliderGroup
                             Prediction = hitPrediction,
                         };
 
-                        if (velocities.TryGetValue(obstacleHit, out Velocity vOther))
+                        if (obstacleHit is GameCollider && velocities.TryGetValue((GameCollider)obstacleHit, out Velocity vOther))
                         {
                             if(vOther.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
                             {
