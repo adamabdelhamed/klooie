@@ -89,6 +89,23 @@ public static class Layout
         });
     }
 
+    public static T FillMax<T>(this T child, int? maxWidth = null, int? maxHeight = null) where T : ConsoleControl
+    {
+        CenterBoth(child);
+        return DoParentTriggeredLayoutAction(child, (c, p) =>
+        {
+            if (p.Width == 0 || p.Height == 0) return;
+
+            var newW = p.Width;
+            var newH = p.Height;
+
+            if (maxWidth.HasValue && newW > maxWidth.Value) newW = maxWidth.Value;
+            if (maxHeight.HasValue && newH > maxHeight.Value) newH = maxHeight.Value;
+
+            c.Bounds = new RectF(c.Left, c.Top, newW, newH);
+        });
+    }
+
     public static T FillHorizontally<T>(this T child, Thickness? padding = null) where T : ConsoleControl
     {
         var effectivePadding = padding.HasValue ? padding.Value : new Thickness(0, 0, 0, 0);

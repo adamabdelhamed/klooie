@@ -7,6 +7,9 @@ namespace klooie.tests;
 [TestCategory(Categories.ConsoleApp)]
 public class LayoutTests
 {
+    [TestInitialize]
+    public void Setup() => UITestManager.SetConsoleSize(80, 50);
+
     public TestContext TestContext { get; set; }
 
     [TestMethod]
@@ -45,6 +48,90 @@ public class LayoutTests
             app.Stop();
         });
         app.Run();
+    }
+
+    [TestMethod]
+    public void Layout_FillMaxSmallerThanParent()
+    {
+        var app = new ConsoleApp();
+        app.Invoke(async () =>
+        {
+            Assert.IsTrue(app.LayoutRoot.Width > 1);
+            Assert.IsTrue(app.LayoutRoot.Height > 1);
+
+            var c = app.LayoutRoot.Add(new ConsoleControl() { Width = 1, Height = 1 });
+            Assert.AreNotEqual(c.Width, app.Width);
+            Assert.AreNotEqual(c.Height, app.Height);
+
+            var maxW = app.Width / 2;
+            var maxH = app.Height / 2;
+            
+            c.FillMax(maxW, maxH);
+            Assert.AreEqual(maxW, c.Width);
+            Assert.AreEqual(maxH, c.Height);
+
+            AssertCentered(c);
+            app.Stop();
+        });
+        app.Run();
+    }
+
+    [TestMethod]
+    public void Layout_FillMaxSameSizeAsParent()
+    {
+        var app = new ConsoleApp();
+        app.Invoke(async () =>
+        {
+            Assert.IsTrue(app.LayoutRoot.Width > 1);
+            Assert.IsTrue(app.LayoutRoot.Height > 1);
+
+            var c = app.LayoutRoot.Add(new ConsoleControl() { Width = 1, Height = 1 });
+            Assert.AreNotEqual(c.Width, app.Width);
+            Assert.AreNotEqual(c.Height, app.Height);
+
+            var maxW = app.Width;
+            var maxH = app.Height;
+
+            c.FillMax(maxW, maxH);
+            Assert.AreEqual(c.Parent.Width, c.Width);
+            Assert.AreEqual(c.Parent.Height, c.Height);
+            AssertCentered(c);
+            app.Stop();
+        });
+        app.Run();
+    }
+
+    [TestMethod]
+    public void Layout_FillMaxLargerThanParent()
+    {
+        var app = new ConsoleApp();
+        app.Invoke(async () =>
+        {
+            Assert.IsTrue(app.LayoutRoot.Width > 1);
+            Assert.IsTrue(app.LayoutRoot.Height > 1);
+
+            var c = app.LayoutRoot.Add(new ConsoleControl() { Width = 1, Height = 1 });
+            Assert.AreNotEqual(c.Width, app.Width);
+            Assert.AreNotEqual(c.Height, app.Height);
+
+            var maxW = app.Width * 2;
+            var maxH = app.Height * 2;
+
+            c.FillMax(maxW, maxH);
+            Assert.AreEqual(c.Parent.Width, c.Width);
+            Assert.AreEqual(c.Parent.Height, c.Height);
+            AssertCentered(c);
+            app.Stop();
+        });
+        app.Run();
+    }
+
+    private void AssertCentered(ConsoleControl c)
+    {
+        var expectedLeft = ConsoleMath.Round((c.Parent.Width - c.Width) / 2f);
+        var expectedTop = ConsoleMath.Round((c.Parent.Height - c.Height) / 2f);
+        Assert.AreEqual(expectedLeft, c.Left);
+        Assert.AreEqual(expectedTop, c.Top);
     }
 
     [TestMethod]
