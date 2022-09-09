@@ -48,15 +48,16 @@ public class AutoTargetingFunction : Lifetime
     private void Evaluate()
     {
         if (Options.Source.IsVisible == false) return;
-        var obstacles = Options.Source.Velocity.Group.GetObstaclesSlow(Options.Source).Where(o => o is WeaponElement == false).ToArray();
+        var obstacles = Options.Source.GetObstacles().Where(o => o is WeaponElement == false).ToArray();
 
         GameCollider target = null;
         float winningCandidateProximity = float.MaxValue;
         HitPrediction winningPrediction = null;
         targets.Clear();
-        foreach (var element in Game.Current.MainColliderGroup.EnumerateCollidersSlow(null).WhereAs<GameCollider>())
+        foreach (var element in obstacles)
         {
-            if (element.ZIndex != Options.Source.ZIndex) continue;
+            if (element is ChildCharacter) continue;
+            if (element.CanCollideWith(this.Options.Source) == false && this.Options.Source.CanCollideWith(element) == false) continue;
             if (element.HasSimpleTag(Options.TargetTag) == false) continue;
 
             if (element is Character && (element as Character).IsVisible == false) continue;
@@ -74,6 +75,13 @@ public class AutoTargetingFunction : Lifetime
 
 
             var edgesHitOutput = new List<Edge>();
+
+            if(element is ParentGameCollider)
+            {
+                var children = obstacles.Where(o => o is ChildCharacter && ((ChildCharacter)(o)).ParentCollider == element).ToHashSet();
+                obstacles = obstacles.Where(o => children.Contains(o) == false).ToArray();
+            }
+
             var options = new HitDetectionOptions(new ColliderBox(sb), obstacles)
             {
                 Angle = angle,
