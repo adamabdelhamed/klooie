@@ -426,4 +426,24 @@ public class LayoutTests
         });
         app.Run();
     }
+
+
+    [TestMethod]
+    public void Layout_CenterBothNegativeSpace()
+    {
+        var app = new ConsoleApp();
+        app.Invoke(async () =>
+        {
+            var panel = app.LayoutRoot.Add(new ConsolePanel() 
+            {
+                Bounds = new LocF(0,0).ToRect(10,8) 
+            });
+
+            var child = panel.Add(new ConsoleControl() { Width = 4, Height = 2 }).CenterBoth();
+            Assert.AreEqual(-2, child.Left);
+            Assert.AreEqual(-1, child.Top);
+            app.Stop();
+        });
+        app.Run();
+    }
 }

@@ -50,7 +50,8 @@ public static class Layout
         return DoTwoWayLayoutAction(child, (c, p) =>
         {
             if (p.Height == 0 || c.Height == 0) return;
-            c.Y = ConsoleMath.Round((p.Height - c.Height) / 2f);
+            var middle = (p.Top + p.Bottom()) / 2f;
+            c.Y = ConsoleMath.Round(middle - child.Height / 2f);
         });
     }
 
@@ -59,7 +60,8 @@ public static class Layout
         return DoTwoWayLayoutAction(child, (c, p) =>
         {
             if (p.Width == 0 || c.Width == 0) return;
-            c.X = ConsoleMath.Round((p.Width - c.Width) / 2f);
+            var middle = (p.Left + p.Right()) / 2f;
+            c.X = ConsoleMath.Round(middle - child.Width / 2f);
         });
     }
 
