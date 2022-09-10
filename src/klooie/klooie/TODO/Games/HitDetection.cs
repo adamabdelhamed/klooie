@@ -57,7 +57,7 @@ public static class HitDetection
     private static Edge[] rayBuffer;
 
     public static bool HasLineOfSight(this Velocity from, ConsoleControl to) 
-        => HasLineOfSight(from.Collider, to, from.GetObstaclesSlow());
+        => HasLineOfSight(from.Collider, to, from.GetObstacles());
     public static bool HasLineOfSight(this ConsoleControl from, ConsoleControl to, IEnumerable<ConsoleControl> obstacles) 
         => GetLineOfSightObstruction(from, to, obstacles) == null;
     public static bool HasLineOfSight(this ConsoleControl from, RectF to, IEnumerable<ConsoleControl> obstacles) 

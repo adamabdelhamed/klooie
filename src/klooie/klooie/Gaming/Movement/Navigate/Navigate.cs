@@ -20,7 +20,7 @@ public class Navigate : Movement
     public NavigateOptions Options { get; private set; }
 
     public List<RectF> ObstaclesPadded => Velocity
-        .GetObstaclesSlow()
+        .GetObstacles()
             .Select(e => e.Bounds.Grow(.1f))
             .ToList();
 
@@ -160,7 +160,7 @@ public class Navigate : Movement
         {
             if (Options.ForceDestination)
             {
-                Velocity.Collider.MoveTo(effectiveDestination.Left(), effectiveDestination.Top());
+                Velocity.Collider.MoveTo(effectiveDestination.Left, effectiveDestination.Top);
             }
             ret = true;
         }

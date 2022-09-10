@@ -49,8 +49,8 @@ public class Process
 
         if (lineNumbers)
         {
-            var topElement = elements.Select(e => e.Top()).Min();
-            var linesNeeded = (elements.Select(e => e.Top()).Max()+1) - elements.Select(e => e.Top()).Min();
+            var topElement = elements.Select(e => e.Top).Min();
+            var linesNeeded = (elements.Select(e => e.Top).Max()+1) - elements.Select(e => e.Top).Min();
             for (var i = 0; i < linesNeeded; i++)
             {
                 var lineElement = Game.Current.GamePanel.Add(new LineNumberControl(i + 1));

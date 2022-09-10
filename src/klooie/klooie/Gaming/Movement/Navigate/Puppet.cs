@@ -23,7 +23,7 @@ public class Puppet : Movement
 
     protected override async Task Move()
     {
-        var obstacles = Velocity.GetObstaclesSlow().Select(e => e.Bounds.Grow(.1f)).ToList();
+        var obstacles = Velocity.GetObstacles().Select(e => e.Bounds.Grow(.1f)).ToList();
         var from = Element.Bounds;
         var path = await Navigate.FindPathAdjusted(from, destination, obstacles);
         if (path == null) throw new Exception("No path");

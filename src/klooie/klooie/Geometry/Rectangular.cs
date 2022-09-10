@@ -178,4 +178,14 @@ public class Rectangular : ObservableObject
 
     public float CalculateNormalizedDistanceTo(RectF other) => this.Bounds.CalculateNormalizedDistanceTo(other);
     public float CalculateNormalizedDistanceTo(Rectangular other) => this.Bounds.CalculateNormalizedDistanceTo(other.Bounds);
+
+}
+
+public static class RectangularEx
+{
+    public static float CalculateDistanceTo(this RectF rect, ConsoleControl collider) =>
+        rect.CalculateDistanceTo(collider.Left, collider.Top, collider.Bounds.Width, collider.Bounds.Height);
+
+    public static Angle CalculateAngleTo(this RectF rect, ConsoleControl collider) =>
+        rect.CalculateAngleTo(collider.Left, collider.Top, collider.Bounds.Width, collider.Bounds.Height);
 }

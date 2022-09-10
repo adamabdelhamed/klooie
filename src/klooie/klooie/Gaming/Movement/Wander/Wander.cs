@@ -87,7 +87,7 @@ public class Wander : Movement
                 _IterationLifetime = Game.Current.CreateChildLifetime();
 
                 var elementBounds = Element.MassBounds;
-                _Obstacles = Velocity.GetObstaclesSlow().Where(o => o.CalculateDistanceTo(elementBounds) <= Options.Visibility);
+                _Obstacles = Velocity.GetObstacles().Where(o => o.CalculateDistanceTo(elementBounds) <= Options.Visibility);
                 SetOptimalAngle();
 
                 var cpd = _CuriosityPoint == null ? -1f : _CuriosityPoint.CalculateNormalizedDistanceTo(Element.MassBounds);
@@ -95,7 +95,7 @@ public class Wander : Movement
                 if (_CuriosityPoint != null && cpd <= Options.CloseEnough)
                 {
                     var a = Element.MassBounds.Center.CalculateAngleTo(_CuriosityPoint.Center());
-                    Element.MoveTo(_CuriosityPoint.Left(), _CuriosityPoint.Top());
+                    Element.MoveTo(_CuriosityPoint.Left, _CuriosityPoint.Top);
                     lkg = a;
                     await YieldForVelocityAndDelay();
                 }

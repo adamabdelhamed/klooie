@@ -4,7 +4,7 @@ public class GameCollider : ConsolePanel
 {   
     public Velocity Velocity { get; private set; }
 
-
+    public virtual bool AutoAddToColliderGroup => true;
 
     public GameCollider(ColliderGroup group = null)
     {
@@ -20,7 +20,7 @@ public class GameCollider : ConsolePanel
     public GameCollider(float x, float y, float w, float h, ColliderGroup group = null) : this(new RectF(x, y, w, h), group) { } 
 
     public GameCollider GetObstacleIfMovedTo(RectF area) =>  
-            Velocity.GetObstaclesSlow()
+            Velocity.GetObstacles()
             .Where(c => c.MassBounds.Touches(area))
             .WhereAs<GameCollider>()
             .FirstOrDefault();
@@ -31,7 +31,7 @@ public class GameCollider : ConsolePanel
 
 
 
-    public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstaclesSlow(this).WhereAs<GameCollider>();
+    public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstacles(this).WhereAs<GameCollider>();
 
 
     public GameCollider GetRoot()
@@ -140,36 +140,10 @@ public class ChildCharacter : Character
     }
 }
 
-public static class GameColliderExtensions
+public class ColliderBox : GameCollider
 {
-    public static void MoveTo(this GameCollider c, float x, float y, int? z = null)
-    {
-        var e = c as ConsoleControl;
-        if(z.HasValue)
-        {
-            e.ZIndex = z.Value;
-        }
-
-        c.Bounds = new RectF(x, y, e.Bounds.Width, e.Bounds.Height);
-    }
-
-    public static void MoveBy(this GameCollider c, float x, float y, int? z = null)
-    {
-        var e = c as ConsoleControl;
-        if (z.HasValue)
-        {
-            e.ZIndex+= z.Value;
-        }
-
-        c.Bounds = new RectF(e.Bounds.Left + x, e.Bounds.Top + y, e.Bounds.Width, e.Bounds.Height);
-    }
-
-    public static IEnumerable<GameCollider> GetObstacles(this GameCollider c)
-    {
-        var e = c as GameCollider;
-        return Game.Current.MainColliderGroup.GetObstaclesSlow(c);
-    }
+    public override bool AutoAddToColliderGroup => false;
+    public ColliderBox(RectF bounds) : base(bounds) { }
+    public ColliderBox(float x, float y, float w, float h) : this(new RectF(x, y, w, h)) { }
 }
-
-
 
