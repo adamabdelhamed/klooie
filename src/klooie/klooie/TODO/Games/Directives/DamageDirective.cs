@@ -286,7 +286,9 @@ public class HPUpdate : NoFrillsLabel
         this.Width = 10;
         this.Height = 1;
         this.MoveTo(target.Left, target.Top - 2, 1000);
-        Subscribe(nameof(Bounds),() =>
+
+
+        target.Sync(nameof(target.Bounds),() =>
         {
             this.MoveTo(target.Left, target.Top - 2, 1000);
         }, EarliestOf(this, target));
