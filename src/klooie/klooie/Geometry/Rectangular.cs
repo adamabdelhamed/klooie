@@ -22,8 +22,6 @@ public class Rectangular : ObservableObject
             var newY = ConsoleMath.Round(value.Top);
             var newW = ConsoleMath.Round(value.Width);
             var newH = ConsoleMath.Round(value.Height);
-            if (newX == x && newY == y && newW == w && newH == h) return;
-
             x = newX;
             y = newY;
             w = newW;
@@ -94,6 +92,8 @@ public class Rectangular : ObservableObject
 
     public float Top => Y;
 
+    public void MoveTo(LocF loc, int? z = null) => MoveTo(loc.Left, loc.Top, z);
+
     public void MoveTo(float x, float y, int? z = null)
     {
         Bounds = new RectF(x, y, Bounds.Width, Bounds.Height);
@@ -138,7 +138,7 @@ public class Rectangular : ObservableObject
         ResizeTo(Width - .2f, Height - .2f);
     }
 
-    public virtual RectF MassBounds => new RectF(X, Y, Width, Height);
+    public virtual RectF MassBounds => Bounds;
 
     public float NumberOfPixelsThatOverlap(RectF other) => this.Bounds.NumberOfPixelsThatOverlap(other);
     public float NumberOfPixelsThatOverlap(Rectangular other) => this.Bounds.NumberOfPixelsThatOverlap(other.Bounds);
