@@ -98,7 +98,7 @@ public class NavigateTests
             {
                 if (collider.OverlapPercentage(left) > 0 || collider.OverlapPercentage(top) > 0 || collider.OverlapPercentage(right) > 0 || collider.OverlapPercentage(bottom) > 0)
                 {
-                    //Assert.Fail();
+                    Assert.Fail();
                 }
             }, collider);
             collider.Velocity.Angle = r.Next(0, 360);

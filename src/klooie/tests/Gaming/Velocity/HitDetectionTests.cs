@@ -1,11 +1,6 @@
 ﻿using klooie.Gaming;
-using klooie.Gaming.Code;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
-using System;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 
 namespace klooie.tests;
 
@@ -42,8 +37,7 @@ public class HitDetectionTests
         AssertCloseEnough(0.001f, prediction.LKGD);
     }
 
-
-    private void AssertCloseEnough(float expected, float actual)
+    public static void AssertCloseEnough(float expected, float actual)
     {
         var minAccepted = expected - HitDetection.VerySmallNumber;
         var maxExpected = expected + HitDetection.VerySmallNumber;

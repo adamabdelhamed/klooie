@@ -139,11 +139,17 @@ public class ColliderGroup
 
     internal PauseManager PauseManager { get; set; }
 
-    public ColliderGroup(ILifetimeManager lt)
+    public ColliderGroup(ILifetimeManager lt, IStopwatch stopwatch = null)
     {
         this.lt = lt;
         hitPrediction = new HitPrediction();
-        ConsoleApp.Current.Invoke(ExecuteAsync);
+        this.stopwatch = stopwatch ?? new WallClockStopwatch();
+        velocities = new VelocityHashTable();
+        colliderBufferLength = 0;
+        colliderBuffer = new GameCollider[100];
+        obstacleBuffer = new RectF[100];
+        lastExecuteTime = TimeSpan.Zero;
+        ConsoleApp.Current?.Invoke(ExecuteAsync);
     }
 
     public bool TryLookupVelocity(GameCollider c, out Velocity v) => velocities.TryGetValue(c, out v);
@@ -184,16 +190,10 @@ public class ColliderGroup
     }
 
     public TimeSpan Now => stopwatch.Elapsed;
-    private Stopwatch stopwatch;
+    private IStopwatch stopwatch;
     private async Task ExecuteAsync()
     {
-        velocities = new VelocityHashTable();
-        colliderBufferLength = 0;
-        colliderBuffer = new GameCollider[100];
-        obstacleBuffer = new RectF[100];
-        stopwatch = Stopwatch.StartNew();
-        lastExecuteTime = TimeSpan.Zero;
-
+        stopwatch.Start();
         while (lt.IsExpired == false)
         {
             await Task.Yield();
@@ -207,16 +207,16 @@ public class ColliderGroup
                 }
                 stopwatch.Start();
             }
-
-            var now = stopwatch.Elapsed;
-            LatestDT = (float)(now - lastExecuteTime).TotalMilliseconds;
-            lastExecuteTime = now;
-            Tick((float)now.TotalSeconds);
+            Tick();
         }
     }
 
-    private void Tick(float now)
+    public void Tick()
     {
+        var nowTime = Now;
+        var now = (float)nowTime.TotalSeconds;
+        LatestDT = (float)(nowTime - lastExecuteTime).TotalMilliseconds;
+        lastExecuteTime = nowTime;
         CalcObstacles();
         var vSpan = velocities.Table.AsSpan();
         for (var i = 0; i < vSpan.Length; i++)
@@ -261,7 +261,7 @@ public class ColliderGroup
                     var proposedBounds = item.Collider.Bounds;
                     var distanceToObstacleHit = proposedBounds.CalculateDistanceTo(obstacleHit.Bounds);
                    
-                    proposedBounds = proposedBounds.OffsetByAngleAndDistance(velocity.Angle, distanceToObstacleHit - .5f, false);
+                    proposedBounds = proposedBounds.OffsetByAngleAndDistance(velocity.Angle, distanceToObstacleHit - HitDetection.VerySmallNumber, false);
                     item.Collider.Bounds = new RectF(proposedBounds.Left, proposedBounds.Top, item.Collider.Width(), item.Collider.Height());
                     velocity.haveMovedSinceLastHitDetection = true;
                     
@@ -580,4 +580,19 @@ public class ColliderBox : GameCollider
 
     public ColliderBox(float x, float y, float w, float h) : this(new RectF(x, y, w, h)) { }
 
+}
+
+public interface IStopwatch
+{
+    public TimeSpan Elapsed { get; }
+    void Start();
+    void Stop();
+}
+
+public class WallClockStopwatch : IStopwatch
+{
+    private Stopwatch sw = new Stopwatch();
+    public TimeSpan Elapsed => sw.Elapsed;
+    public void Start() => sw.Start();
+    public void Stop() => sw.Stop();
 }
