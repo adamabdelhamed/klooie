@@ -4,13 +4,8 @@ public class VisibilitySense : IWanderSense
     public HitPrediction LastPrediction { get; private set; }
     public ScoreComponent Measure(Wander wander, Angle angle)
     {
-        LastPrediction = HitDetection.PredictHit(new HitDetectionOptions(new ColliderBox(wander.Element.MassBounds), wander._Obstacles)
-        {
-            Angle = angle,
-            Visibility = wander.Options.Visibility,
-            Mode = CastingMode.Rough,
-        });
-
+        var colliders = wander._Obstacles.ToArray();
+        LastPrediction = HitDetection.PredictHit(wander.Element, angle, colliders, wander.Options.Visibility, CastingMode.Rough);
         var visibilityScore = 0f;
         if (LastPrediction.Type == HitType.None)
         {

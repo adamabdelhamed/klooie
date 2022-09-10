@@ -81,15 +81,8 @@ public class AutoTargetingFunction : Lifetime
                 var children = obstacles.Where(o => o is ChildCharacter && ((ChildCharacter)(o)).ParentCollider == element).ToHashSet();
                 obstacles = obstacles.Where(o => children.Contains(o) == false).ToArray();
             }
-
-            var options = new HitDetectionOptions(new ColliderBox(sb), obstacles)
-            {
-                Angle = angle,
-                Mode = CastingMode.Rough,
-                Visibility = 3 * Game.Current.LayoutRoot.Bounds.Hypotenous,
-                EdgesHitOutput = edgesHitOutput,
-            };
-            var prediction = HitDetection.PredictHit(options);
+ 
+            var prediction = HitDetection.PredictHit(new ColliderBox(sb), angle, obstacles, 3 * Game.Current.GamePanel.Bounds.Hypotenous, CastingMode.Rough);
 
             var elementHit = prediction.ColliderHit as GameCollider;
 

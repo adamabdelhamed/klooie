@@ -250,9 +250,7 @@ public class ColliderGroup
 
                 // before moving the object, see if the movement would impact another object
                 float d = velocity.Speed * dt;
-                var bounds = item.Collider.MassBounds;
-                hitPrediction.Clear();
-                HitDetection.PredictHitFast(velocity.Collider, bounds, obstacleBuffer, velocity.Angle, colliderBuffer, 1.5f * d, CastingMode.Precise, colliderBufferLength, hitPrediction);
+                HitDetection.PredictHit(velocity.Collider, obstacleBuffer, velocity.Angle, colliderBuffer, 1.5f * d, CastingMode.Precise, colliderBufferLength, hitPrediction);
                 velocity.NextCollision = hitPrediction;
                 velocity._beforeMove?.Fire();
 
@@ -267,7 +265,7 @@ public class ColliderGroup
                     item.Collider.Bounds = new RectF(proposedBounds.Left, proposedBounds.Top, item.Collider.Width(), item.Collider.Height());
                     velocity.haveMovedSinceLastHitDetection = true;
                     
-                    var angle = bounds.CalculateAngleTo(obstacleHit.Bounds);
+                    var angle = velocity.Collider.MassBounds.CalculateAngleTo(obstacleHit.MassBounds);
 
                     if (velocity.haveMovedSinceLastHitDetection)
                     {

@@ -6,18 +6,18 @@ public class GameCollider : ConsolePanel
 
 
 
-    public GameCollider()
+    public GameCollider(ColliderGroup group = null)
     {
-        Velocity = new Velocity(this, Game.Current.MainColliderGroup);
+        Velocity = new Velocity(this, group ?? Game.Current?.MainColliderGroup);
         Velocity.OnAngleChanged.Subscribe(() => FirePropertyChanged(nameof(Bounds)), this);
     }
 
-    public GameCollider(RectF bounds) : this()
+    public GameCollider(RectF bounds, ColliderGroup group = null) : this(group)
     {
         this.Bounds = bounds;
     }
 
-    public GameCollider(float x, float y, float w, float h) : this(new RectF(x, y, w, h)) { } 
+    public GameCollider(float x, float y, float w, float h, ColliderGroup group = null) : this(new RectF(x, y, w, h), group) { } 
 
     public GameCollider GetObstacleIfMovedTo(RectF area) =>  
             Velocity.GetObstaclesSlow()

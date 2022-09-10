@@ -15,12 +15,8 @@ public class CinematicMovement : CameraMovement
         obstacles.Add(new ColliderBox(camBounds.Left - 1, camBounds.Top, 1, Camera.Height)); // left boundary
         obstacles.Add(new ColliderBox(camBounds.Left + Camera.Width, camBounds.Top, 1, Camera.Height)); // right boundary
 
-        var prediction = HitDetection.PredictHit(new HitDetectionOptions(FocalVelocity.Collider, obstacles)
-        {
-            Visibility = Camera.Bounds.Hypotenous,
-            Angle = FocalVelocity.Angle,
-            Mode = CastingMode.SingleRay,
-        });
+        var prediction = HitDetection.PredictHit(FocalVelocity.Collider, FocalVelocity.angle, obstacles.ToArray(), Camera.Bounds.Hypotenous, CastingMode.SingleRay);
+
         var etaTs = CalculatePredictionETA(prediction, FocalVelocity);
         return prediction.Type != HitType.None && etaTs < TimeSpan.FromMilliseconds(CollisionETAThreshold);
     }
