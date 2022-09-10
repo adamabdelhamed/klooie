@@ -10,7 +10,7 @@ public static class MainCharacterHelpers
         else
         {
             var waitForMcLt = Game.Current.CreateChildLifetime();
-            Game.Current.GamePanel.Controls.Added.Subscribe(el =>
+            Game.Current.ControlAdded.Subscribe(el =>
             {
                 if (waitForMcLt.IsExpired) return;
                 if (el is MainCharacter)
@@ -18,7 +18,6 @@ public static class MainCharacterHelpers
                     Game.Current.InvokeNextCycle(syncAction);
                     waitForMcLt.Dispose();
                 }
-
             }, waitForMcLt);
         }
     }
