@@ -49,8 +49,6 @@ public class Character : ParentGameCollider
     public float CurrentSpeedPercentage { get; set; } = 1f;
     public float PlayerMovementSpeed => MaxMovementSpeed * CurrentSpeedPercentage;
 
-    public HashSet<Character> Minions { get; private set; } = new HashSet<Character>();
-
     public GameCollider Target { get; set; }
 
 
