@@ -15,7 +15,6 @@ public class ColliderGroup
     internal const float HighestSpeedForEvalCalc = 60; // x2
     internal const float EvalFrequencySlope = (MostFrequentEval - LeastFrequentEval) / (HighestSpeedForEvalCalc - LowestSpeedForEvalCalc);
 
-    private int colliderBufferLength;
     private GameCollider[] colliderBuffer;
     private RectF[] obstacleBuffer;
     private HitPrediction hitPrediction;
@@ -39,7 +38,6 @@ public class ColliderGroup
         hitPrediction = new HitPrediction();
         this.stopwatch = stopwatch ?? new WallClockStopwatch();
         velocities = new VelocityHashTable();
-        colliderBufferLength = 0;
         colliderBuffer = new GameCollider[100];
         obstacleBuffer = new RectF[100];
         lastExecuteTime = TimeSpan.Zero;
@@ -111,7 +109,7 @@ public class ColliderGroup
         var now = (float)nowTime.TotalSeconds;
         LatestDT = (float)(nowTime - lastExecuteTime).TotalMilliseconds;
         lastExecuteTime = nowTime;
-        CalcObstacles();
+        var numColliders = CalcObstacles();
         var vSpan = velocities.Table.AsSpan();
         for (var i = 0; i < vSpan.Length; i++)
         {
@@ -144,29 +142,22 @@ public class ColliderGroup
 
                 // before moving the object, see if the movement would impact another object
                 float d = velocity.Speed * dt;
-                HitDetection.PredictHit(velocity.Collider, obstacleBuffer, velocity.Angle, colliderBuffer, 1.5f * d, CastingMode.Precise, colliderBufferLength, hitPrediction);
+                HitDetection.PredictHit(velocity.Collider, obstacleBuffer, velocity.Angle, colliderBuffer, d, CastingMode.Precise, numColliders, hitPrediction);
                 velocity.NextCollision = hitPrediction;
                 velocity._beforeMove?.Fire();
 
-                if (hitPrediction.Type != HitType.None && hitPrediction.LKGD <= d)
+                if (hitPrediction.Type != HitType.None)
                 {
                     var obstacleHit = hitPrediction.ColliderHit;
-
-                    var proposedBounds = item.Collider.Bounds;
-                    var distanceToObstacleHit = proposedBounds.CalculateDistanceTo(obstacleHit.Bounds);
-
-                    proposedBounds = proposedBounds.OffsetByAngleAndDistance(velocity.Angle, distanceToObstacleHit - HitDetection.VerySmallNumber, false);
-                    item.Collider.Bounds = new RectF(proposedBounds.Left, proposedBounds.Top, item.Collider.Bounds.Width, item.Collider.Bounds.Height);
+                    var proposedBounds = velocity.Collider.Bounds.OffsetByAngleAndDistance(velocity.Angle, hitPrediction.LKGD, false);
+                    item.Collider.Bounds = proposedBounds;
                     velocity.haveMovedSinceLastHitDetection = true;
-
-                    var angle = velocity.Collider.MassBounds.CalculateAngleTo(obstacleHit.MassBounds);
-
                     if (velocity.haveMovedSinceLastHitDetection)
                     {
                         velocity.LastImpact = new Impact()
                         {
                             MovingObjectSpeed = velocity.speed,
-                            Angle = angle,
+                            Angle = velocity.Angle,
                             MovingObject = item.Collider,
                             ColliderHit = obstacleHit,
                             HitType = hitPrediction.Type,
@@ -184,7 +175,7 @@ public class ColliderGroup
                             vOther._impactOccurred?.Fire(new Impact()
                             {
                                 MovingObjectSpeed = velocity.speed,
-                                Angle = angle.Opposite(),
+                                Angle = velocity.Angle.Opposite(),
                                 MovingObject = obstacleHit,
                                 ColliderHit = item.Collider,
                                 HitType = hitPrediction.Type,
@@ -208,7 +199,7 @@ public class ColliderGroup
                 }
                 else
                 {
-                    var newLocation = item.Collider.Bounds.OffsetByAngleAndDistance(velocity.Angle, d);
+                    var newLocation = item.Collider.Bounds.OffsetByAngleAndDistance(velocity.Angle, d, false);
                     item.Collider.Bounds = newLocation;
                     velocity.haveMovedSinceLastHitDetection = true;
                 }
@@ -217,10 +208,9 @@ public class ColliderGroup
             }
         }
     }
-
-    private void CalcObstacles()
+    private int CalcObstacles()
     {
-        colliderBufferLength = 0;
+        var ret = 0;
         var colliderBufferSpan = colliderBuffer.AsSpan();
         var obstacleBufferSpan = obstacleBuffer.AsSpan();
         var span = velocities.Table.AsSpan();
@@ -229,71 +219,50 @@ public class ColliderGroup
             var entry = span[i].AsSpan();
             for (var j = 0; j < entry.Length; j++)
             {
-                var item = entry[j];
+                var item = entry[j]?.Collider;
                 if (item == null) continue;
 
-                colliderBufferSpan[colliderBufferLength] = item.Collider;
-                obstacleBufferSpan[colliderBufferLength] = item.Collider.Bounds;
-                colliderBufferLength++;
+                colliderBufferSpan[ret] = item;
+                obstacleBufferSpan[ret] = item.Bounds;
+                ret++;
             }
         }
+        return ret;
     }
 
     public IEnumerable<GameCollider> EnumerateCollidersSlow(List<GameCollider> list)
     {
         list = list ?? new List<GameCollider>(Count);
-        colliderBufferLength = 0;
         var span = velocities.Table.AsSpan();
         for (var i = 0; i < span.Length; i++)
         {
             var entry = span[i].AsSpan();
             for (var j = 0; j < entry.Length; j++)
             {
-                var item = entry[j];
+                var item = entry[j]?.Collider;
                 if (item == null) continue;
-                list.Add(item.Collider);
+                list.Add(item);
             }
         }
         return list;
     }
-
-    public IEnumerable<GameCollider> EnumerateCollidersSlow(List<GameCollider> list, GameCollider except)
-    {
-        list = list ?? new List<GameCollider>(Count);
-        colliderBufferLength = 0;
-        var span = velocities.Table.AsSpan();
-        for (var i = 0; i < span.Length; i++)
-        {
-            var entry = span[i].AsSpan();
-            for (var j = 0; j < entry.Length; j++)
-            {
-                var item = entry[j];
-                if (item == null || item.Collider == except) continue;
-                list.Add(item.Collider);
-            }
-        }
-        return list;
-    }
+ 
 
     public IEnumerable<GameCollider> GetObstacles(GameCollider owner, List<GameCollider> list = null)
     {
         list = list ?? new List<GameCollider>(Count);
-        colliderBufferLength = 0;
         var span = velocities.Table.AsSpan();
         for (var i = 0; i < span.Length; i++)
         {
             var entry = span[i].AsSpan();
             for (var j = 0; j < entry.Length; j++)
             {
-                var item = entry[j];
-
+                var item = entry[j]?.Collider;
                 if (item == null) continue;
-
-                if (item.Collider == owner) continue;
-
-                if (owner.CanCollideWith(item.Collider) == false) continue;
-
-                list.Add(item.Collider);
+                if (item == owner) continue;
+                if (owner.CanCollideWith(item) == false) continue;
+                if (item.CanCollideWith(owner) == false) continue;
+                list.Add(item);
             }
         }
         return list;

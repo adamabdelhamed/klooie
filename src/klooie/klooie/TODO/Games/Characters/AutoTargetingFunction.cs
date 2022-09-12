@@ -6,7 +6,7 @@ public class AutoTargetingOptions
         public string TargetTag { get; set; }
         public float AngularVisibility { get; set; } = 60;
 
-        public RectF SourceBounds => Source.MassBounds;
+        public RectF SourceBounds => Source.Bounds;
 
     }
 
@@ -56,7 +56,6 @@ public class AutoTargetingFunction : Lifetime
         targets.Clear();
         foreach (var element in obstacles)
         {
-            if (element is ChildCharacter) continue;
             if (element.CanCollideWith(this.Options.Source) == false && this.Options.Source.CanCollideWith(element) == false) continue;
             if (element.HasSimpleTag(Options.TargetTag) == false) continue;
 
@@ -76,12 +75,6 @@ public class AutoTargetingFunction : Lifetime
 
             var edgesHitOutput = new List<Edge>();
 
-            if(element is ParentGameCollider)
-            {
-                var children = obstacles.Where(o => o is ChildCharacter && ((ChildCharacter)(o)).ParentCollider == element).ToHashSet();
-                obstacles = obstacles.Where(o => children.Contains(o) == false).ToArray();
-            }
- 
             var prediction = HitDetection.PredictHit(new ColliderBox(sb), angle, obstacles, 3 * Game.Current.GamePanel.Bounds.Hypotenous, CastingMode.Rough);
 
             var elementHit = prediction.ColliderHit as GameCollider;
@@ -96,19 +89,6 @@ public class AutoTargetingFunction : Lifetime
                 {
                     target = elementHit;
                     winningCandidateProximity = d;
-                }
-            }
-            else if (elementHit != null && element.IsPartOfMass(elementHit))
-            {
-                // todo - smoke concealment needs to be untangled from this class
-                //if (element is Character && SmokeFunction.IsConcealed(element as Character, prediction, edgesHitOutput)) continue;
-                targets.Add(elementHit);
-                var d = Options.Source.CalculateNormalizedDistanceTo(element);
-                if (d < winningCandidateProximity)
-                {
-                    target = elementHit;
-                    winningCandidateProximity = d;
-                    winningPrediction = prediction;
                 }
             }
         }

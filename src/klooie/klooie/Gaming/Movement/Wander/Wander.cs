@@ -62,7 +62,7 @@ public class Wander : Movement
             var baseSpeed = innerSpeed();
             if (_CuriosityPoint == null) return baseSpeed;
 
-            var prox = Element.MassBounds.CalculateDistanceTo(_CuriosityPoint.Bounds) / (Options.Visibility * 3f);
+            var prox = Element.Bounds.CalculateDistanceTo(_CuriosityPoint.Bounds) / (Options.Visibility * 3f);
             prox = Math.Min(prox, 1);
 
             if (prox < 1)
@@ -86,22 +86,22 @@ public class Wander : Movement
                 _IterationLifetime?.Dispose();
                 _IterationLifetime = Game.Current.CreateChildLifetime();
 
-                var elementBounds = Element.MassBounds;
+                var elementBounds = Element.Bounds;
                 _Obstacles = Velocity.GetObstacles().Where(o => o.CalculateDistanceTo(elementBounds) <= Options.Visibility);
                 SetOptimalAngle();
 
-                var cpd = _CuriosityPoint == null ? -1f : _CuriosityPoint.CalculateNormalizedDistanceTo(Element.MassBounds);
+                var cpd = _CuriosityPoint == null ? -1f : _CuriosityPoint.CalculateNormalizedDistanceTo(Element.Bounds);
                 Angle lkg;
                 if (_CuriosityPoint != null && cpd <= Options.CloseEnough)
                 {
-                    var a = Element.MassBounds.Center.CalculateAngleTo(_CuriosityPoint.Center());
+                    var a = Element.Bounds.Center.CalculateAngleTo(_CuriosityPoint.Center());
                     Element.MoveTo(_CuriosityPoint.Left, _CuriosityPoint.Top);
                     lkg = a;
                     await YieldForVelocityAndDelay();
                 }
-                else if (_CuriosityPoint != null && HasStraightPath(_CuriosityPoint.MassBounds))
+                else if (_CuriosityPoint != null && HasStraightPath(_CuriosityPoint.Bounds))
                 {
-                    Velocity.Angle = Element.MassBounds.CalculateAngleTo(_CuriosityPoint.Bounds);
+                    Velocity.Angle = Element.Bounds.CalculateAngleTo(_CuriosityPoint.Bounds);
                     Velocity.Speed = Speed();
                     lkg = Velocity.Angle;
                     await YieldForVelocityAndDelay();
@@ -117,10 +117,10 @@ public class Wander : Movement
                     Velocity.Speed = Speed();
                 
                     await YieldForVelocityAndDelay();
-                    var locNext = Element.MassBounds;
+                    var locNext = Element.Bounds;
                     if (locNext.Equals(loc))
                     {
-                        var overlaps = Element.GetObstacles().Where(e => e.MassBounds.Touches(Element.Bounds)).ToList();
+                        var overlaps = Element.GetObstacles().Where(e => e.Bounds.Touches(Element.Bounds)).ToList();
                         if (overlaps.Any())
                         {
                             Element.NudgeFree(optimalAngle: Velocity.Angle.Opposite());
@@ -174,14 +174,14 @@ public class Wander : Movement
     private bool HasStraightPath(RectF cp)
     {
         var cpBox = new ColliderBox(cp);
-        var a = Element.MassBounds.Center.CalculateAngleTo(cp.Center);
+        var a = Element.Bounds.Center.CalculateAngleTo(cp.Center);
         var colliders = _Obstacles.Union(new GameCollider[] { cpBox }).ToArray();
-        var visibility = Element.MassBounds.CalculateDistanceTo(cp) * 2f;
+        var visibility = Element.Bounds.CalculateDistanceTo(cp) * 2f;
         var prediction = HitDetection.PredictHit(Element, a, colliders, visibility, CastingMode.Rough);
 
         var perfect = prediction.ColliderHit == cpBox;
         if (perfect) return true;
-        var closeEnough = new RectF(prediction.LKGX, prediction.LKGY, Element.MassBounds.Width, Element.MassBounds.Height).CalculateDistanceTo(cp) <= Options.CloseEnough;
+        var closeEnough = new RectF(prediction.LKGX, prediction.LKGY, Element.Bounds.Width, Element.Bounds.Height).CalculateDistanceTo(cp) <= Options.CloseEnough;
 
         return closeEnough;
 
@@ -219,9 +219,9 @@ public class Wander : Movement
     public void SetOptimalAngle()
     {
         var optimalAngle = _LastGoodAngle.HasValue ? _LastGoodAngle.Value : 0;
-        if (_CuriosityPoint != null && _CuriosityPoint.Touches(Element.MassBounds) == false)
+        if (_CuriosityPoint != null && _CuriosityPoint.Touches(Element.Bounds) == false)
         {
-            optimalAngle = Element.MassBounds.CalculateAngleTo(_CuriosityPoint.Bounds);
+            optimalAngle = Element.Bounds.CalculateAngleTo(_CuriosityPoint.Bounds);
         }
 
         _OptimalAngle = optimalAngle;

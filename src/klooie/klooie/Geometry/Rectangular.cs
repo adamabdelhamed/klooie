@@ -138,8 +138,6 @@ public class Rectangular : ObservableObject
         ResizeTo(Width - .2f, Height - .2f);
     }
 
-    public virtual RectF MassBounds => Bounds;
-
     public float NumberOfPixelsThatOverlap(RectF other) => this.Bounds.NumberOfPixelsThatOverlap(other);
     public float NumberOfPixelsThatOverlap(Rectangular other) => this.Bounds.NumberOfPixelsThatOverlap(other.Bounds);
 

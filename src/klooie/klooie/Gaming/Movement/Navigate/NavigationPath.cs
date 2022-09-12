@@ -31,7 +31,7 @@ public class NavigationPath : Lifetime
 
     public GameCollider FindLocalTarget()
     {
-        var bounds = options.Element.MassBounds;
+        var bounds = options.Element.Bounds;
         var obstacles = options.ObstaclesPadded;
         var lookAhead = Math.Min(10, tail.Count - 1);
         for (var i = lookAhead; i >= 0; i--)
@@ -49,7 +49,7 @@ public class NavigationPath : Lifetime
         for (var i = tail.Count - 1; i >= 0; i--)
         {
             var curr = tail[i];
-            var d = options.Element.MassBounds.CalculateNormalizedDistanceTo(curr);
+            var d = options.Element.Bounds.CalculateNormalizedDistanceTo(curr);
             if (d <= options.Options.CloseEnough)
             {
                 lastProgressTime = Game.Current.MainColliderGroup.Now;

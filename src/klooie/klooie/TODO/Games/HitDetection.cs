@@ -81,7 +81,7 @@ public static class HitDetection
 
     public static ConsoleControl? GetLineOfSightObstruction(this ConsoleControl from, ConsoleControl to, IEnumerable<ConsoleControl> obstacleControls, CastingMode castingMode = CastingMode.Rough)
     {
-        var massBounds = from.MassBounds;
+        var massBounds = from.Bounds;
         var colliders = obstacleControls.Union(new[] { to }).ToArray();
         var angle = massBounds.CalculateAngleTo(to.Bounds);
         var Visibility = 3 * massBounds.CalculateDistanceTo(to.Bounds);
@@ -91,7 +91,7 @@ public static class HitDetection
 
     public static HitPrediction PredictHit(ConsoleControl from, RectF[] obstacles, Angle angle, ConsoleControl[] colliders, float visibility, CastingMode mode, int bufferLen, HitPrediction toReuse, List<Edge> edgesHitOutput = null)
     {
-        var movingObject = from.MassBounds;
+        var movingObject = from.Bounds;
         var prediction = toReuse?.Clear() ?? new HitPrediction();
         prediction.LKGX = movingObject.Left;
         prediction.LKGY = movingObject.Top;
@@ -103,7 +103,6 @@ public static class HitDetection
             return prediction;
         }
 
-        visibility = visibility == float.MaxValue ? visibility : visibility + VerySmallNumber;
         prediction.Visibility = visibility;
 
         var rayCount = CreateRays(angle, visibility, mode, movingObject);
@@ -129,12 +128,17 @@ public static class HitDetection
                 if (cc.CanCollideWith(ci) == false || ci.CanCollideWith(cc) == false) continue;
             }
 
-            if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obstacle) > visibility) continue;
+            if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obstacle) > visibility + VerySmallNumber) continue;
 
             ProcessEdge(i, obstacle.TopEdge, rayCount, edgesHitOutput, visibility, ref closestIntersectionDistance, ref closestIntersectingObstacleIndex, ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
             ProcessEdge(i, obstacle.BottomEdge, rayCount, edgesHitOutput, visibility, ref closestIntersectionDistance, ref closestIntersectingObstacleIndex, ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
             ProcessEdge(i, obstacle.LeftEdge, rayCount, edgesHitOutput, visibility, ref closestIntersectionDistance, ref closestIntersectingObstacleIndex, ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
             ProcessEdge(i, obstacle.RightEdge, rayCount, edgesHitOutput, visibility, ref closestIntersectionDistance, ref closestIntersectingObstacleIndex, ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
+
+          //  if(obstacle.NumberOfPixelsThatOverlap(movingObject) > 0 && closestIntersectingObstacleIndex < 0)
+          //  {
+                //throw new Exception("object is touching, but intersection not found");
+          //  }
         }
 
         if (closestIntersectingObstacleIndex >= 0)
@@ -148,6 +152,12 @@ public static class HitDetection
             prediction.Edge = closestEdge;
             prediction.IntersectionX = closestIntersectionX;
             prediction.IntersectionY = closestIntersectionY;
+
+       //     if(prediction.LKGD > visibility)
+       //     {
+       //         throw new Exception($"LKGD of {prediction.LKGD} is > visibility {visibility}");
+       //     }
+
         }
 
         return prediction;
@@ -217,7 +227,12 @@ public static class HitDetection
             if (TryFindIntersectionPoint(ray, edge, out float ix, out float iy))
             {
                 edgesHitOutput?.Add(ray);
-                var d = LocF.CalculateDistanceTo(ray.X1, ray.Y1, ix, iy);
+                var d = LocF.CalculateDistanceTo(ray.X1, ray.Y1, ix, iy) - VerySmallNumber;
+
+          //      if (d > visibility)
+          //      {
+          //          throw new Exception($"intersection distance of {d} is > visibility of {visibility}");
+          //      }
 
                 if (d < closestIntersectionDistance && d <= visibility)
                 {
@@ -231,28 +246,143 @@ public static class HitDetection
         }
     }
 
-    private static bool TryFindIntersectionPoint(in Edge a, in Edge b, out float x, out float y)
+    public static bool TryFindIntersectionPoint(in Edge ray, in Edge stationaryEdge, out float x, out float y)
     {
-        var x1 = a.X1;
-        var y1 = a.Y1;
-        var x2 = a.X2;
-        var y2 = a.Y2;
 
-        var x3 = b.X1;
-        var y3 = b.Y1;
-        var x4 = b.X2;
-        var y4 = b.Y2;
+        var x1 = ray.X1;
+        var y1 = ray.Y1;
+        var x2 = ray.X2;
+        var y2 = ray.Y2;
+
+        var x3 = stationaryEdge.X1;
+        var y3 = stationaryEdge.Y1;
+        var x4 = stationaryEdge.X2;
+        var y4 = stationaryEdge.Y2;
 
         var den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
         if (den == 0)
         {
-            x = 0;
-            y = 0;
-            return false;
+            // There is a special case where den == 0, and yet there is an intersection.
+            //
+            // The case is when the two edges are parallel with each other. In that
+            // case we need to do a little more checking before we know if they 
+            // intersect.
+
+
+            // First we see if the sloped are different. If they are then they are not
+            // parallel. This means they do not fall into the special case and the 2 edges
+            // do not intersect.
+            var raySlope = ray.From.CalculateAngleTo(ray.To);
+            var stationaryEdgeSlope = stationaryEdge.From.CalculateAngleTo(stationaryEdge.To);
+            if (raySlope != stationaryEdgeSlope)
+            {
+                x = 0;
+                y = 0;
+                return false;
+            }
+
+            // if these parallel lines share and endpoint then the intersection is that endpoint
+            if (ray.X1 == stationaryEdge.X1 && ray.Y1 == stationaryEdge.Y1)
+            {
+                x = ray.X1;
+                y = ray.Y1;
+                return true;
+            }
+
+            if (ray.X1 == stationaryEdge.X2 && ray.Y1 == stationaryEdge.Y2)
+            {
+                x = ray.X1;
+                y = ray.Y1;
+                return true;
+            }
+
+            // The slopes are the same so we need to perform the final test.
+            // We will create 4 new edges, two for the ray and 2 for the stationary edge.
+            // They will be perpendicular to the edge they were created from and they will be
+            // centered on the point they were created from.
+            //
+            // For the 2 edges created from the ray, test to see if they intersect with the stationary edge.
+            // For the 2 edges created from the stationary edge, test to see if they intersect with the ray.
+            // That is a total of 4 tests.
+
+            var up = ray.From.OffsetByAngleAndDistance(raySlope.Add(-90), VerySmallNumber, false);
+            var down = ray.From.OffsetByAngleAndDistance(raySlope.Add(90), VerySmallNumber, false);
+            var rayPerp1 = new Edge(up.Left, up.Top, down.Left, down.Top);
+
+            up = ray.To.OffsetByAngleAndDistance(raySlope.Add(-90), VerySmallNumber, false);
+            down = ray.To.OffsetByAngleAndDistance(raySlope.Add(90), VerySmallNumber, false);
+            var rayPerp2 = new Edge(up.Left, up.Top, down.Left, down.Top);
+
+            up = stationaryEdge.From.OffsetByAngleAndDistance(stationaryEdgeSlope.Add(-90), VerySmallNumber, false);
+            down = stationaryEdge.From.OffsetByAngleAndDistance(stationaryEdgeSlope.Add(90), VerySmallNumber, false);
+            var statPerp1 = new Edge(up.Left, up.Top, down.Left, down.Top);
+
+            up = stationaryEdge.To.OffsetByAngleAndDistance(stationaryEdgeSlope.Add(-90), VerySmallNumber, false);
+            down = stationaryEdge.To.OffsetByAngleAndDistance(stationaryEdgeSlope.Add(90), VerySmallNumber, false);
+            var statPerp2 = new Edge(up.Left, up.Top, down.Left, down.Top);
+
+            var test1 = TryFindIntersectionPoint(rayPerp1, stationaryEdge, out float test1X, out float test1Y);
+            var test2 = TryFindIntersectionPoint(rayPerp2, stationaryEdge, out float test2X, out float test2Y);
+            var test3 = TryFindIntersectionPoint(statPerp1, ray, out float test3X, out float test3Y);
+            var test4 = TryFindIntersectionPoint(statPerp2, ray, out float test4X, out float test4Y);
+
+            // If none of these tests produce an intersection then we can return false.
+            if (test1 == false && test2 == false && test3 == false && test4 == false)
+            {
+                x = 0;
+                y = 0;
+                return false;
+            }
+
+            // There is an intersection. Our final challenge is to determine where the intersection happens.
+            //         
+            // This is not easy since overlapping, parallel line segments can intersect at an infinite number
+            // of points. But we want to choose the point where the ray meets the stationary object in the ray
+            // direction. Do do this, we'll look at the subet of our 4 tests where an intersection was found.
+            // For each one we'll create an edge starting from the ray's starting point and ending at the 
+            // intersection. We will return the shortest edge and report that as the intersection point.
+
+            var edgeBuffer = new Edge[4];
+            var edgeIndex = 0;
+            if (test1) edgeBuffer[edgeIndex++] = new Edge(ray.X1, ray.Y1, test1X, test1Y);
+            if (test2) edgeBuffer[edgeIndex++] = new Edge(ray.X1, ray.Y1, test2X, test2Y);
+            if (test3) edgeBuffer[edgeIndex++] = new Edge(ray.X1, ray.Y1, test3X, test3Y);
+            if (test4) edgeBuffer[edgeIndex++] = new Edge(ray.X1, ray.Y1, test4X, test4Y);
+
+            var shortestD = float.MaxValue;
+            var shortestEdge = default(Edge);
+            for(var i = 0; i < edgeIndex; i++)
+            {
+                var finalTestSlope = edgeBuffer[i].From.CalculateAngleTo(edgeBuffer[i].To);
+                
+                // if the lines had the same slope, but were separated by a very small margin then the slope
+                // will be different so we can count it out
+                if (finalTestSlope != raySlope) continue;
+                var d = edgeBuffer[i].From.CalculateDistanceTo(edgeBuffer[i].To);
+                if(d < shortestD)
+                {
+                    shortestD = d;
+                    shortestEdge = edgeBuffer[i];
+                }
+            }
+
+
+            if (shortestD < float.MaxValue)
+            {
+                x = shortestEdge.X2;
+                y = shortestEdge.Y2;
+                return true;
+            }
+            else
+            {
+                x = 0;
+                y = 0;
+                return false;
+            }
         }
 
         var t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
-        if (t <= 0 || t >= 1)
+        if (t < 0 || t > 1)
         {
             x = 0;
             y = 0;
@@ -260,7 +390,7 @@ public static class HitDetection
         }
 
         var u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den;
-        if (u > 0 && u < 1)
+        if (u >= 0 && u <= 1)
         {
             x = x1 + t * (x2 - x1);
             y = y1 + t * (y2 - y1);

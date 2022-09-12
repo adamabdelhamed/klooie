@@ -6,7 +6,7 @@ public static class NudgeHelper
         var loc = GetNudgeLocation(el, desiredLocation, optimalAngle, maxSearch);
         if (loc.HasValue)
         {
-            var elBounds = el.MassBounds;
+            var elBounds = el.Bounds;
             var dx = el.Left - elBounds.Left;
             var dy = el.Top - elBounds.Top;
             el.MoveTo(loc.Value.Left + dx, loc.Value.Top + dy);
@@ -18,7 +18,7 @@ public static class NudgeHelper
 
     private static LocF? GetNudgeLocation(this GameCollider el, RectF? desiredLoc = null, Angle optimalAngle = default, float maxSearch = 15f)
     {
-        var desiredLocation = desiredLoc.HasValue ? desiredLoc.Value : el.MassBounds;
+        var desiredLocation = desiredLoc.HasValue ? desiredLoc.Value : el.Bounds;
         var obstacles = el.GetObstacles();
         if (obstacles.Where(o => o.Bounds.Touches(desiredLocation)).Any())
         {

@@ -156,7 +156,7 @@ public class Navigate : Movement
             return false;
         }
 
-        if(Velocity.Collider.MassBounds.CalculateNormalizedDistanceTo(dest.Bounds) <= Options.CloseEnough)
+        if(Velocity.Collider.Bounds.CalculateNormalizedDistanceTo(dest.Bounds) <= Options.CloseEnough)
         {
             if (Options.ForceDestination)
             {

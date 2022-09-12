@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using System;
+using System.Linq;
 using static klooie.tests.HitDetectionTests;
 namespace klooie.tests;
 
@@ -127,6 +128,7 @@ public class VelocityTests
                 var collider = new GameCollider(group);
                 collider.MoveTo(r.Next((int)sceneBounds.Width / 2, (int)sceneBounds.Width - 5), r.Next((int)sceneBounds.Height / 2, (int)sceneBounds.Height - 5));
                 if (collider.NudgeFree() == false) Assert.Fail("Failed to nudge");
+
                 collider.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
                 collider.Velocity.Angle = r.Next(0, 360);
                 collider.Velocity.Speed = r.Next(10, 50);
@@ -134,6 +136,13 @@ public class VelocityTests
                 var checkBounds = () =>
                 {
                     totalChecks++;
+
+                    var touching = group.EnumerateCollidersSlow(null).Where(c => c != collider && c.NumberOfPixelsThatOverlap(collider) > 0).ToArray();
+                    if (touching.Any())
+                    {
+                        Assert.Fail("Colliders touching at time " + group.Now.TotalSeconds);
+                    }
+
                     if (collider.NumberOfPixelsThatOverlap(left) > 0 || collider.NumberOfPixelsThatOverlap(top) > 0 || collider.NumberOfPixelsThatOverlap(right) > 0 || collider.NumberOfPixelsThatOverlap(bottom) > 0)
                     {
                         Assert.Fail("Collider overlapping wall at time " + group.Now.TotalSeconds);

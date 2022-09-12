@@ -51,7 +51,7 @@ public class NavigateTests
             Test = async (c) =>
             {
                 Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-                await NavigateTest(150, true, factory);
+                await NavigateTest(10, true, factory);
                 Game.Current.Stop();
             }
         });
@@ -175,7 +175,7 @@ public class NavigateTests
             success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => speed, () => new GameCollider(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
             {
                 Show = true
-            }), Task.Delay(camera ? 60000 : 10000).ToLifetime());
+            }), Task.Delay(camera ? 240000 : 10000).ToLifetime());
         }
         else
         {

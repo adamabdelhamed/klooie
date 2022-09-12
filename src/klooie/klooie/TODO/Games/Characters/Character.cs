@@ -1,44 +1,7 @@
 ﻿namespace klooie.Gaming;
 
 
-public interface IAmMass
-    {
-        GameCollider Parent { get; }
-    }
-
-    public interface IHaveMassBounds
-    {
-        IEnumerable<GameCollider> Elements { get; }
-    }
-
-    public static class IHaveMassBoundsEx
-    {
-        public static RectF CalculateMassBounds(this IHaveMassBounds mass) => CalculateMassBounds(mass.Elements.Concat(new GameCollider[] { mass as GameCollider }));
-
-        public static RectF CalculateMassBounds(IEnumerable<GameCollider> colliders) => colliders.Select(c => c.Bounds).CalculateMassBounds();
-        public static RectF CalculateMassBounds(params RectF[] parts) => parts.CalculateMassBounds();
-
-        public static RectF CalculateMassBounds(this IEnumerable<RectF> parts)
-        {
-            var left = float.MaxValue;
-            var top = float.MaxValue;
-            var right = float.MinValue;
-            var bottom = float.MinValue;
-
-            foreach (var part in parts)
-            {
-                left = Math.Min(left, part.Left);
-                top = Math.Min(top, part.Top);
-                right = Math.Max(right, part.Right);
-                bottom = Math.Max(bottom, part.Bottom);
-            }
-
-            var bounds = new RectF(left, top, right - left, bottom - top);
-            return bounds;
-        }
-    }
-
-public class Character : ParentGameCollider
+public class Character : GameCollider
 {
     public Event<IInteractable> OnInteract { get; private set; } = new Event<IInteractable>();
     public Event<Angle> OnMove { get; private set; } = new Event<Angle>();
@@ -58,7 +21,7 @@ public class Character : ParentGameCollider
         {
             if (FreeAimCursor != null)
             {
-                return this.MassBounds.Center.CalculateAngleTo(FreeAimCursor.Bounds.Center);
+                return this.Bounds.Center.CalculateAngleTo(FreeAimCursor.Bounds.Center);
             }
             else
             {
@@ -97,24 +60,18 @@ public class Character : ParentGameCollider
         if (otherHolder != null)
         {
             if (otherHolder == this) return false;
-            if (ChildColliders.Contains(otherHolder)) return false;
         }
 
         return true;
     }
 
-    public bool IsSameCharacter(Character b)
-    {
-        if (object.ReferenceEquals(this, b)) return true;
-        return object.ReferenceEquals(this.GetRoot(), b.GetRoot());
-    }
 
     public Angle CalculateAngleToTarget()
     {
         var realTarget = Target;
 
         var angle = realTarget != null ?
-            this.MassBounds.CalculateAngleTo(realTarget.Bounds) :
+            this.Bounds.CalculateAngleTo(realTarget.Bounds) :
             Velocity.Angle;
 
         if (this == MainCharacter.Current && MainCharacter.Current.FreeAimCursor != null)

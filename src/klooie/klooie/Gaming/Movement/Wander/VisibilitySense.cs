@@ -13,7 +13,7 @@ public class VisibilitySense : IWanderSense
         }
         else
         {
-            var eb = wander.Element.MassBounds;
+            var eb = wander.Element.Bounds;
             visibilityScore = LocF.CalculateNormalizedDistanceTo(eb.Left, eb.Top, LastPrediction.LKGX, LastPrediction.LKGY) / wander.Options.Visibility;
             visibilityScore = Math.Min(visibilityScore, 1);
         }

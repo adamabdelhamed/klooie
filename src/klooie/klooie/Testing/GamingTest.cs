@@ -12,6 +12,7 @@ public class GamingTestOptions
     public UITestMode Mode { get; set; }
     public bool Camera { get; set; } = false;
     public Event<LocF>? FocalPointChanged { get; set; }
+    public IStopwatch Stopwatch { get; set; }
 }
 
 public static class GamingTest

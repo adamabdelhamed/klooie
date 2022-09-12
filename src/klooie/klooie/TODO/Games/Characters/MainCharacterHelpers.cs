@@ -36,7 +36,7 @@ public static class MainCharacterHelpers
            var approaches = 0;
            while (thingBeingApproached.IsExpired == false && MainCharacter.Current != null)
            {
-               if (MainCharacter.Current.CalculateDistanceTo(thingBeingApproached.MassBounds) <= 1)
+               if (MainCharacter.Current.CalculateDistanceTo(thingBeingApproached.Bounds) <= 1)
                {
                    action();
                    approaches++;
@@ -46,7 +46,7 @@ public static class MainCharacterHelpers
                        break;
                    }
 
-                   while (MainCharacter.Current != null && thingBeingApproached.IsExpired == false && MainCharacter.Current.CalculateDistanceTo(thingBeingApproached.MassBounds) <= 10)
+                   while (MainCharacter.Current != null && thingBeingApproached.IsExpired == false && MainCharacter.Current.CalculateDistanceTo(thingBeingApproached.Bounds) <= 10)
                    {
                        await Task.Yield();
                    }
