@@ -201,6 +201,8 @@ public class Character : GameCollider
         OnMove.Fire(oldAngle);
     }
 
+    private GameCollider GetObstacleIfMovedTo(RectF area) => Velocity.GetObstacles().Where(c => c.Bounds.Touches(area)).WhereAs<GameCollider>().FirstOrDefault();
+
     public void RoundOff()
     {
         var newLeft = (float)ConsoleMath.Round(this.Left);
