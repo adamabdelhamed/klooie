@@ -88,9 +88,9 @@ public class Rectangular : ObservableObject
         }
     }
 
-    public float Left => X;
+    public float Left => Bounds.Left;
 
-    public float Top => Y;
+    public float Top => Bounds.Top;
 
     public void MoveTo(LocF loc, int? z = null) => MoveTo(loc.Left, loc.Top, z);
 
