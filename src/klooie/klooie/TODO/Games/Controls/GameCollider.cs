@@ -11,7 +11,7 @@ public class GameCollider : ConsoleControl
     public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstacles(this).WhereAs<GameCollider>();
 }
 
-public class ColliderBox : GameCollider
+public sealed class ColliderBox : GameCollider
 {
     internal override bool AutoAddToColliderGroup => false;
     public ColliderBox(RectF bounds) : base(bounds) { }
