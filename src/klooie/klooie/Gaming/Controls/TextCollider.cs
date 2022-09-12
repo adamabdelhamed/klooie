@@ -2,13 +2,14 @@
 
 public class TextCollider : GameCollider
 {
-    public ConsoleString Content { get => Get<ConsoleString>(); set => Set(value); }
+    private ConsoleString _content;
+    public ConsoleString Content { get => _content; set => SetHardIf(ref _content, value, _content != value); }
 
     public TextCollider(ConsoleString content)
     {
         this.TransparentBackground = true;
         this.Content = content;
-        Sync(nameof(Content), () => ResizeTo(Content.Length, this.Height), this);
+        Sync(nameof(Content), () => ResizeTo(Content.Length, 1), this);
     }
 
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);
