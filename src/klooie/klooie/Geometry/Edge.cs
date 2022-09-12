@@ -8,6 +8,9 @@ public readonly struct Edge
     public readonly float X2;
     public readonly float Y2;
 
+    public LocF From => new LocF(X1, Y1);
+    public LocF To => new LocF(X2, Y2);
+
     public Edge()
     {
         X1 = default;
