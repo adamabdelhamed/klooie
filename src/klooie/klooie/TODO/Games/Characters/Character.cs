@@ -99,13 +99,7 @@ public class Character : ParentGameCollider
         if (otherHolder != null)
         {
             if (otherHolder == this) return false;
-            foreach (var child in Children)
-            {
-                if (otherHolder == child)
-                {
-                    return false;
-                }
-            }
+            if (ChildColliders.Contains(otherHolder)) return false;
         }
 
         return true;

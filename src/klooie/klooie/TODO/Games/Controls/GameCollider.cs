@@ -45,7 +45,7 @@ public class GameCollider : ConsolePanel
         yield return root;
         if (this is ParentGameCollider)
         {
-            foreach (var c in (this as ParentGameCollider).Children)
+            foreach (var c in (this as ParentGameCollider).ChildColliders)
             {
                 yield return c;
             }
@@ -54,17 +54,17 @@ public class GameCollider : ConsolePanel
 
     public virtual bool IsPartOfMass(GameCollider mass)
     {
-        return mass == this || (mass as ParentGameCollider)?.Children.Contains(this) == true;
+        return mass == this || (mass as ParentGameCollider)?.ChildColliders.Contains(this) == true;
     }
 }
 
 public class ParentGameCollider : GameCollider
 {
-    public List<GameCollider> Children { get; private set; } = new List<GameCollider>();
+    public HashSet<GameCollider> ChildColliders { get; private set; } = new HashSet<GameCollider>();
     public bool SharedHPMode { get; protected set; }
     public override bool CanCollideWith(GameCollider other)
     {
-        return base.CanCollideWith(other) && Children.Contains(other) == false;
+        return base.CanCollideWith(other) && ChildColliders.Contains(other) == false;
     }
 
     public override RectF MassBounds
@@ -76,7 +76,7 @@ public class ParentGameCollider : GameCollider
             var right = this.Right();
             var bottom = this.Bottom();
 
-            foreach (var child in Children)
+            foreach (var child in ChildColliders)
             {
                 left = Math.Min(left, child.Left);
                 top = Math.Min(top, child.Top);
@@ -111,7 +111,7 @@ public class ParentGameCollider : GameCollider
 
     public void Cleanup()
     {
-        foreach (var child in Children.ToArray())
+        foreach (var child in ChildColliders.ToArray())
         {
             child.Dispose();
         }
@@ -127,7 +127,12 @@ public class ChildCharacter : Character
     public ChildCharacter(Character parent)
     {
         this.parent = parent;
-        parent.OnDisposed(() => this.TryDispose());
+        parent.ChildColliders.Add(this);
+        parent.OnDisposed(() =>
+        {
+            parent.ChildColliders.Remove(this);
+            this.TryDispose();
+        });
     }
 
     public override bool CanCollideWith(GameCollider other)

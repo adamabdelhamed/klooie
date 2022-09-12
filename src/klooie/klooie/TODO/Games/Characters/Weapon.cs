@@ -28,7 +28,7 @@ public class WeaponElement : GameCollider
         if (base.CanCollideWith(other) == false) return false;
         if (other == Weapon.Holder) return false;
         if ((other as WeaponElement)?.Weapon?.Holder == Weapon?.Holder) return false;
-        if (Weapon.Holder.Children.Contains(other)) return false;
+        if (Weapon.Holder.ChildColliders.Contains(other)) return false;
 
         return true;
 
