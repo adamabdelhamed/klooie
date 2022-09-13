@@ -29,7 +29,7 @@ public class MovementTests
         cStill.ResizeTo(3, 1);
         cStill.MoveTo(112, 2);
 
-        var successLt = cMover.Velocity.ImpactOccurred.CreateNextFireLifetime();
+        var successLt = cMover.Velocity.OnCollision.CreateNextFireLifetime();
         var lt = Lifetime.EarliestOf(Task.Delay(2000).ToLifetime(), successLt);
         await Mover.InvokeOrTimeout(new Right(cMover.Velocity, () => 80), lt);
         var success = successLt.IsExpired;

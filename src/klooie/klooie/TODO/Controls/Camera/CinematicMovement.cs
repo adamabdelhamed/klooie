@@ -15,10 +15,10 @@ public class CinematicMovement : CameraMovement
         obstacles.Add(new ColliderBox(camBounds.Left - 1, camBounds.Top, 1, Camera.Height)); // left boundary
         obstacles.Add(new ColliderBox(camBounds.Left + Camera.Width, camBounds.Top, 1, Camera.Height)); // right boundary
 
-        var prediction = HitDetection.PredictHit(FocalVelocity.Collider, FocalVelocity.angle, obstacles.ToArray(), Camera.Bounds.Hypotenous, CastingMode.SingleRay);
+        var prediction = CollisionDetector.Predict(FocalVelocity.Collider, FocalVelocity.angle, obstacles.ToArray(), Camera.Bounds.Hypotenous, CastingMode.SingleRay);
 
         var etaTs = CalculatePredictionETA(prediction, FocalVelocity);
-        return prediction.Type != HitType.None && etaTs < TimeSpan.FromMilliseconds(CollisionETAThreshold);
+        return prediction.CollisionPredicted && etaTs < TimeSpan.FromMilliseconds(CollisionETAThreshold);
     }
  
     private void Check()
@@ -29,7 +29,7 @@ public class CinematicMovement : CameraMovement
         }
     }
 
-    private TimeSpan CalculatePredictionETA(HitPrediction collision, Velocity v)
+    private TimeSpan CalculatePredictionETA(CollisionPrediction collision, Velocity v)
     {
         if (collision == null || v.Speed == 0 || collision.ColliderHit == null) return TimeSpan.MaxValue;
         var d = collision.LKGD;

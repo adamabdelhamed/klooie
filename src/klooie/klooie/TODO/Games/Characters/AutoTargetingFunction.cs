@@ -15,7 +15,7 @@ public class AutoTargetingFunction : Lifetime
 
     public Event<GameCollider> TargetChanged { get; private set; } = new Event<GameCollider>();
     public Event<GameCollider> TargetAcquired { get; private set; } = new Event<GameCollider>();
-    public HitPrediction TargetCast { get; private set; }
+    public CollisionPrediction TargetCast { get; private set; }
     public AutoTargetingOptions Options { get; private set; }
     private GameCollider lastTarget;
     private List<GameCollider> targets = new List<GameCollider>();
@@ -52,7 +52,7 @@ public class AutoTargetingFunction : Lifetime
 
         GameCollider target = null;
         float winningCandidateProximity = float.MaxValue;
-        HitPrediction winningPrediction = null;
+        CollisionPrediction winningPrediction = null;
         targets.Clear();
         foreach (var element in obstacles)
         {
@@ -75,7 +75,7 @@ public class AutoTargetingFunction : Lifetime
 
             var edgesHitOutput = new List<Edge>();
 
-            var prediction = HitDetection.PredictHit(new ColliderBox(sb), angle, obstacles, 3 * Game.Current.GamePanel.Bounds.Hypotenous, CastingMode.Rough);
+            var prediction = CollisionDetector.Predict(new ColliderBox(sb), angle, obstacles, 3 * Game.Current.GamePanel.Bounds.Hypotenous, CastingMode.Rough);
 
             var elementHit = prediction.ColliderHit as GameCollider;
 

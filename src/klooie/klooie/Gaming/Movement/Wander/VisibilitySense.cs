@@ -1,13 +1,13 @@
 ﻿namespace klooie.Gaming;
 public class VisibilitySense : IWanderSense
 {
-    public HitPrediction LastPrediction { get; private set; }
+    public CollisionPrediction LastPrediction { get; private set; }
     public ScoreComponent Measure(Wander wander, Angle angle)
     {
         var colliders = wander._Obstacles.ToArray();
-        LastPrediction = HitDetection.PredictHit(wander.Element, angle, colliders, wander.Options.Visibility, CastingMode.Rough);
+        LastPrediction = CollisionDetector.Predict(wander.Element, angle, colliders, wander.Options.Visibility, CastingMode.Rough);
         var visibilityScore = 0f;
-        if (LastPrediction.Type == HitType.None)
+        if (LastPrediction.CollisionPredicted == false)
         {
             visibilityScore = 1;
         }

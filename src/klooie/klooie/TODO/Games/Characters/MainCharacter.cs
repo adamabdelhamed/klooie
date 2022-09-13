@@ -82,7 +82,7 @@ public class MainCharacter : Character
 
     public void RegisterItemForPickup(GameCollider item, Action afterPickup)
     {
-        this.Velocity.ImpactOccurred.Subscribe((i) =>
+        this.Velocity.OnCollision.Subscribe((i) =>
         {
             if (i.ColliderHit == item)
             {

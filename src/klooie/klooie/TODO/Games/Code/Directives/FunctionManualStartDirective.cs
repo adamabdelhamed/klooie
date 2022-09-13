@@ -34,12 +34,12 @@ public class FunctionManualStarter : Character
 
         this.ResizeTo(3, 3);
         this.MoveTo(code.Left - Width, code.Top - 1);
-        this.Velocity.ImpactOccurred.Subscribe(OnImpact, this);
+        this.Velocity.OnCollision.Subscribe(OnCollision, this);
     }
 
-    private void OnImpact(Impact i)
+    private void OnCollision(Collision c)
     {
-        if (i.Angle.Value > 90 && i.Angle.Value < 270 && IsEnabled)
+        if (c.Angle.Value > 90 && c.Angle.Value < 270 && IsEnabled)
         {
             lastStartedTime = Game.Current.MainColliderGroup.Now;
             directive.Function.Execute();

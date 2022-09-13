@@ -4,7 +4,7 @@ public class GameCollider : ConsoleControl
 {   
     public Velocity Velocity { get; private set; }
     internal virtual bool AutoAddToColliderGroup => true;
-    public GameCollider(ColliderGroup? group = null) => Velocity = new Velocity(this, group ?? Game.Current?.MainColliderGroup ?? throw new ArgumentException($"{nameof(group)} can only be null when Game.Current is not"));
+    public GameCollider(ColliderGroup? group = null) => Velocity = new Velocity(this, group ?? Game.Current?.MainColliderGroup ?? (AutoAddToColliderGroup == false ? null : throw new ArgumentException($"{nameof(group)} can only be null when Game.Current is not")));
     public GameCollider(RectF bounds, ColliderGroup? group = null) : this(group) => this.Bounds = bounds;
     public GameCollider(float x, float y, float w, float h, ColliderGroup? group = null) : this(new RectF(x, y, w, h), group) { } 
     public virtual bool CanCollideWith(GameCollider other) => ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;

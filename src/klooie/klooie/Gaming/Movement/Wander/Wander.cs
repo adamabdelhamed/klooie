@@ -177,7 +177,7 @@ public class Wander : Movement
         var a = Element.Bounds.Center.CalculateAngleTo(cp.Center);
         var colliders = _Obstacles.Union(new GameCollider[] { cpBox }).ToArray();
         var visibility = Element.Bounds.CalculateDistanceTo(cp) * 2f;
-        var prediction = HitDetection.PredictHit(Element, a, colliders, visibility, CastingMode.Rough);
+        var prediction = CollisionDetector.Predict(Element, a, colliders, visibility, CastingMode.Rough);
 
         var perfect = prediction.ColliderHit == cpBox;
         if (perfect) return true;

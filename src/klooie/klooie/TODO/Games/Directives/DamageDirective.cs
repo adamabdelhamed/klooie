@@ -13,7 +13,7 @@ public class DamageDirective : Directive
 
     public string RespawnOnKilledEvent { get; set; }
 
-    public List<Func<DamageEventArgs, Impact?, bool>> DamageSuppressors = new List<Func<DamageEventArgs, Impact?, bool>>();
+    public List<Func<DamageEventArgs, Collision?, bool>> DamageSuppressors = new List<Func<DamageEventArgs, Collision?, bool>>();
 
     [ArgIgnore]
     public Event<DamageEnforcementEvent> OnEnemyDestroyed { get; private set; } = new Event<DamageEnforcementEvent>();
@@ -36,26 +36,26 @@ public class DamageDirective : Directive
     {
         Current = this;
         Game.Current.OnDisposed(() => Current = null);
-        Game.Current.MainColliderGroup.ImpactOccurred.Subscribe(ReportImpact, Game.Current);
+        Game.Current.MainColliderGroup.OnCollision.Subscribe(ReportCollision, Game.Current);
         return Task.CompletedTask;
     }
        
-    public void ReportImpact(Impact impact)
+    public void ReportCollision(Collision collision)
     {
-        if (impact.MovingObject is Character) return;
-        if (IsDamageable(impact.ColliderHit as ConsoleControl))
+        if (collision.MovingObject is Character) return;
+        if (IsDamageable(collision.ColliderHit as ConsoleControl))
         {
             ReportDamage(new DamageEventArgs()
             {
-                Damager = impact.MovingObject as GameCollider,
-                Damagee = impact.ColliderHit as GameCollider
-            }, impact);
+                Damager = collision.MovingObject as GameCollider,
+                Damagee = collision.ColliderHit as GameCollider
+            }, collision);
         }
     }
 
     public bool IsDamageable(ConsoleControl el) => el != null && HPInfo.ContainsKey(el);
 
-    public void ReportDamage(DamageEventArgs args, Impact? impact = null)
+    public void ReportDamage(DamageEventArgs args, Collision? collision = null)
     {
         var damagerIsEnemy = args.Damager is WeaponElement &&
             (args.Damager as WeaponElement).Weapon != null &&
@@ -72,7 +72,7 @@ public class DamageDirective : Directive
 
         foreach(var suppressor in DamageSuppressors)
         {
-            if(suppressor(args,impact))
+            if(suppressor(args,collision))
             {
                 return;
             }
@@ -83,17 +83,17 @@ public class DamageDirective : Directive
 
         if (damageAmount != 0)
         {
-            var damageArgs = new DamageEnforcementEvent() { RawArgs = args, DamageAmount = -damageAmount, Impact = impact };
-            AddHP(args.Damagee, -damageAmount, args.Damager as WeaponElement, impact, damageArgs);
+            var damageArgs = new DamageEnforcementEvent() { RawArgs = args, DamageAmount = -damageAmount, Collision = collision };
+            AddHP(args.Damagee, -damageAmount, args.Damager as WeaponElement, collision, damageArgs);
             OnDamageEnforced.Fire(damageArgs);
         }
     }
 
-    public void AddHP(ConsoleControl element, float amount, WeaponElement responsible = null, Impact? impact = null, DamageEnforcementEvent args = null)
+    public void AddHP(ConsoleControl element, float amount, WeaponElement responsible = null, Collision? collision = null, DamageEnforcementEvent args = null)
     {
         var currentHp = GetHP(element);
         var newHP = currentHp + amount;
-        SetHP(element, newHP, responsible, impact, args);
+        SetHP(element, newHP, responsible, collision, args);
     }
 
     public void SetDamageInfo(ConsoleControl element, DamageInfo power)
@@ -103,7 +103,7 @@ public class DamageDirective : Directive
         HPInfo[element].Strength = power.Strength;
     }
 
-    public void SetHP(ConsoleControl element, float newHP, WeaponElement responsible = null, Impact? impact = null, DamageEnforcementEvent args = null)
+    public void SetHP(ConsoleControl element, float newHP, WeaponElement responsible = null, Collision? collision = null, DamageEnforcementEvent args = null)
     {
         newHP = newHP < 0 ? 0 : newHP;
 
@@ -233,7 +233,7 @@ public class DamageDirective : Directive
     {
         public DamageEventArgs RawArgs { get; set; }
         public float DamageAmount { get; set; }
-        public Impact? Impact { get; set; }
+        public Collision? Collision { get; set; }
     }
 
 

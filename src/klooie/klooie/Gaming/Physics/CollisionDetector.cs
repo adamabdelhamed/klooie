@@ -1,25 +1,18 @@
 ﻿namespace klooie.Gaming;
-public enum HitType
-{
-    None = 0,
-    Obstacle = 1,
-}
 
-public struct Impact
+public struct Collision
 {
     public float MovingObjectSpeed { get; set; }
     public Angle Angle { get; set; }
     public ConsoleControl MovingObject { get; set; }
     public ConsoleControl ColliderHit { get; set; }
-    public HitType HitType { get; set; }
-    public HitPrediction Prediction { get; set; }
-
+    public CollisionPrediction Prediction { get; set; }
     public override string ToString() => $"{Prediction.LKGX},{Prediction.LKGY} - {ColliderHit?.GetType().Name}";
 }
 
-public class HitPrediction
+public class CollisionPrediction
 {
-    public HitType Type { get; set; }
+    public bool CollisionPredicted { get; set; }
     public RectF ObstacleHitBounds { get; set; }
     public ConsoleControl ColliderHit { get; set; }
     public float LKGX { get; set; }
@@ -32,12 +25,12 @@ public class HitPrediction
 
     public LocF Intersection => new LocF(IntersectionX, IntersectionY);
 
-    internal HitPrediction Clear()
+    internal CollisionPrediction Clear()
     {
         ColliderHit = null;
         ObstacleHitBounds = default;
         Edge = default;
-        Type = HitType.None;
+        CollisionPredicted = false;
         return this;
     }
 }
@@ -49,7 +42,7 @@ public enum CastingMode
     Precise
 }
 
-public static class HitDetection
+public static class CollisionDetector
 {
     public const float VerySmallNumber = .00001f;
 
@@ -74,10 +67,10 @@ public static class HitDetection
         => GetLineOfSightObstruction(from, new ColliderBox(to), obstacles, castingMode);
     public static ConsoleControl? GetLineOfSightObstruction(this RectF from, RectF to, IEnumerable<ConsoleControl> obstacles, CastingMode castingMode = CastingMode.Rough) 
         => GetLineOfSightObstruction(new ColliderBox(from), new ColliderBox(to), obstacles, castingMode);
-    public static HitPrediction PredictHit(ConsoleControl from, Angle angle, ConsoleControl[] colliders, float visibility, CastingMode castingMode, HitPrediction toReuse = null, List<Edge> edgesHitOutput = null) 
-        => PredictHit(from, angle, colliders, visibility, castingMode, colliders.Length, toReuse, edgesHitOutput);
-    public static HitPrediction PredictHit(ConsoleControl from, Angle angle, ConsoleControl[] colliders, float visibility, CastingMode castingMode, int bufferLen, HitPrediction toReuse = null, List<Edge> edgesHitOutput = null) 
-        => PredictHit(from, CreateObstaclesFromColliders(colliders), angle, colliders, visibility, castingMode, bufferLen, toReuse, edgesHitOutput);
+    public static CollisionPrediction Predict(ConsoleControl from, Angle angle, ConsoleControl[] colliders, float visibility, CastingMode castingMode, CollisionPrediction toReuse = null, List<Edge> edgesHitOutput = null) 
+        => Predict(from, angle, colliders, visibility, castingMode, colliders.Length, toReuse, edgesHitOutput);
+    public static CollisionPrediction Predict(ConsoleControl from, Angle angle, ConsoleControl[] colliders, float visibility, CastingMode castingMode, int bufferLen, CollisionPrediction toReuse = null, List<Edge> edgesHitOutput = null) 
+        => Predict(from, CreateObstaclesFromColliders(colliders), angle, colliders, visibility, castingMode, bufferLen, toReuse, edgesHitOutput);
 
     public static ConsoleControl? GetLineOfSightObstruction(this ConsoleControl from, ConsoleControl to, IEnumerable<ConsoleControl> obstacleControls, CastingMode castingMode = CastingMode.Rough)
     {
@@ -85,21 +78,21 @@ public static class HitDetection
         var colliders = obstacleControls.Union(new[] { to }).ToArray();
         var angle = massBounds.CalculateAngleTo(to.Bounds);
         var Visibility = 3 * massBounds.CalculateDistanceTo(to.Bounds);
-        var prediction = PredictHit(from, angle, colliders, Visibility, castingMode);
-        return prediction.Type == HitType.None ? null : prediction.ColliderHit == to ? null : prediction.ColliderHit;
+        var prediction = Predict(from, angle, colliders, Visibility, castingMode);
+        return prediction.CollisionPredicted ? null : prediction.ColliderHit == to ? null : prediction.ColliderHit;
     }
 
-    public static HitPrediction PredictHit(ConsoleControl from, RectF[] obstacles, Angle angle, ConsoleControl[] colliders, float visibility, CastingMode mode, int bufferLen, HitPrediction toReuse, List<Edge> edgesHitOutput = null)
+    public static CollisionPrediction Predict(ConsoleControl from, RectF[] obstacles, Angle angle, ConsoleControl[] colliders, float visibility, CastingMode mode, int bufferLen, CollisionPrediction toReuse, List<Edge> edgesHitOutput = null)
     {
         var movingObject = from.Bounds;
-        var prediction = toReuse?.Clear() ?? new HitPrediction();
+        var prediction = toReuse?.Clear() ?? new CollisionPrediction();
         prediction.LKGX = movingObject.Left;
         prediction.LKGY = movingObject.Top;
         prediction.Visibility = visibility;
 
         if (visibility == 0)
         {
-            prediction.Type = HitType.None;
+            prediction.CollisionPredicted = false;
             return prediction;
         }
 
@@ -148,7 +141,7 @@ public static class HitDetection
             prediction.LKGD = closestIntersectionDistance;
             prediction.LKGX = closestIntersectionX;
             prediction.LKGY = closestIntersectionY;
-            prediction.Type = HitType.Obstacle;
+            prediction.CollisionPredicted = true;
             prediction.Edge = closestEdge;
             prediction.IntersectionX = closestIntersectionX;
             prediction.IntersectionY = closestIntersectionY;
