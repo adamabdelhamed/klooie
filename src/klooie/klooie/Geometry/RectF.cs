@@ -81,8 +81,8 @@ public readonly struct RectF
     public RectF ShrinkBy(float dx, float dy)
     {
         var center = Center;
-        var newW = Width -dx;
-        var newH = Height -dy;
+        var newW = Width - dx;
+        var newH = Height - dy;
         return new RectF(center.Left - newW / 2f, center.Top - newH / 2f, newW, newH);
     }
 
@@ -269,4 +269,24 @@ public readonly struct RectF
     }
 
     public static RectF Offset(float x, float y, float w, float h, float dx, float dy) => new RectF(x + dx, y + dy, w, h);
+
+    public static RectF FromMass(ConsoleControl c, IEnumerable<ConsoleControl> others)
+    {
+
+        var left = c.Left;
+        var top = c.Top;
+        var right = c.Right();
+        var bottom = c.Bottom();
+
+        foreach (var child in others)
+        {
+            left = Math.Min(left, child.Left);
+            top = Math.Min(top, child.Top);
+            right = Math.Max(right, child.Right());
+            bottom = Math.Max(bottom, child.Bottom());
+        }
+
+        var bounds = new RectF(left, top, right - left, bottom - top);
+        return bounds;
+    }
 }
