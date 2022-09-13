@@ -150,40 +150,41 @@ public class ColliderGroup
                 {
                     var obstacleHit = hitPrediction.ColliderHit;
                     var proposedBounds = velocity.Collider.Bounds.OffsetByAngleAndDistance(velocity.Angle, hitPrediction.LKGD, false);
-                    item.Collider.Bounds = proposedBounds;
-                    velocity.haveMovedSinceLastHitDetection = true;
-                    if (velocity.haveMovedSinceLastHitDetection)
+                    if (item.Collider.CanMoveTo(proposedBounds))
                     {
-                        velocity.LastCollision = new Collision()
-                        {
-                            MovingObjectSpeed = velocity.speed,
-                            Angle = velocity.Angle,
-                            MovingObject = item.Collider,
-                            ColliderHit = obstacleHit,
-                            Prediction = hitPrediction,
-                        };
+                        item.Collider.Bounds = proposedBounds;
+                    }
 
-                        if (obstacleHit is GameCollider && velocities.TryGetValue((GameCollider)obstacleHit, out Velocity vOther))
-                        {
-                            if (vOther.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
-                            {
-                                var topOrBottomEdgeWasHit = hitPrediction.Edge == obstacleHit.Bounds.TopEdge || hitPrediction.Edge == obstacleHit.Bounds.BottomEdge;
-                                vOther.Angle = topOrBottomEdgeWasHit ? Angle.Right.Add(-vOther.Angle.Value) : Angle.Left.Add(-vOther.Angle.Value);
-                            }
 
-                            vOther._onCollision?.Fire(new Collision()
-                            {
-                                MovingObjectSpeed = velocity.speed,
-                                Angle = velocity.Angle.Opposite(),
-                                MovingObject = obstacleHit,
-                                ColliderHit = item.Collider,
-                            });
+                    velocity.LastCollision = new Collision()
+                    {
+                        MovingObjectSpeed = velocity.speed,
+                        Angle = velocity.Angle,
+                        MovingObject = item.Collider,
+                        ColliderHit = obstacleHit,
+                        Prediction = hitPrediction,
+                    };
+
+                    if (obstacleHit is GameCollider && velocities.TryGetValue((GameCollider)obstacleHit, out Velocity vOther))
+                    {
+                        if (vOther.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
+                        {
+                            var topOrBottomEdgeWasHit = hitPrediction.Edge == obstacleHit.Bounds.TopEdge || hitPrediction.Edge == obstacleHit.Bounds.BottomEdge;
+                            vOther.Angle = topOrBottomEdgeWasHit ? Angle.Right.Add(-vOther.Angle.Value) : Angle.Left.Add(-vOther.Angle.Value);
                         }
 
-                        velocity._onCollision?.Fire(velocity.LastCollision);
-                        OnCollision.Fire(velocity.LastCollision);
-                        velocity.haveMovedSinceLastHitDetection = false;
+                        vOther._onCollision?.Fire(new Collision()
+                        {
+                            MovingObjectSpeed = velocity.speed,
+                            Angle = velocity.Angle.Opposite(),
+                            MovingObject = obstacleHit,
+                            ColliderHit = item.Collider,
+                        });
                     }
+
+                    velocity._onCollision?.Fire(velocity.LastCollision);
+                    OnCollision.Fire(velocity.LastCollision);
+
 
                     if (velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
                     {
@@ -198,8 +199,10 @@ public class ColliderGroup
                 else
                 {
                     var newLocation = item.Collider.Bounds.OffsetByAngleAndDistance(velocity.Angle, d, false);
-                    item.Collider.Bounds = newLocation;
-                    velocity.haveMovedSinceLastHitDetection = true;
+                    if (item.Collider.CanMoveTo(newLocation))
+                    {
+                        item.Collider.Bounds = newLocation;
+                    }
                 }
 
                 velocity._onVelocityEnforced?.Fire();

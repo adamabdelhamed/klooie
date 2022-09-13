@@ -51,7 +51,7 @@ public class Character : GameCollider
         this.ResizeTo(1, 1);
     }
 
-    public virtual bool CanCollideWith(GameCollider other)
+    public override bool CanCollideWith(GameCollider other)
     {
         if (base.CanCollideWith(other) == false) return false;
 

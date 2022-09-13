@@ -9,7 +9,6 @@ public class Velocity
         DoNothing
     }
 
-    internal bool haveMovedSinceLastHitDetection = true;
     internal Angle angle;
     internal float speed;
     internal float lastEvalTime;
