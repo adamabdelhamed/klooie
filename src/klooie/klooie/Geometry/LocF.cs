@@ -64,6 +64,9 @@ public readonly struct LocF
         float x2 = forward ? x + dx : x - dx;
         float y2 = up ? y - dy : y + dy;
 
+        x2 = ConsoleMath.Round(x2, 5);
+        y2 = ConsoleMath.Round(y2, 5);
+
         return new LocF(x2, y2);
     }
 

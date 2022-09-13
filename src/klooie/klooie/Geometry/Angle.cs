@@ -233,6 +233,11 @@ public readonly struct Angle
     }
 
     /// <summary>
+    /// Returns true if the angle is 0,90,180, or 270
+    /// </summary>
+    public bool IsGridAligned => Value == Right || Value == Left || Value == Up || Value == Down;
+
+    /// <summary>
     /// Converts an angle to radians
     /// </summary>
     /// <param name="degrees">the angle in degrees</param>

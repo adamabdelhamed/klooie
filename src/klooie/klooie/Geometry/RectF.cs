@@ -270,7 +270,18 @@ public readonly struct RectF
 
     public static RectF Offset(float x, float y, float w, float h, float dx, float dy) => new RectF(x + dx, y + dy, w, h);
 
-    public static RectF FromMass(ConsoleControl c, IEnumerable<ConsoleControl> others)
+    public RectF ToSameWithWiggleRoom() => new RectF(Left + .1f, Top + .1f, Width - .2f, Height - .2f);
+
+
+    public LocF[] Corners => new LocF[]
+    {
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight
+    };
+
+public static RectF FromMass(ConsoleControl c, IEnumerable<ConsoleControl> others)
     {
 
         var left = c.Left;

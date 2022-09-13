@@ -177,6 +177,8 @@ public class Rectangular : ObservableObject
     public float CalculateNormalizedDistanceTo(RectF other) => this.Bounds.CalculateNormalizedDistanceTo(other);
     public float CalculateNormalizedDistanceTo(Rectangular other) => this.Bounds.CalculateNormalizedDistanceTo(other.Bounds);
 
+    public LocF[] Corners() => Bounds.Corners;
+
 }
 
 public static class RectangularEx
