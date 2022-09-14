@@ -321,7 +321,10 @@
             Lifetime focusLt = null;
             this.Focused.Subscribe(() =>
             {
-                (lastFocused ?? firstControl)?.Focus();
+                if ((lastFocused ?? firstControl)?.CanFocus == true)
+                {
+                    (lastFocused ?? firstControl)?.Focus();
+                }
                 focusLt = new Lifetime();
                 Application.PushKeyForLifetime(ConsoleKey.UpArrow, HandleUpArrow, focusLt);
                 Application.PushKeyForLifetime(ConsoleKey.DownArrow, HandleDownArrow, focusLt);
@@ -603,7 +606,7 @@
             if (focusedPoint == null || Controls.Contains(focusedPoint) == false) return;
 
             lastFocused = Controls
-                .Where(c => c is DataPointControl)
+                .Where(c => c.CanFocus && c is DataPointControl)
                 .Where(p => p.Y < focusedPoint.Y)
                 .OrderBy(p => CalculateDistanceBetween(focusedPoint.DataPoint, (p as DataPointControl).DataPoint))
                 .FirstOrDefault() as DataPointControl;
