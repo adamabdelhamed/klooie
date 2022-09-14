@@ -1,6 +1,9 @@
 ﻿namespace klooie.Gaming;
 public class ColliderGroup
 {
+    private FrameRateMeter frameRateMeter = new FrameRateMeter();
+    public int FramesPerSecond => frameRateMeter.CurrentFPS;
+
     private int NextHashCode = 0;
     public Event<Collision> OnCollision { get; private set; } = new Event<Collision>();
     public int Count { get; private set; }
@@ -208,6 +211,7 @@ public class ColliderGroup
                 velocity._onVelocityEnforced?.Fire();
             }
         }
+        frameRateMeter.Increment();
     }
     private int CalcObstacles()
     {

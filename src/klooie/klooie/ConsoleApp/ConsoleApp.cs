@@ -540,48 +540,48 @@ public partial class ConsoleApp : EventLoop
         public ConsoleKeyInfo Info { get; set; }
         public TaskCompletionSource<bool> TaskSource { get; set; }
     }
+}
 
-    private class FrameRateMeter
+internal class FrameRateMeter
+{
+    private DateTime start;
+    private DateTime currentSecond;
+    private int framesInCurrentSecond;
+    private int framesInPreviousSecond;
+
+    public int TotalFrames { get; private set; }
+    public int CurrentFPS => framesInPreviousSecond;
+
+    public FrameRateMeter()
     {
-        private DateTime start;
-        private DateTime currentSecond;
-        private int framesInCurrentSecond;
-        private int framesInPreviousSecond;
-
-        public int TotalFrames { get; private set; }
-        public int CurrentFPS => framesInPreviousSecond;
-
-        public FrameRateMeter()
-        {
-            start = DateTime.UtcNow;
-            currentSecond = start;
-            framesInCurrentSecond = 0;
-        }
-
-        public void Increment()
-        {
-            var now = DateTime.UtcNow;
-            TotalFrames++;
-
-            if (AreSameSecond(now, currentSecond))
-            {
-                framesInCurrentSecond++;
-            }
-            else
-            {
-                framesInPreviousSecond = framesInCurrentSecond;
-                framesInCurrentSecond = 0;
-                currentSecond = now;
-            }
-        }
-
-        private bool AreSameSecond(DateTime a, DateTime b) =>
-            a.Year == b.Year &&
-            a.Month == b.Month &&
-            a.Day == b.Day &&
-            a.Hour == b.Hour &&
-            a.Minute == b.Minute &&
-            a.Second == b.Second;
+        start = DateTime.UtcNow;
+        currentSecond = start;
+        framesInCurrentSecond = 0;
     }
+
+    public void Increment()
+    {
+        var now = DateTime.UtcNow;
+        TotalFrames++;
+
+        if (AreSameSecond(now, currentSecond))
+        {
+            framesInCurrentSecond++;
+        }
+        else
+        {
+            framesInPreviousSecond = framesInCurrentSecond;
+            framesInCurrentSecond = 0;
+            currentSecond = now;
+        }
+    }
+
+    private bool AreSameSecond(DateTime a, DateTime b) =>
+        a.Year == b.Year &&
+        a.Month == b.Month &&
+        a.Day == b.Day &&
+        a.Hour == b.Hour &&
+        a.Minute == b.Minute &&
+        a.Second == b.Second;
 }
 
