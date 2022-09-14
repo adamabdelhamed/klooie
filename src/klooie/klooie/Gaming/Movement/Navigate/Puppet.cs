@@ -19,8 +19,6 @@ public class Puppet : Movement
     /// <param name="destination">the final location of the puppet</param>
     /// <returns>a task</returns>
     public static Movement Create(Velocity v, SpeedEval speed, RectF destination) => new Puppet(v, speed, destination);
-    private float Now => ConsoleMath.Round(Game.Current.MainColliderGroup.Now.TotalSeconds, 1);
-
     protected override async Task Move()
     {
         var obstacles = Velocity.GetObstacles().Select(e => e.Bounds.Grow(.1f)).ToList();
@@ -35,12 +33,10 @@ public class Puppet : Movement
             var stepsThatShouldHaveBeenTaken = Math.Ceiling(elapsedSeconds.TotalSeconds * speed);
             while(i >= stepsThatShouldHaveBeenTaken - 1)
             {
-                Console.WriteLine($"{Now}: Waiting: i == {i}, expectedTaken == {stepsThatShouldHaveBeenTaken}");
                 await Game.Current.DelayOrYield(100);
                 elapsedSeconds = Velocity.Group.Now - start;
                 stepsThatShouldHaveBeenTaken = Math.Ceiling(elapsedSeconds.TotalSeconds * speed);
             }
-            Console.WriteLine($"{Now}: Moving: {i}");
             Element.MoveCenterTo(path[i].Left + .5f, path[i].Top + .5f);
         }
     }
