@@ -272,19 +272,19 @@ public readonly struct Angle
             if (f < 0 || f >= 360) throw new ValidationArgException($"Angles must be >=0 and < 360, given: {val}");
             return new Angle(f);
         }
-        else if ("Up".Equals(val, StringComparison.OrdinalIgnoreCase))
+        else if (nameof(Up).Equals(val, StringComparison.OrdinalIgnoreCase))
         {
             return Up;
         }
-        else if ("Down".Equals(val, StringComparison.OrdinalIgnoreCase))
+        else if (nameof(Down).Equals(val, StringComparison.OrdinalIgnoreCase))
         {
             return Down;
         }
-        else if ("Left".Equals(val, StringComparison.OrdinalIgnoreCase))
+        else if (nameof(Left).Equals(val, StringComparison.OrdinalIgnoreCase))
         {
             return Left;
         }
-        else if ("Right".Equals(val, StringComparison.OrdinalIgnoreCase))
+        else if (nameof(Right).Equals(val, StringComparison.OrdinalIgnoreCase))
         {
             return Right;
         }
