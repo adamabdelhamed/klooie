@@ -14,8 +14,6 @@ public class Character : GameCollider
 
     public GameCollider Target { get; set; }
 
-    public virtual Angle DefaultTargetAngle => Velocity.Angle;
-
     public Angle TargetAngle
     {
         get
@@ -26,7 +24,7 @@ public class Character : GameCollider
             }
             else
             {
-                return Target == null ? DefaultTargetAngle : CalculateAngleToTarget();
+                return Target == null ? Velocity.Angle : CalculateAngleToTarget();
             }
         }
     }
