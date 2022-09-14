@@ -247,7 +247,6 @@ public partial class ConsoleApp : EventLoop
 
             int initialPosition = focusStack.Peek().FocusIndex;
 
-            DateTime start = DateTime.Now;
             do
             {
                 bool wrapped = CycleFocusIndex(forward);
@@ -260,7 +259,7 @@ public partial class ConsoleApp : EventLoop
 
                 if (wrapped && initialPosition < 0) break;
             }
-            while (focusStack.Peek().FocusIndex != initialPosition && DateTime.Now - start < TimeSpan.FromSeconds(.2));
+            while (focusStack.Peek().FocusIndex != initialPosition);
         }
 
         public void RestoreFocus()
