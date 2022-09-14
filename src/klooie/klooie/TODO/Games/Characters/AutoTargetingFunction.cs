@@ -5,7 +5,7 @@ public class AutoTargetingOptions
         public Character Source { get; set; }
         public string TargetTag { get; set; }
         public float AngularVisibility { get; set; } = 60;
-
+        public float Range { get; set; } = float.MaxValue;
         public RectF SourceBounds => Source.Bounds;
 
     }
@@ -60,6 +60,7 @@ public class AutoTargetingFunction : Lifetime
             if (element.HasSimpleTag(Options.TargetTag) == false) continue;
 
             if (element is Character && (element as Character).IsVisible == false) continue;
+            if (Options.Range != float.MaxValue && element.CalculateNormalizedDistanceTo(Options.Source) > Options.Range) continue;
 
             // todo - give auto targeting function access to the camera in a more structured way
             //if (Game.Current.CameraPanel.CameraBounds.Touches(element.Bounds) == false) continue;
