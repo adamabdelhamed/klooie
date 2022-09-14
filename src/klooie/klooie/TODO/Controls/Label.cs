@@ -228,6 +228,7 @@ public class NoFrillsLabel : ConsoleControl
         {
             _text = value;
             Width = value != null ? value.Length : 0;
+            FirePropertyChanged(nameof(Text));
         }
     }
 
