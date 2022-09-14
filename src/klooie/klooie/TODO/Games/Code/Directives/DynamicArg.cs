@@ -10,6 +10,7 @@ public class DynamicArg
     public static string WeaponDisplayName(Type t) => WeaponDisplayName(t.Name);
 
     public static string WeaponDisplayName(string typeName) => GetDisplayName(typeName);
+    public static string WeaponDisplayName(Weapon w) => WeaponDisplayName(w.GetType());
 
 
     public static string AbilityDisplayName<T>() where T : IAbility => AbilityDisplayName(typeof(T));
