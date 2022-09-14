@@ -51,7 +51,7 @@ public class NavigateTests
             Test = async (c) =>
             {
                 Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-                await NavigateTest(10, true, factory);
+                await NavigateTest(20, true, factory);
                 Game.Current.Stop();
             }
         });
