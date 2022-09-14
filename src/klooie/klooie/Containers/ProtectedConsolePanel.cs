@@ -31,8 +31,8 @@ public class ProtectedConsolePanel : Container
         ProtectedPanel = new ConsolePanel();
         ProtectedPanel.Parent = this;
         ProtectedPanel.Fill();
-        this.Subscribe(nameof(Background), () => ProtectedPanel.Background = Background, this);
-        this.Subscribe(nameof(Foreground), () => ProtectedPanel.Foreground = Foreground, this);
+        this.Sync(nameof(Background), () => ProtectedPanel.Background = Background, this);
+        this.Sync(nameof(Foreground), () => ProtectedPanel.Foreground = Foreground, this);
     }
 
     protected override void OnPaint(ConsoleBitmap context) => Compose(ProtectedPanel);
