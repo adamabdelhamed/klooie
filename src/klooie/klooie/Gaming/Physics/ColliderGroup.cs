@@ -158,7 +158,6 @@ public class ColliderGroup
                         item.Collider.Bounds = proposedBounds;
                     }
 
-
                     velocity.LastCollision = new Collision()
                     {
                         MovingObjectSpeed = velocity.speed,
