@@ -29,11 +29,10 @@
         protected virtual ConsoleString GetHistoryNext() => throw new NotImplementedException();
 
         protected virtual void OnInputBoxReady() { }
-        protected virtual Task Run(ArgAction toRun)
+        protected virtual async Task Run(ArgAction toRun)
         {
-            toRun.Invoke();
+            await toRun.InvokeAsync();
             SetOutput(null);
-            return Task.CompletedTask;
         }
 
         Lifetime refreshLt = new Lifetime();
@@ -106,43 +105,40 @@
             InputBox = inputPanel.Add(new TextBox() { X = "CMD> ".Length, Width = inputPanel.Width - "CMD> ".Length, Foreground = RGB.Gray, Background = RGB.Black });
             InputBox.RichTextEditor.TabHandler.TabCompletionHandlers.Add(new PowerArgsRichCommandLineReader(def, new List<ConsoleString>(), false));
             OnInputBoxReady();
-            top++;
-            ConsoleApp.Current.InvokeNextCycle(() =>
+            top++;           
+            if (myLt == refreshLt)
             {
-                if (myLt == refreshLt)
+                InputBox.Focused.Subscribe(() =>
                 {
-                    InputBox.Focused.Subscribe(() =>
+                    if (focusLt != null && focusLt.IsExpired == false && focusLt.IsExpiring == false)
                     {
-                        if (focusLt != null && focusLt.IsExpired == false && focusLt.IsExpiring == false)
-                        {
-                            focusLt.Dispose();
-                        }
+                        focusLt.Dispose();
+                    }
 
-                        focusLt = new Lifetime();
+                    focusLt = new Lifetime();
 
 
-                        Application.PushKeyForLifetime(ConsoleKey.Tab, () =>
-                        {
-                            var forgotten = OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));
-                        }, focusLt);
-                        Application.PushKeyForLifetime(ConsoleKey.Tab, ConsoleModifiers.Shift, () =>
-                        {
-                            var forgotten = OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, true, false, false));
-                        }, focusLt);
-
-                    }, refreshLt);
-
-                    InputBox.Unfocused.Subscribe(() =>
+                    Application.PushKeyForLifetime(ConsoleKey.Tab, () =>
                     {
-                        if (focusLt != null && focusLt.IsExpired == false && focusLt.IsExpiring == false)
-                        {
-                            focusLt.Dispose();
-                        }
-                    }, refreshLt);
+                        var forgotten = OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));
+                    }, focusLt);
+                    Application.PushKeyForLifetime(ConsoleKey.Tab, ConsoleModifiers.Shift, () =>
+                    {
+                        var forgotten = OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, true, false, false));
+                    }, focusLt);
 
-                    InputBox.Focus();
-                }
-            });
+                }, refreshLt);
+
+                InputBox.Unfocused.Subscribe(() =>
+                {
+                    if (focusLt != null && focusLt.IsExpired == false && focusLt.IsExpiring == false)
+                    {
+                        focusLt.Dispose();
+                    }
+                }, refreshLt);
+
+                InputBox.Focus();
+            }
 
             if (SuperCompact == false)
             {
