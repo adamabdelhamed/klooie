@@ -4,7 +4,7 @@ namespace klooie;
 public class TabControlOptions
 {
     public ObservableCollection<string> Tabs { get; private set; } = new ObservableCollection<string>();
-    public Func<string,ConsolePanel> BodyFactory { get; set; }
+    public Func<string,ConsoleControl> BodyFactory { get; set; }
     public bool TreatAKeyAndDKeyAsLeftRight { get; set; }
     public TabControlOptions(IEnumerable<string> tabs) => tabs.ForEach(t => Tabs.Add(t));
     public TabControlOptions(params string[] tabs) => tabs.ForEach(t => Tabs.Add(t));
