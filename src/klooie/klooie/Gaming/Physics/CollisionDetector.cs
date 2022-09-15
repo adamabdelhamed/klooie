@@ -79,7 +79,7 @@ public static class CollisionDetector
         var angle = massBounds.CalculateAngleTo(to.Bounds);
         var Visibility = 3 * massBounds.CalculateDistanceTo(to.Bounds);
         var prediction = Predict(from, angle, colliders, Visibility, castingMode);
-        return prediction.CollisionPredicted ? null : prediction.ColliderHit == to ? null : prediction.ColliderHit;
+        return prediction.CollisionPredicted == false ? null : prediction.ColliderHit == to ? null : prediction.ColliderHit;
     }
 
     public static CollisionPrediction Predict(ConsoleControl from, RectF[] obstacles, Angle angle, ConsoleControl[] colliders, float visibility, CastingMode mode, int bufferLen, CollisionPrediction toReuse, List<Edge> edgesHitOutput = null)
