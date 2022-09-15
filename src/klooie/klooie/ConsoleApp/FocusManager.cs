@@ -247,6 +247,16 @@ public partial class ConsoleApp : EventLoop
 
             int initialPosition = focusStack.Peek().FocusIndex;
 
+            if(FocusedControl != null)
+            {
+                var focusedIndex = focusStack.Peek().Controls.IndexOf(FocusedControl);
+                if(focusedIndex != initialPosition)
+                {
+                    focusStack.Peek().FocusIndex = focusedIndex;
+                    initialPosition = focusedIndex;
+                }
+            }
+
             do
             {
                 bool wrapped = CycleFocusIndex(forward);
