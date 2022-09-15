@@ -224,6 +224,7 @@
             {
                 ConsoleCharacter? prototype = InputBox.Value.Length == 0 ? (ConsoleCharacter?)null : InputBox.Value[InputBox.Value.Length - 1];
                 InputBox.RichTextEditor.RegisterKeyPress(keyInfo, prototype);
+                InputBox.FirePropertyChanged(nameof(InputBox.Value));
             }
             else if (keyInfo.Key == ConsoleKey.UpArrow)
             {
