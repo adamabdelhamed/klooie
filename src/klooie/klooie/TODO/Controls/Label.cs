@@ -238,5 +238,6 @@ public class NoFrillsLabel : ConsoleControl
         CanFocus = false;
     }
 
+    public override string ToString() => $"NoFrills: "+Text;
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(_text.IsUnstyled ? _text.ToString().ToConsoleString(Foreground,Background) : _text, 0, 0);
 }
