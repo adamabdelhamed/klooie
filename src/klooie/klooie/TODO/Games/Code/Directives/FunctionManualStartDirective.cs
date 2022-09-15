@@ -13,7 +13,7 @@ public class FunctionManualStartDirective : FunctionDirective
     }
 }
 
-public class FunctionManualStarter : Character
+public class FunctionManualStarter : GameCollider
 {
     private FunctionManualStartDirective directive;
     private TimeSpan lastStartedTime;

@@ -55,14 +55,14 @@ public class NavigationAtScaleGame : Game
         }
     }
 
-    private async Task<Character[]> PlaceClusterOfCharacters(LocF near, RGB color, int count)
+    private async Task<GameCollider[]> PlaceClusterOfCharacters(LocF near, RGB color, int count)
     {
-        var ret = new Character[count];
+        var ret = new GameCollider[count];
         for(var i = 0; i < count; i++)
         {
             var nextX = near.Left + random.Next(-Spray, Spray);
             var nextY = near.Top + random.Next(-Spray/2, Spray/2);
-            var character = GamePanel.Add(new Character() { Background = color });
+            var character = GamePanel.Add(new GameCollider() { Background = color });
             character.MoveTo(nextX, nextY);
             character.NudgeFree();
             ret[i] = character;
@@ -71,7 +71,7 @@ public class NavigationAtScaleGame : Game
         return ret;
     }
 
-    private void SendCharactersTo(Character[] characters, LocF goal)
+    private void SendCharactersTo(GameCollider[] characters, LocF goal)
     {
         foreach(var character in characters)
         {

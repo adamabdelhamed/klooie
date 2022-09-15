@@ -97,7 +97,7 @@ public class TabControl : ProtectedConsolePanel
         currentTabLabel = null;
         foreach(var str in Options.Tabs)
         {
-            var label = tabStack.Add(new NoFrillsLabel(str.ToConsoleString()) { CanFocus = true });
+            var label = tabStack.Add(new NoFrillsLabel(str.ToConsoleString()) { CompositionMode = CompositionMode.BlendBackground, CanFocus = true });
             currentTabLabel = str == CurrentTab ? label : currentTabLabel;
             tabs.Add(label);
         }

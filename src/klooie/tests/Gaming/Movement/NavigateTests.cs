@@ -1,10 +1,7 @@
 ﻿using klooie.Gaming;
-using klooie.Gaming.Code;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using System;
-using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace klooie.tests;
@@ -35,10 +32,10 @@ public class NavigateTests
     public void Navigate_Camera()
     {
         var ev = new Event<LocF>();
-        Character c = null;
+        GameCollider c = null;
         var factory = () =>
         {
-            c = new Character();
+            c = new GameCollider();
             c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
             return c;
         };
@@ -61,7 +58,7 @@ public class NavigateTests
     public void Navigate_Colliders() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 50, async (context) =>
     {
         Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-        var cMover = Game.Current.GamePanel.Add(new Character());
+        var cMover = Game.Current.GamePanel.Add(new GameCollider());
         cMover.Background = RGB.Red;
         cMover.ResizeTo(1, 1);
         cMover.MoveTo(Game.Current.GameBounds.Top + 4, Game.Current.GameBounds.Left + 2);
@@ -118,10 +115,10 @@ public class NavigateTests
     public void Puppet_Camera()
     {
         var ev = new Event<LocF>();
-        Character c = null;
+        GameCollider c = null;
         var factory = () =>
         {
-            c = new Character();
+            c = new GameCollider();
             c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
             return c;
         };
@@ -140,17 +137,17 @@ public class NavigateTests
         });
     }
 
-    public Task PuppetTest(float speed, bool camera, Func<Character> factory = null)
+    public Task PuppetTest(float speed, bool camera, Func<GameCollider> factory = null)
     {
         return NavOrPuppetTest(false, speed, camera, factory);
     }
 
-    public Task NavigateTest(float speed, bool camera, Func<Character> factory = null)
+    public Task NavigateTest(float speed, bool camera, Func<GameCollider> factory = null)
     {
         return NavOrPuppetTest(true, speed, camera, factory);
     }
 
-    public async Task NavOrPuppetTest(bool nav, float speed, bool camera, Func<Character> factory = null)
+    public async Task NavOrPuppetTest(bool nav, float speed, bool camera, Func<GameCollider> factory = null)
     {
         if (camera)
         {
@@ -161,7 +158,7 @@ public class NavigateTests
             AddTerrain(8, 10, 5);
         }
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
-        var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new Character());
+        var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new GameCollider());
         cMover.Background = RGB.Red;
         cMover.ResizeTo(1, 1);
         cMover.MoveTo(Game.Current.GameBounds.Top + 4, Game.Current.GameBounds.Left + 2);

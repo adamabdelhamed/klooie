@@ -19,12 +19,12 @@ public class MovementTests
     public void Movement_Basic() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI,120,5, async (context) =>
     {
         Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-        var cMover = Game.Current.GamePanel.Add(new Character());
+        var cMover = Game.Current.GamePanel.Add(new GameCollider());
         cMover.Background = RGB.Red;
         cMover.ResizeTo(3, 1);
         cMover.MoveTo(2, 2);
 
-        var cStill = Game.Current.GamePanel.Add(new Character());
+        var cStill = Game.Current.GamePanel.Add(new GameCollider());
         cStill.Background = RGB.Green;
         cStill.ResizeTo(3, 1);
         cStill.MoveTo(112, 2);
@@ -42,7 +42,7 @@ public class MovementTests
     public void Movement_TargetExpires() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 5, async (context) =>
     {
         Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-        var cMover = Game.Current.GamePanel.Add(new Character());
+        var cMover = Game.Current.GamePanel.Add(new GameCollider());
         cMover.Background = RGB.Red;
         cMover.ResizeTo(3, 1);
         cMover.MoveTo(2, 2);
@@ -79,10 +79,10 @@ public class MovementTests
     public void Movement_WanderCamera()
     {
         var ev = new Event<LocF>();
-        Character c = null;
+        GameCollider c = null;
         var factory = () =>
         {
-            c = new Character();
+            c = new GameCollider();
             c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
             return c;
         };
@@ -123,7 +123,7 @@ public class MovementTests
         }
     });
  
-    private async Task WanderTest(float speed, float duration, bool camera, Func<Character> factory = null)
+    private async Task WanderTest(float speed, float duration, bool camera, Func<GameCollider> factory = null)
     {
         Console.WriteLine("Speed: " + speed);
         if (camera)
@@ -135,7 +135,7 @@ public class MovementTests
             AddTerrain(15, 6, 3);
         }
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
-        var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new Character());
+        var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new GameCollider());
         cMover.Background = RGB.Red;
         cMover.ResizeTo(3, 1);
         cMover.MoveTo(Game.Current.Width / 2f, Game.Current.Height / 2f);

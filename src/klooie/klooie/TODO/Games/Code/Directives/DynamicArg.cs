@@ -5,43 +5,7 @@ namespace klooie.Gaming.Code;
 public class DynamicArg
 {
 
-    public static string WeaponDisplayName<T>() where T : Weapon => WeaponDisplayName(typeof(T));
-
-    public static string WeaponDisplayName(Type t) => WeaponDisplayName(t.Name);
-
-    public static string WeaponDisplayName(string typeName) => GetDisplayName(typeName);
-    public static string WeaponDisplayName(Weapon w) => WeaponDisplayName(w.GetType());
-
-
-    public static string AbilityDisplayName<T>() where T : IAbility => AbilityDisplayName(typeof(T));
-
-    public static string AbilityConsoleName(Type t) => AbilityDisplayName(t).Replace(" ", "");
-
-    public static string AbilityDisplayName(Type t) => AbilityDisplayName(t.Name);
-
-    public static string AbilityDisplayName(string typeName) => GetDisplayName(typeName);
-
-    public static string UsableItemDisplayName<T>() where T : UsableItem => UsableItemDisplayName(typeof(T));
-
-    public static string UsableItemDisplayName(Type t) => UsableItemDisplayName(t.Name);
-
-    public static string UsableItemDisplayName(string typeName) => GetDisplayName(typeName);
-
-
-    private static Dictionary<string, string> displayNameMemo = new Dictionary<string, string>();
-    private static string GetDisplayName(string typeName)
-    {
-        if (displayNameMemo.TryGetValue(typeName, out string ret) == false)
-        {
-            ret = FromVariable(typeName + "DisplayName").StringValue;
-            if (ret == "false")
-            {
-                ret = typeName;
-            }
-            displayNameMemo.Add(typeName, ret);
-        }
-        return ret;
-    }
+   
 
     public string Argument { get; set; }
     [ArgReviver]

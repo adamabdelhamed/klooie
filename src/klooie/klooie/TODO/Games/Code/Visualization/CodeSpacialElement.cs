@@ -14,7 +14,6 @@ public interface IGhost
 }
 public class CodeControl : GameCollider, IGhost
 {
-    public bool IsTargeted { get; set; }
     public bool IsDimmed { get; set; }
     public bool IsGhost
     {
@@ -65,7 +64,6 @@ public class CodeControl : GameCollider, IGhost
         this.Token = token;
         Subscribe(nameof(Bounds), () =>
         {
-            IsTargeted = MainCharacter.Current?.Target == this;
 
             if (this.State == CodeDisplayState.Infected || this.State == CodeDisplayState.InfectedWithHotfixReady)
             {
@@ -194,15 +192,8 @@ public class CodeControl : GameCollider, IGhost
     public static IEnumerable<CodeControl> CodeElements => Game.Current.GamePanel.Controls.WhereAs<CodeControl>();
 
     public static IEnumerable<CodeControl> CompiledCodeElements => CodeElements
-        .Where(c => c is MaliciousCodeElement == false)
-        .Where(c => c is OptimizationCodeElement == false)
         .ToArray();
 
-    protected override void OnPaint(ConsoleBitmap context)
-    {
-        var str = FormatToken();
-        if (IsTargeted) str = str.StringValue.ToConsoleString(RGB.Black, RGB.Cyan);
-        context.DrawString(str, 0, 0);
-    }
+    protected override void OnPaint(ConsoleBitmap context) => context.DrawString(FormatToken(), 0, 0);
 }
 

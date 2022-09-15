@@ -42,20 +42,6 @@ public static class CodeEditing
         }
     }
 
-    public static void ReplaceCompiledKeywordWithMalicuousOne(string replacement, CodeControl toReplace)
-    {
-        var lengthDelta = replacement.Length - toReplace.Token.Value.Length;
-        var codeToMove = CodeControl.CodeElements
-            .Where(c => c.Top == toReplace.Top && c.Left > toReplace.Left);
-
-        foreach (var codeElement in codeToMove)
-        {
-            codeElement.MoveBy(lengthDelta, 0);
-        }
-        toReplace.Dispose();
-        var replacementElement = Game.Current.GamePanel.Add(new MaliciousCodeElement(replacement));
-        replacementElement.MoveTo(toReplace.Left, toReplace.Top);
-    }
 
     public static CodeControl IdentifyNextRunningLine(int targetLine)
     {

@@ -127,7 +127,6 @@ public class ThreadRuntime : Lifetime
                 }
 
                 var matchingItem = CodeControl.CodeElements
-                    .Where(c => c is MaliciousCodeElement == false)
                     .Where(c => c.Token == block.CloseCurly).SingleOrDefault();
 
                 await CPUDelay();
