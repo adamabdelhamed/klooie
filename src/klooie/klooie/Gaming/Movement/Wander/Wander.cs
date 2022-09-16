@@ -113,33 +113,12 @@ public class Wander : Movement
                     WanderScore.NormalizeScores(scores);
                     scores = scores.OrderByDescending(s => s.FinalScore).ToList();
                     _BestScore = scores.First();
-                    var loc = elementBounds;
                     Velocity.Angle = _BestScore.Angle;
                     Velocity.Speed = Speed();
-                
-                    await YieldForVelocityAndDelay();
-                    var locNext = Element.Bounds;
-                    if (locNext.Equals(loc))
-                    {
-                        var overlaps = Element.GetObstacles().Where(e => e.Bounds.Touches(Element.Bounds)).ToList();
-                        if (overlaps.Any())
-                        {
-                            Element.NudgeFree(optimalAngle: Velocity.Angle.Opposite());
-                        }
-                        else if(IsStuck == false)
-                        {
-                            LastStuckTime = Game.Current.MainColliderGroup.Now;
-                            IsStuck = true;
-                        }
-                    }
-                    else
-                    {
-                        IsStuck = false;
-                        LastStuckTime = null;
-                    }
                     lkg = _BestScore.Angle;
+                    await YieldForVelocityAndDelay();
                 }
-
+                HandleBeingStuck(elementBounds);
                 _LastGoodAngle = lkg;
             }
         }
@@ -157,6 +136,22 @@ public class Wander : Movement
         }
     }
 
+    private void HandleBeingStuck(RectF previousLoction)
+    {
+        var locNow = Element.Bounds;
+        var stuckNow = locNow.CalculateDistanceTo(previousLoction) <= 10 * CollisionDetector.VerySmallNumber;
+        if (IsStuck == false && stuckNow)
+        {
+            LastStuckTime = Game.Current.MainColliderGroup.Now;
+            IsStuck = true;
+        }
+        else if (stuckNow == false)
+        {
+            IsStuck = false;
+            LastStuckTime = null;
+        }
+    }
+    
     private async Task YieldForVelocityAndDelay()
     {
         await YieldAsync();

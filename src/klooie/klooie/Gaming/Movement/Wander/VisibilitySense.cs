@@ -5,7 +5,7 @@ public class VisibilitySense : IWanderSense
     public ScoreComponent Measure(Wander wander, Angle angle, TimeSpan stuckTime)
     {
         var colliders = wander._Obstacles.ToArray();
-        LastPrediction = CollisionDetector.Predict(wander.Element, angle, colliders, wander.Options.Visibility, CastingMode.Rough);
+        LastPrediction = CollisionDetector.Predict(wander.Element, angle, colliders, wander.Options.Visibility, CastingMode.Precise);
         var visibilityScore = 0f;
         if (LastPrediction.CollisionPredicted == false)
         {
