@@ -154,9 +154,9 @@ public class ColliderGroup
                 {
                     var obstacleHit = hitPrediction.ColliderHit;
                     var proposedBounds = velocity.Collider.Bounds.RadialOffset(velocity.Angle, hitPrediction.LKGD, false);
-                    if (item.Collider.CanMoveTo(proposedBounds))
+                    if (WouldCauseTouching(obstacleBuffer, numColliders, proposedBounds) == false)
                     {
-                        item.Collider.Bounds = proposedBounds;
+                        item.Collider.TryMoveTo(proposedBounds.Left, proposedBounds.Top);
                     }
 
                     velocity.LastCollision = new Collision()
@@ -212,6 +212,15 @@ public class ColliderGroup
             }
         }
         frameRateMeter.Increment();
+    }
+
+    private bool WouldCauseTouching(RectF[] obstacleBuffer, int bufferLength, RectF proposed)
+    {
+        for(var i = 0; i < bufferLength; i++)
+        {
+            if (obstacleBuffer[i].CalculateDistanceTo(proposed) == 0) return true;
+        }
+        return false;
     }
     private int CalcObstacles()
     {
