@@ -90,6 +90,12 @@ public class Lifetime : Disposable, ILifetime
     /// </summary>
     public bool ShouldContinue => IsExpired == false && IsExpiring == false;
 
+
+    /// <summary>
+    /// Returns false if the lifetime is not expired or expiring
+    /// </summary>
+    public bool ShouldStop => !ShouldContinue;
+
     /// <summary>
     /// Creates a new lifetime
     /// </summary>

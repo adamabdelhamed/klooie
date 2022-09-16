@@ -36,6 +36,11 @@ public interface ILifetimeManager
     /// true if the lifetime is not expired or expiring
     /// </summary>
     bool ShouldContinue { get; }
+
+    /// <summary>
+    /// false if the lifetime is not expired or expiring
+    /// </summary>
+    bool ShouldStop { get; }
 }
 
 /// <summary>
@@ -69,6 +74,8 @@ internal class LifetimeManager : ILifetimeManager
     public bool IsExpired { get; internal set; }
     public bool IsExpiring { get; internal set; }
     public bool ShouldContinue => IsExpired == false && IsExpiring == false;
+
+    public bool ShouldStop => !ShouldContinue;
 
     internal void Finish() => NotificationBufferPool.Notify(subscribers, subscribersWithParams);
 
