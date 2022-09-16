@@ -51,7 +51,10 @@ public static class GamingTest
             WindowWidth = options.GameWidth,
             WindowHeight = options.GameHeight + 1
         };
-
+        if(options.Mode == UITestMode.HeadOnly)
+        {
+            ConsoleProvider.Current = new StdConsoleProvider();
+        }
         var game = new TestGame(options);
         var testManager = new UITestManager(game, options.TestId, options.Mode);
         if (options.Test != null)

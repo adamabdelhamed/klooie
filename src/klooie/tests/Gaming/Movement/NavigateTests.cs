@@ -2,6 +2,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace klooie.tests;
@@ -16,7 +18,15 @@ public class NavigateTests
     public void Navigate_Basic() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI,120,50, async (context) =>
     {
         Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-        await NavigateTest(50, false);
+        await NavigateTest(50, false, null, false);
+        Game.Current.Stop();
+    });
+
+    [TestMethod]
+    public void Navigate_Tight() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 50, async (context) =>
+    {
+        Game.Current.GamePanel.Background = new RGB(20, 20, 20);
+        await NavigateTest(50, false, null, true);
         Game.Current.Stop();
     });
 
@@ -24,12 +34,17 @@ public class NavigateTests
     public void Puppet_Basic() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 50, async (context) =>
     {
         Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-        await PuppetTest(30, false);
+        await PuppetTest(30, false, null, false);
         Game.Current.Stop();
     });
 
     [TestMethod]
     public void Navigate_Camera()
+    {
+        NavigateCamera(true);
+    }
+
+    public void NavigateCamera(bool headless)
     {
         var ev = new Event<LocF>();
         GameCollider c = null;
@@ -43,12 +58,12 @@ public class NavigateTests
         {
             Camera = true,
             FocalPointChanged = ev,
-            Mode = UITestMode.RealTimeFYI,
+            Mode = headless ? UITestMode.RealTimeFYI : UITestMode.HeadOnly,
             TestId = TestContext.TestId(),
             Test = async (c) =>
             {
                 Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-                await NavigateTest(20, true, factory);
+                await NavigateTest(250, true, factory, false);
                 Game.Current.Stop();
             }
         });
@@ -131,31 +146,37 @@ public class NavigateTests
             Test = async (c) =>
             {
                 Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-                await PuppetTest(100, true, factory);
+                await PuppetTest(100, true, factory, false);
                 Game.Current.Stop();
             }
         });
     }
 
-    public Task PuppetTest(float speed, bool camera, Func<GameCollider> factory = null)
+    public Task PuppetTest(float speed, bool camera, Func<GameCollider> factory, bool extraTight)
     {
-        return NavOrPuppetTest(false, speed, camera, factory);
+        return NavOrPuppetTest(false, speed, camera, factory, extraTight);
     }
 
-    public Task NavigateTest(float speed, bool camera, Func<GameCollider> factory = null)
+    public Task NavigateTest(float speed, bool camera, Func<GameCollider> factory, bool extraTight)
     {
-        return NavOrPuppetTest(true, speed, camera, factory);
+        return NavOrPuppetTest(true, speed, camera, factory, extraTight);
     }
 
-    public async Task NavOrPuppetTest(bool nav, float speed, bool camera, Func<GameCollider> factory = null)
+    private static float NowDisplay => ConsoleMath.Round(Game.Current.MainColliderGroup.Now.TotalSeconds, 2);
+
+    public async Task NavOrPuppetTest(bool nav, float speed, bool camera, Func<GameCollider> factory, bool extraTight)
     {
-        if (camera)
+        if(extraTight)
         {
-            AddTerrain(15, 60, 30);
+            MovementTests.AddTerrain(2.1f, 2, 1);
+        }
+        else if (camera)
+        {
+            MovementTests.AddTerrain(15, 60, 30);
         }
         else
         {
-            AddTerrain(8, 10, 5);
+            MovementTests.AddTerrain(8, 10, 5);
         }
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
         var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new GameCollider());
@@ -164,21 +185,77 @@ public class NavigateTests
         cMover.MoveTo(Game.Current.GameBounds.Top + 4, Game.Current.GameBounds.Left + 2);
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
 
+        var path = new List<RectF>() { cMover.Bounds };
+        cMover.Subscribe(nameof(cMover.Bounds), () =>
+         {
+             path.Add(cMover.Bounds);
+             var overlaps = cMover.GetOverlappingObstacles().ToArray();
+             if (overlaps.Any())
+             {
+                 Assert.Fail($"{NowDisplay}: Overlap decected, cMoverBounds = {cMover.Bounds}, First overlapping object is a {overlaps.First().GetType().Name} at bounds {overlaps.First().Bounds}");
+             }
+
+             var touchingButNotOverlapping = cMover.GetObstacles()
+             .Where(o => o.CalculateDistanceTo(cMover) == 0).ToArray();
+             if(touchingButNotOverlapping.Any())
+             {
+                 Assert.Fail($"{NowDisplay}: Touching decected, cMoverBounds = {cMover.Bounds}, First overlapping object is a {touchingButNotOverlapping.First().GetType().Name} at bounds {touchingButNotOverlapping.First().Bounds}");
+             }
+
+         }, cMover);
+
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
         bool success;
+        var goal = extraTight ? Game.Current.GameBounds.Center.ToRect(1, 1) : Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height);
+
+        Game.Current.Invoke(async () =>
+        {
+            while (path.None()) await Task.Delay(10);
+            await Task.Delay(500);
+            var lastIndex = path.Count - 1;
+            var lastBounds = path.Last();
+            var lastNow = Game.Current.MainColliderGroup.Now;
+            while (cMover.ShouldContinue)
+            {
+                while (Game.Current.MainColliderGroup.Now - lastNow < TimeSpan.FromSeconds(1))
+                {
+                    await Task.Delay(10);
+                }
+                lastNow = Game.Current.MainColliderGroup.Now;
+
+                var movesSinceLastCheck = path.Skip(lastIndex).ToArray();
+                if (movesSinceLastCheck.Length < 2)  Assert.Fail($"{NowDisplay}: We appeared to get stuck");
+                var traveled = 0f;
+                for(var i = 0; i < movesSinceLastCheck.Length-1; i++)
+                {
+                    var d = movesSinceLastCheck[i].CalculateDistanceTo(movesSinceLastCheck[i + 1]);
+                    traveled += d;
+                }
+
+                if(traveled < 2)
+                {
+                    Assert.Fail($"{NowDisplay}: cMover only moved {ConsoleMath.Round(traveled,2)} units in the last second");
+                }
+
+                lastIndex = path.Count - 1;
+            }
+        });
+        
         if (nav)
         {
-            success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => speed, () => new GameCollider(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
+            success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => speed, ()=> new ColliderBox(goal), new NavigateOptions()
             {
+                CloseEnough = 5,
                 Show = true
-            }), Task.Delay(camera ? 240000 : 10000).ToLifetime());
+            }), Task.Delay(camera ? 25000 : 10000).ToLifetime());
         }
         else
         {
-            success = await Mover.InvokeOrTimeout(Puppet.Create(cMover.Velocity, () => speed, Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), Task.Delay(camera ? 60000 : 10000).ToLifetime());
+            
+            success = await Mover.InvokeOrTimeout(Puppet.Create(cMover.Velocity, () => speed, goal), Task.Delay(camera ? 60000 : 10000).ToLifetime());
         }
-        Assert.IsTrue(success);
+        Assert.IsTrue(success, $"{NowDisplay}:Failed to reach target");
         await Task.Delay(250);
         await Game.Current.RequestPaintAsync();
         Game.Current.GamePanel.Controls.Clear();
@@ -186,42 +263,7 @@ public class NavigateTests
         Console.WriteLine();
     }
 
-    private static void AddTerrain(float spacing, float w, float h)
-    {
-        var bounds = Game.Current.GameBounds;
-
-        var leftWall = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.White });
-        leftWall.MoveTo(bounds.Left, bounds.Top);
-        leftWall.ResizeTo(2, bounds.Height);
-        leftWall.GiveWiggleRoom();
-
-        var rightWall = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.White });
-        rightWall.MoveTo(bounds.Right - 2, bounds.Top);
-        rightWall.ResizeTo(2, bounds.Height);
-        rightWall.GiveWiggleRoom();
-
-        var topWall = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.White });
-        topWall.MoveTo(bounds.Left, bounds.Top);
-        topWall.ResizeTo(bounds.Width, 1);
-        topWall.GiveWiggleRoom();
-
-        var bottonWall = Game.Current.GamePanel.Add(new GameCollider() { Background = RGB.White });
-        bottonWall.MoveTo(bounds.Left, bounds.Bottom - 1);
-        bottonWall.ResizeTo(Game.Current.GameBounds.Width, 1);
-        bottonWall.GiveWiggleRoom();
-
-        for (var x = bounds.Left + spacing; x < bounds.Right - (spacing+w); x += w + spacing)
-        {
-            for (var y = bounds.Top + spacing / 2f; y < bounds.Bottom - (spacing+h) / 2; y += h + (spacing / 2f))
-            {
-                var collider = Game.Current.GamePanel.Add(new GameCollider());
-                collider.ResizeTo(w, h);
-                collider.MoveTo(x, y);
-                collider.Background = RGB.DarkGreen;
-            }
-        }
-    }
-
+ 
     public class Right : Movement
     {
         public Right(Velocity v, SpeedEval innerSpeedEval) : base(v, innerSpeedEval) { }

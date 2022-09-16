@@ -76,6 +76,22 @@ public class MovementTests
     });
 
     [TestMethod]
+    public void Movement_WanderTight() => GamingTest.Run(new GamingTestOptions()
+    {
+        TestId = TestContext.TestId(),
+        Mode = UITestMode.RealTimeFYI,
+        GameWidth = 120,
+        GameHeight = 40,
+        Test = async (context) =>
+        {
+            await WanderTest(20, 5000, false, null, true);
+            await Game.Current.RequestPaintAsync();
+            await Game.Current.Delay(500);
+            Game.Current.Stop();
+        }
+    });
+
+    [TestMethod]
     public void Movement_WanderCamera()
     {
         var ev = new Event<LocF>();
@@ -126,7 +142,12 @@ public class MovementTests
     private async Task WanderTest(float speed, float duration, bool camera, Func<GameCollider> factory, bool extraTight)
     {
         Console.WriteLine("Speed: " + speed);
-        if (camera)
+
+        if(extraTight)
+        {
+            AddTerrain(5f, 2, 1);
+        }
+        else if (camera)
         {
             AddTerrain(15, 60, 30);
         }
@@ -138,7 +159,16 @@ public class MovementTests
         var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new GameCollider());
         cMover.Background = RGB.Red;
         cMover.ResizeTo(3, 1);
-        cMover.MoveTo(Game.Current.Width / 2f, Game.Current.Height / 2f);
+
+        if(extraTight)
+        {
+            cMover.MoveTo(Game.Current.GameBounds.Left + 2, Game.Current.GameBounds.Top + 1) ;
+        }
+        else
+        {
+            cMover.MoveTo(Game.Current.Width / 2f, Game.Current.Height / 2f);
+        }
+
         cMover.Subscribe(nameof(cMover.Bounds), () =>
         {
             var overlaps = cMover.GetObstacles()
@@ -151,10 +181,10 @@ public class MovementTests
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
         cMover.Velocity.Angle = 45;
         var failed = false;
+        var lastPosition = cMover.Center();
         Game.Current.Invoke(async () =>
         {
             var dueTime = Game.Current.MainColliderGroup.Now + TimeSpan.FromMilliseconds(duration);
-            var lastPosition = cMover.Center();
             while (Game.Current.MainColliderGroup.Now < dueTime)
             {
                 await Game.Current.Delay(1000);
@@ -169,14 +199,23 @@ public class MovementTests
         });
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
-        await Mover.InvokeWithShortCircuit(Wander.Create(cMover.Velocity, () => speed, new WanderOptions()));
+        await Mover.InvokeWithShortCircuit(Wander.Create(cMover.Velocity, () => speed, new WanderOptions()
+        {
+            CuriousityPoint = ()=> extraTight ? new ColliderBox(Game.Current.GameBounds.Center.ToRect(1,1)) : null,
+        }));
         Assert.IsTrue(cMover.IsExpired);
-        Assert.IsFalse(failed);
+        Assert.IsFalse(failed, "Failed to keep moving");
+
+        if(extraTight)
+        {
+            Assert.IsTrue(lastPosition.CalculateDistanceTo(Game.Current.GameBounds.Center) < 5, "Too far from center");
+        }
+
         Game.Current.GamePanel.Controls.Clear();
         Console.WriteLine();
     }
 
-    private static void AddTerrain(float spacing, float w, float h)
+    public static void AddTerrain(float spacing, float w, float h)
     {
         var bounds = Game.Current.GameBounds;
 
@@ -200,9 +239,10 @@ public class MovementTests
         bottonWall.ResizeTo(Game.Current.GameBounds.Width, 1);
         bottonWall.GiveWiggleRoom();
 
-        for (var x = bounds.Left + spacing; x < bounds.Right - spacing; x += w + spacing)
+        var outerSpacing = Math.Max(5, spacing);
+        for (var x = bounds.Left + outerSpacing; x < bounds.Right - outerSpacing; x += w + spacing)
         {
-            for (var y = bounds.Top + spacing / 2f; y < bounds.Bottom - spacing / 2; y += h + (spacing / 2f))
+            for (var y = bounds.Top + outerSpacing / 2f; y < bounds.Bottom - outerSpacing / 2; y += h + (spacing / 2f))
             {
                 var collider = Game.Current.GamePanel.Add(new Terrain());
                 collider.ResizeTo(w, h);
