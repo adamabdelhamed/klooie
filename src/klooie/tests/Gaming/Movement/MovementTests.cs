@@ -68,7 +68,7 @@ public class MovementTests
         GameHeight = 40,
         Test = async (context) =>
         {
-            await WanderTest(20, 5000, false);
+            await WanderTest(20, 5000, false, null, false);
             await Game.Current.RequestPaintAsync();
             await Game.Current.Delay(500);
             Game.Current.Stop();
@@ -97,7 +97,7 @@ public class MovementTests
             Test = async (context) =>
             {
                 Game.Current.LayoutRoot.IsVisible = false;
-                await WanderTest(20, 8000, true, factory);
+                await WanderTest(20, 8000, true, factory, false);
                 await Game.Current.RequestPaintAsync();
                 await Game.Current.Delay(500);
                 Game.Current.Stop();
@@ -115,7 +115,7 @@ public class MovementTests
         {
             for (var s = 5f; s < 200; s += 25)
             {
-                await WanderTest(s,300, false);
+                await WanderTest(s,300, false, null, false);
             }
             await Game.Current.RequestPaintAsync();
             await Game.Current.Delay(500);
@@ -123,7 +123,7 @@ public class MovementTests
         }
     });
  
-    private async Task WanderTest(float speed, float duration, bool camera, Func<GameCollider> factory = null)
+    private async Task WanderTest(float speed, float duration, bool camera, Func<GameCollider> factory, bool extraTight)
     {
         Console.WriteLine("Speed: " + speed);
         if (camera)
@@ -145,7 +145,7 @@ public class MovementTests
             .Where(o => o.OverlapPercentage(cMover) > 0).ToArray();
             if(overlaps.Any())
             {
-
+                Assert.Fail("overlaps detected");
             }
         }, cMover);
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
