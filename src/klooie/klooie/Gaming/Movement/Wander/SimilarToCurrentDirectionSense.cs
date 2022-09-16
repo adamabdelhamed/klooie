@@ -4,8 +4,18 @@ public class SimilarToCurrentDirectionSense : IWanderSense
 {
     private List<Angle> previousAngles = new List<Angle>();
 
-    public ScoreComponent Measure(Wander wander, Angle angle)
+    public ScoreComponent Measure(Wander wander, Angle angle, TimeSpan stuckTime)
     {
+        if(stuckTime > TimeSpan.FromSeconds(.25))
+        {
+            return new ScoreComponent()
+            {
+                Id = "LAST",
+                Value = 0,
+                Weight = 0
+            };
+        }
+
         if (wander._LastGoodAngle.HasValue == false)
         {
             return new ScoreComponent()

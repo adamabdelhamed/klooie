@@ -95,7 +95,7 @@ public class Wander : Movement
                 if (_CuriosityPoint != null && cpd <= Options.CloseEnough)
                 {
                     var a = Element.Bounds.Center.CalculateAngleTo(_CuriosityPoint.Center());
-                    Element.MoveTo(_CuriosityPoint.Left, _CuriosityPoint.Top);
+                    Element.TryMoveTo(_CuriosityPoint.Left, _CuriosityPoint.Top);
                     lkg = a;
                     await YieldForVelocityAndDelay();
                 }
@@ -108,7 +108,8 @@ public class Wander : Movement
                 }
                 else
                 {
-                    var scores = GetMovementAngleCandidates().Select(a => ScoreThisOption(a)).ToList();
+                    var stuckTime = IsStuck ? Velocity.Group.Now - LastStuckTime.Value : TimeSpan.Zero; ;
+                    var scores = GetMovementAngleCandidates().Select(a => ScoreThisOption(a, stuckTime)).ToList();
                     WanderScore.NormalizeScores(scores);
                     scores = scores.OrderByDescending(s => s.FinalScore).ToList();
                     _BestScore = scores.First();
@@ -125,7 +126,7 @@ public class Wander : Movement
                         {
                             Element.NudgeFree(optimalAngle: Velocity.Angle.Opposite());
                         }
-                        else
+                        else if(IsStuck == false)
                         {
                             LastStuckTime = Game.Current.MainColliderGroup.Now;
                             IsStuck = true;
@@ -134,6 +135,7 @@ public class Wander : Movement
                     else
                     {
                         IsStuck = false;
+                        LastStuckTime = null;
                     }
                     lkg = _BestScore.Angle;
                 }
@@ -187,16 +189,16 @@ public class Wander : Movement
 
     }
 
-    private WanderScore ScoreThisOption(Angle angle)
+    private WanderScore ScoreThisOption(Angle angle, TimeSpan stuckDuration)
     {
         return new WanderScore()
         {
             Angle = angle,
             Components = new List<ScoreComponent>()
                 {
-                    _VisibilitySense.Measure(this, angle).WeighIfNotSet(Options.Weights[typeof(VisibilitySense)]),
-                    _CloserToTargetSense.Measure(this, angle).WeighIfNotSet(Options.Weights[typeof(CloserToTargetSense)]),
-                    _SimilarToCurrentDirectionSense.Measure(this, angle).WeighIfNotSet(Options.Weights[typeof(SimilarToCurrentDirectionSense)]),
+                    _VisibilitySense.Measure(this, angle, stuckDuration).WeighIfNotSet(Options.Weights[typeof(VisibilitySense)]),
+                    _CloserToTargetSense.Measure(this, angle, stuckDuration).WeighIfNotSet(Options.Weights[typeof(CloserToTargetSense)]),
+                    _SimilarToCurrentDirectionSense.Measure(this, angle, stuckDuration).WeighIfNotSet(Options.Weights[typeof(SimilarToCurrentDirectionSense)]),
                 }
         };
     }

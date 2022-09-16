@@ -2,13 +2,13 @@
 
     public class CloserToTargetSense : IWanderSense
     {
-        public ScoreComponent Measure(Wander wander, Angle angle)
+        public ScoreComponent Measure(Wander wander, Angle angle, TimeSpan stuckTime)
         {
             float doesItGetMeCloserScore = 0;
             //score component - If I have a curiosity point then does this angle get me closer or farther?
 
             var dt = (float)(wander.Speed() * Game.Current.MainColliderGroup.LatestDT);
-            if (wander._CuriosityPoint != null)
+            if (wander._CuriosityPoint != null && stuckTime < TimeSpan.FromSeconds(.25))
             {
                 var castArea = wander.Element.Bounds.RadialOffset(angle, 1f);
                 var dNow = wander.Element.Bounds.CalculateNormalizedDistanceTo(wander._CuriosityPoint.Bounds);
