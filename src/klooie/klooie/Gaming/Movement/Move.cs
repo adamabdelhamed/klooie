@@ -76,6 +76,7 @@ public abstract class Movement<T> : Movement
 
 public abstract class Movement : Lifetime
 {
+    protected float NowDisplay => ConsoleMath.Round(Velocity.Group.Now.TotalSeconds, 2);
     public Velocity Velocity { get; private set; }
     public SpeedEval Speed { get; set; }
     public GameCollider Element => Velocity.Collider as GameCollider;
