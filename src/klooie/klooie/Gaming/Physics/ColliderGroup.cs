@@ -1,6 +1,8 @@
 ﻿namespace klooie.Gaming;
 public class ColliderGroup
 {
+    private const float MaxDTSeconds = .05f;
+    private const float MaxDTMilliseconds = MaxDTSeconds * 1000f;
     private FrameRateMeter frameRateMeter = new FrameRateMeter();
     public int FramesPerSecond => frameRateMeter.CurrentFPS;
 
@@ -92,7 +94,6 @@ public class ColliderGroup
         while (lt.IsExpired == false)
         {
             await Task.Yield();
-
             if (PauseManager?.State == PauseManager.PauseState.Paused)
             {
                 stopwatch.Stop();
@@ -110,7 +111,7 @@ public class ColliderGroup
     {
         var nowTime = Now;
         var now = (float)nowTime.TotalSeconds;
-        LatestDT = (float)(nowTime - lastExecuteTime).TotalMilliseconds;
+        LatestDT = Math.Min(MaxDTMilliseconds, (float)(nowTime - lastExecuteTime).TotalMilliseconds);
         lastExecuteTime = nowTime;
         var numColliders = CalcObstacles();
         var vSpan = velocities.Table.AsSpan();
@@ -140,7 +141,7 @@ public class ColliderGroup
                     velocity._onVelocityEnforced?.Fire();
                     continue;
                 }
-                var dt = ((float)now - velocity.lastEvalTime) * SpeedRatio * velocity.SpeedRatio;
+                var dt = Math.Min(MaxDTSeconds, ((float)now - velocity.lastEvalTime) * SpeedRatio * velocity.SpeedRatio);
                 velocity.lastEvalTime = now;
 
                 // before moving the object, see if the movement would collide with another object
