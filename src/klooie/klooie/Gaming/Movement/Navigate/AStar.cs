@@ -72,18 +72,28 @@ public static class AStar
 		List<LocF> path = new List<LocF>();
 		Node currentNode = endNode;
 
-		Node previousNode = null;
 		while (currentNode != startNode)
 		{
-			var isLateralOrVericalMove = previousNode != null && (previousNode.Left == currentNode.Left || previousNode.Top == currentNode.Top);
-			if (isLateralOrVericalMove == false)
-			{
-				path.Add(new LocF(currentNode.Left, currentNode.Top));
-			}
-			previousNode = currentNode;
+			path.Add(new LocF(currentNode.Left, currentNode.Top));
 			currentNode = currentNode.parent;
 		}
 		path.Reverse();
+
+		for(var i = 1; i < path.Count -1; i++)
+        {
+			var previousNode = path[i - 1];
+			var thisNode = path[i];
+			var nextNode = path[i+1];
+
+			var areVerticallyStacked = thisNode.Left == previousNode.Left && thisNode.Left == nextNode.Left;
+			var areHorizontallyStacked = thisNode.Top == previousNode.Top && thisNode.Top == nextNode.Top;
+
+			var isLateralOrVericalMove = areVerticallyStacked || areHorizontallyStacked;
+			if(isLateralOrVericalMove)
+            {
+				path.RemoveAt(i--);
+            }
+		}
 
 		return path;
 
@@ -147,10 +157,17 @@ public static class AStar
             for (int i = 0; i < obstacles.Count; i++)
 			{
                 RectF obstacle = obstacles[i];
-                for (var x = (int)Math.Floor(obstacle.Left); x <= (int)Math.Ceiling(obstacle.Right); x++)
+
+				var left = (int)Math.Max(obstacle.Left, 0);
+				var right = (int)Math.Min(this.w - 1, obstacle.Right);
+
+				var top = (int)Math.Max(obstacle.Top, 0);
+				var bottom = (int)Math.Min(this.h - 1, obstacle.Bottom);
+
+				for (var x = left; x <= right; x++)
 				{
 					var xSpan = nodes[x].AsSpan();
-					for (var y = (int)Math.Floor(obstacle.Top); y <= (int)Math.Ceiling(obstacle.Bottom); y++)
+					for (var y = top; y <= bottom; y++)
 					{
 						if (x >= 0 && y >= 0 && x < w && y < h)
 						{
