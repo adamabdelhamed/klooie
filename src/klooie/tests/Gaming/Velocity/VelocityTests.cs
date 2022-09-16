@@ -173,6 +173,7 @@ public class TestStopwatch : IStopwatch
 {
     public TimeSpan Elapsed { get; set; }
 
+    public bool SupportsMaxDT => false;
     public void Start() { }
     public void Stop() { }
 }

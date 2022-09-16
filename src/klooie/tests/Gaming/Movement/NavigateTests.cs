@@ -23,12 +23,19 @@ public class NavigateTests
     });
 
     [TestMethod]
-    public void Navigate_Tight() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 50, async (context) =>
+    public void Navigate_Tight()
     {
-        Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-        await NavigateTest(50, false, null, true);
-        Game.Current.Stop();
-    });
+        for (var i = 0; i < 10; i++)
+        {
+            GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 50, async (context) =>
+            {
+                Game.Current.GamePanel.Background = new RGB(20, 20, 20);
+                await NavigateTest(50, false, null, true);
+                Game.Current.Stop();
+            });
+            Console.WriteLine($"Iteration {i+1} succeeded");
+        }
+    }
 
     [TestMethod]
     public void Puppet_Basic() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 50, async (context) =>
@@ -166,7 +173,8 @@ public class NavigateTests
 
     public async Task NavOrPuppetTest(bool nav, float speed, bool camera, Func<GameCollider> factory, bool extraTight)
     {
-        if(extraTight)
+        bool success = false;
+        if (extraTight)
         {
             MovementTests.AddTerrain(2.1f, 2, 1);
         }
@@ -181,13 +189,14 @@ public class NavigateTests
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
         var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new GameCollider());
         cMover.Background = RGB.Red;
-        cMover.ResizeTo(1, 1);
-        cMover.MoveTo(Game.Current.GameBounds.Top + 4, Game.Current.GameBounds.Left + 2);
+        cMover.ResizeTo(.8f, .8f);
+        cMover.MoveTo(Game.Current.GameBounds.Top + 2.5f, Game.Current.GameBounds.Left + 1.5f);
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
 
         var path = new List<RectF>() { cMover.Bounds };
         cMover.Subscribe(nameof(cMover.Bounds), () =>
          {
+             if (success) return;
              path.Add(cMover.Bounds);
              var overlaps = cMover.GetOverlappingObstacles().ToArray();
              if (overlaps.Any())
@@ -206,7 +215,7 @@ public class NavigateTests
 
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
-        bool success;
+       
         var goal = extraTight ? Game.Current.GameBounds.Center.ToRect(1, 1) : Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height);
 
         Game.Current.Invoke(async () =>
@@ -218,10 +227,11 @@ public class NavigateTests
             var lastNow = Game.Current.MainColliderGroup.Now;
             while (cMover.ShouldContinue)
             {
-                while (Game.Current.MainColliderGroup.Now - lastNow < TimeSpan.FromSeconds(1))
+                while (Game.Current.MainColliderGroup.Now - lastNow < TimeSpan.FromSeconds(2))
                 {
                     await Task.Delay(10);
                 }
+                if (success) break;
                 lastNow = Game.Current.MainColliderGroup.Now;
 
                 var movesSinceLastCheck = path.Skip(lastIndex).ToArray();
@@ -233,9 +243,9 @@ public class NavigateTests
                     traveled += d;
                 }
 
-                if(traveled < 2)
+                if(traveled == 0)
                 {
-                    Assert.Fail($"{NowDisplay}: cMover only moved {ConsoleMath.Round(traveled,2)} units in the last second");
+                    Assert.Fail($"{NowDisplay}: cMover didn't move in the last 2 seconds");
                 }
 
                 lastIndex = path.Count - 1;

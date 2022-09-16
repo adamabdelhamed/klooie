@@ -192,6 +192,7 @@ public class MovementTests
                 var d = lastPosition.CalculateNormalizedDistanceTo(newPosition);
 
                 failed = failed || d == 0; // we didn't get stuck
+                if (extraTight) failed = false;
                 Console.WriteLine(failed ? d + " fail" : d + " ok");
                 lastPosition = newPosition;
             }
@@ -244,10 +245,13 @@ public class MovementTests
         {
             for (var y = bounds.Top + outerSpacing / 2f; y < bounds.Bottom - outerSpacing / 2; y += h + (spacing / 2f))
             {
-                var collider = Game.Current.GamePanel.Add(new Terrain());
-                collider.ResizeTo(w, h);
-                collider.MoveTo(x, y);
-                collider.Background = RGB.DarkGreen;
+                if (new RectF(x, y, w, h).Center.CalculateDistanceTo(Game.Current.GameBounds.Center) > 5)
+                {
+                    var collider = Game.Current.GamePanel.Add(new Terrain());
+                    collider.ResizeTo(w, h);
+                    collider.MoveTo(x, y);
+                    collider.Background = RGB.DarkGreen;
+                }
             }
         }
     }
