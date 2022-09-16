@@ -2,6 +2,7 @@
 namespace klooie.Gaming;
 public interface IStopwatch
 {
+    bool SupportsMaxDT { get; }
     public TimeSpan Elapsed { get; }
     void Start();
     void Stop();
@@ -13,4 +14,6 @@ public class WallClockStopwatch : IStopwatch
     public TimeSpan Elapsed => sw.Elapsed;
     public void Start() => sw.Start();
     public void Stop() => sw.Stop();
+
+    public bool SupportsMaxDT => true;
 }

@@ -111,7 +111,8 @@ public class ColliderGroup
     {
         var nowTime = Now;
         var now = (float)nowTime.TotalSeconds;
-        LatestDT = Math.Min(MaxDTMilliseconds, (float)(nowTime - lastExecuteTime).TotalMilliseconds);
+        var stopwatchDt = (float)(nowTime - lastExecuteTime).TotalMilliseconds;
+        LatestDT = stopwatch.SupportsMaxDT ? Math.Min(MaxDTMilliseconds, stopwatchDt) : stopwatchDt;
         lastExecuteTime = nowTime;
         var numColliders = CalcObstacles();
         var vSpan = velocities.Table.AsSpan();
@@ -141,7 +142,8 @@ public class ColliderGroup
                     velocity._onVelocityEnforced?.Fire();
                     continue;
                 }
-                var dt = Math.Min(MaxDTSeconds, ((float)now - velocity.lastEvalTime) * SpeedRatio * velocity.SpeedRatio);
+                var initialDt = ((float)now - velocity.lastEvalTime) * SpeedRatio * velocity.SpeedRatio;
+                var dt = stopwatch.SupportsMaxDT ?  Math.Min(MaxDTSeconds, initialDt) : initialDt;
                 velocity.lastEvalTime = now;
 
                 // before moving the object, see if the movement would collide with another object
