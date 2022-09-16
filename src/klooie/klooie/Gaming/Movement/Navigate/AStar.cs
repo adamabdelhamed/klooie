@@ -72,9 +72,15 @@ public static class AStar
 		List<LocF> path = new List<LocF>();
 		Node currentNode = endNode;
 
+		Node previousNode = null;
 		while (currentNode != startNode)
 		{
-			path.Add(new LocF(currentNode.Left, currentNode.Top));
+			var isLateralOrVericalMove = previousNode != null && (previousNode.Left == currentNode.Left || previousNode.Top == currentNode.Top);
+			if (isLateralOrVericalMove == false)
+			{
+				path.Add(new LocF(currentNode.Left, currentNode.Top));
+			}
+			previousNode = currentNode;
 			currentNode = currentNode.parent;
 		}
 		path.Reverse();
