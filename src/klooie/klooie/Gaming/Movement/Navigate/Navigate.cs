@@ -2,7 +2,7 @@
 public class NavigateOptions
 {
     public float CloseEnough { get; set; } = Mover.DefaultCloseEnough;
-    public bool ForceDestination { get; set; } = true;
+    public bool TryForceDestination { get; set; } = true;
     public bool Show { get; set; }
     public Func<Task> OnDelay { get; set; }
     public Action OnSuccess { get; set; }
@@ -158,9 +158,9 @@ public class Navigate : Movement
 
         if(Velocity.Collider.Bounds.CalculateNormalizedDistanceTo(dest.Bounds) <= Options.CloseEnough)
         {
-            if (Options.ForceDestination)
+            if (Options.TryForceDestination)
             {
-                Velocity.Collider.MoveTo(effectiveDestination.Left, effectiveDestination.Top);
+                Velocity.Collider.TryMoveTo(effectiveDestination.Left, effectiveDestination.Top);
             }
             ret = true;
         }
