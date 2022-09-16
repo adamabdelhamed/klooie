@@ -10,7 +10,7 @@
             var dt = (float)(wander.Speed() * Game.Current.MainColliderGroup.LatestDT);
             if (wander._CuriosityPoint != null)
             {
-                var castArea = wander.Element.Bounds.OffsetByAngleAndDistance(angle, 1f);
+                var castArea = wander.Element.Bounds.RadialOffset(angle, 1f);
                 var dNow = wander.Element.Bounds.CalculateNormalizedDistanceTo(wander._CuriosityPoint.Bounds);
                 var dWhatIf = castArea.CalculateNormalizedDistanceTo(wander._CuriosityPoint.Bounds);
                 doesItGetMeCloserScore = (dNow - dWhatIf) / dt;

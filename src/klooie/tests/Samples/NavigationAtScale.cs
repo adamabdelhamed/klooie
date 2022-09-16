@@ -24,8 +24,8 @@ public class NavigationAtScaleGame : Game
         await camera.FadeIn();
         PlaceBackgroundTexture();
 
-        var topLeftArea = GameBounds.TopLeft.OffsetByAngleAndDistance(45, Spray * 2 + Margin * 2);
-        var bottomRightArea = GameBounds.BottomRight.OffsetByAngleAndDistance(225, Spray * 2 + Margin * 2);
+        var topLeftArea = GameBounds.TopLeft.RadialOffset(45, Spray * 2 + Margin * 2);
+        var bottomRightArea = GameBounds.BottomRight.RadialOffset(225, Spray * 2 + Margin * 2);
 
         camera.PointAt(topLeftArea);
         var greenTask = PlaceClusterOfCharacters(topLeftArea, RGB.Green, 8);

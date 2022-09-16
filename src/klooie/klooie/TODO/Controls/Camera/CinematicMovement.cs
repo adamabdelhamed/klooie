@@ -37,7 +37,7 @@ public class CinematicMovement : CameraMovement
         return TimeSpan.FromSeconds(seconds);
     }
 
-    private RectF DesiredCameraBounds => Camera.EnsureWithinBigBounds(FocalElement.Center().OffsetByAngleAndDistance(FocalVelocity.Angle, Camera.Bounds.Hypotenous *.25f).ToRect(Camera.Width, Camera.Height));
+    private RectF DesiredCameraBounds => Camera.EnsureWithinBigBounds(FocalElement.Center().RadialOffset(FocalVelocity.Angle, Camera.Bounds.Hypotenous *.25f).ToRect(Camera.Width, Camera.Height));
 
     public override async Task Move()
     {

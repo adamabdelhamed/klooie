@@ -165,7 +165,7 @@ public class Rectangular : ObservableObject
 
     public RectF Round() => this.Bounds.Round();
 
-    public RectF OffsetByAngleAndDistance(Angle a, float d, bool normalized = true) => this.Bounds.OffsetByAngleAndDistance(a, d, normalized);
+    public RectF RadialOffset(Angle a, float d, bool normalized = true) => this.Bounds.RadialOffset(a, d, normalized);
     public RectF Offset(float dx, float dy) => this.Bounds.Offset(dx, dy);
 
     public Angle CalculateAngleTo(RectF other) => this.Bounds.CalculateAngleTo(other);

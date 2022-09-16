@@ -153,7 +153,7 @@ public class ColliderGroup
                 if (hitPrediction.CollisionPredicted)
                 {
                     var obstacleHit = hitPrediction.ColliderHit;
-                    var proposedBounds = velocity.Collider.Bounds.OffsetByAngleAndDistance(velocity.Angle, hitPrediction.LKGD, false);
+                    var proposedBounds = velocity.Collider.Bounds.RadialOffset(velocity.Angle, hitPrediction.LKGD, false);
                     if (item.Collider.CanMoveTo(proposedBounds))
                     {
                         item.Collider.Bounds = proposedBounds;
@@ -201,7 +201,7 @@ public class ColliderGroup
                 }
                 else
                 {
-                    var newLocation = item.Collider.Bounds.OffsetByAngleAndDistance(velocity.Angle, d, false);
+                    var newLocation = item.Collider.Bounds.RadialOffset(velocity.Angle, d, false);
                     if (item.Collider.CanMoveTo(newLocation))
                     {
                         item.Collider.Bounds = newLocation;

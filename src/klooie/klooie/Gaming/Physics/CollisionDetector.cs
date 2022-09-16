@@ -162,7 +162,7 @@ public static class CollisionDetector
         rayBuffer = rayBuffer ?? new Edge[10000];
         if (mode == CastingMode.Precise)
         {
-            var delta = movingObject.OffsetByAngleAndDistance(angle, visibility, normalized: false);
+            var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
             var dx = delta.Left - movingObject.Left;
             var dy = delta.Top - movingObject.Top;
 
@@ -187,7 +187,7 @@ public static class CollisionDetector
         }
         else if (mode == CastingMode.Rough)
         {
-            var delta = movingObject.OffsetByAngleAndDistance(angle, visibility, normalized: false);
+            var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
             var dx = delta.Left - movingObject.Left;
             var dy = delta.Top - movingObject.Top;
 
@@ -199,7 +199,7 @@ public static class CollisionDetector
         }
         else if (mode == CastingMode.SingleRay)
         {
-            var delta = movingObject.OffsetByAngleAndDistance(angle, visibility, normalized: false);
+            var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
             var dx = delta.Left - movingObject.Left;
             var dy = delta.Top - movingObject.Top;
             rayBuffer[rayCount++] = new Edge(movingObject.CenterX, movingObject.CenterY, movingObject.CenterX + dx, movingObject.CenterY + dy);
@@ -298,20 +298,20 @@ public static class CollisionDetector
             // For the 2 edges created from the stationary edge, test to see if they intersect with the ray.
             // That is a total of 4 tests.
 
-            var up = ray.From.OffsetByAngleAndDistance(raySlope.Add(-90), VerySmallNumber, false);
-            var down = ray.From.OffsetByAngleAndDistance(raySlope.Add(90), VerySmallNumber, false);
+            var up = ray.From.RadialOffset(raySlope.Add(-90), VerySmallNumber, false);
+            var down = ray.From.RadialOffset(raySlope.Add(90), VerySmallNumber, false);
             var rayPerp1 = new Edge(up.Left, up.Top, down.Left, down.Top);
 
-            up = ray.To.OffsetByAngleAndDistance(raySlope.Add(-90), VerySmallNumber, false);
-            down = ray.To.OffsetByAngleAndDistance(raySlope.Add(90), VerySmallNumber, false);
+            up = ray.To.RadialOffset(raySlope.Add(-90), VerySmallNumber, false);
+            down = ray.To.RadialOffset(raySlope.Add(90), VerySmallNumber, false);
             var rayPerp2 = new Edge(up.Left, up.Top, down.Left, down.Top);
 
-            up = stationaryEdge.From.OffsetByAngleAndDistance(stationaryEdgeSlope.Add(-90), VerySmallNumber, false);
-            down = stationaryEdge.From.OffsetByAngleAndDistance(stationaryEdgeSlope.Add(90), VerySmallNumber, false);
+            up = stationaryEdge.From.RadialOffset(stationaryEdgeSlope.Add(-90), VerySmallNumber, false);
+            down = stationaryEdge.From.RadialOffset(stationaryEdgeSlope.Add(90), VerySmallNumber, false);
             var statPerp1 = new Edge(up.Left, up.Top, down.Left, down.Top);
 
-            up = stationaryEdge.To.OffsetByAngleAndDistance(stationaryEdgeSlope.Add(-90), VerySmallNumber, false);
-            down = stationaryEdge.To.OffsetByAngleAndDistance(stationaryEdgeSlope.Add(90), VerySmallNumber, false);
+            up = stationaryEdge.To.RadialOffset(stationaryEdgeSlope.Add(-90), VerySmallNumber, false);
+            down = stationaryEdge.To.RadialOffset(stationaryEdgeSlope.Add(90), VerySmallNumber, false);
             var statPerp2 = new Edge(up.Left, up.Top, down.Left, down.Top);
 
             var test1 = TryFindIntersectionPoint(rayPerp1, stationaryEdge, out float test1X, out float test1Y);

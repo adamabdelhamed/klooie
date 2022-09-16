@@ -43,7 +43,7 @@ public readonly struct Rect
     public override int GetHashCode() => ToRectF().GetHashCode();
 
     public Rect Offset(int dx, int dy) => new Rect(Left + dx, Top + dy, Width, Height);
-    public Rect OffsetByAngleAndDistance(Angle angle, float distance, bool normalized = true) => ToRectF().OffsetByAngleAndDistance(angle, distance, normalized).ToRect();
+    public Rect RadialOffset(Angle angle, float distance, bool normalized = true) => ToRectF().RadialOffset(angle, distance, normalized).ToRect();
     public Rect Grow(float percentage) => ToRectF().Grow(percentage).ToRect();
     public Rect Shrink(float percentage) => ToRectF().Shrink(percentage).ToRect();
     public Angle CalculateAngleTo(in Rect other) => ToRectF().CalculateAngleTo(other.ToRectF());

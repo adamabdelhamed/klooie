@@ -56,8 +56,8 @@ public readonly struct RectF
 
     public RectF Offset(float dx, float dy) => Offset(Left, Top, Width, Height, dx, dy);
 
-    public RectF OffsetByAngleAndDistance(Angle angle, float distance, bool normalized = true) =>
-        OffsetByAngleAndDistance(Left, Top, Width, Height, angle, distance, normalized);
+    public RectF RadialOffset(Angle angle, float distance, bool normalized = true) =>
+        RadialOffset(Left, Top, Width, Height, angle, distance, normalized);
 
     public RectF Round() => new RectF(ConsoleMath.Round(Left), ConsoleMath.Round(Top), ConsoleMath.Round(Width), ConsoleMath.Round(Height));
     public Rect ToRect() => new Rect(ConsoleMath.Round(Left), ConsoleMath.Round(Top), ConsoleMath.Round(Width), ConsoleMath.Round(Height));
@@ -262,9 +262,9 @@ public readonly struct RectF
         return Right > other.Right;
     }
 
-    public static RectF OffsetByAngleAndDistance(float x, float y, float w, float h, Angle angle, float distance, bool normalized = true)
+    public static RectF RadialOffset(float x, float y, float w, float h, Angle angle, float distance, bool normalized = true)
     {
-        var newLoc = LocF.OffsetByAngleAndDistance(x, y, angle, distance, normalized);
+        var newLoc = LocF.RadialOffset(x, y, angle, distance, normalized);
         return new RectF(newLoc.Left, newLoc.Top, w, h);
     }
 

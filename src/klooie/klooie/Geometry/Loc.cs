@@ -29,8 +29,8 @@ public readonly struct Loc
     public Loc Offset(int dx, int dy) => new Loc(Left + dx, Top + dy);
     
     public static Loc Offset(int x, int y, int dx, int dy) => new Loc(x + dx, y + dy);
-    public static Loc OffsetByAngleAndDistance(float x, float y, Angle angle, float distance, bool normalized = true) => new LocF(x, y).OffsetByAngleAndDistance(angle, distance, normalized).ToLoc();
-    public Loc OffsetByAngleAndDistance(Angle angle, float distance, bool normalized = true) => ToLocF().OffsetByAngleAndDistance(angle, distance, normalized).ToLoc();
+    public static Loc RadialOffset(float x, float y, Angle angle, float distance, bool normalized = true) => new LocF(x, y).RadialOffset(angle, distance, normalized).ToLoc();
+    public Loc RadialOffset(Angle angle, float distance, bool normalized = true) => ToLocF().RadialOffset(angle, distance, normalized).ToLoc();
     public static float CalculateNormalizedDistanceTo(in Loc a, in Loc b) => a.ToLocF().CalculateNormalizedDistanceTo(b.ToLocF());
     public static Angle CalculateAngleTo(in Loc a, in Loc b) => a.ToLocF().CalculateAngleTo(b.ToLocF());
     public static float CalculateDistanceTo(in Loc a, in Loc b) => a.ToLocF().CalculateDistanceTo(b.ToLocF());

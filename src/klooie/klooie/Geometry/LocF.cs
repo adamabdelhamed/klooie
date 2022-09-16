@@ -47,7 +47,7 @@ public readonly struct LocF
 
     public static LocF Offset(float x, float y, float dx, float dy) => new LocF(x + dx, y + dy);
 
-    public static LocF OffsetByAngleAndDistance(float x, float y, Angle angle, float distance, bool normalized = true)
+    public static LocF RadialOffset(float x, float y, Angle angle, float distance, bool normalized = true)
     {
         if (normalized)
         {
@@ -70,7 +70,7 @@ public readonly struct LocF
         return new LocF(x2, y2);
     }
 
-    public LocF OffsetByAngleAndDistance(Angle angle, float distance, bool normalized = true)
+    public LocF RadialOffset(Angle angle, float distance, bool normalized = true)
     {
         if (normalized)
         {

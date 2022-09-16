@@ -26,7 +26,7 @@ public static class NudgeHelper
             {
                 for (var d = .1f; d < maxSearch; d += .1f)
                 {
-                    var testLoc = desiredLocation.OffsetByAngleAndDistance(angle, d);
+                    var testLoc = desiredLocation.RadialOffset(angle, d);
                     var testArea = new RectF(testLoc.Left, testLoc.Top, desiredLocation.Width, desiredLocation.Height);
                     if (obstacles.Where(o => o.Bounds.Touches(testArea)).None())
                     {
