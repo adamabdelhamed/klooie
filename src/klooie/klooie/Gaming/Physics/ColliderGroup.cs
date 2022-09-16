@@ -148,6 +148,7 @@ public class ColliderGroup
 
                 // before moving the object, see if the movement would collide with another object
                 float d = velocity.Speed * dt;
+                d = ConsoleMath.NormalizeQuantity(d, velocity.Angle);
                 CollisionDetector.Predict(velocity.Collider, obstacleBuffer, velocity.Angle, colliderBuffer, d, CastingMode.Precise, numColliders, hitPrediction);
                 velocity.NextCollision = hitPrediction;
                 velocity._beforeMove?.Fire();
