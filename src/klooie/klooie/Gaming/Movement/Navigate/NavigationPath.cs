@@ -29,27 +29,15 @@ public class NavigationPath : Lifetime
     }
     public bool IsReallyStuck => Game.Current.MainColliderGroup.Now - lastProgressTime > TimeSpan.FromSeconds(7);
 
-    public GameCollider FindLocalTarget()
-    {
-        var bounds = options.Element.Bounds;
-        var obstacles = options.ObstaclesPadded;
-        var lookAhead = Math.Min(10, tail.Count - 1);
-        for (var i = lookAhead; i >= 0; i--)
-        {
-            if (bounds.HasLineOfSight(tail[i], obstacles))
-            {
-                return new ColliderBox(tail[i]);
-            }
-        }
-        return tail.Count > 0 ? new ColliderBox(tail[0]) : null;
-    }
+    public GameCollider FindLocalTarget() => tail.Count > 0 ? new ColliderBox(tail[0]) : null;
+    
 
     public void PruneTail()
     {
         for (var i = tail.Count - 1; i >= 0; i--)
         {
             var curr = tail[i];
-            var d = options.Element.Bounds.CalculateNormalizedDistanceTo(curr);
+           var d = options.Element.Bounds.CalculateNormalizedDistanceTo(curr);
             if (d <= options.Options.CloseEnough)
             {
                 lastProgressTime = Game.Current.MainColliderGroup.Now;
