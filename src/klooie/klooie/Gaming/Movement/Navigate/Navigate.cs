@@ -14,7 +14,6 @@ public class Navigate : Movement
     public GameCollider _LocalTarget { get; set; }
     public NavigationPath _CurrentPath { get; set; }
     public Lifetime _ResultLifetime { get; private set; } = Game.Current.CreateChildLifetime();
-    public RateGovernor _TargetUpdateRateGovernor { get; set; } = new RateGovernor(TimeSpan.FromSeconds(.2));
 
     private Func<GameCollider> destination;
     public NavigateOptions Options { get; private set; }
@@ -43,6 +42,20 @@ public class Navigate : Movement
             OnDelay = () => Delay(),
             CuriousityPoint = () => _LocalTarget,
         }), EarliestOf(_ResultLifetime, this));
+
+        /*
+        Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.DoNothing;
+        while(ShouldContinue && _ResultLifetime.ShouldContinue)
+        {
+            Velocity.Speed = Speed();
+            Velocity.Angle = Element.Center().CalculateAngleTo(_LocalTarget.Center());
+            Console.WriteLine(Velocity.Angle);
+            var delay = Velocity.EvalFrequencySeconds * 1025;
+            await Game.Current.Delay(delay);
+            await Delay();
+        }
+        Velocity.Stop();
+        */
     }
 
     private void ConfigureCleanup()
@@ -74,13 +87,10 @@ public class Navigate : Movement
         if (_CurrentPath != null)
         {
             _CurrentPath.PruneTail();
-            if (_TargetUpdateRateGovernor.ShouldFire(Game.Current.MainColliderGroup.Now))
+            var target = _CurrentPath.FindLocalTarget();
+            if (target.Equals(_LocalTarget) == false)
             {
-                var target = _CurrentPath.FindLocalTarget();
-                if (target.Equals(_LocalTarget) == false)
-                {
-                    _LocalTarget = target;
-                }
+                _LocalTarget = target;
             }
         }
     }
@@ -90,7 +100,8 @@ public class Navigate : Movement
         var dest = destination();
         if (dest == null) return;
 
-        if (_CurrentPath == null || _CurrentPath?.IsReallyStuck == true || effectiveDestination == null || effectiveDestination.Bounds.Equals(dest.Bounds) == false)
+
+        if (_CurrentPath == null || effectiveDestination == null || effectiveDestination.Bounds.Equals(dest.Bounds) == false)
         {
             effectiveDestination = dest;
             AssertSupported();
@@ -126,7 +137,6 @@ public class Navigate : Movement
 
         var adjustedObstacles = obstacles
             .Select(o => o.Offset(-sceneX, -sceneY))
-            .Where(o => inBounds.Contains(o))
             .ToList();
 
         from = from.Offset(-sceneX, -sceneY);
@@ -161,6 +171,7 @@ public class Navigate : Movement
             if (Options.TryForceDestination)
             {
                 Velocity.Collider.TryMoveTo(effectiveDestination.Left, effectiveDestination.Top);
+                Velocity.Stop();
             }
             ret = true;
         }
