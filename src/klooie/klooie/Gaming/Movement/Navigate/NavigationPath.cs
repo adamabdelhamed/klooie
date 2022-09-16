@@ -7,7 +7,6 @@ public class NavigationPath : Lifetime
     private List<RectF> tail;
 #endif
     private Navigate options;
-    private TimeSpan lastProgressTime = Game.Current.MainColliderGroup.Now;
 
     public NavigationPath(Navigate options, List<RectF> steps)
     {
@@ -27,29 +26,37 @@ public class NavigationPath : Lifetime
         if(options.Options.Show) ShowPath();
 #endif
     }
-    public bool IsReallyStuck => Game.Current.MainColliderGroup.Now - lastProgressTime > TimeSpan.FromSeconds(7);
 
     public GameCollider FindLocalTarget() => tail.Count > 0 ? new ColliderBox(tail[0]) : null;
-    
+
 
     public void PruneTail()
     {
         for (var i = tail.Count - 1; i >= 0; i--)
         {
             var curr = tail[i];
-           var d = options.Element.Bounds.CalculateNormalizedDistanceTo(curr);
-            if (d <= options.Options.CloseEnough)
+            var d = options.Element.Bounds.CalculateDistanceTo(curr);
+            var weAreCloseEnoughThatWeAreWillingToDoAnExpensiveLineOfSightTest = d < 2;
+            if (weAreCloseEnoughThatWeAreWillingToDoAnExpensiveLineOfSightTest)
             {
-                lastProgressTime = Game.Current.MainColliderGroup.Now;
-
-                for (var j = 0; j < i + 1; j++)
+                var blockingObstacle = options.Element.GetLineOfSightObstruction(tail[i], options.Element.GetObstacles(), CastingMode.Precise);
+                if (blockingObstacle == null)
                 {
-                    if (tail.Count > 1)
+                    for (var j = 0; j < i + 1; j++)
                     {
-                        tail.RemoveAt(0);
+                        if (tail.Count > 1)
+                        {
+                            var x = tail[0].Left + (tail[0].Width - options.Element.Bounds.Width) / 2f;
+                            var y = tail[0].Top + (tail[0].Height - options.Element.Bounds.Height) / 2f;
+                            if(options.Element.TryMoveTo(x, y))
+                            {
+                                options.Velocity.Angle = tail[0].CalculateAngleTo(tail[1]);
+                            }
+                            tail.RemoveAt(0);
+                        }
                     }
+                    return;
                 }
-                return;
             }
         }
     }
