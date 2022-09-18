@@ -5,6 +5,16 @@
 public class BitmapControl : ConsoleControl
 {
     /// <summary>
+    /// Gets or sets the horizontal offset to apply when deciding which pixels to draw from the bitmap
+    /// </summary>
+    public int OffsetX { get; set; }
+
+    /// <summary>
+    /// Gets or sets the vertical offset to apply when deciding which pixels to draw from the bitmap
+    /// </summary>
+    public int OffsetY { get; set; }
+
+    /// <summary>
     /// The Bitmap image to render in the control
     /// </summary>
     public ConsoleBitmap Bitmap { get { return Get<ConsoleBitmap>(); } set { Set(value); } }
@@ -44,7 +54,12 @@ public class BitmapControl : ConsoleControl
         {
             for (var y = 0; y < Bitmap.Height && y < this.Height; y++)
             {
-                ref var pixel = ref Bitmap.GetPixel(x, y);
+                var bmpX = x + OffsetX;
+                var bmpY = y + OffsetY;
+
+                if (bmpX < 0 || bmpX >= Bitmap.Width || bmpY < 0 || bmpY >= Bitmap.Height) continue;
+
+                ref var pixel = ref Bitmap.GetPixel(x+ OffsetX, y+OffsetY);
                 context.DrawPoint(pixel, x, y);
             }
         }
