@@ -187,4 +187,26 @@ public class Camera : ConsolePanel
     /// <returns>true if the control is within the camera bounds</returns>
     public override bool IsInView(ConsoleControl c) => 
         new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height).Touches(c.Bounds);
+
+    /// <summary>
+    /// When BigBounds is larger than the camera bounds then the camera is free to
+    /// move inside of BigBounds. This method calculates the x and y pan coordinates
+    /// as a value from 0 to 1. When the camera is all the way to the right then xPer will equal 0.
+    /// When the camera is all the way to the left, xPer will equal 1. When the camera is all
+    /// the way to the top, yPer will equal 0. When the camera is all the way to the bottom, yPer
+    /// will equal 1.
+    /// </summary>
+    /// <param name="xPer">the horizontal pan position, as a percentage from 0 to 1</param>
+    /// <param name="yPer">the vertical pan position, as a percentage from 0 to 1</param>
+    public void CalculatePanPercentages(out float xPer, out float yPer)
+    {
+        var cameraRangeX = BigBounds.Width - Bounds.Width;
+        var cameraRangeY = BigBounds.Height - Bounds.Height;
+
+        var xDelta = CameraLocation.Left - BigBounds.Left;
+        var yDelta = CameraLocation.Top - BigBounds.Top;
+
+        xPer = cameraRangeX == 0 ? .5f : xDelta / cameraRangeX;
+        yPer = cameraRangeY == 0 ? .5f : yDelta / cameraRangeY;
+    }
 }
