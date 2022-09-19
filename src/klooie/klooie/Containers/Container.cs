@@ -103,7 +103,7 @@ public abstract class Container : ConsoleControl
 
     }
 
-    protected virtual (int X, int Y) Transform(ConsoleControl c) => (c.X, c.Y);
+    public virtual (int X, int Y) Transform(ConsoleControl c) => (c.X, c.Y);
 
     private void ComposePaintOver(ConsoleControl control)
     {

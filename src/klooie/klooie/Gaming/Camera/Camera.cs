@@ -177,7 +177,7 @@ public class Camera : ConsolePanel
     /// </summary>
     /// <param name="c">the control being composed</param>
     /// <returns>the control coordinates, transformed by the camera position</returns>
-    protected override (int X, int Y) Transform(ConsoleControl c) =>
+    public override (int X, int Y) Transform(ConsoleControl c) =>
         (ConsoleMath.Round(c.Bounds.Left - cameraLocation.Left), ConsoleMath.Round(c.Bounds.Top - cameraLocation.Top));
 
     /// <summary>
