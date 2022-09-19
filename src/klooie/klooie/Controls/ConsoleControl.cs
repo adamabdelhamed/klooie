@@ -223,12 +223,13 @@ public class ConsoleControl : Rectangular
     {
         get
         {
-            var ret = this.X;
+            var ret = Parent != null ? Parent.Transform(this).X : this.X;
             ConsoleControl current = this;
             while (current.Parent != null)
             {
                 current = current.Parent;
-                ret += current.X;
+                var transformed = current.Parent != null ? current.Parent.Transform(current).X : current.X;
+                ret += transformed;
             }
             return ret;
         }
@@ -241,12 +242,13 @@ public class ConsoleControl : Rectangular
     {
         get
         {
-            var ret = this.Y;
+            var ret = Parent != null ? Parent.Transform(this).Y : this.Y;
             ConsoleControl current = this;
             while (current.Parent != null)
             {
                 current = current.Parent;
-                ret += current.Y;
+                var transformed = current.Parent != null ? current.Parent.Transform(current).Y : current.Y;
+                ret += transformed;
             }
             return ret;
         }
