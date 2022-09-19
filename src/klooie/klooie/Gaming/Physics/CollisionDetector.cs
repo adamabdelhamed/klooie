@@ -262,7 +262,7 @@ public static class CollisionDetector
             // intersect.
 
 
-            // First we see if the sloped are different. If they are then they are not
+            // First we see if the slopes are different. If they are then they are not
             // parallel. This means they do not fall into the special case and the 2 edges
             // do not intersect.
             var raySlope = ray.From.CalculateAngleTo(ray.To);
@@ -298,20 +298,20 @@ public static class CollisionDetector
             // For the 2 edges created from the stationary edge, test to see if they intersect with the ray.
             // That is a total of 4 tests.
 
-            var up = ray.From.RadialOffset(raySlope.Add(-90), VerySmallNumber, false);
-            var down = ray.From.RadialOffset(raySlope.Add(90), VerySmallNumber, false);
+            var up = ray.From.RadialOffset(raySlope.Add(-90), 1, false);
+            var down = ray.From.RadialOffset(raySlope.Add(90), 1, false);
             var rayPerp1 = new Edge(up.Left, up.Top, down.Left, down.Top);
 
-            up = ray.To.RadialOffset(raySlope.Add(-90), VerySmallNumber, false);
-            down = ray.To.RadialOffset(raySlope.Add(90), VerySmallNumber, false);
+            up = ray.To.RadialOffset(raySlope.Add(-90), 1, false);
+            down = ray.To.RadialOffset(raySlope.Add(90), 1, false);
             var rayPerp2 = new Edge(up.Left, up.Top, down.Left, down.Top);
 
-            up = stationaryEdge.From.RadialOffset(stationaryEdgeSlope.Add(-90), VerySmallNumber, false);
-            down = stationaryEdge.From.RadialOffset(stationaryEdgeSlope.Add(90), VerySmallNumber, false);
+            up = stationaryEdge.From.RadialOffset(stationaryEdgeSlope.Add(-90), 1, false);
+            down = stationaryEdge.From.RadialOffset(stationaryEdgeSlope.Add(90), 1, false);
             var statPerp1 = new Edge(up.Left, up.Top, down.Left, down.Top);
 
-            up = stationaryEdge.To.RadialOffset(stationaryEdgeSlope.Add(-90), VerySmallNumber, false);
-            down = stationaryEdge.To.RadialOffset(stationaryEdgeSlope.Add(90), VerySmallNumber, false);
+            up = stationaryEdge.To.RadialOffset(stationaryEdgeSlope.Add(-90), 1, false);
+            down = stationaryEdge.To.RadialOffset(stationaryEdgeSlope.Add(90), 1, false);
             var statPerp2 = new Edge(up.Left, up.Top, down.Left, down.Top);
 
             var test1 = TryFindIntersectionPoint(rayPerp1, stationaryEdge, out float test1X, out float test1Y);

@@ -56,6 +56,25 @@ public class HitDetectionTests
     }
 
     [TestMethod]
+    public void HitDetection_LineIntersectionWhenOverlappingALotParallel()
+    {
+        var a = new Edge(0, 0, 1, 0);
+        var b = new Edge(.5f, 0, 2, 0);
+        Assert.IsTrue(CollisionDetector.TryFindIntersectionPoint(a, b, out float x, out float y));
+        Assert.AreEqual(.5f, x);
+        Assert.AreEqual(0f, y);
+    }
+
+    [TestMethod]
+    public void HitDetection_LineIntersectionSpecialCase()
+    {
+        var ray = new Edge(275.584778f, 0, 275.584778f, 8);
+        var stationaryEdge = new Edge(275.3438f, 0, 275.3438f, 1);
+    
+        Assert.IsTrue(CollisionDetector.TryFindIntersectionPoint(ray, stationaryEdge, out float x, out float y));
+    }
+
+    [TestMethod]
     public void HitDetection_LineIntersectionWhenBarelyTouchingParallel()
     {
         var a = new Edge(0, 0, 1, 0);
