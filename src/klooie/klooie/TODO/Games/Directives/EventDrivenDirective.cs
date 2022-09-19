@@ -61,6 +61,9 @@ public abstract class EventDrivenDirective : Directive
     private int numberOfExecutions;
 
     private bool disabledByUntil;
+
+    private bool ShouldFireNow => On != null && "Now".Equals(On.StringValue, StringComparison.OrdinalIgnoreCase);
+
     public override StatementExecutionResult Execute(TimeThread thread)
     {
         if (On?.StringValue == "demand")
@@ -81,11 +84,11 @@ public abstract class EventDrivenDirective : Directive
             }, Game.Current);
         }
 
-        if (On != null && On?.StringValue != "continue")
+        if (On != null && On?.StringValue != "continue" && ShouldFireNow == false)
         {
             Game.Current.Subscribe(On.StringValue, (ev) => FireNowOrDelay(ev), Game.Current);
         }
-        else if (On == null)
+        else if (On == null || ShouldFireNow)
         {
             FireNowOrDelay();
         }
