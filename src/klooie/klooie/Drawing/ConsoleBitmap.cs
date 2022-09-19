@@ -282,6 +282,9 @@ public class ConsoleBitmap
         }
     }
 
+    public void DrawRect(in RGB pen, int x, int y, int w, int h)
+        => DrawRect(new ConsoleCharacter(' ', RGB.Black, pen), x, y, w, h);
+
     /// <summary>
     /// Draws an unfilled in rectangle bounded by the given coordinates
     /// using the current pen
@@ -373,6 +376,11 @@ public class ConsoleBitmap
         }
     }
 
+    public void DrawPoint(in RGB pen, int x, int y) 
+        => DrawPoint(new ConsoleCharacter(' ', RGB.Black, pen), x, y);
+
+    public void DrawLine(in RGB pen, int x1, int y1, int x2, int y2)
+        => DrawLine(new ConsoleCharacter(' ', RGB.Black, pen), x1, y1, x2, y2);
 
     /// <summary>
     /// Draw a line segment between the given points
@@ -957,4 +965,33 @@ internal class ChunkPool
     }
 }
 
- 
+public static class ConsoleStringEx
+{
+    public static ConsoleBitmap ToConsoleBitmap(this ConsoleString cstring)
+    {
+
+        var str = cstring.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\t", "    ");
+        var lines = str.Split("\n");
+        var h = lines.Count;
+        var w = lines.Select(l => l.Length).Max();
+        var ret = new ConsoleBitmap(w, h);
+
+        var x = 0;
+        var y = 0;
+
+        foreach (var c in str)
+        {
+            if (c.Value == '\n')
+            {
+                x = 0;
+                y++;
+            }
+            else
+            {
+                ret.Pixels[x++][y] = c;
+            }
+        }
+
+        return ret;
+    }
+}
