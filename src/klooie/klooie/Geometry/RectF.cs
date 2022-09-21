@@ -62,6 +62,13 @@ public readonly struct RectF
     public RectF Round() => new RectF(ConsoleMath.Round(Left), ConsoleMath.Round(Top), ConsoleMath.Round(Width), ConsoleMath.Round(Height));
     public Rect ToRect() => new Rect(ConsoleMath.Round(Left), ConsoleMath.Round(Top), ConsoleMath.Round(Width), ConsoleMath.Round(Height));
 
+    public RectF ToCenterdAt(LocF loc)
+    {
+        var x = loc.Left - (Width / 2f);
+        var y = loc.Top - (Height / 2f);
+        return new RectF(x, y, Width, Height);
+    }
+
     public RectF Grow(float percentage)
     {
         var center = Center;
@@ -84,6 +91,13 @@ public readonly struct RectF
         var newW = Width - dx;
         var newH = Height - dy;
         return new RectF(center.Left - newW / 2f, center.Top - newH / 2f, newW, newH);
+    }
+
+    public LocF GetTopLeftIfCenteredAt(float x, float y)
+    {
+        var left = x - Width / 2f;
+        var top = y - Height / 2f;
+        return new LocF(left, top);
     }
 
     public Angle CalculateAngleTo(in RectF other) => CalculateAngleTo(this, other);
