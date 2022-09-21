@@ -36,6 +36,7 @@ public class Gallery : ProtectedConsolePanel
                 rowHeight = child.Height;
                 child.X = x;
                 child.Y = y;
+                x += child.Width + HMargin;
             }
         }
     }

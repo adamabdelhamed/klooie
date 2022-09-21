@@ -27,6 +27,14 @@ public readonly struct Edge
         Y2 = y2;
     }
 
+    public bool Contains(LocF point)
+    {
+        if (point == From || point == To) return true;
+        var raySlope = From.CalculateAngleTo(To);
+        var testSlope = From.CalculateAngleTo(point);
+        return raySlope == testSlope;
+    }
+
     public override string ToString() => $"{X1},{Y1} => {X2},{Y2}";
     public bool Equals(Edge other) => X1 == other.X1 && X2 == other.X2 && Y1 == other.Y1 && Y2 == other.Y2;
     public override bool Equals(object? obj) => obj is Edge && Equals((Edge)obj);
