@@ -191,6 +191,7 @@ public class NavigateTests
         cMover.Background = RGB.Red;
         cMover.ResizeTo(.8f, .8f);
         cMover.MoveTo(Game.Current.GameBounds.Top + 2.5f, Game.Current.GameBounds.Left + 1.5f);
+        cMover.MoveTo(cMover.X + .1f, cMover.Y + .1f);
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
 
         var path = new List<RectF>() { cMover.Bounds };
