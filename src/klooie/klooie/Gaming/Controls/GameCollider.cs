@@ -19,6 +19,12 @@ public class GameCollider : ConsoleControl
         return TryMoveTo(spot.Left, spot.Top);
     }
 
+    public void MoveByRadial(Angle a, float distance)
+    {
+        var spot = Bounds.RadialOffset(a, distance);
+        MoveTo(spot.Left, spot.Top);
+    }
+
     public bool TryMoveTo(float x, float y)
     {
         var proposedBounds = new RectF(x, y, Bounds.Width, Bounds.Height);
