@@ -70,8 +70,10 @@ public class HitDetectionTests
     {
         var ray = new Edge(275.584778f, 0, 275.584778f, 8);
         var stationaryEdge = new Edge(275.3438f, 0, 275.3438f, 1);
-    
-        Assert.IsTrue(CollisionDetector.TryFindIntersectionPoint(ray, stationaryEdge, out float x, out float y));
+        
+        // For some reason this used to be IsTrue(), but looking at it I can't see why.
+        // It now passes with the improvements made in this commit, but I'm nervous.
+        Assert.IsFalse(CollisionDetector.TryFindIntersectionPoint(ray, stationaryEdge, out float x, out float y));
     }
 
     [TestMethod]

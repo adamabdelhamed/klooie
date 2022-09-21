@@ -351,6 +351,15 @@ public static class CollisionDetector
                 // if the lines had the same slope, but were separated by a very small margin then the slope
                 // will be different so we can count it out
                 if (finalTestSlope != raySlope) continue;
+
+                // if this candidate intersection point doesn't acutally lie
+                // on both the ray edge and the stationary edge then there is no
+                // intersection
+                var isOnRay = ray.Contains(edgeBuffer[i].To);
+                if (isOnRay == false) continue;
+                var isOnEdge = stationaryEdge.Contains(edgeBuffer[i].To);
+                if (isOnEdge == false) continue;
+
                 var d = edgeBuffer[i].From.CalculateDistanceTo(edgeBuffer[i].To);
                 if(d < shortestD)
                 {
