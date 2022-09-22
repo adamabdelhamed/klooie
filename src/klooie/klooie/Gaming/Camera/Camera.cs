@@ -17,7 +17,7 @@ public class Camera : ConsolePanel
         get => cameraLocation; 
         set 
         {
-            var proposed = new RectF(value.Left, value.Top, Width, Height);
+            var proposed = new RectF(ConsoleMath.Round(value.Left), ConsoleMath.Round(value.Top), Width, Height);
             var final = EnsureWithinBigBounds(proposed).TopLeft;
             if(SetHardIf(ref cameraLocation, final, cameraLocation != final))
             {
