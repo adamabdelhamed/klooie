@@ -8,6 +8,11 @@ public class ShowCodeDirective : EventDrivenDirective
     public DynamicArg Top { get; set; }
     public bool LineNumbers { get; set; }
 
+    public ShowCodeDirective()
+    {
+
+    }
+
     public override Task OnEventFired(object args)
     {
         Process.Current.RenderCode(Process.Current.AST.Root, LineNumbers, Left.FloatValue, Top.FloatValue);

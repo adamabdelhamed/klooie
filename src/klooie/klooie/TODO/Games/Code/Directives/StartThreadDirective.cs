@@ -4,20 +4,14 @@ public class StartThreadDirective : EventDrivenDirective
     public string Locals { get; set; }
 
     [ArgRequired]
-    public string EntryPoint { get; set; }
+    public string FunctionName { get; set; }
 
     public bool FireAndForget { get; set; }
 
     public override async Task OnEventFired(object args)
     {
-        var waitStart = Game.Current.MainColliderGroup.Now;
-        while (Game.Current.MainColliderGroup.Now - waitStart < TimeSpan.FromSeconds(1))
-        {
-            await Task.Yield();
-        }
-
         var function = Process.Current.AST.Functions
-            .Where(f => f.CanExecute && f.Name == EntryPoint)
+            .Where(f => f.CanExecute && f.Name == FunctionName)
             .SingleOrDefault();
 
         if (function == null && FireAndForget)
@@ -26,7 +20,7 @@ public class StartThreadDirective : EventDrivenDirective
         }
         else if (function == null)
         {
-            throw new ArgException("No function called " + EntryPoint);
+            throw new ArgException("No function called " + FunctionName);
         }
 
         await function.Execute().AsTask();

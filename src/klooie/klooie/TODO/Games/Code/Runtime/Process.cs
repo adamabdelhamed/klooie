@@ -38,6 +38,14 @@ public class Process
         lt.OnDisposed(() => Heap.Current?.Set<object>(null, key));
     }
 
+    public void RegisterStatementHandler(string statementText, StatementImplementation impl, ILifetimeManager lt = null)
+    {
+        lt = lt ?? Game.Current;
+        var key = RunningCodeStatement.FormatStatementImplementationKey(statementText);
+        Heap.Current.Set(impl, key);
+        lt.OnDisposed(() => Heap.Current?.Set<object>(null, key));
+    }
+
     public void RenderCode(Block root, bool lineNumbers, float leftOfDocument, float topOfDocument)
     {
         var elements = CreateCodeElements(root, leftOfDocument, topOfDocument);
@@ -63,21 +71,14 @@ public class Process
     {
         var directives = new List<Directive>();
         var codeControls = new List<CodeControl>();
+        var topLine = int.MaxValue;
 
-        var manualPlacements = new Dictionary<Function, MoveFunctionDirective>();
-        var manualTopLefts = new Dictionary<Function, RectF>();
-        var manuallyPlaced = new HashSet<ConsoleControl>();
-        foreach (var moveFunctionDirective in Game.Current.Rules.WhereAs<MoveFunctionDirective>())
+        root.Visit((s) =>
         {
-            if (moveFunctionDirective.If != null && moveFunctionDirective.If.BooleanValue == false)
-            {
-                continue;
-            }
-
-            manualPlacements.Add(moveFunctionDirective.Function, moveFunctionDirective);
-            var topLeftToken = moveFunctionDirective.Function.Tokens.OrderBy(t => t.Line).ThenBy(t => t.Column).First();
-            manualTopLefts.Add(moveFunctionDirective.Function, Place(topLeftToken, leftOfDocument, topOfDocument));
-        }
+            var topInStatement = s.Tokens.None() ? int.MaxValue : s.Tokens.Select(t => t.Line).Min();
+            topLine = Math.Min(topLine, topInStatement);
+            return false;
+        });
 
         root.Visit((s) =>
         {
@@ -85,19 +86,8 @@ public class Process
             CodeControl lastOnLine = null;
             foreach (var token in s.Tokens.Where(token => string.IsNullOrWhiteSpace(token.Value) == false))
             {
-                var placement = Place(token, leftOfDocument, topOfDocument);
-
+                var placement = GetPlacement(token, leftOfDocument, topOfDocument, token.Line-topLine);
                 var element = new CodeControl(token);
-                if (AST.TryGetFunction(token, out Function function) && manualPlacements.TryGetValue(function, out MoveFunctionDirective moveDirective))
-                {
-                    var origin = manualTopLefts[function];
-                    var dx = placement.Left - origin.Left;
-                    var dy = placement.Top - origin.Top;
-                    placement = new RectF(moveDirective.Left.FloatValue + dx, moveDirective.Top.FloatValue + dy, placement.Width, placement.Height);
-                    manuallyPlaced.Add(element);
-                }
-
-
 
                 if (firstOnLine)
                 {
@@ -108,8 +98,7 @@ public class Process
                     lastOnLine = element;
                 }
 
-                element.X = ConsoleMath.Round(placement.Left);
-                element.Y = ConsoleMath.Round(placement.Top);
+                element.Bounds = placement;
                 codeControls.Add(element);
             }
 
@@ -121,20 +110,17 @@ public class Process
             return false;
         });
 
-        for (var i = 0; i < Game.Current.GamePanel.Height + 50; i++)
+        for (var y = Game.Current.GameBounds.Top; y < Game.Current.GameBounds.Bottom; y++)
         {
-            var nonDirectiveCodeOnLine = codeControls.Where(c => c.Token.Statement is Directive == false && (int)ConsoleMath.Round(c.Top) == i).ToArray();
-            var directiveCodeOnLine = codeControls.Where(c => c.Token.Statement is Directive == true && (int)ConsoleMath.Round(c.Top) == i).ToArray();
+            var nonDirectiveCodeOnLine = codeControls.Where(c => c.Token.Statement is Directive == false && ConsoleMath.Round(c.Top) == y).ToArray();
+            var directiveCodeOnLine = codeControls.Where(c => c.Token.Statement is Directive == true && ConsoleMath.Round(c.Top) == y).ToArray();
             if (directiveCodeOnLine.Length > 0 && nonDirectiveCodeOnLine.Length == 0)
             {
-                foreach (var element in codeControls.Where(c => ConsoleMath.Round(c.Top) > i).OrderBy(c => c.Top))
+                foreach (var element in codeControls.Where(c => ConsoleMath.Round(c.Top) > y).OrderBy(c => c.Top))
                 {
-                    if (manuallyPlaced.Contains(element) == false)
-                    {
-                        element.MoveBy(0, -1);
-                    }
+                    element.MoveBy(0, -1);
                 }
-                i--;
+                y--;
             }
 
             foreach (var directiveCode in directiveCodeOnLine)
@@ -143,28 +129,16 @@ public class Process
                 directiveCode.Dispose();
             }
         }
-        var shifts = directives.WhereAs<ShiftCodeDirective>().ToList();
-        if (shifts.Count > 0)
-        {
-            foreach (var codeControl in codeControls)
-            {
-                foreach (var shift in shifts)
-                {
-                    codeControl.MoveBy(0, shift.Amount);
-                }
-            }
-        }
-
+        
         return codeControls;
     }
 
-    private RectF Place(CodeToken token, float leftOfDocument, float topOfDocument)
+    private RectF GetPlacement(CodeToken token, float leftOfDocument, float topOfDocument, int y)
     {
-        var h = .8f;
-        var w = token.Value.Length - .2f;
-        var hPad = .1f;
-        var vPad = (1 - h) / 2;
-        var placement = new RectF(leftOfDocument + LineNumberWidth + (token.Column - 1), topOfDocument + (token.Line - 1), w, h);
+        var h = 1f;
+        var w = token.Value.Length;
+        var placement = new RectF(leftOfDocument + LineNumberWidth + (token.Column - 1), topOfDocument + (y - 1), w, h);
+        placement = placement.ToSameWithWiggleRoom();
         return placement;
     }
 }

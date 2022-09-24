@@ -119,6 +119,10 @@ public class CodeControl : GameCollider, IGhost
             {
                 fg = RGB.Cyan;
             }
+            else if (token.Type == TokenType.TypeName)
+            {
+                fg = RGB.Magenta;
+            }
             else if (token.Type == TokenType.DoubleQuotedStringLiteral)
             {
                 return DoubleQuotedStringFormat();
