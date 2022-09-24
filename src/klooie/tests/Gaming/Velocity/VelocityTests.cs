@@ -91,7 +91,7 @@ public class VelocityTests
             stopwatch.Elapsed += TimeSpan.FromSeconds(1);
             group.Tick();
             AssertCloseEnough(0, c1.Left);
-            AssertCloseEnough(1, c1.Top);
+            AssertCloseEnough(.5f, c1.Top);
         }
     }
 
