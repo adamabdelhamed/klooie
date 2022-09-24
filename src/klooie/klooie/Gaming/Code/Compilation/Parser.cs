@@ -10,11 +10,12 @@ public enum TokenType
     NonTrailingWhitespace,
     TrailingWhitespace,
     Newline,
+    TypeName,
 }
 
 internal static class Parser
 {
-    public static void Parse(List<CodeToken> tokens)
+    public static void Parse(List<CodeToken> tokens, List<string> typeNames)
     {
         var reader = new TokenReader<CodeToken>(tokens);
 
@@ -39,6 +40,10 @@ internal static class Parser
             else if (LanguageConstants.Instance.IsKeyword(reader.Peek().Value))
             {
                 reader.Advance().Type = TokenType.Keyword;
+            }
+            else if (typeNames?.Contains(reader.Peek().Value) == true)
+            {
+                reader.Advance().Type = TokenType.TypeName;
             }
             else if (reader.Peek().Value == "\n")
             {

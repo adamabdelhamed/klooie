@@ -20,6 +20,11 @@ public class CompilerOptions
     /// The script provider to use to load scripts, if your program supports that
     /// </summary>
     public IScriptProvider? ScriptProvider { get; set; }
+
+    /// <summary>
+    /// Optionally send a list of type names so that matching tokens get styled correctly
+    /// </summary>
+    public List<string> TypeNames { get; set; }
 }
 
 /// <summary>
@@ -53,7 +58,7 @@ public static class Compiler
         var builder = new StringBuilder();
         RenderLines(GetCleanLines(options.Code), options, builder);
         ast.Tokens = KlooieCodeTokenizer.Tokenize(builder.ToString(), options.CodeLocation);
-        Parser.Parse(ast.Tokens);
+        Parser.Parse(ast.Tokens, options.TypeNames);
         SemanticAnalyzer.BuildTree(ast);
         return ast;
     }
