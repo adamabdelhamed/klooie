@@ -16,6 +16,12 @@ public class Game : ConsoleApp, IDelayProvider
     private ColliderGroup mainColliderGroup;
 
     /// <summary>
+    /// During startup, this will be populated with the current rule that's running.
+    /// This is useful if you need to detect rules that have gotten stuck
+    /// </summary>
+    public IRule CurrentStartupRule => ruleManager?.Current;
+
+    /// <summary>
     /// Gets a reference to the current game
     /// </summary>
     public static Game Current => ConsoleApp.Current as Game;
