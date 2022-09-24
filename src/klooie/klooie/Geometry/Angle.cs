@@ -232,6 +232,34 @@ public readonly struct Angle
         }
     }
 
+    public char LineChar
+    {
+        get
+        {
+            var tolerance = 30;
+            if (this.DiffShortest(0) <= tolerance || this.DiffShortest(180) <= tolerance || this.DiffShortest(360) <= tolerance)
+            {
+                return '-';
+            }
+            else if (this.DiffShortest(90) <= tolerance || this.DiffShortest(270) <= tolerance)
+            {
+                return '|';
+            }
+            else if (this.DiffShortest(135) <= tolerance || this.DiffShortest(315) <= tolerance)
+            {
+                return '/';
+            }
+            else if (this.DiffShortest(45) <= tolerance || this.DiffShortest(225) <= tolerance)
+            {
+                return '\\';
+            }
+            else
+            {
+                return '.';
+            }
+        }
+    }
+
     /// <summary>
     /// Returns true if the angle is 0,90,180, or 270
     /// </summary>

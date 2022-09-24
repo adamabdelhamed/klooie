@@ -77,6 +77,12 @@ public readonly struct RectF
         return new RectF(center.Left - newW / 2f, center.Top - newH / 2f, newW, newH);
     }
 
+    public RectF Grow(float newWidth, float newHeight)
+    {
+        var center = Center;
+        return new RectF(center.Left - newWidth / 2f, center.Top - newHeight / 2f, newWidth, newHeight);
+    }
+
     public RectF Shrink(float percentage)
     {
         var center = Center;
