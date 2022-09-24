@@ -6,6 +6,10 @@ internal class RuleManager
     private IRule[] rules;
     private List<IRule> dynamicRules;
 
+    private IRule current;
+    public IRule Current => current;
+
+
     public IEnumerable<IRule> Rules
     {
         get
@@ -34,7 +38,9 @@ internal class RuleManager
         rules = ruleProvider.Rules;
         foreach (var rule in Rules)
         {
+            current = rule;
             await rule.ExecuteAsync();
+            current = null;
         }
     }
 }
