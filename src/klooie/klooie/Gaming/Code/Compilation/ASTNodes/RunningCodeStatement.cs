@@ -12,6 +12,7 @@ public class ThrowResult : StatementExecutionResult
     public RunningCodeStatement Statement { get; set; }
 }
 public delegate Task FunctionImplementation(RunningCodeStatement statement, object[] parameters);
+public delegate Task StatementImplementation(RunningCodeStatement statement);
 
 public class RunningCodeStatement : Statement
 {
@@ -34,6 +35,9 @@ public class RunningCodeStatement : Statement
 
     public Func<TimeThread, StatementExecutionResult> OnExecuteHandler { get; set; }
 
+    public static string FormatStatementImplementationKey(string code) =>
+        $"{nameof(StatementImplementation)}:{code.Trim()}";
+
     public override StatementExecutionResult Execute(TimeThread thread)
     {
         StatementExecutionResult ret = new RunningCodeExecutionResult() { Statement = this };
@@ -44,6 +48,15 @@ public class RunningCodeStatement : Statement
             {
                 (ret as RunningCodeExecutionResult).Statement = this;
             }
+        }
+
+        if(Heap.Current.TryGetValue(FormatStatementImplementationKey(Code), out StatementImplementation impl))
+        {
+            thread.AsyncTask = new Func<Task>(async () =>
+            {
+                await Game.Current.Delay(250);
+                await impl(this);
+            })();
         }
 
         if (TryParseFunction(out FunctionInfo function))
@@ -113,7 +126,7 @@ public class RunningCodeStatement : Statement
         }
         await Game.Current.Delay(delay);
     }
-
+    private string Code => string.Join("", Tokens.Select(t => t.Value));
     private bool TryParseAssignment(out AssignmentInfo info)
     {
         var code = string.Join("", Tokens.Select(t => t.Value));
