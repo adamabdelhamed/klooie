@@ -1,4 +1,7 @@
-﻿namespace klooie;
+﻿using System.Text.RegularExpressions;
+
+namespace klooie;
+[ArgReviverType]
 public readonly struct RectF
 {
     public readonly float Left;
@@ -32,7 +35,15 @@ public readonly struct RectF
         this.Height = h;
     }
 
-
+    [ArgReviver]
+    public static RectF Revive(string key, string value)
+    {
+        var regex = new Regex(@"(?<Left>-?\d+),(?<Top>-?\d+),(?<Width>-?\d+),(?<Height>-?\d+)");
+        var match = regex.Match(value);
+        if (match.Success == false) throw new ValidationArgException($"Invalid RectF: "+value);
+        var parse = (Match m, string field) => float.Parse(m.Groups[field].Value);
+        return new RectF(parse(match, "Left"), parse(match, "Top"), parse(match, "Width"), parse(match, "Height"));
+    }
 
     public override string ToString() => $"{Left},{Top} {Width}x{Height}";
     public bool Equals(in Rect other) => Equals(other.ToRectF());
