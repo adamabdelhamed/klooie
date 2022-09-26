@@ -46,7 +46,7 @@ public class Process
         lt.OnDisposed(() => Heap.Current?.Set<object>(null, key));
     }
 
-    public void RenderCode(Block root, bool lineNumbers, float leftOfDocument, float topOfDocument)
+    public List<CodeControl> RenderCode(Block root, bool lineNumbers, float leftOfDocument, float topOfDocument)
     {
         var elements = CreateCodeElements(root, leftOfDocument, topOfDocument);
 
@@ -65,6 +65,7 @@ public class Process
                 lineElement.MoveTo(leftOfDocument, topElement + i);
             }
         }
+        return elements;
     }
 
     private List<CodeControl> CreateCodeElements(Block root, float leftOfDocument, float topOfDocument)
