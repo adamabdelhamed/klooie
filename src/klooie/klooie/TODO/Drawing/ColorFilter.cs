@@ -252,7 +252,7 @@ public static class FadeEx
             Setter = p =>
             {
                 filter.Percentage = p;
-                ConsoleApp.Current.RequestPaint();
+                ConsoleApp.Current?.RequestPaint();
             }
         });
         return filter;
