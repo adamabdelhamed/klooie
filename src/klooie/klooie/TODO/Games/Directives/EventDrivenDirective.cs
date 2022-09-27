@@ -8,7 +8,7 @@ public abstract class EventDrivenDirective : Directive
     public string Until { get; set; }
 
     [ArgDefaultValue(Game.ReadyEventId)]
-    public DynamicArg On { get; set; } = Game.ReadyEventId.ToDynamicArg();
+    public virtual DynamicArg On { get; set; } = Game.ReadyEventId.ToDynamicArg();
 
     [ArgDefaultValue(0)]
     public virtual DynamicArg Delay { get; set; }
