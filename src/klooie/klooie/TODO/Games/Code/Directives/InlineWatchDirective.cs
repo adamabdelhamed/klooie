@@ -1,5 +1,5 @@
 ﻿namespace klooie.Gaming.Code;
-public class InlineWatchDirective : Directive
+public class InlineWatchDirective : EventDrivenDirective
 {
 
     [ArgRequired]
@@ -26,7 +26,7 @@ public class InlineWatchDirective : Directive
 
     public bool AutoHide { get; set; }
 
-    public override Task ExecuteAsync()
+    public override Task OnEventFired(object args)
     {
        
         var element = Game.Current.GamePanel.Add(new InlineWatchLabel(this));
