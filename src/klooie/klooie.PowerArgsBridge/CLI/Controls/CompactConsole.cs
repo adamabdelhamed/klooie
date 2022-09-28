@@ -40,6 +40,7 @@ public abstract class CompactConsole : ConsolePanel
     Lifetime refreshLt = new Lifetime();
     public void HardRefresh(ConsoleString outputValue = null)
     {
+        var wasInputBlocked = this.InputBox?.IsInputBlocked == true;
         refreshLt?.Dispose();
         refreshLt = new Lifetime();
         var myLt = refreshLt;
@@ -104,7 +105,7 @@ public abstract class CompactConsole : ConsolePanel
 
         var inputPanel = gridLayout.Add(new ConsolePanel() { }, 1, top++);
         inputPanel.Add(new Label() { Text = "CMD> ".ToConsoleString() });
-        InputBox = inputPanel.Add(new TextBox() { X = "CMD> ".Length, Width = inputPanel.Width - "CMD> ".Length, Foreground = RGB.Gray, Background = RGB.Black });
+        InputBox = inputPanel.Add(new TextBox() { IsInputBlocked = wasInputBlocked, X = "CMD> ".Length, Width = inputPanel.Width - "CMD> ".Length, Foreground = RGB.Gray, Background = RGB.Black });
         InputBox.RichTextEditor.TabHandler.TabCompletionHandlers.Add(new PowerArgsRichCommandLineReader(def, new List<ConsoleString>(), false));
         OnInputBoxReady();
         top++;
