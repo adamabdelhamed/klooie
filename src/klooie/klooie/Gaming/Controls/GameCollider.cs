@@ -32,13 +32,13 @@ public class GameCollider : ConsoleControl
 
         bool causesOverlap = false;
 #if DEBUG
-        var overlaps = GetObstacles().Where(o => o.NumberOfPixelsThatOverlap(proposedBounds) > 0).ToArray();
+        var overlaps = GetObstacles().Where(o => o.CalculateDistanceTo(proposedBounds) == 0).ToArray();
         causesOverlap = overlaps.Any();
 #else
-        causesOverlap = GetObstacles().Where(o => o.NumberOfPixelsThatOverlap(proposedBounds) > 0).Any();
+        causesOverlap = GetObstacles().Where(o => o.CalculateDistanceTo(proposedBounds) == 0).Any();
 #endif
 
-        if(causesOverlap == false)
+        if (causesOverlap == false)
         {
             this.MoveTo(x, y);
             return true;

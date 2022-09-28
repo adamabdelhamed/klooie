@@ -205,10 +205,7 @@ public class ColliderGroup
                 else
                 {
                     var newLocation = item.Collider.Bounds.RadialOffset(velocity.Angle, d, false);
-                    if (item.Collider.CanMoveTo(newLocation))
-                    {
-                        item.Collider.Bounds = newLocation;
-                    }
+                    item.Collider.TryMoveTo(newLocation.Left, newLocation.Top);
                 }
 
                 velocity._onVelocityEnforced?.Fire();
