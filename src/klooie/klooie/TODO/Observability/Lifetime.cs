@@ -46,10 +46,17 @@ public static class ILifetimeEx
     /// </summary>
     /// <param name="t">the tast</param>
     /// <returns>a lifetime</returns>
-    public static ILifetimeManager ToLifetime(this Task t)
+    public static ILifetimeManager ToLifetime(this Task t, EventLoop loop = null)
     {
+        loop = loop ?? ConsoleApp.Current;
+        if(loop == null) throw new ArgumentException("ToLifetime() requires an event loop");
+
         var lt = new Lifetime();
-        t.ContinueWith((t2) => lt.Dispose(), TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
+        loop.Invoke(async () =>
+        {
+            await t;
+            lt.Dispose();
+        });
         return lt;
     }
 }
