@@ -167,6 +167,23 @@ public abstract class AnimatorOptions
         /// <returns>the eased percentage</returns>
         public static float EaseInOut(float percentage) => percentage < .5 ? 4 * percentage * percentage * percentage : (percentage - 1) * (2 * percentage - 2) * (2 * percentage - 2) + 1;
 
+
+        /// <summary>
+        /// An easing function that overshoots its target then bounces back
+        /// </summary>
+        /// <param name="percentage">the linear percentage</param>
+        /// <returns>the eased percentage</returns>
+        public static float EaseOverShootAndBounceBack(float percentage)
+        {
+            var  c1 = 1.70158f;
+            var c2 = c1 * 1.525f;
+
+            var ret = percentage < 0.5
+              ? (Math.Pow(2 * percentage, 2) * ((c2 + 1) * 2 * percentage - c2)) / 2
+              : (Math.Pow(2 * percentage - 2, 2) * ((c2 + 1) * (percentage * 2 - 2) + c2) + 2) / 2;
+            return (float)ret;
+        }
+
         private const int TargetFramesPerSecond = 20;
         
         /// <summary>
