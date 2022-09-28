@@ -62,6 +62,7 @@ public class ConsoleControl : Rectangular
     private bool _isVisible;
     private object _tag;
     private string _id;
+    private CompositionMode _composition;
     private bool hasBeenAddedToVisualTree;
     private HashSet<string> tags;
 
@@ -74,7 +75,7 @@ public class ConsoleControl : Rectangular
     /// <summary>
     /// Controls how controls are painted when multiple controls overlap
     /// </summary>
-    public CompositionMode CompositionMode { get; set; } = CompositionMode.PaintOver;
+    public CompositionMode CompositionMode { get { return _composition; } set { SetHardIf(ref _composition, value, value != _composition); } }
 
     /// <summary>
     /// Gets the Id of the control which can only be set at initialization time
@@ -302,6 +303,7 @@ public class ConsoleControl : Rectangular
         this.Foreground = DefaultColors.ForegroundColor;
         this.IsVisible = true;
         FocusColor = DefaultColors.FocusColor;
+        CompositionMode = CompositionMode.PaintOver;
     }
 
     /// <summary>
