@@ -97,8 +97,9 @@ public class InlineWatchDirective : EventDrivenDirective
 
             if (directive.AutoHide)
             {
-                Game.Current.Delay(2100).Then(() =>
+                Game.Current.Invoke(async () =>
                 {
+                    await Game.Current.Delay(2100);
                     var elapsed = Game.Current.MainColliderGroup.Now - lastUpdatedTime;
                     if (elapsed >= TimeSpan.FromSeconds(2))
                     {

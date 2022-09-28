@@ -115,7 +115,7 @@ public class DialogTests
         // should have the dialog shown
         dialogTask = MessageDialog.Show("Hello world");
         await context.PaintAndRecordKeyFrameAsync();
-        Assert.IsFalse(dialogTask.IsFulfilled());
+        Assert.IsFalse(dialogTask.IsCompleted);
 
         // simulate an enter keypress, which should clear the dialog
         await ConsoleApp.Current.SendKey(ConsoleKey.Enter);
@@ -130,7 +130,7 @@ public class DialogTests
         Task<ConsoleString?> dialogTask;
         dialogTask = TextInputDialog.Show(new ShowTextInputOptions("Rich text input prompt text".ToGreen()) { SpeedPercentage = 0 });
         await context.PaintAndRecordKeyFrameAsync();
-        Assert.IsFalse(dialogTask.IsFulfilled());
+        Assert.IsFalse(dialogTask.IsCompleted);
         await ConsoleApp.Current.SendKey(ConsoleKey.A.KeyInfo(shift: true));
         await context.PaintAndRecordKeyFrameAsync();
         await ConsoleApp.Current.SendKey(ConsoleKey.D);
@@ -139,7 +139,7 @@ public class DialogTests
         await context.PaintAndRecordKeyFrameAsync();
         await ConsoleApp.Current.SendKey(ConsoleKey.M);
         await context.PaintAndRecordKeyFrameAsync();
-        Assert.IsFalse(dialogTask.IsFulfilled());
+        Assert.IsFalse(dialogTask.IsCompleted);
         await ConsoleApp.Current.SendKey(ConsoleKey.Enter);
         var stringVal = (await dialogTask).ToString();
         await context.PaintAndRecordKeyFrameAsync();

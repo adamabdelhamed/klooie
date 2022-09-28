@@ -49,7 +49,7 @@ public static class ILifetimeEx
     public static ILifetimeManager ToLifetime(this Task t)
     {
         var lt = new Lifetime();
-        t.Finally((t2) => lt.Dispose());
+        t.ContinueWith((t2) => lt.Dispose(), TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
         return lt;
     }
 }
