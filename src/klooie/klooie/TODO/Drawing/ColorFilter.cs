@@ -106,7 +106,7 @@ public class FadeOutFilter : IConsoleControlFilter
 {
     public float Percentage { get; set; }
 
-    public RGB OutColor { get; set; } = RGB.Black;
+    public RGB BackgroundColor { get; set; } = RGB.Black;
 
     /// <summary>
     /// The control to filter
@@ -121,8 +121,8 @@ public class FadeOutFilter : IConsoleControlFilter
             {
                 var pixel = bitmap.GetPixel(x, y);
 
-                bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, pixel.ForegroundColor.ToOther(OutColor, Percentage),
-                    pixel.BackgroundColor.ToOther(OutColor, Percentage)));
+                bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, pixel.ForegroundColor.ToOther(BackgroundColor, Percentage),
+                    pixel.BackgroundColor.ToOther(BackgroundColor, Percentage)));
 
             }
         }
@@ -131,6 +131,7 @@ public class FadeOutFilter : IConsoleControlFilter
 
 public class FadeInFilter : IConsoleControlFilter
 {
+    public RGB BackgroundColor { get; set; } = RGB.Black;
     public float Percentage { get; set; }
 
     /// <summary>
@@ -145,8 +146,8 @@ public class FadeInFilter : IConsoleControlFilter
             for (var y = 0; y < bitmap.Height; y++)
             {
                 var pixel = bitmap.GetPixel(x, y);
-                bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, RGB.Black.ToOther(pixel.ForegroundColor, Percentage),
-                    RGB.Black.ToOther(pixel.BackgroundColor, Percentage)));
+                bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, BackgroundColor.ToOther(pixel.ForegroundColor, Percentage),
+                    BackgroundColor.ToOther(pixel.BackgroundColor, Percentage)));
             }
         }
     }
@@ -210,10 +211,14 @@ public static class FadeEx
         return filter;
     }
 
-    public static async Task<FadeInFilter> FadeIn(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null)
+    public static async Task<FadeInFilter> FadeIn(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null, RGB? bg = null)
     {
         easingFunction = easingFunction ?? Animator.Linear;
         var filter = new FadeInFilter();
+        if(bg.HasValue)
+        {
+            filter.BackgroundColor = bg.Value;
+        }
         c.Filters.Add(filter);
 
         await Animator.AnimateAsync(new FloatAnimatorOptions()
@@ -232,13 +237,13 @@ public static class FadeEx
         return filter;
     }
 
-    public static async Task<FadeOutFilter> FadeOut(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null, RGB? outColor = null)
+    public static async Task<FadeOutFilter> FadeOut(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null, RGB? bg = null)
     {
         easingFunction = easingFunction ?? Animator.Linear;
         var filter = new FadeOutFilter();
-        if (outColor.HasValue)
+        if (bg.HasValue)
         {
-            filter.OutColor = outColor.Value;
+            filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
 
