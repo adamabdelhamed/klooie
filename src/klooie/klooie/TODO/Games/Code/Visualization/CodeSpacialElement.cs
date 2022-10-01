@@ -6,34 +6,11 @@ public enum CodeDisplayState
     Infected,
     InfectedWithHotfixReady,
     TrainingData,
-    Ghost,
 }
-public interface IGhost
-{
-    bool IsGhost { get; set; }
-}
-public class CodeControl : GameCollider, IGhost
+public class CodeControl : GameCollider
 {
     public bool IsDimmed { get; set; }
-    public bool IsGhost
-    {
-        get
-        {
-            return State == CodeDisplayState.Ghost;
-        }
-        set
-        {
-            State = value ? CodeDisplayState.Ghost : CodeDisplayState.Normal;
-            if (IsGhost)
-            {
-                this.MoveTo(this.Left, this.Top);
-            }
-            else
-            {
-                this.MoveTo(this.Left, this.Top);
-            }
-        }
-    }
+   
     public LineNumberControl LineNumberElement => Game.Current.GamePanel.Controls.WhereAs<LineNumberControl>()
         .Where(l => Math.Floor(l.CenterY()) == Math.Floor(this.CenterY()))
         .SingleOrDefault();
