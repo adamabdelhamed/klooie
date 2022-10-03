@@ -1,5 +1,8 @@
-﻿namespace klooie;
+﻿using System.Text.RegularExpressions;
 
+namespace klooie;
+
+[ArgReviverType]
 public readonly struct LocF
 {
     public readonly float Left;
@@ -22,6 +25,17 @@ public readonly struct LocF
     public override bool Equals(object? obj) => (obj is LocF && Equals((LocF)obj)) || (obj is Loc && Equals((Loc)obj));
     public static bool operator ==(in LocF a, in LocF b) => a.Equals(b);
     public static bool operator !=(in LocF a, in LocF b) => a.Equals(b) == false;
+
+
+    [ArgReviver]
+    public static LocF Revive(string key, string value)
+    {
+        var regex = new Regex(@"(?<Left>-?\d+),(?<Top>-?\d+)");
+        var match = regex.Match(value);
+        if (match.Success == false) throw new ValidationArgException($"Invalid LocF: " + value);
+        var parse = (Match m, string field) => float.Parse(m.Groups[field].Value);
+        return new LocF(parse(match, "Left"), parse(match, "Top"));
+    }
 
     public override int GetHashCode()
     {
