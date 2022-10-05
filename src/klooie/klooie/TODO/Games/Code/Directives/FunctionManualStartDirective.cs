@@ -1,7 +1,7 @@
 ﻿
 namespace klooie.Gaming.Code;
 
-public class FunctionManualStartDirective : FunctionDirective
+public class FunctionManualStartDirective : EventDrivenFunctionDirective
 {
     [ArgDefaultValue(false)]
     public bool MultiThreaded { get; set; } = false;
@@ -18,7 +18,7 @@ public class FunctionManualStarter : GameCollider
     private FunctionManualStartDirective directive;
     private TimeSpan lastStartedTime;
 
-    private int ActiveThreadCount => Process.Current.Threads.Where(f => f.Options.EntryPoint == directive.Function).Count();
+    private int ActiveThreadCount => Process.Current.Threads.Where(f => f.ShouldContinue && f.Options.EntryPoint == directive.Function).Count();
     private bool CanStartBecauseDebounceTimeHasPassed => Game.Current.MainColliderGroup.Now - lastStartedTime >= TimeSpan.FromSeconds(.5);
     public bool IsEnabled => CanStartBecauseDebounceTimeHasPassed && (directive.MultiThreaded || ActiveThreadCount == 0);
 
@@ -42,16 +42,12 @@ public class FunctionManualStarter : GameCollider
         if (c.Angle.Value > 90 && c.Angle.Value < 270 && IsEnabled)
         {
             lastStartedTime = Game.Current.MainColliderGroup.Now;
-            directive.Function.Execute();
-            FirePropertyChanged(nameof(Bounds));
-            Game.Current.Invoke(async () =>
+            var lt = directive.Function.Execute();
+            lt.OnDisposed(() =>
             {
-                while (IsEnabled == false)
-                {
-                    await Task.Yield();
-                }
                 FirePropertyChanged(nameof(Bounds));
             });
+            FirePropertyChanged(nameof(Bounds));
         }
     }
 

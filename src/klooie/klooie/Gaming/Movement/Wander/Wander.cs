@@ -27,17 +27,17 @@ public class Wander : Movement
 {
     public WanderOptions Options { get; private set; }
 
-    public Angle? _LastGoodAngle { get; set; }
-    public Angle _OptimalAngle { get; set; }
-    public Lifetime _IterationLifetime { get; set; }
-    public IEnumerable<GameCollider> _Obstacles { get; set; }
-    public WanderScore _BestScore { get; set; }
-    public GameCollider _CuriosityPoint { get; set; }
+    internal Angle? _LastGoodAngle { get; set; }
+    internal Angle _OptimalAngle { get; set; }
+    internal Lifetime _IterationLifetime { get; set; }
+    internal GameCollider[] _Obstacles { get; set; }
+    internal WanderScore _BestScore { get; set; }
+    internal GameCollider _CuriosityPoint { get; set; }
 
-    public IWanderSense _VisibilitySense { get; set; }
-    public IWanderSense _CloserToTargetSense { get; set; }
-    public IWanderSense _SimilarToCurrentDirectionSense { get; set; }
-    public IWanderSense _ApproachAngleSense { get; set; }
+    internal IWanderSense _VisibilitySense { get; set; }
+    internal IWanderSense _CloserToTargetSense { get; set; }
+    internal IWanderSense _SimilarToCurrentDirectionSense { get; set; }
+    internal IWanderSense _ApproachAngleSense { get; set; }
     public bool IsStuck { get; private set; }
 
     public TimeSpan? LastStuckTime { get; private set; }
@@ -87,7 +87,7 @@ public class Wander : Movement
                 _IterationLifetime = Game.Current.CreateChildLifetime();
 
                 var elementBounds = Element.Bounds;
-                _Obstacles = Velocity.GetObstacles().Where(o => o.CalculateDistanceTo(elementBounds) <= Options.Visibility);
+                _Obstacles = Velocity.GetObstacles().Where(o => o.CalculateDistanceTo(elementBounds) <= Options.Visibility).ToArray();
                 SetOptimalAngle();
 
                 var cpd = _CuriosityPoint == null ? -1f : _CuriosityPoint.CalculateNormalizedDistanceTo(Element.Bounds);
