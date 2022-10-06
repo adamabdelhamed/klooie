@@ -352,7 +352,10 @@ public abstract class AnimatorOptions
 
         private static async Task AnimateAsyncInternal(AnimatorOptions options)
         {
-
+            if (options.IsCancelled != null && options.IsCancelled())
+            {
+                return;
+            }
             var animationTime = TimeSpan.FromMilliseconds(options.Duration);
             if (animationTime == TimeSpan.Zero)
             {
