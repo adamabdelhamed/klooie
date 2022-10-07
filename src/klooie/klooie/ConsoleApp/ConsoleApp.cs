@@ -53,6 +53,11 @@ public partial class ConsoleApp : EventLoop
     public Event OnKeyInputThrottled { get; private set; } = new Event();
 
     /// <summary>
+    /// An event that fires whenever a key is pressed. Other handlers will also run.
+    /// </summary>
+    public Event<ConsoleKeyInfo> GlobalKeyPressed { get; private set; } = new Event<ConsoleKeyInfo>();
+
+    /// <summary>
     /// If true, paint requests will be honored. Defaults to true.
     /// </summary>
     public bool PaintEnabled { get; set; } = true;
@@ -405,6 +410,8 @@ public partial class ConsoleApp : EventLoop
 
     private void HandleKeyInput(ConsoleKeyInfo info)
     {
+        GlobalKeyPressed.Fire(info);
+
         if (focus.GlobalKeyHandlers.TryIntercept(info))
         {
             // great, it was handled
