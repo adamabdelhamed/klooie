@@ -1,78 +1,86 @@
-﻿namespace PowerArgs.CLI.Controls
+﻿namespace PowerArgs.CLI.Controls;
+public class ArrowBasedListMenu<T> : ProtectedConsolePanel where T : class
 {
-    public class ArrowBasedListMenu<T> : ProtectedConsolePanel where T : class
+    private List<T> menuItems;
+    private Func<T, ConsoleString> formatter;
+    private Func<T, bool> isEnabled;
+
+    public int SelectedIndex { get => Get<int>(); set => Set(value); }
+    public ConsoleKey? AlternateUp { get; set; }
+    public ConsoleKey? AlternateDown { get; set; }
+
+    public T? SelectedItem => menuItems.Count > 0 ? menuItems[SelectedIndex] : null;
+    public Event<T> ItemActivated { get; private init; } = new Event<T>();
+
+    public ArrowBasedListMenu(List<T> menuItems) : this(menuItems, item => true, item => ("" + item).ToConsoleString()) { }
+
+    public ArrowBasedListMenu(List<T> menuItems, Func<T, bool> isEnabled, Func<T, ConsoleString> formatter)
     {
-        public int SelectedIndex { get => Get<int>(); set => Set(value); }
-        public T SelectedItem => MenuItems.Count > 0 ? MenuItems[SelectedIndex] : null;
+        this.menuItems = menuItems;
+        this.isEnabled = isEnabled;
+        this.formatter = formatter;
+        GuardAgainstNullArguments();
+        AddMenuItems();
+        SetupEventHandlers();
+    }
 
-        public Event<T> ItemActivated { get; private set; } = new Event<T>();
-        public List<T> MenuItems { get; private set; }
-        private Func<T, ConsoleString> formatter;
+    private void AddMenuItems()
+    {
+        var stack = ProtectedPanel.Add(new StackPanel() { Orientation = Orientation.Vertical, Margin = 1 }).Fill();
+        menuItems.ForEach(menuItem => stack.Add(new Label() { Tag = menuItem }).FillHorizontally());
+    }
 
-        public ConsoleKey? AlternateUp { get; set; }
-        public ConsoleKey? AlternateDown { get; set; }
+    private void SetupEventHandlers()
+    {
+        this.CanFocus = true;
+        this.Focused.Sync(RefreshLabels, this);
+        this.Unfocused.Subscribe(RefreshLabels, this);
+        this.KeyInputReceived.Subscribe(OnKeyPress, this);
+    }
 
-        public ArrowBasedListMenu(List<T> menuItems, Func<T,ConsoleString> formatter = null)
+    private void OnKeyPress(ConsoleKeyInfo obj)
+    {
+        var wasUpPressed = obj.Key == ConsoleKey.UpArrow || (AlternateUp.HasValue && obj.Key == AlternateUp.Value);
+        var wasDownPressed = obj.Key == ConsoleKey.DownArrow || (AlternateDown.HasValue && obj.Key == AlternateDown.Value);
+        var wasEnterPressed = obj.Key == ConsoleKey.Enter;
+        var canAdvanceBackwards = SelectedIndex > 0 && isEnabled(menuItems[SelectedIndex - 1]);
+        var canAdvanceForwards = SelectedIndex < menuItems.Count - 1 && isEnabled(menuItems[SelectedIndex + 1]);
+        var canActivateItem = SelectedItem != null;
+
+        if (wasUpPressed && canAdvanceBackwards)
         {
-            MenuItems = menuItems;
-            formatter = formatter ?? new Func<T, ConsoleString>(item => (""+item).ToConsoleString());
-            this.formatter = formatter;
-
-            var stack = ProtectedPanel.Add(new StackPanel() { Orientation = Orientation.Vertical, Margin = 1 }).Fill();
-            this.CanFocus = true;
-
-            this.Focused.Subscribe(Sync, this);
-            this.Unfocused.Subscribe(Sync, this);
-
-            foreach (var menuItem in menuItems)
-            {
-                var label = stack.Add(new Label() { Text = formatter(menuItem), Tag = menuItem }).FillHorizontally();
-            }
-
-            Sync();
-
-            this.KeyInputReceived.Subscribe(OnKeyPress, this);
+            SelectedIndex--;
+            FirePropertyChanged(nameof(SelectedItem));
+            RefreshLabels();
         }
-
-        private void OnKeyPress(ConsoleKeyInfo obj)
+        else if (wasDownPressed && canAdvanceForwards)
         {
-            if(obj.Key == ConsoleKey.UpArrow || (AlternateUp.HasValue && obj.Key == AlternateUp.Value))
-            {
-                if(SelectedIndex > 0)
-                {
-                    SelectedIndex--;
-                    FirePropertyChanged(nameof(SelectedItem));
-                    Sync();
-                }
-            }
-            else if(obj.Key == ConsoleKey.DownArrow || (AlternateDown.HasValue && obj.Key == AlternateDown.Value))
-            {
-                if (SelectedIndex < MenuItems.Count - 1)
-                {
-                    SelectedIndex++;
-                    FirePropertyChanged(nameof(SelectedItem));
-                    Sync();
-                }
-            }
-            else if(obj.Key == ConsoleKey.Enter)
-            {
-                ItemActivated.Fire(SelectedItem);
-            }
+            SelectedIndex++;
+            FirePropertyChanged(nameof(SelectedItem));
+            RefreshLabels();
         }
-
-        private void Sync()
+        else if (wasEnterPressed && canActivateItem)
         {
-            foreach (var label in ProtectedPanel.Descendents.WhereAs<Label>().Where(l => l.Tag is T))
-            {
-                if (object.ReferenceEquals(label.Tag, SelectedItem))
-                {
-                    label.Text = formatter(label.Tag as T).StringValue.ToConsoleString(HasFocus ? RGB.Black : Foreground, HasFocus ? RGB.Cyan : Background);
-                }
-                else
-                {
-                    label.Text = formatter(label.Tag as T);
-                }
-            }
+            ItemActivated.Fire(SelectedItem);
         }
+    }
+
+    private ConsoleString SelectedItemFormatter(T item)=> (formatter(item).StringValue).ToConsoleString(HasFocus ? RGB.Black : Foreground, HasFocus ? RGB.Cyan : Background);
+    
+    private void RefreshLabels()
+    {
+        foreach (var label in ProtectedPanel.Descendents.WhereAs<Label>().Where(l => l.Tag is T))
+        {
+            var item = (T)label.Tag;
+            var isSelected = ReferenceEquals(label.Tag, SelectedItem);
+            label.Text = isSelected ? SelectedItemFormatter(item) : formatter(item);
+        }
+    }
+
+    private void GuardAgainstNullArguments()
+    {
+        if (menuItems == null) throw new ArgumentNullException(nameof(menuItems));
+        if (isEnabled == null) throw new ArgumentNullException(nameof(isEnabled));
+        if (formatter == null) throw new ArgumentNullException(nameof(formatter));
     }
 }
