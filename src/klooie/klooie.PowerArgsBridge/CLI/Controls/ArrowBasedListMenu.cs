@@ -20,6 +20,7 @@ public class ArrowBasedListMenu<T> : ProtectedConsolePanel where T : class
         this.isEnabled = isEnabled;
         this.formatter = formatter;
         GuardAgainstNullArguments();
+        GuardAgainstInvalidSelectedIndexSetter();
         AddMenuItems();
         SetupEventHandlers();
     }
@@ -75,6 +76,17 @@ public class ArrowBasedListMenu<T> : ProtectedConsolePanel where T : class
             var isSelected = ReferenceEquals(label.Tag, SelectedItem);
             label.Text = isSelected ? SelectedItemFormatter(item) : formatter(item);
         }
+    }
+
+    private void GuardAgainstInvalidSelectedIndexSetter()
+    {
+        Subscribe(nameof(SelectedIndex), () =>
+        {
+            if (SelectedIndex < 0 || SelectedIndex >= menuItems.Count)
+            {
+                throw new ArgumentException($"{nameof(SelectedIndex)} '{SelectedIndex}'is out of range");
+            }
+        }, this);
     }
 
     private void GuardAgainstNullArguments()
