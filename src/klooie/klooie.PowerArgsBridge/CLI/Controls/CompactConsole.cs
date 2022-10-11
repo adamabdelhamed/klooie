@@ -12,6 +12,8 @@ public abstract class CompactConsole : ConsolePanel
     public ConsoleString WelcomeMessage { get; set; } = "Welcome to the console".ToWhite();
     public ConsoleString EscapeMessage { get; set; } = "Press escape to resume".ToGray();
 
+    public bool HideWelcomePanel { get; set; }
+
     public bool SuperCompact { get; set; }
 
     public CompactConsole()
@@ -41,6 +43,7 @@ public abstract class CompactConsole : ConsolePanel
     public void HardRefresh(ConsoleString outputValue = null)
     {
         var wasInputBlocked = this.InputBox?.IsInputBlocked == true;
+        var wasFocusable = this.InputBox?.CanFocus == true;
         refreshLt?.Dispose();
         refreshLt = new Lifetime();
         var myLt = refreshLt;
@@ -94,18 +97,18 @@ public abstract class CompactConsole : ConsolePanel
 
         if (SuperCompact == false)
         {
-            var welcomePanel = gridLayout.Add(new ConsolePanel(), 1, top++);
+            var welcomePanel = gridLayout.Add(new ConsolePanel() { IsVisible = !HideWelcomePanel }, 1, top++);
             welcomePanel.Add(new Label() { Text = WelcomeMessage }).CenterHorizontally();
 
-            var escapePanel = gridLayout.Add(new ConsolePanel(), 1, top++);
+            var escapePanel = gridLayout.Add(new ConsolePanel() { IsVisible = !HideWelcomePanel }, 1, top++);
             escapePanel.Add(new Label() { Text = EscapeMessage }).CenterHorizontally();
-
+            
             top++;
         }
 
         var inputPanel = gridLayout.Add(new ConsolePanel() { }, 1, top++);
         inputPanel.Add(new Label() { Text = "CMD> ".ToConsoleString() });
-        InputBox = inputPanel.Add(new TextBox() { IsInputBlocked = wasInputBlocked, X = "CMD> ".Length, Width = inputPanel.Width - "CMD> ".Length, Foreground = RGB.Gray, Background = RGB.Black });
+        InputBox = inputPanel.Add(new TextBox() { CanFocus = wasFocusable, IsInputBlocked = wasInputBlocked, X = "CMD> ".Length, Width = inputPanel.Width - "CMD> ".Length, Foreground = RGB.Gray, Background = RGB.Black });
         InputBox.RichTextEditor.TabHandler.TabCompletionHandlers.Add(new PowerArgsRichCommandLineReader(def, new List<ConsoleString>(), false));
         OnInputBoxReady();
         top++;
@@ -140,7 +143,10 @@ public abstract class CompactConsole : ConsolePanel
                 }
             }, refreshLt);
 
-            InputBox.Focus();
+            if (InputBox.CanFocus)
+            {
+                InputBox.Focus();
+            }
         }
 
         if (SuperCompact == false)
@@ -299,7 +305,7 @@ public abstract class CompactConsole : ConsolePanel
 
             if (candidates.Count == 0)
             {
-                return $"\nNo actions start with {InputBox.Value.ToString()}".ToRed();
+                return $"\nNo commands start with {InputBox.Value.ToString()}".ToRed();
             }
         }
 
@@ -312,9 +318,9 @@ public abstract class CompactConsole : ConsolePanel
             var recommended = candidates.Where(c => c.Metadata.HasMeta<RecommendedAction>()).ToList();
             var other = candidates.Where(c => !c.Metadata.HasMeta<RecommendedAction>()).ToList();
 
-            var recommendedHeader = recommended.None() ? ConsoleString.Empty : " recommended actions ".ToConsoleString(RGB.Black, RGB.Yellow) + "\n\n".ToConsoleString();
+            var recommendedHeader = recommended.None() ? ConsoleString.Empty : " recommended commands ".ToConsoleString(RGB.Black, RGB.Yellow) + "\n\n".ToConsoleString();
             var recommendedTable = recommended.None() ? ConsoleString.Empty : CreateTable(recommended, true);
-            var otherHeader = other.None() ? ConsoleString.Empty : "\n\nother actions\n".ToGray();
+            var otherHeader = other.None() ? ConsoleString.Empty : "\n\nother commands\n".ToGray();
             var otherTable = other.None() ? ConsoleString.Empty : CreateTable(other, false).ToGray();
 
             return recommendedHeader + recommendedTable + otherHeader + otherTable;
