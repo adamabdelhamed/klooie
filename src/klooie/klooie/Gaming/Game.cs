@@ -32,6 +32,11 @@ public class Game : ConsoleApp, IDelayProvider
     public ISoundProvider Sound { get; set; } = new NoOpSoundProvider();
 
     /// <summary>
+    /// an event that fires when the game is paused
+    /// </summary>
+    public Event<ILifetimeManager> Paused => pauseManager.OnPaused;
+
+    /// <summary>
     /// returns true if the game is currently paused
     /// </summary>
     public bool IsPaused => pauseManager.State == PauseManager.PauseState.Paused;
