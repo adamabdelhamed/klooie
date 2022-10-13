@@ -10,7 +10,7 @@ public class Rectangular : ObservableObject
 
     public int ZIndex { get => z; set => SetHardIf(ref z, value, z != value); }
 
-    public int ColliderHashCode { get; set; } = -1;
+    internal int ColliderHashCode { get; set; } = -1;
 
     public RectF Bounds
     {
