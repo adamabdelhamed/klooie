@@ -166,6 +166,7 @@ public abstract class CompactConsole : ConsolePanel
     private async Task OnHandleHey(ConsoleKeyInfo keyInfo)
     {
         if (InputBox.IsInputBlocked) return;
+        if (keyInfo.Key == ConsoleKey.Enter && string.IsNullOrWhiteSpace(InputBox.Value?.ToString())) return;
         OnKeyPress(keyInfo);
         if (keyInfo.Key == ConsoleKey.Enter)
         {
