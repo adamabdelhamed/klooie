@@ -1,36 +1,8 @@
 ﻿namespace klooie.Gaming.Code;
 
-public enum CodeDisplayState
-{
-    Normal,
-    Infected,
-    InfectedWithHotfixReady,
-    TrainingData,
-}
+
 public class CodeControl : GameCollider
 {
-    public bool IsDimmed { get; set; }
-   
-    public LineNumberControl LineNumberElement => Game.Current.GamePanel.Controls.WhereAs<LineNumberControl>()
-        .Where(l => Math.Floor(l.CenterY()) == Math.Floor(this.CenterY()))
-        .SingleOrDefault();
-
-    private CodeDisplayState _state = CodeDisplayState.Normal;
-    public CodeDisplayState State
-    {
-        get => _state;
-        set
-        {
-            _state = value;
-            var lineNumber = LineNumberElement;
-            if (lineNumber != null)
-            {
-                lineNumber.State = value;
-            }
-            FirePropertyChanged(nameof(Bounds));
-        }
-    }
-
     public CodeToken Token;
 
     public CodeControl(CodeToken token)
@@ -39,29 +11,6 @@ public class CodeControl : GameCollider
         this.MoveTo(this.Left, this.Top);
         this.ResizeTo(token.Value.Length, 1);
         this.Token = token;
-        Subscribe(nameof(Bounds), () =>
-        {
-
-            if (this.State == CodeDisplayState.Infected || this.State == CodeDisplayState.InfectedWithHotfixReady)
-            {
-                foreach (var line in Game.Current.GamePanel.Controls.WhereAs<LineNumberControl>().ToArray())
-                {
-                    line.State = CodeDisplayState.Normal;
-                }
-
-                foreach (var el in Game.Current.GamePanel.Controls.WhereAs<CodeControl>().ToArray())
-                {
-                    if (el.State == CodeDisplayState.Infected || el.State == CodeDisplayState.InfectedWithHotfixReady)
-                    {
-                        var line = el.LineNumberElement;
-                        if (line != null)
-                        {
-                            line.State = el.State;
-                        }
-                    }
-                }
-            }
-        }, this);
     }
 
     public virtual ConsoleString LineOfCode
@@ -74,64 +23,42 @@ public class CodeControl : GameCollider
 
     public override string ToString() => $"{Token.ToString()}";
 
-    public ConsoleString FormatToken(CodeDisplayState? state = null)
+    public ConsoleString FormatToken()
     {
-        state = state.HasValue ? state.Value : State;
         var token = Token;
 
         RGB fg = RGB.Gray, bg = RGB.Black;
 
-        if (state == CodeDisplayState.Normal)
-        {
-            if (token.Statement is Directive)
-            {
-                bg = RGB.DarkGreen;
-            }
 
-            if (token.Type == TokenType.Comment)
-            {
-                fg = RGB.Green;
-            }
-            else if (token.Type == TokenType.Keyword)
-            {
-                fg = RGB.Cyan;
-            }
-            else if (token.Type == TokenType.TypeName)
-            {
-                fg = RGB.Magenta;
-            }
-            else if (token.Type == TokenType.DoubleQuotedStringLiteral)
-            {
-                return DoubleQuotedStringFormat();
-                fg = RGB.DarkYellow;
-            }
-            else if (token.Type == TokenType.TrailingWhitespace)
-            {
-                bg = RGB.White;
-            }
-            else if (token.Type == TokenType.NonTrailingWhitespace)
-            {
-                bg = RGB.White;
-            }
-        }
-        else if (state == CodeDisplayState.Infected)
+        if (token.Statement is Directive)
         {
-            fg = RGB.Red;
+            bg = RGB.DarkGreen;
         }
-        else if (state == CodeDisplayState.InfectedWithHotfixReady)
+
+        if (token.Type == TokenType.Comment)
         {
-            fg = RGB.Black;
+            fg = RGB.Green;
+        }
+        else if (token.Type == TokenType.Keyword)
+        {
+            fg = RGB.Cyan;
+        }
+        else if (token.Type == TokenType.TypeName)
+        {
+            fg = RGB.Magenta;
+        }
+        else if (token.Type == TokenType.DoubleQuotedStringLiteral)
+        {
+            return DoubleQuotedStringFormat();
+            fg = RGB.DarkYellow;
+        }
+        else if (token.Type == TokenType.TrailingWhitespace)
+        {
             bg = RGB.White;
         }
-        else if (state == CodeDisplayState.TrainingData)
+        else if (token.Type == TokenType.NonTrailingWhitespace)
         {
-            fg = RGB.Yellow;
-        }
-
-        if (IsDimmed)
-        {
-            fg = RGB.DarkGray;
-            bg = RGB.Black;
+            bg = RGB.White;
         }
 
         return token.Value.ToConsoleString(fg, bg);
@@ -139,7 +66,6 @@ public class CodeControl : GameCollider
 
     private ConsoleString DoubleQuotedStringFormat()
     {
-        var game = ConsoleApp.Current as Game;
         if (Token.Value == "[")
         {
             return new ConsoleString("[", RGB.DarkGray);

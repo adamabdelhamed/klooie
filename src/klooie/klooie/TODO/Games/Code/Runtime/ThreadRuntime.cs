@@ -70,10 +70,7 @@ public class ThreadRuntime : Lifetime
             }
             else if (threadResult is ThrowResult)
             {
-                if (FunctionSoundsDirective.IsSoundEnabled(Options.EntryPoint))
-                {
-                    Game.Current.Publish("ThrowStatementStart");
-                }
+                Game.Current.Publish("ThrowStatementStart");
                 throwResult = threadResult as ThrowResult;
                 var runningCodeStatement = throwResult.Statement;
                 var message = throwResult.Message ?? "Unhandled exception";
@@ -182,10 +179,7 @@ public class ThreadRuntime : Lifetime
         if (IsExpired) return;
         if (statement is RunningCodeStatement && (statement as RunningCodeStatement).AsyncInfo != null)
         {
-            if (FunctionSoundsDirective.IsSoundEnabled(Options.EntryPoint))
-            {
-                Game.Current.Publish("AsyncStatementStart");
-            }
+            Game.Current.Publish("AsyncStatementStart");
             var asyncInfo = (statement as RunningCodeStatement).AsyncInfo;
             using (var asyncLifetime = Game.Current.CreateChildLifetime())
             {
@@ -223,10 +217,7 @@ public class ThreadRuntime : Lifetime
                 }
                 await Game.Current.Delay(asyncInfo.Latency);
                 if (IsExpired) return;
-                if (FunctionSoundsDirective.IsSoundEnabled(Options.EntryPoint))
-                {
-                    Game.Current.Publish("AsyncStatementReturn");
-                }
+                Game.Current.Publish("AsyncStatementReturn");
                 await Game.Current.Delay(TimeSpan.FromMilliseconds(asyncInfo.AsyncDuration + WireLatency()));
                 if (IsExpired) return;
 
@@ -262,10 +253,7 @@ public class ThreadRuntime : Lifetime
 
     private ActiveLineElement ActivateStatement(List<CodeToken> tokens, string throwMessage = null)
     {
-        if (FunctionSoundsDirective.IsSoundEnabled(Options.EntryPoint))
-        {
-            Game.Current.Publish("StatementActivated");
-        }
+        Game.Current.Publish("StatementActivated");
         var anchor = CodeControl.CodeElements
             .Where(c => tokens.Contains(c.Token))
             .OrderBy(c => c.Token.Column).FirstOrDefault();

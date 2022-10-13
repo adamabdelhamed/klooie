@@ -69,10 +69,6 @@ public static class NestedDirectedResolver
             {
                 return !model.ToBool(tokens);
             }
-            else if (tokens[0].Equals("lifetime", StringComparison.OrdinalIgnoreCase))
-            {
-                return model.GetLifetime(tokens);
-            }
             else
             {
                 throw new NotSupportedException("Not supported: " + tokens[0]);
@@ -215,11 +211,6 @@ public static class NestedDirectedResolver
             else if (tokens.Length == 1) return false;
 
             return tokens[1].ToLower() == "true";
-        }
-
-        public ILifetime GetLifetime(string[] tokens)
-        {
-            return LifetimeDirective.Get(tokens[1]);
         }
     }
 

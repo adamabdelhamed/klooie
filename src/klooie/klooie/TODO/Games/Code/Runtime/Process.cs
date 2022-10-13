@@ -46,7 +46,7 @@ public class Process
         lt.OnDisposed(() => Heap.Current?.Set<object>(null, key));
     }
 
-    public List<CodeControl> RenderCode(Block root, bool lineNumbers, float leftOfDocument, float topOfDocument)
+    public List<CodeControl> RenderCode(Block root, float leftOfDocument, float topOfDocument)
     {
         var elements = CreateCodeElements(root, leftOfDocument, topOfDocument);
 
@@ -55,16 +55,6 @@ public class Process
             Game.Current.GamePanel.Controls.Add(element);
         }
 
-        if (lineNumbers)
-        {
-            var topElement = elements.Select(e => e.Top).Min();
-            var linesNeeded = (elements.Select(e => e.Top).Max()+1) - elements.Select(e => e.Top).Min();
-            for (var i = 0; i < linesNeeded; i++)
-            {
-                var lineElement = Game.Current.GamePanel.Add(new LineNumberControl(i + 1));
-                lineElement.MoveTo(leftOfDocument, topElement + i);
-            }
-        }
         return elements;
     }
 
