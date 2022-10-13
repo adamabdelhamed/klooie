@@ -160,3 +160,51 @@ public static class Layout
         return child;
     }
 }
+
+public readonly struct Thickness
+{
+    /// <summary>
+    /// the amount of padding on the left
+    /// </summary>
+    public readonly int Left { get; private init; }
+
+    /// <summary>
+    /// the amount of padding on the right
+    /// </summary>
+    public readonly int Right { get; private init; }
+
+    /// <summary>
+    /// the amount of padding on top
+    /// </summary>
+    public readonly int Top { get; private init; }
+
+    /// <summary>
+    /// the amount of padding on the bottom
+    /// </summary>
+    public readonly int Bottom { get; private init; }
+
+    /// <summary>
+    /// the total amount of horizontal padding
+    /// </summary>
+    public int HorizontalPadding => Left + Right;
+
+    /// <summary>
+    /// the total amount of vertical padding
+    /// </summary>
+    public int VerticalPadding => Top + Bottom;
+
+    /// <summary>
+    /// Creates a new thickness
+    /// </summary>
+    /// <param name="l">the amount of padding on the left</param>
+    /// <param name="r">the amount of padding on the right</param>
+    /// <param name="t">the amount of padding on top</param>
+    /// <param name="b">the amount of padding on the bottom</param>
+    public Thickness(int l, int r, int t, int b)
+    {
+        this.Left = l;
+        this.Right = r;
+        this.Top = t;
+        this.Bottom = b;
+    }
+}
