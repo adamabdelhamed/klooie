@@ -6,6 +6,9 @@ public class FunctionManualStartDirective : EventDrivenFunctionDirective
     [ArgDefaultValue(false)]
     public bool MultiThreaded { get; set; } = false;
 
+    [ArgDefaultValue(false)]
+    public bool OneTime { get; set; } = false;
+
     protected override Task OnFunctionIdentified(Function myFunction)
     {
         Game.Current.GamePanel.Add(new FunctionManualStarter(this));
@@ -25,6 +28,7 @@ public class FunctionManualStarter : GameCollider
     public FunctionManualStarter(FunctionManualStartDirective directive)
     {
         this.directive = directive;
+        CompositionMode = CompositionMode.BlendBackground;
         var code = Game.Current.GamePanel.Controls
                 .WhereAs<CodeControl>()
                 .Where(c => c.Token?.Function == directive.Function)
@@ -48,6 +52,10 @@ public class FunctionManualStarter : GameCollider
                 FirePropertyChanged(nameof(Bounds));
             });
             FirePropertyChanged(nameof(Bounds));
+            if(directive.OneTime)
+            {
+                this.Dispose();
+            }
         }
     }
 
