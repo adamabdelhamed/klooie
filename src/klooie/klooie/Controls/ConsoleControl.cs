@@ -256,6 +256,22 @@ public class ConsoleControl : Rectangular
     }
 
     /// <summary>
+    /// Gets all parents of this control
+    /// </summary>
+    public IEnumerable<Container> Anscestors
+    {
+        get
+        {
+            var parent = Parent;
+            while(parent != null)
+            {
+                yield return parent;
+                parent = parent.Parent;
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets this controls bitmap, which can be painted onto its parent
     /// </summary>
     public ConsoleBitmap Bitmap { get; internal set; }
