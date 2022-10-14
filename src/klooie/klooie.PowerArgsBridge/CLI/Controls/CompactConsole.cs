@@ -124,13 +124,13 @@ public abstract class CompactConsole : ConsolePanel
                 focusLt = new Lifetime();
 
 
-                Application.PushKeyForLifetime(ConsoleKey.Tab, () =>
+                Application.PushKeyForLifetime(ConsoleKey.Tab, async () =>
                 {
-                    var forgotten = OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));
+                    await OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));
                 }, focusLt);
-                Application.PushKeyForLifetime(ConsoleKey.Tab, ConsoleModifiers.Shift, () =>
+                Application.PushKeyForLifetime(ConsoleKey.Tab, ConsoleModifiers.Shift, async () =>
                 {
-                    var forgotten = OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, true, false, false));
+                    await OnHandleHey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, true, false, false));
                 }, focusLt);
 
             }, refreshLt);
