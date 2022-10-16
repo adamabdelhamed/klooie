@@ -114,6 +114,7 @@ public class Rectangular : ObservableObject
         Bounds = new RectF(Bounds.Left, Bounds.Top, w, h);
     }
 
+    public void MoveCenterTo(LocF loc) => MoveCenterTo(loc.Left, loc.Top);
     public void MoveCenterTo(float x, float y)
     {
         var left = x - Width / 2f;
