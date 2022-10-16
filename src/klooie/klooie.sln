@@ -11,11 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.PowerArgsBridge", "k
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.TestsBridge", "klooie.TestsBridge\klooie.TestsBridge.csproj", "{685306D0-3491-4CF0-B14B-E96EAC6A532A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.animationstudio", "klooie.animationstudio\klooie.animationstudio.csproj", "{95A2DB71-7EF5-4214-84D6-A37FAA15A661}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.VideoPlayer", "klooie.VideoPlayer\klooie.VideoPlayer.csproj", "{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "Playground\Playground.csproj", "{1D7E2A64-A1A7-40AF-A55D-A539EC088825}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Playground", "Playground\Playground.csproj", "{1D7E2A64-A1A7-40AF-A55D-A539EC088825}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,10 +37,6 @@ Global
 		{685306D0-3491-4CF0-B14B-E96EAC6A532A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{685306D0-3491-4CF0-B14B-E96EAC6A532A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{685306D0-3491-4CF0-B14B-E96EAC6A532A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{95A2DB71-7EF5-4214-84D6-A37FAA15A661}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{95A2DB71-7EF5-4214-84D6-A37FAA15A661}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{95A2DB71-7EF5-4214-84D6-A37FAA15A661}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{95A2DB71-7EF5-4214-84D6-A37FAA15A661}.Release|Any CPU.Build.0 = Release|Any CPU
 		{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
