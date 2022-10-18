@@ -1,13 +1,21 @@
 ﻿
 namespace klooie;
 
+public enum TabAlignment
+{
+    Center,
+    Left
+}
+
 public class TabControlOptions
 {
-    public ObservableCollection<string> Tabs { get; private set; } = new ObservableCollection<string>();
+    public ObservableCollection<string> Tabs { get; private init; } = new ObservableCollection<string>();
     public Func<string,ConsoleControl> BodyFactory { get; set; }
     public bool TreatAKeyAndDKeyAsLeftRight { get; set; }
     public TabControlOptions(IEnumerable<string> tabs) => tabs.ForEach(t => Tabs.Add(t));
     public TabControlOptions(params string[] tabs) => tabs.ForEach(t => Tabs.Add(t));
+
+    public TabAlignment TabAlignment { get; set; } = TabAlignment.Center;
 }
 
 public class TabControl : ProtectedConsolePanel
@@ -35,15 +43,11 @@ public class TabControl : ProtectedConsolePanel
             }
         }
     }
-    public TabControlOptions Options { get; private set; }
-    public RGB FocusBGColor { get => Get<RGB>(); set => Set(value); }  
-    public RGB FocusFGColor { get => Get<RGB>(); set => Set(value); }  
+    public TabControlOptions Options { get; private init; }
 
     public TabControl(TabControlOptions options)
     {
         this.Options = options;
-        FocusBGColor = RGB.Cyan;
-        FocusFGColor = RGB.Black;
         Foreground = RGB.Yellow;
         Ready.SubscribeOnce(Init);
     }
@@ -74,8 +78,8 @@ public class TabControl : ProtectedConsolePanel
             CurrentTab = currentTabLabel.Text.ToString();
         }
 
-        var currentTabFg = hasFocus ? FocusFGColor : RGB.Gray;
-        var currentTabBg = hasFocus ? FocusBGColor : RGB.DarkGray;
+        var currentTabFg = hasFocus ? FocusColor : RGB.Gray;
+        var currentTabBg = hasFocus ? FocusContrastColor : RGB.DarkGray;
         foreach (var label in tabStack.Controls.WhereAs<Label>())
         {
             var tabString = label.Text.ToString();
@@ -92,7 +96,18 @@ public class TabControl : ProtectedConsolePanel
 
         tabs.Clear();
         tabContainer.Controls.Clear();
-        tabStack = tabContainer.Add(new StackPanel() { Orientation = Orientation.Horizontal, Margin = 3, AutoSize = StackPanel.AutoSizeMode.Both, Background = this.Background }).CenterBoth();
+        tabStack = tabContainer.Add(new StackPanel() { Orientation = Orientation.Horizontal, Margin = 3, AutoSize = StackPanel.AutoSizeMode.Both, Background = this.Background });
+
+        if(Options.TabAlignment == TabAlignment.Center)
+        {
+            tabStack.CenterBoth();
+        }
+        else
+        {
+            tabStack.CenterVertically();
+            tabStack.X = 2;
+        }
+        
         CurrentTab = (CurrentTab != null && Options.Tabs.Where(t => t.ToString() == CurrentTab).Any()) ? CurrentTab : Options.Tabs.First().ToString();
         currentTabLabel = null;
         foreach(var str in Options.Tabs)
