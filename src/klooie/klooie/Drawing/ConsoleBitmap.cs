@@ -404,6 +404,27 @@ public class ConsoleBitmap
     }
 
     /// <summary>
+    /// Draws the given bitmap onto this bitmap
+    /// </summary>
+    /// <param name="bitmap">the bitmap to draw</param>
+    /// <param name="offsetX">an x offset to apply</param>
+    /// <param name="offsetY">a y offset to apply</param>
+    public void DrawBitmap(ConsoleBitmap bitmap, int offsetX, int offsetY)
+    {
+        for (var x = 0; x < bitmap.Width && x < Width; x++)
+        {
+            for (var y = 0; y < bitmap.Height && y < Height; y++)
+            {
+                var bmpX = x + offsetX;
+                var bmpY = y + offsetY;
+                if (bmpX < 0 || bmpX >= bitmap.Width || bmpY < 0 || bmpY >= bitmap.Height) continue;
+                ref var pixel = ref bitmap.GetPixel(x + offsetX, y + offsetY);
+                DrawPoint(pixel, x, y);
+            }
+        }
+    }
+
+    /// <summary>
     /// Given 2 points, defines a line as it can best be rendered in a ConsoleBitmap, but does not draw the line.
     /// </summary>
     /// <param name="x1">the x coordinate of the first point</param>

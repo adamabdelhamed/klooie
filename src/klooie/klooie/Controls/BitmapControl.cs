@@ -7,30 +7,34 @@ public class BitmapControl : ConsoleControl
     /// <summary>
     /// Gets or sets the horizontal offset to apply when deciding which pixels to draw from the bitmap
     /// </summary>
-    public int OffsetX { get; set; }
+    public int OffsetX { get => Get<int>(); set => Set(value); }
 
     /// <summary>
     /// Gets or sets the vertical offset to apply when deciding which pixels to draw from the bitmap
     /// </summary>
-    public int OffsetY { get; set; }
+    public int OffsetY { get => Get<int>(); set => Set(value); }
 
     /// <summary>
     /// The Bitmap image to render in the control
     /// </summary>
-    public ConsoleBitmap Bitmap { get { return Get<ConsoleBitmap>(); } set { Set(value); } }
+    public ConsoleBitmap Bitmap { get => Get<ConsoleBitmap>(); set => Set(value);  }
 
     /// <summary>
     /// If true then this control will auto size itself based on its target bitmap
     /// </summary>
-    public bool AutoSize { get { return Get<bool>(); } set { Set(value); } }
+    public bool AutoSize { get => Get<bool>();  set => Set(value);  }
 
     /// <summary>
     /// Creates a new Bitmap control
+    /// <param name="initialValue">the bitmap to draw</param>
     /// </summary>
-    public BitmapControl()
+    public BitmapControl(ConsoleBitmap initialValue = null)
     {
         this.Subscribe(nameof(AutoSize), BitmapOrAutoSizeChanged, this);
         this.Subscribe(nameof(Bitmap), BitmapOrAutoSizeChanged, this);
+        this.Subscribe(nameof(OffsetX), BitmapOrAutoSizeChanged, this);
+        this.Subscribe(nameof(OffsetY), BitmapOrAutoSizeChanged, this);
+        Bitmap = initialValue;
     }
 
     private void BitmapOrAutoSizeChanged()
@@ -50,18 +54,6 @@ public class BitmapControl : ConsoleControl
     protected override void OnPaint(ConsoleBitmap context)
     {
         if (Bitmap == null) return;
-        for (var x = 0; x < Bitmap.Width && x < this.Width; x++)
-        {
-            for (var y = 0; y < Bitmap.Height && y < this.Height; y++)
-            {
-                var bmpX = x + OffsetX;
-                var bmpY = y + OffsetY;
-
-                if (bmpX < 0 || bmpX >= Bitmap.Width || bmpY < 0 || bmpY >= Bitmap.Height) continue;
-
-                ref var pixel = ref Bitmap.GetPixel(x+ OffsetX, y+OffsetY);
-                context.DrawPoint(pixel, x, y);
-            }
-        }
+        context.DrawBitmap(Bitmap, OffsetX, OffsetY);
     }
 }
