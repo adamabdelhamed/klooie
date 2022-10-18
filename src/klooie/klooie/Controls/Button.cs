@@ -95,7 +95,7 @@ public class Button : ConsoleControl
         if (shortcut == null) return ConsoleString.Empty;
         
         var keyString = shortcut.Key.ToString();
-        var isFromTopNumberBar = Regex.IsMatch(keyString, @"D\n");
+        var isFromTopNumberBar = Regex.IsMatch(keyString, @"D\d");
         var isFromNumPad = keyString.StartsWith("NumPad");
         keyString = isFromTopNumberBar ? keyString.Substring(1) : isFromNumPad ? keyString.Substring("NumPad".Length) : keyString;
         var isAlt = shortcut.Modifier.HasValue && shortcut.Modifier == ConsoleModifiers.Alt;
@@ -126,7 +126,10 @@ public class Button : ConsoleControl
         }
     }
 
-    private void OnKeyInputReceived(ConsoleKeyInfo info) { if (info.Key == ConsoleKey.Enter) PressIfCanFocus(); }
+    private void OnKeyInputReceived(ConsoleKeyInfo info) 
+    {
+        if (info.Key == ConsoleKey.Enter) PressIfCanFocus(); 
+    }
     private void PressIfCanFocus()
     {
         if (this.CanFocus == false) return;

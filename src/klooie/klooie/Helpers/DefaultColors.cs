@@ -1,5 +1,5 @@
 ﻿namespace klooie;
-public static class DefaultColors
+internal static class DefaultColors
 {
     public static RGB BackgroundColor { get; set; }
     public static RGB ForegroundColor { get; set; }
