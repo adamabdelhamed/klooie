@@ -53,6 +53,7 @@ public class TextViewer : ConsoleControl
     /// <param name="autoSize">sets your auto sizeing preference</param>
     public TextViewer(ConsoleString initialText = null, AutoSizeMode autoSize = AutoSizeMode.Height)
     {
+        CanFocus = false;
         lines = new List<List<ConsoleCharacter>>();
         Text = initialText ?? ConsoleString.Empty;
         this.AutoSize = autoSize;

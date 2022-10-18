@@ -31,17 +31,15 @@ public class ScrollablePanelTests
         var rows = 100;
         for (var i = 1; i <= rows; i++)
         {
-            var label = stack.Add(new Label() { CanFocus = true, Text = $"row {i} of {rows}".ToWhite() });
-            label.Focused.Subscribe(() => label.Text = label.Text.ToCyan(), label);
-            label.Focused.Subscribe(() => label.Text = label.Text.ToWhite(), label);
+            var label = stack.Add(new Label() { CanFocus = true, Text = $"row {i} of {rows}".ToConsoleString() });
         }
 
-        await ConsoleApp.Current.SendKey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));
+        await ConsoleApp.Current.SendKey(ConsoleKey.Tab);
         // Step 4 - Tab through all the rows. The scrollbar and scrollable content should automatically
         //        - keep the focused row in view.
         for (var i = 0; i < rows; i++)
         {
-            ConsoleApp.Current.SendKey(new ConsoleKeyInfo('\t', ConsoleKey.Tab, false, false, false));
+            await ConsoleApp.Current.SendKey(ConsoleKey.Tab);
             await context.PaintAndRecordKeyFrameAsync();
         }
         ConsoleApp.Current.Stop();

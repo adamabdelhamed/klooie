@@ -60,6 +60,7 @@ public class Button : ConsoleControl
         this.Subscribe(nameof(Background),UpdateText, this);
         this.Focused.Subscribe(UpdateText, this);
         this.Unfocused.Subscribe(UpdateText, this);
+        this.Subscribe(nameof(CanFocus), UpdateText, this);
         this.AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
         this.KeyInputReceived.Subscribe(OnKeyInputReceived, this);
     }

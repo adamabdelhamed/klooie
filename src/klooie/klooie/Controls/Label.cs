@@ -28,6 +28,14 @@ public class Label : ConsoleControl
         Subscribe(nameof(Bounds), NormalizeNewlinesTabsAndStyleText, this);
         Subscribe(nameof(Foreground), NormalizeNewlinesTabsAndStyleText, this);
         Subscribe(nameof(Background), NormalizeNewlinesTabsAndStyleText, this);
+        Focused.Subscribe(FocusChanged, this);
+        Unfocused.Subscribe(FocusChanged, this);
+    }
+
+    private void FocusChanged()
+    {
+        NormalizeNewlinesTabsAndStyleText();
+        FirePropertyChanged(nameof(Text));
     }
 
     private void TextChanged(ConsoleString value)
@@ -40,7 +48,7 @@ public class Label : ConsoleControl
         Width = autoSize ? _text.Length : Width;
     }
 
-    private void NormalizeNewlinesTabsAndStyleText() => _cleaned = TextCleaner.NormalizeNewlinesTabsAndStyle(_text, Foreground, Background);
+    private void NormalizeNewlinesTabsAndStyleText() => _cleaned = TextCleaner.NormalizeNewlinesTabsAndStyle(_text, HasFocus ? FocusContrastColor : Foreground, HasFocus ? FocusColor : Background);
     public override string ToString() => $"Label: " + Text;
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(_cleaned, 0, 0);
 }

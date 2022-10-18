@@ -46,7 +46,7 @@ public class DialogTests
 
         context.SecondsBetweenKeyframes = .02f;
         await context.PaintAndRecordKeyFrameAsync();
-        var dialogTask = MessageDialog.Show(new ShowMessageOptions(msg.ToGreen()) { SpeedPercentage = 0 });
+        var dialogTask = MessageDialog.Show(new ShowMessageOptions(msg.ToConsoleString()) { SpeedPercentage = 0 });
         await Task.Delay(20);
         await context.PaintAndRecordKeyFrameAsync();
         await ConsoleApp.Current.SendKey(ConsoleKey.Tab);
@@ -108,23 +108,6 @@ public class DialogTests
     }
 
     [TestMethod]
-    public void Dialog_ShowMessagePorted1() => AppTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified,80,20,async (context) =>
-    {
-        Task dialogTask;
-        // show hello world message, wait for a paint, then take a keyframe of the screen, which 
-        // should have the dialog shown
-        dialogTask = MessageDialog.Show("Hello world");
-        await context.PaintAndRecordKeyFrameAsync();
-        Assert.IsFalse(dialogTask.IsCompleted);
-
-        // simulate an enter keypress, which should clear the dialog
-        await ConsoleApp.Current.SendKey(ConsoleKey.Enter);
-        await context.PaintAndRecordKeyFrameAsync();
-        await dialogTask;
-        ConsoleApp.Current.Stop();
-    });
-
-    [TestMethod]
     public void Dialog_ShowTextInputPorted() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified,async (context) =>
     {
         Task<ConsoleString?> dialogTask;
@@ -153,7 +136,7 @@ public class DialogTests
         await Task.Delay(25);
         if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
         ConsoleApp.Current.LayoutRoot.Background = RGB.Green;
-        var label = ConsoleApp.Current.LayoutRoot.Add(new Label() { Text = "Background text".ToYellow(), CanFocus = true }).DockToTop(padding: 1).CenterHorizontally();
+        var label = ConsoleApp.Current.LayoutRoot.Add(new Label() { Text = "Background text".ToConsoleString(), CanFocus = true }).DockToTop(padding: 1).CenterHorizontally();
         ConsoleApp.Current.ClearFocus();
         await Task.Delay(250);
         if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
