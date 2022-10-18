@@ -50,7 +50,7 @@ public class NavigationAtScaleGame : Game
         {
             for (var y = Margin/2f; y < GameBounds.Height - Margin/2f; y+=10)
             {
-                GamePanel.Add(new NoFrillsLabel("#".ToConsoleString(new RGB(40, 40, 40))) { CompositionMode = CompositionMode.BlendBackground }).MoveTo(GameBounds.Left + x,GameBounds.Top + y);
+                GamePanel.Add(new Label("#".ToConsoleString(new RGB(40, 40, 40))) { CompositionMode = CompositionMode.BlendBackground }).MoveTo(GameBounds.Left + x,GameBounds.Top + y);
             }
         }
     }

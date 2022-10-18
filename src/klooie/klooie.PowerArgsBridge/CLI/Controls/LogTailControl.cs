@@ -5,13 +5,13 @@
         public int MaxLines { get; set; } = 1000;
         private ScrollablePanel scrollPanel;
 
-        private Label logLabel;
+        private TextViewer logLabel;
 
         private List<ConsoleString> logLines = new List<ConsoleString>() { ConsoleString.Empty };
         public LogTailControl()
         {
             scrollPanel = Add(new ScrollablePanel()).Fill();
-            logLabel = scrollPanel.ScrollableContent.Add(new Label(LabelRenderMode.ManualSizing) { Text = ConsoleString.Empty  }).FillHorizontally();
+            logLabel = scrollPanel.ScrollableContent.Add(new TextViewer()).FillHorizontally();
             this.Subscribe(nameof(Background),() => 
             {
                 scrollPanel.Background = Background;

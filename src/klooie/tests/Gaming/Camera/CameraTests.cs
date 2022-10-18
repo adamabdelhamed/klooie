@@ -88,7 +88,7 @@ public class CameraTests
         {
             for (var y = margin / 2f; y < Game.Current.GameBounds.Height - margin / 2f; y += 10)
             {
-                Game.Current.GamePanel.Add(new NoFrillsLabel((x+","+y).ToConsoleString(RGB.White)) { CompositionMode = CompositionMode.BlendBackground }).MoveTo(Game.Current.GameBounds.Left + x, Game.Current.GameBounds.Top + y);
+                Game.Current.GamePanel.Add(new Label((x+","+y).ToConsoleString(RGB.White)) { CompositionMode = CompositionMode.BlendBackground }).MoveTo(Game.Current.GameBounds.Left + x, Game.Current.GameBounds.Top + y);
             }
         }
     }

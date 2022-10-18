@@ -16,9 +16,9 @@ public class TabControl : ProtectedConsolePanel
     private ConsolePanel tabContainer;
     private StackPanel tabStack;
     private ConsolePanel body;
-    private NoFrillsLabel currentTabLabel;
+    private Label currentTabLabel;
     private Lifetime arrowKeyLifetime;
-    private List<NoFrillsLabel> tabs = new List<NoFrillsLabel>();
+    private List<Label> tabs = new List<Label>();
     private string _currentTab;
 
     public string CurrentTab
@@ -70,13 +70,13 @@ public class TabControl : ProtectedConsolePanel
         if (hasFocus)
         {
             SetupArrowKeyNavitation();
-            currentTabLabel = ConsoleApp.Current.FocusedControl as NoFrillsLabel;
+            currentTabLabel = ConsoleApp.Current.FocusedControl as Label;
             CurrentTab = currentTabLabel.Text.ToString();
         }
 
         var currentTabFg = hasFocus ? FocusFGColor : RGB.Gray;
         var currentTabBg = hasFocus ? FocusBGColor : RGB.DarkGray;
-        foreach (var label in tabStack.Controls.WhereAs<NoFrillsLabel>())
+        foreach (var label in tabStack.Controls.WhereAs<Label>())
         {
             var tabString = label.Text.ToString();
             var fg = tabString == CurrentTab ? currentTabFg : Foreground;
@@ -97,7 +97,7 @@ public class TabControl : ProtectedConsolePanel
         currentTabLabel = null;
         foreach(var str in Options.Tabs)
         {
-            var label = tabStack.Add(new NoFrillsLabel(str.ToConsoleString()) { CompositionMode = CompositionMode.BlendBackground, CanFocus = true });
+            var label = tabStack.Add(new Label(str.ToConsoleString()) { CompositionMode = CompositionMode.BlendBackground, CanFocus = true });
             currentTabLabel = str == CurrentTab ? label : currentTabLabel;
             tabs.Add(label);
         }

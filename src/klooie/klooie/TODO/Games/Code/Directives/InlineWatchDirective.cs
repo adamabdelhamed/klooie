@@ -45,7 +45,7 @@ public class InlineWatchDirective : EventDrivenDirective
         return Task.CompletedTask;
     }
 
-    public class InlineWatchLabel : NoFrillsLabel
+    public class InlineWatchLabel : Label
     {
         private InlineWatchDirective directive;
         private TimeSpan lastUpdatedTime;

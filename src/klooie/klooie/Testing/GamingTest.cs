@@ -124,7 +124,7 @@ public class TestGame : Game
         await base.Startup();
         if (options.Mode == UITestMode.RealTimeFYI)
         {
-            var fr = LayoutRoot.Add(new NoFrillsLabel() { Foreground = RGB.White, Background = RGB.Black }).DockToRight(padding: 2).DockToTop(padding: 1);
+            var fr = LayoutRoot.Add(new Label() { Foreground = RGB.White, Background = RGB.Black }).DockToRight(padding: 2).DockToTop(padding: 1);
             Invoke(async () =>
             {
                 while (ShouldContinue)

@@ -32,7 +32,7 @@ public class ShowMessageOptions : DialogWithChoicesOptions
     /// <param name="contentContainer"></param>
     /// <returns></returns>
     public override ConsoleControl ContentFactory(ConsolePanel contentContainer) => 
-        new Label(LabelRenderMode.MultiLineSmartWrap) { Y = 1, X = 2, Width = contentContainer.Width - 4, Text = Message };
+        new TextViewer() { Y = 1, X = 2, Width = contentContainer.Width - 4, Text = Message };
 }
 
 /// <summary>

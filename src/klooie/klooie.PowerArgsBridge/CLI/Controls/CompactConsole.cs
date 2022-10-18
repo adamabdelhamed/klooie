@@ -7,7 +7,7 @@ public abstract class CompactConsole : ConsolePanel
     public bool IsAssistanceEnabled { get; set; } = true;
     public TextBox InputBox { get; private set; }
     private CommandLineArgumentsDefinition def;
-    private Label outputLabel;
+    private TextViewer outputLabel;
     private Lifetime focusLt;
     public ConsoleString WelcomeMessage { get; set; } = "Welcome to the console".ToWhite();
     public ConsoleString EscapeMessage { get; set; } = "Press escape to resume".ToGray();
@@ -152,13 +152,10 @@ public abstract class CompactConsole : ConsolePanel
         if (SuperCompact == false)
         {
             var outputPanel = gridLayout.Add(new ConsolePanel() { Background = RGB.Black }, 1, top);
-            outputLabel = outputPanel.Add(new Label(LabelRenderMode.MultiLineSmartWrap)
-            {
-                Text =
-                string.IsNullOrWhiteSpace(outputValue?.StringValue) == false ? outputValue :
+            var text = string.IsNullOrWhiteSpace(outputValue?.StringValue) == false ? outputValue :
                 string.IsNullOrWhiteSpace(outputLabel?.Text?.StringValue) == false ? outputLabel?.Text :
-                CreateAssistiveText(),
-            }).Fill();
+                CreateAssistiveText();
+            outputLabel = outputPanel.Add(new TextViewer(text)).Fill();
         }
         InputBox.KeyInputReceived.Subscribe(async (keyInfo) => await OnHandleHey(keyInfo), InputBox);
     }
