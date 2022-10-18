@@ -5,47 +5,34 @@
 public class TextBox : ConsoleControl
 {
     private static readonly TimeSpan BlinkInterval = TimeSpan.FromMilliseconds(500);
-
-    private RichTextEditor textState;
- 
-    public bool IsBlinking { get => Get<bool>(); private set => Set(value); }
     private ConsoleApp.SetIntervalHandle blinkTimerHandle;
+    private bool isAllSelected;
+    private bool isBlinking;
 
     /// <summary>
     /// Gets the editor object that controls the rich text capabilities of the text box
     /// </summary>
-    public RichTextEditor RichTextEditor
-    {
-        get
-        {
-            return textState;
-        }
-    }
+    public RichTextEditor Editor { get; private set; }
+
+    /// <summary>
+    /// If true then the entire text is shown as selected on focus. Otherwise, the cursor
+    /// will be placed at the end of the text.
+    /// </summary>
+    public bool SelectAllOnFocus { get; set; } = false;
 
     /// <summary>
     /// Gets or sets the value in the text box
     /// </summary>
-    public ConsoleString Value
-    {
-        get
-        {
-            return textState.CurrentValue;
-        }
-        set
-        {
-            textState.CurrentValue = value;
-            textState.CursorPosition = value.Length;
-        }
-    }
-
-    public bool SelectAllOnFocus { get; set; } = false;
-    private bool isAllSelected;
+    public ConsoleString Value { get => Get<ConsoleString>(); set => Set(value); }
 
     /// <summary>
     /// Gets or sets a flag that enables or disables the blinking cursor that appears when the text box has focus
     /// </summary>
     public bool BlinkEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Set to true to block input while continuing to allow focus.
+    /// </summary>
     public bool IsInputBlocked { get; set; }
 
     /// <summary>
@@ -54,18 +41,18 @@ public class TextBox : ConsoleControl
     public TextBox()
     {
         FocusColor = DefaultColors.FocusColor;
-        this.textState = new RichTextEditor();
+        this.Editor = new RichTextEditor();
         this.Height = 1;
         this.Width = 15;
         CanFocus = true;
         this.Focused.Subscribe(TextBox_Focused, this);
         this.Unfocused.Subscribe(TextBox_Unfocused, this);
         KeyInputReceived.Subscribe(OnKeyInputReceived, this);
-    }
-
-    private void TextValueChanged()
-    {
-        FirePropertyChanged(nameof(Value));
+        Subscribe(nameof(Value), () =>
+        {
+            Editor.CurrentValue = Value;
+            Editor.CursorPosition = Value.Length;
+        }, this);
     }
 
     private void TextBox_Focused()
@@ -74,7 +61,7 @@ public class TextBox : ConsoleControl
         {
             isAllSelected = true;
             blinkTimerHandle?.Dispose();
-            IsBlinking = false;
+            isBlinking = false;
         }
         else
         {
@@ -84,11 +71,11 @@ public class TextBox : ConsoleControl
 
     private void StartBlinking()
     {
-        IsBlinking = true;
+        isBlinking = true;
         blinkTimerHandle = Application.SetInterval(() =>
         {
             if (HasFocus == false) return;
-            IsBlinking = !IsBlinking;
+            isBlinking = !isBlinking;
             Application.RequestPaint();
         }, BlinkInterval);
     }
@@ -96,7 +83,7 @@ public class TextBox : ConsoleControl
     private void TextBox_Unfocused()
     {
         blinkTimerHandle?.Dispose();
-        IsBlinking = false;
+        isBlinking = false;
         isAllSelected = false;
     }
 
@@ -113,14 +100,14 @@ public class TextBox : ConsoleControl
         else if (isAllSelected && info.Key == ConsoleKey.LeftArrow)
         {
             isAllSelected = false;
-            textState.CursorPosition = 0;
+            Editor.CursorPosition = 0;
             StartBlinking();
             return;
         }
         else if (isAllSelected && info.Key == ConsoleKey.RightArrow)
         {
             isAllSelected = false;
-            textState.CursorPosition = Value.Length;
+            Editor.CursorPosition = Value.Length;
             StartBlinking();
             return;
         }
@@ -131,10 +118,10 @@ public class TextBox : ConsoleControl
             StartBlinking();
         }
 
-        ConsoleCharacter? prototype = this.Value.Length == 0 ? (ConsoleCharacter?)null : this.Value[this.Value.Length - 1];
-        textState.RegisterKeyPress(info, prototype);
-        TextValueChanged();
-        IsBlinking = true;
+        ConsoleCharacter? prototype = this.Value.Length == 0 ? null : this.Value[this.Value.Length - 1];
+        Editor.RegisterKeyPress(info, prototype);
+        FirePropertyChanged(nameof(Value));
+        isBlinking = true;
         Application.ChangeInterval(blinkTimerHandle, BlinkInterval);
     }
 
@@ -144,12 +131,12 @@ public class TextBox : ConsoleControl
     /// <param name="context"></param>
     protected override void OnPaint(ConsoleBitmap context)
     {
-        var toPaint = textState.CurrentValue;
+        var toPaint = Editor.CurrentValue;
 
         var offset = 0;
-        if (toPaint.Length >= Width && textState.CursorPosition > Width - 1)
+        if (toPaint.Length >= Width && Editor.CursorPosition > Width - 1)
         {
-            offset = (textState.CursorPosition + 1) - Width;
+            offset = (Editor.CursorPosition + 1) - Width;
             toPaint = toPaint.Substring(offset);
         }
 
@@ -173,11 +160,11 @@ public class TextBox : ConsoleControl
 
         context.DrawString(new ConsoleString(bgTransformed), 0, 0);
 
-        if (IsBlinking && BlinkEnabled)
+        if (isBlinking && BlinkEnabled)
         {
-            char blinkChar = textState.CursorPosition >= toPaint.Length ? ' ' : toPaint[textState.CursorPosition].Value;
+            char blinkChar = Editor.CursorPosition >= toPaint.Length ? ' ' : toPaint[Editor.CursorPosition].Value;
             var pen = new ConsoleCharacter(blinkChar, DefaultColors.FocusContrastColor, FocusColor);
-            context.DrawPoint(pen, textState.CursorPosition - offset, 0);
+            context.DrawPoint(pen, Editor.CursorPosition - offset, 0);
         }
     }
 }

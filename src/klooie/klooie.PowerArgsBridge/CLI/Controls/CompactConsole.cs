@@ -109,7 +109,7 @@ public abstract class CompactConsole : ConsolePanel
         var inputPanel = gridLayout.Add(new ConsolePanel() { }, 1, top++);
         inputPanel.Add(new Label() { Text = "CMD> ".ToConsoleString() });
         InputBox = inputPanel.Add(new TextBox() { CanFocus = wasFocusable, IsInputBlocked = wasInputBlocked, X = "CMD> ".Length, Width = inputPanel.Width - "CMD> ".Length, Foreground = RGB.Gray, Background = RGB.Black });
-        InputBox.RichTextEditor.TabHandler.TabCompletionHandlers.Add(new PowerArgsRichCommandLineReader(def, new List<ConsoleString>(), false));
+        InputBox.Editor.TabHandler.TabCompletionHandlers.Add(new PowerArgsRichCommandLineReader(def, new List<ConsoleString>(), false));
         OnInputBoxReady();
         top++;
         if (myLt == refreshLt)
@@ -232,7 +232,7 @@ public abstract class CompactConsole : ConsolePanel
         else if (keyInfo.Key == ConsoleKey.Tab)
         {
             ConsoleCharacter? prototype = InputBox.Value.Length == 0 ? (ConsoleCharacter?)null : InputBox.Value[InputBox.Value.Length - 1];
-            InputBox.RichTextEditor.RegisterKeyPress(keyInfo, prototype);
+            InputBox.Editor.RegisterKeyPress(keyInfo, prototype);
             InputBox.FirePropertyChanged(nameof(InputBox.Value));
         }
         else if (keyInfo.Key == ConsoleKey.UpArrow)
