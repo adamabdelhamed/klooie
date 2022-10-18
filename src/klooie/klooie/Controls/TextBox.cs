@@ -26,11 +26,6 @@ public class TextBox : ConsoleControl
     public ConsoleString Value { get => Get<ConsoleString>(); set => Set(value); }
 
     /// <summary>
-    /// Gets or sets a flag that enables or disables the blinking cursor that appears when the text box has focus
-    /// </summary>
-    public bool BlinkEnabled { get; set; } = true;
-
-    /// <summary>
     /// Set to true to block input while continuing to allow focus.
     /// </summary>
     public bool IsInputBlocked { get; set; }
@@ -160,7 +155,7 @@ public class TextBox : ConsoleControl
 
         context.DrawString(new ConsoleString(bgTransformed), 0, 0);
 
-        if (isBlinking && BlinkEnabled)
+        if (isBlinking)
         {
             char blinkChar = Editor.CursorPosition >= toPaint.Length ? ' ' : toPaint[Editor.CursorPosition].Value;
             var pen = new ConsoleCharacter(blinkChar, DefaultColors.FocusContrastColor, FocusColor);

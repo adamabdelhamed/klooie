@@ -1,8 +1,7 @@
-﻿using klooie.tests;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 
-namespace ArgsTests.CLI.Controls;
+namespace klooie.tests;
 [TestClass]
 [TestCategory(Categories.ConsoleApp)]
 public class TextBoxTests
