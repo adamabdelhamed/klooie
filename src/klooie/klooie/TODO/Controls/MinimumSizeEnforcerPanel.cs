@@ -1,4 +1,4 @@
-﻿namespace PowerArgs.Cli;
+﻿namespace klooie;
 public class MinimumSizeEnforcerPanelOptions
 {
     public int MinWidth { get; set; }

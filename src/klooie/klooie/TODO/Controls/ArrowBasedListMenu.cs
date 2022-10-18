@@ -1,4 +1,4 @@
-﻿namespace PowerArgs.CLI.Controls;
+﻿namespace klooie;
 public class ArrowBasedListMenu<T> : ProtectedConsolePanel where T : class
 {
     private List<T> menuItems;

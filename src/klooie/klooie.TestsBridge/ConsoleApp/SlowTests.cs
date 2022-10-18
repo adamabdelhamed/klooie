@@ -1,7 +1,6 @@
 ﻿using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
-using PowerArgs.Cli;
 using System;
 using System.Threading.Tasks;
 

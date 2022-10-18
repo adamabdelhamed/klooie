@@ -1,6 +1,5 @@
 ﻿using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PowerArgs.Cli;
 using System;
 
 namespace ArgsTests.CLI.Controls
