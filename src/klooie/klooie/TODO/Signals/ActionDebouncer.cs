@@ -3,6 +3,12 @@
     /// <summary>
     /// A class that can be used to ensure an action only executes after a burst of triggers ends.
     /// </summary>
+
+
+
+    /// <summary>
+    /// A class that can be used to ensure an action only executes after a burst of triggers ends.
+    /// </summary>
     public class AwaitActionDebouncer
     {
         private TimeSpan burstTimeWindow;
@@ -38,7 +44,7 @@
         /// <summary>
         /// Triggers the debouncer to execute the wrapped action.
         /// </summary>
-        public async void Trigger()
+        public async Task Trigger()
         {
             var myRequest = new object();
             var makeCallback = false;

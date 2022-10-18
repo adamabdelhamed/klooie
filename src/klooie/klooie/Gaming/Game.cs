@@ -27,11 +27,6 @@ public class Game : ConsoleApp, IDelayProvider
     public static Game Current => ConsoleApp.Current as Game;
 
     /// <summary>
-    /// Gets or sets the sound provider for this game
-    /// </summary>
-    public ISoundProvider Sound { get; set; } = new NoOpSoundProvider();
-
-    /// <summary>
     /// an event that fires when the game is paused
     /// </summary>
     public Event<ILifetimeManager> Paused => pauseManager.OnPaused;

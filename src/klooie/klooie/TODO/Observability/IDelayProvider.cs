@@ -51,13 +51,6 @@ public class WallClockDelayProvider : IDelayProvider
     public async Task YieldAsync() => await Task.Yield();
 }
 
-public class NonDelayProvider : IDelayProvider
-{
-    public Task Delay(double ms) => ms > 0 ? Task.CompletedTask : throw new ArgumentException("ms must be > 0");
-    public Task Delay(TimeSpan timeout) => timeout > TimeSpan.Zero ? Task.CompletedTask : throw new ArgumentException("timeout must be > 0");
-    public Task YieldAsync() => Task.CompletedTask;
-}
-
 /// <summary>
 /// Extension methods for IDelayProvider
 /// </summary>
@@ -98,7 +91,7 @@ public static class IDelayProviderEx
     /// <param name="ms">the delay amount</param>
     /// <param name="maxPercentageDelta">the amount to fuzz, between 0 and 1</param>
     /// <returns>a task</returns>
-    public static async Task DelayFuzzy(this IDelayProvider provider, float ms, float maxPercentageDelta = .1f)
+    public static async Task DelayFuzzy(this IDelayProvider provider, double ms, float maxPercentageDelta = .1f)
     {
         if (maxPercentageDelta < 0 || maxPercentageDelta > 1) throw new ArgumentException($"{nameof(maxPercentageDelta)} must be >= 0 and < 1");
         var effectiveDelay = r.Next(ConsoleMath.Round(ms * (1 - maxPercentageDelta)), ConsoleMath.Round(ms * (1 + maxPercentageDelta)));
@@ -112,25 +105,6 @@ public static class IDelayProviderEx
     /// <param name="amount">the delay amount</param>
     /// <param name="maxPercentageDelta">the amount to fuzz, between 0 and 1</param>
     /// <returns>a task</returns>
-    public static async Task DelayFuzzy(this IDelayProvider provider, TimeSpan amount, float maxPercentageDelta = .1f)
-    {
-        if (maxPercentageDelta < 0 || maxPercentageDelta > 1) throw new ArgumentException($"{nameof(maxPercentageDelta)} must be >= 0 and < 1");
-        var effectiveDelay = r.Next(ConsoleMath.Round(amount.TotalMilliseconds * (1 - maxPercentageDelta)), ConsoleMath.Round(amount.TotalMilliseconds * (1 + maxPercentageDelta)));
-        await provider.Delay(effectiveDelay);
-    }
-
-    /// <summary>
-    /// Creates a task that completes once the given condition is true
-    /// </summary>
-    /// <param name="delayProvider">the delay provider</param>
-    /// <param name="condition">the condition</param>
-    /// <param name="evalFrequency">how frequently to evalaute</param>
-    /// <returns></returns>
-    public static async Task ConditionalTask(this IDelayProvider delayProvider, Func<bool> condition, float evalFrequency)
-    {
-        while (condition() == false)
-        {
-            await delayProvider.Delay(evalFrequency);
-        }
-    }
+    public static Task DelayFuzzy(this IDelayProvider provider, TimeSpan amount, float maxPercentageDelta = .1f)
+        => DelayFuzzy(provider, amount.TotalSeconds, maxPercentageDelta);
 }

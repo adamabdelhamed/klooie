@@ -144,6 +144,11 @@ public partial class ConsoleApp : EventLoop
     public int FocusStackDepth => focus.StackDepth;
 
     /// <summary>
+    /// Gets or sets the sound provider for this game
+    /// </summary>
+    public ISoundProvider Sound { get; set; } = new NoOpSoundProvider();
+
+    /// <summary>
     /// Creates a new console app given a set of boundaries
     /// </summary>
     public ConsoleApp()
@@ -471,11 +476,7 @@ public partial class ConsoleApp : EventLoop
     private void Cycle()
     {
         cycleRateMeter.Increment();
-        // todo - if evaluation showed up on a profile. Consider checking this at most twice per second.
-        if ((lastConsoleWidth != ConsoleProvider.Current.BufferWidth || lastConsoleHeight != ConsoleProvider.Current.WindowHeight))
-        {
-            DebounceResize();
-        }
+        DebounceResize();
 
         if (ConsoleProvider.Current.KeyAvailable)
         {
@@ -508,17 +509,18 @@ public partial class ConsoleApp : EventLoop
 
     private void DebounceResize()
     {
+        if (lastConsoleWidth == ConsoleProvider.Current.BufferWidth && lastConsoleHeight == ConsoleProvider.Current.WindowHeight)return;
         ConsoleProvider.Current.Clear();
-        bool done = false;
-        var debouncer = new TimerActionDebouncer(TimeSpan.FromSeconds(.25), () => done = true);
-        debouncer.Trigger();
-        while (done == false)
+
+        var lastSyncTime = DateTime.UtcNow;
+        var hasABitOfTimePassedSinceSync = ()=> DateTime.UtcNow - lastSyncTime > TimeSpan.FromSeconds(.25f);
+        while (hasABitOfTimePassedSinceSync() == false)
         {
             if (ConsoleProvider.Current.BufferWidth != lastConsoleWidth || ConsoleProvider.Current.WindowHeight != lastConsoleHeight)
             {
                 lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
                 lastConsoleHeight = ConsoleProvider.Current.WindowHeight;
-                debouncer.Trigger();
+                lastSyncTime = DateTime.UtcNow;
             }
         }
 

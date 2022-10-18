@@ -229,7 +229,7 @@
         }
     }
 
-    public class ConsoleBitmapChange : IUndoRedoAction
+    public class ConsoleBitmapChange 
     {
         private int x;
         private int y;

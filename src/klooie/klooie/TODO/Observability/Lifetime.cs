@@ -11,11 +11,6 @@ public interface ILifetime : ILifetimeManager, IDisposable
     /// </summary>
     /// <returns>true if the object was disposed by this call</returns>
     bool TryDispose();
-
-    /// <summary>
-    /// Disposes the object (will throw if already disposed)
-    /// </summary>
-    void Dispose();
 }
 
 /// <summary>
