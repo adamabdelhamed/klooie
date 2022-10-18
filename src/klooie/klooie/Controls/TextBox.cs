@@ -35,6 +35,7 @@ public class TextBox : ConsoleControl
     /// </summary>
     public TextBox()
     {
+        Value = ConsoleString.Empty;
         FocusColor = DefaultColors.FocusColor;
         this.Editor = new RichTextEditor();
         this.Height = 1;
@@ -45,6 +46,7 @@ public class TextBox : ConsoleControl
         KeyInputReceived.Subscribe(OnKeyInputReceived, this);
         Subscribe(nameof(Value), () =>
         {
+            if (Value == null) throw new ArgumentNullException(nameof(Value));
             Editor.CurrentValue = Value;
             Editor.CursorPosition = Value.Length;
         }, this);
@@ -115,7 +117,7 @@ public class TextBox : ConsoleControl
 
         ConsoleCharacter? prototype = this.Value.Length == 0 ? null : this.Value[this.Value.Length - 1];
         Editor.RegisterKeyPress(info, prototype);
-        FirePropertyChanged(nameof(Value));
+        Value = Editor.CurrentValue;
         isBlinking = true;
         Application.ChangeInterval(blinkTimerHandle, BlinkInterval);
     }

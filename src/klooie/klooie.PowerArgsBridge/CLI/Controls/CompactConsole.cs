@@ -233,7 +233,7 @@ public abstract class CompactConsole : ConsolePanel
         {
             ConsoleCharacter? prototype = InputBox.Value.Length == 0 ? (ConsoleCharacter?)null : InputBox.Value[InputBox.Value.Length - 1];
             InputBox.Editor.RegisterKeyPress(keyInfo, prototype);
-            InputBox.FirePropertyChanged(nameof(InputBox.Value));
+            InputBox.Value = InputBox.Editor.CurrentValue;
         }
         else if (keyInfo.Key == ConsoleKey.UpArrow)
         {
@@ -295,7 +295,7 @@ public abstract class CompactConsole : ConsolePanel
         }
 
         List<CommandLineAction> candidates = def.Actions.Where(a => a.Metadata.WhereAs<OmitFromUsageDocs>().None()).ToList();
-        if (InputBox.Value.Length > 0)
+        if (InputBox.Value != null && InputBox.Value.Length > 0)
         {
             var command = InputBox.Value.Split(" ".ToConsoleString()).FirstOrDefault();
             command = command ?? ConsoleString.Empty;
