@@ -34,7 +34,7 @@ public class Game : ConsoleApp, IDelayProvider
     /// <summary>
     /// returns true if the game is currently paused
     /// </summary>
-    public bool IsPaused => pauseManager.State == PauseManager.PauseState.Paused;
+    public bool IsPaused => pauseManager.IsPaused;
 
     /// <summary>
     /// Gets the time that has been elapsed in the MainColliderGroup
@@ -44,12 +44,12 @@ public class Game : ConsoleApp, IDelayProvider
     /// <summary>
     /// Pauses the game
     /// </summary>
-    public virtual void Pause() => pauseManager.State = PauseManager.PauseState.Paused;
+    public virtual void Pause() => pauseManager.IsPaused = true;
 
     /// <summary>
     /// Pauses the game
     /// </summary>
-    public virtual void Resume() => pauseManager.State = PauseManager.PauseState.Running;
+    public virtual void Resume() => pauseManager.IsPaused = false;
 
     /// <summary>
     /// Gets the rules
@@ -145,13 +145,13 @@ public class Game : ConsoleApp, IDelayProvider
     /// </summary>
     /// <param name="ms">the amount of time in ms to delay</param>
     /// <returns>a task</returns>
-    public Task Delay(double ms) => pauseManager.DelayProvider.Delay(ms);
+    public Task Delay(double ms) => pauseManager.Delay(ms);
 
     /// <summary>
     /// implements a pause aware delay action
     /// </summary>
     /// <param name="timeout">the amount of time to delay</param>
     /// <returns>a task</returns>
-    public Task Delay(TimeSpan timeout) => pauseManager.DelayProvider.Delay(timeout);
+    public Task Delay(TimeSpan timeout) => pauseManager.Delay(timeout);
 }
 

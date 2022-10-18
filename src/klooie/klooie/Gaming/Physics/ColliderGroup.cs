@@ -94,10 +94,10 @@ public class ColliderGroup
         while (lt.IsExpired == false)
         {
             await Task.Yield();
-            if (PauseManager?.State == PauseManager.PauseState.Paused)
+            if (PauseManager?.IsPaused == true)
             {
                 stopwatch.Stop();
-                while (PauseManager.State == PauseManager.PauseState.Paused)
+                while (PauseManager.IsPaused)
                 {
                     await Task.Yield();
                 }
