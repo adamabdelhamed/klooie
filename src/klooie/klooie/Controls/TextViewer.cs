@@ -1,12 +1,20 @@
 ﻿namespace klooie;
 
+/// <summary>
+/// A control that renders multi-line text and supports text wrapping
+/// </summary>
 public class TextViewer : ConsoleControl
 {
     public enum AutoSizeMode
     {
-        // don't auto size
+        /// <summary>
+        /// Use this option if you would like to size the control yourself
+        /// </summary>
         None,
-        // auto size only the height
+        /// <summary>
+        /// Use this option if you want the control to auto size the height.
+        /// You are still responsible for setting the width.
+        /// </summary>
         Height,
     }
     private ConsoleString _text;
@@ -14,6 +22,9 @@ public class TextViewer : ConsoleControl
     private List<List<ConsoleCharacter>> lines;
     private Tokenizer<Token> tokenizer;
 
+    /// <summary>
+    /// Gets the auto size mode that was set in the constructor
+    /// </summary>
     public AutoSizeMode AutoSize { get; private init; }
 
     /// <summary>
@@ -35,7 +46,11 @@ public class TextViewer : ConsoleControl
     /// </summary>
     public int? MaxHeight { get { return Get<int?>(); } set { Set(value); } }
 
-
+    /// <summary>
+    /// Creates a new TextViewer
+    /// </summary>
+    /// <param name="initialText">the initial text value</param>
+    /// <param name="autoSize">sets your auto sizeing preference</param>
     public TextViewer(ConsoleString initialText = null, AutoSizeMode autoSize = AutoSizeMode.Height)
     {
         lines = new List<List<ConsoleCharacter>>();

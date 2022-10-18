@@ -1,16 +1,28 @@
 ﻿namespace klooie;
 
+/// <summary>
+/// A control that displays a single line of text
+/// </summary>
 public class Label : ConsoleControl
 {
     private bool autoSize;
     private ConsoleString _text;
     private ConsoleString _cleaned;
+
+    /// <summary>
+    /// The text to display
+    /// </summary>
     public ConsoleString Text { get => _text; set => TextChanged(value); }
 
-    public Label(ConsoleString? initialContent = null, bool autoSize = true)
+    /// <summary>
+    /// Creates a new label
+    /// </summary>
+    /// <param name="initialText">the initial text value</param>
+    /// <param name="autoSize">true to auto size the width of the label, false otherwise</param>
+    public Label(ConsoleString? initialText = null, bool autoSize = true)
     {
         this.autoSize = autoSize;
-        Text = initialContent ?? ConsoleString.Empty;
+        Text = initialText ?? ConsoleString.Empty;
         CanFocus = false;
         Subscribe(nameof(Text), NormalizeNewlinesTabsAndStyleText, this);
         Subscribe(nameof(Bounds), NormalizeNewlinesTabsAndStyleText, this);
