@@ -1,10 +1,8 @@
 ﻿using klooie.Gaming;
-using klooie.Gaming.Code;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using System;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace klooie.tests;

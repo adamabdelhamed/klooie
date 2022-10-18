@@ -1,6 +1,6 @@
 ﻿namespace klooie;
 
-public class PropertyChangedSubscription : Lifetime
+internal class PropertyChangedSubscription : Lifetime
 {
     public ObservableObject Target { get; private set; }
     public Action ChangeListener { get; private set; }
@@ -22,7 +22,7 @@ public class PropertyChangedSubscription : Lifetime
     }
 }
 
-public class PropertyChangedSubscriptionWithParam : Lifetime
+internal class PropertyChangedSubscriptionWithParam : Lifetime
 {
     public ObservableObject Target { get; private set; }
     public Action<object> ChangeListener { get; private set; }
