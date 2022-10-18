@@ -54,7 +54,7 @@ public class ConsoleControl : Rectangular
     private Event _focused, _unfocused, _addedToVisualTree, _beforeAddedToVisualTree, _removedFromVisualTree, _beforeRemovedFromVisualTree, _ready, _tagsChanged;
     private Event<ConsoleKeyInfo> _keyInputReceived;
     private Container _parent;
-    private RGB _bg, _fg, _focusColor;
+    private RGB _bg, _fg, _focusColor, _focusContrastColor;
     private bool _transparent;
     private bool _hasFocus;
     private bool _tabSkip;
@@ -192,9 +192,14 @@ public class ConsoleControl : Rectangular
     public bool HasFocus { get { return _hasFocus; } internal set { SetHardIf(ref _hasFocus, value, _hasFocus != value); } }
 
     /// <summary>
-    /// Gets whether or not this control currently has focus
+    /// Gets the color used to indicate focus
     /// </summary>
     public RGB FocusColor { get { return _focusColor; } set { SetHardIf(ref _focusColor, value, _focusColor != value); } }
+
+    /// <summary>
+    /// Gets the color used to indicate focus contrast
+    /// </summary>
+    public RGB FocusContrastColor { get { return _focusContrastColor; } set { SetHardIf(ref _focusContrastColor, value, _focusContrastColor != value); } }
 
     /// <summary>
     /// The writer used to record the visual state of the control
@@ -319,6 +324,7 @@ public class ConsoleControl : Rectangular
         this.Foreground = DefaultColors.ForegroundColor;
         this.IsVisible = true;
         FocusColor = DefaultColors.FocusColor;
+        FocusContrastColor = DefaultColors.FocusContrastColor;
         CompositionMode = CompositionMode.PaintOver;
     }
 

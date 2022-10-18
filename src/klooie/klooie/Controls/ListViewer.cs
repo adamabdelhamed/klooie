@@ -463,19 +463,11 @@ internal class ListViewerPanel : ProtectedConsolePanel
             AutoSize = AutoSizeMode.Both;
             Margin = 2;
             Orientation = Orientation.Horizontal;
-            FirstPageButton = Add(new Button() { Text = "<<".ToConsoleString() });
-            PreviousPageButton = Add(new Button() { Text = "<".ToConsoleString() });
+            FirstPageButton = Add(new Button(enableShortcuts ? new KeyboardShortcut(ConsoleKey.Home) : null) { Text = "<<".ToConsoleString() });
+            PreviousPageButton = Add(new Button(enableShortcuts ? new KeyboardShortcut(ConsoleKey.PageUp) : null) { Text = "<".ToConsoleString() });
             CurrentPageLabel = Add(new Label() { Text = "Page 1 of 1".ToConsoleString() });
-            NextPageButton = Add(new Button() { Text = ">".ToConsoleString() });
-            LastPageButton = Add(new Button() { Text = ">>".ToConsoleString() });
-
-            if (enableShortcuts)
-            {
-                FirstPageButton.Shortcut = new KeyboardShortcut(ConsoleKey.Home);
-                PreviousPageButton.Shortcut = new KeyboardShortcut(ConsoleKey.PageUp);
-                NextPageButton.Shortcut = new KeyboardShortcut(ConsoleKey.PageDown);
-                LastPageButton.Shortcut = new KeyboardShortcut(ConsoleKey.End);
-            }
+            NextPageButton = Add(new Button(enableShortcuts ? new KeyboardShortcut(ConsoleKey.PageDown) : null) { Text = ">".ToConsoleString() });
+            LastPageButton = Add(new Button(enableShortcuts ? new KeyboardShortcut(ConsoleKey.End) : null) { Text = ">>".ToConsoleString() });
         }
     }
 }

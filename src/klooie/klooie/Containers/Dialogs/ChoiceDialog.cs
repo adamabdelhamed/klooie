@@ -90,7 +90,7 @@ public static class ChoiceDialog
                 foreach (var option in options.UserChoices)
                 {
                     var myOption = option;
-                    var button = buttonStack.Add(new Button() { Text = option.DisplayText, Tag = option.Value, Shortcut = option.Shortcut });
+                    var button = buttonStack.Add(new Button(option.Shortcut) { Text = option.DisplayText, Tag = option.Value });
                     button.Pressed.Subscribe(() =>
                     {
                         choice = myOption;

@@ -148,11 +148,11 @@ public class ConsoleBitmapPlayer : ConsolePanel
 
         var buttonBar = Add(new StackPanel() { CanFocus = false, Height = 1, Orientation = Orientation.Horizontal }).FillHorizontally().DockToBottom();
 
-        seekToBeginningButton = buttonBar.Add(new Button() { Text = "<<".ToConsoleString(), Shortcut = new KeyboardShortcut(ConsoleKey.Home), CanFocus = false });
-        seekBack10SButton = buttonBar.Add(new Button() { Shortcut = new KeyboardShortcut(ConsoleKey.LeftArrow), CanFocus = false });
-        playButton = buttonBar.Add(new Button() { Text = "".ToConsoleString(), Shortcut = new KeyboardShortcut(ConsoleKey.P), CanFocus = false });
-        seekForward10SButton = buttonBar.Add(new Button() { Shortcut = new KeyboardShortcut(ConsoleKey.RightArrow), CanFocus = false });
-        seekToEndButton = buttonBar.Add(new Button() { Text = ">>".ToConsoleString(), Shortcut = new KeyboardShortcut(ConsoleKey.End), CanFocus = false });
+        seekToBeginningButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.Home)) { Text = "<<".ToConsoleString(), CanFocus = false });
+        seekBack10SButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.LeftArrow)) { CanFocus = false });
+        playButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.P)) { Text = "".ToConsoleString(), CanFocus = false });
+        seekForward10SButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.RightArrow)) { CanFocus = false });
+        seekToEndButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.End)) { Text = ">>".ToConsoleString(), CanFocus = false });
 
         if (showButtonBar)
         {

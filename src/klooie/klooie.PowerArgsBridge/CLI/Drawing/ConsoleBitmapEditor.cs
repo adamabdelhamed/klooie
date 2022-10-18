@@ -108,7 +108,7 @@
         /// <returns>a set of buttons</returns>
         public IEnumerable<Button> CreateStandardButtons()
         {
-            var changeFgButton = new Button() { Shortcut = new KeyboardShortcut(ConsoleKey.F, ConsoleModifiers.Alt) };
+            var changeFgButton = new Button(new KeyboardShortcut(ConsoleKey.F, ConsoleModifiers.Alt));
 
             changeFgButton.Pressed.Subscribe(async () =>
             {
@@ -130,7 +130,7 @@
                 });
             }, this);
 
-            var changeBgButton = new Button() { Shortcut = new KeyboardShortcut(ConsoleKey.B, ConsoleModifiers.Alt) };
+            var changeBgButton = new Button(new KeyboardShortcut(ConsoleKey.B, ConsoleModifiers.Alt));
 
             changeBgButton.Pressed.Subscribe(() =>
             {

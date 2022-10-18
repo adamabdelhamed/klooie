@@ -24,12 +24,9 @@ public class KeyboardShortcut
     /// supported because it doesn't play well in a console</param>
     public KeyboardShortcut(ConsoleKey key, ConsoleModifiers? modifier = null)
     {
+        if (modifier == ConsoleModifiers.Control) throw new InvalidOperationException("Control is not supported as a keyboard shortcut modifier");
         this.Key = key;
         this.Modifier = modifier;
-        if (modifier == ConsoleModifiers.Control)
-        {
-            throw new InvalidOperationException("Control is not supported as a keyboard shortcut modifier");
-        }
     }
 }
 
@@ -38,176 +35,107 @@ public class KeyboardShortcut
 /// </summary>
 public class Button : ConsoleControl
 {
-    private bool shortcutRegistered;
-
+    private KeyboardShortcut shortcut;
+    private ConsoleString display;
     /// <summary>
     /// An event that fires when the button is clicked
     /// </summary>
-    public Event Pressed { get; private set; } = new Event();
+    public Event Pressed { get; private init; } = new Event();
 
     /// <summary>
     /// Gets or sets the text that is displayed on the button
     /// </summary>
-    public ConsoleString Text { get { return Get<ConsoleString>(); } set { Set(value); } }
-
-    /// <summary>
-    /// Gets or sets the keyboard shortcut info for this button.
-    /// </summary>
-    public KeyboardShortcut Shortcut
-    {
-        get
-        {
-            return Get<KeyboardShortcut>();
-        }
-        set
-        {
-            if (Shortcut != null) throw new InvalidOperationException("Button shortcuts can only be set once.");
-            Set(value);
-            RegisterShortcutIfPossibleAndNotAlreadyDone();
-        }
-    }
+    public ConsoleString? Text { get => Get<ConsoleString>(); set => Set(value); }
 
     /// <summary>
     /// Creates a new button control
+    /// <param name="shortcut">An optional keyboard shortcut that can be used to press the button</param>
     /// </summary>
-    public Button()
+    public Button(KeyboardShortcut? shortcut = null)
     {
+        this.shortcut = shortcut;
         Height = 1;
-        this.Sync(nameof(Text), UpdateWidth, this);
-        this.Sync(nameof(Shortcut), UpdateWidth, this);
-
+        this.Subscribe(nameof(Text), UpdateText, this);
+        this.Subscribe(nameof(Foreground),UpdateText, this);
+        this.Subscribe(nameof(Background),UpdateText, this);
+        this.Focused.Subscribe(UpdateText, this);
+        this.Unfocused.Subscribe(UpdateText, this);
         this.AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
         this.KeyInputReceived.Subscribe(OnKeyInputReceived, this);
     }
 
-    private void UpdateWidth() => Width = GetButtonDisplayString().Length;
+    private void UpdateText()
+    {
+        display = GetButtonDisplayString();
+        Width = display.Length;
+    }
 
     private ConsoleString GetButtonDisplayString()
     {
-        var startAnchor = "[".ToConsoleString(HasFocus ? DefaultColors.BackgroundColor : CanFocus ? Foreground : DefaultColors.DisabledColor, HasFocus ? FocusColor : Background);
-        var effectiveText = Text ?? ConsoleString.Empty;
-        var shortcut = ConsoleString.Empty;
-        if (Text != null)
-        {
-            RGB fg, bg;
-
-            if (effectiveText.IsUnstyled)
-            {
-                if (CanFocus)
-                {
-                    fg = Foreground;
-                    bg = Background;
-                }
-                else
-                {
-                    fg = DefaultColors.DisabledColor;
-                    bg = Background;
-                }
-                effectiveText = new ConsoleString(effectiveText.StringValue, fg, bg);
-            }
-        }
-
-        if (Shortcut != null)
-        {
-            var key = Shortcut.Key.ToString();
-            if (Regex.IsMatch(key, @"D\n"))
-            {
-                key = key.Substring(1);
-            }
-            else if (key.StartsWith("NumPad"))
-            {
-                key = key.Substring("NumPad".Length);
-            }
-
-            if (Shortcut.Modifier.HasValue && Shortcut.Modifier == ConsoleModifiers.Alt)
-            {
-                shortcut = new ConsoleString($" (ALT+{key})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
-            }
-            else if (Shortcut.Modifier.HasValue && Shortcut.Modifier == ConsoleModifiers.Shift)
-            {
-                shortcut = new ConsoleString($" (SHIFT+{key})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
-            }
-            else if (Shortcut.Modifier.HasValue && Shortcut.Modifier == ConsoleModifiers.Control)
-            {
-                shortcut = new ConsoleString($" (CTL+{key})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
-            }
-            else
-            {
-                shortcut = new ConsoleString($" ({key})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
-            }
-        }
-
-        var endAnchor = "]".ToConsoleString(HasFocus ? DefaultColors.BackgroundColor : CanFocus ? Foreground : DefaultColors.DisabledColor, HasFocus ? FocusColor : Background);
-        var ret = startAnchor + effectiveText + shortcut + endAnchor;
+        var anchorFg = HasFocus ? FocusContrastColor : CanFocus ? Foreground: Foreground.Darker;
+        var anchorBg = HasFocus ? FocusColor : Background;
+        var startAnchor = "[".ToConsoleString(anchorFg, anchorBg);
+        var endAnchor = "]".ToConsoleString(anchorFg, anchorBg);
+        var ret = startAnchor + GetEffectiveLabelText() + GetKeyString() + endAnchor;
         return ret;
     }
 
-    /// <summary>
-    /// Called when the button is added to an app
-    /// </summary>
-    public void OnAddedToVisualTree() => RegisterShortcutIfPossibleAndNotAlreadyDone();
-
-    private void RegisterShortcutIfPossibleAndNotAlreadyDone()
+    private ConsoleString GetEffectiveLabelText()
     {
-        if (Shortcut != null && shortcutRegistered == false && Application != null)
+        var effectiveText = Text ?? ConsoleString.Empty;
+        if (effectiveText.IsUnstyled == false) return effectiveText;
+
+        var fg = CanFocus ? Foreground : DefaultColors.DisabledColor;
+        effectiveText = new ConsoleString(effectiveText.StringValue, fg, Background);
+        return effectiveText;
+    }
+
+    private ConsoleString GetKeyString()
+    {
+        if (shortcut == null) return ConsoleString.Empty;
+        
+        var keyString = shortcut.Key.ToString();
+        var isFromTopNumberBar = Regex.IsMatch(keyString, @"D\n");
+        var isFromNumPad = keyString.StartsWith("NumPad");
+        keyString = isFromTopNumberBar ? keyString.Substring(1) : isFromNumPad ? keyString.Substring("NumPad".Length) : keyString;
+        var isAlt = shortcut.Modifier.HasValue && shortcut.Modifier == ConsoleModifiers.Alt;
+        var isShift = shortcut.Modifier.HasValue && shortcut.Modifier == ConsoleModifiers.Shift;
+        var altStr = new ConsoleString($" (ALT+{keyString})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
+        var shiftStr = new ConsoleString($" (SHIFT+{keyString})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
+        var nakedStr = new ConsoleString($" ({keyString})", CanFocus ? Foreground : DefaultColors.DisabledColor, Background);
+        var ret = isAlt ? altStr : isShift ? shiftStr : nakedStr;
+        return ret;
+    }
+
+    private void OnAddedToVisualTree()
+    {
+        if (shortcut == null) return;
         {
-            shortcutRegistered = true;
-            Application.PushKeyForLifetime(Shortcut.Key, Shortcut.Modifier, () =>
-             {
-                 if (this.CanFocus)
-                 {
-                     Pressed.Fire();
-                 }
-             }, this);
+            Application.PushKeyForLifetime(shortcut.Key, shortcut.Modifier, PressIfCanFocus, this);
 
-            if (Shortcut.Key.ToString().Contains("NumPad"))
+            if (Regex.IsMatch(shortcut.Key.ToString(), @"D\d"))
             {
-                var num = Shortcut.Key.ToString().Last();
-                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), Shortcut.Modifier, () =>
-                   {
-                       if (this.CanFocus)
-                       {
-                           Pressed.Fire();
-                       }
-                   }, this);
+                var num = shortcut.Key.ToString().Last();
+                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "NumPad" + num), shortcut.Modifier, PressIfCanFocus, this);
             }
-
-            if (Regex.IsMatch(Shortcut.Key.ToString(), @"D\n"))
+            else if (shortcut.Key.ToString().StartsWith("NumPad"))
             {
-                var num = Shortcut.Key.ToString().Last();
-                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "NumPad" + num), Shortcut.Modifier, () =>
-                {
-                    if (this.CanFocus)
-                    {
-                        Pressed.Fire();
-                    }
-                }, this);
-            }
-            else if (Shortcut.Key.ToString().StartsWith("NumPad"))
-            {
-                var num = Shortcut.Key.ToString().Last();
-                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), Shortcut.Modifier, () =>
-                {
-                    if (this.CanFocus)
-                    {
-                        Pressed.Fire();
-                    }
-                }, this);
+                var num = shortcut.Key.ToString().Last();
+                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), shortcut.Modifier, PressIfCanFocus, this);
             }
         }
     }
 
-    private void OnKeyInputReceived(ConsoleKeyInfo info)
+    private void OnKeyInputReceived(ConsoleKeyInfo info) { if (info.Key == ConsoleKey.Enter) PressIfCanFocus(); }
+    private void PressIfCanFocus()
     {
-        if (info.Key == ConsoleKey.Enter)
-        {
-            Pressed.Fire();
-        }
+        if (this.CanFocus == false) return;
+        Pressed.Fire();
     }
 
     /// <summary>
     /// paints the button
     /// </summary>
     /// <param name="context">drawing context</param>
-    protected override void OnPaint(ConsoleBitmap context) => context.DrawString(GetButtonDisplayString(), 0, 0);
+    protected override void OnPaint(ConsoleBitmap context) => context.DrawString(display, 0, 0);
 }
