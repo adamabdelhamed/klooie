@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="TODO\ConsoleApp\" />
     <Folder Include="TODO\Games\Characters\" />
   </ItemGroup>
 

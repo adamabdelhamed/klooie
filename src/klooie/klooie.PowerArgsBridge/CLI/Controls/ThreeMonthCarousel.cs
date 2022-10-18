@@ -76,7 +76,7 @@
                 temp.Y = ConsoleMath.Round((Height - temp.Height) / 2f);
                 var tempDest = !forward ? leftDest : rightDest;
 
-                EasingFunction ease = Animator.EaseInOut;
+                EasingFunction ease = EasingFunctions.EaseInOut;
                 var tempAnimation = temp.AnimateAsync(new ConsoleControlAnimationOptions()
                 {
                     IsCancelled = () => seekLt.IsExpired,

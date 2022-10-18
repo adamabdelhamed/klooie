@@ -41,7 +41,7 @@ public class CinematicMovement : CameraMovement
 
     public override async Task Move()
     {
-        await Camera.AnimateTo(DesiredCameraBounds.TopLeft, MovementDuration, new CustomEase(new float[]
+        await Camera.AnimateTo(DesiredCameraBounds.TopLeft, MovementDuration, new KeyframedEase(new float[]
         {
             .01f, .02f,.04f, .07f, .11f, .16f, .22f,
             .28f, .38f, .50f, .60f, .70f, .80f,

@@ -137,12 +137,12 @@ public static class Dialog
         }
         else
         {
-            return Animator.AnimateAsync(new FloatAnimatorOptions()
+            return Animator.AnimateAsync(new FloatAnimationOptions()
             {
                 From = from,
                 To = to,
                 Duration = duration,
-                EasingFunction = Animator.EaseInOut,
+                EasingFunction = EasingFunctions.EaseInOut,
                 IsCancelled = () => lt.IsExpired,
                 Setter = percentage => setter(percentage)
             });

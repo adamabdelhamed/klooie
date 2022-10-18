@@ -22,7 +22,7 @@ public static class NudgeHelper
         var obstacles = el.GetObstacles();
         if (obstacles.Where(o => o.Bounds.Touches(desiredLocation)).Any())
         {
-            foreach (var angle in SpacialAwareness.Enumerate360Angles(optimalAngle))
+            foreach (var angle in Angle.Enumerate360Angles(optimalAngle))
             {
                 for (var d = .1f; d < maxSearch; d += .1f)
                 {

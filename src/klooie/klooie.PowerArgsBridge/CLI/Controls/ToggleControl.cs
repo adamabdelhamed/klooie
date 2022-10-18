@@ -78,24 +78,20 @@
                 return;
             }
 
-            var animation1 = Animator.AnimateAsync(new RoundedAnimatorOptions()
+            var dest = new RectF(newLeft, valueLabel.Top, valueLabel.Bounds.Width, valueLabel.Bounds.Height);
+            var animation1 = valueLabel.AnimateAsync(new ConsoleControlAnimationOptions()
             {
                 IsCancelled = () => valueLifetime.IsExpired,
-                From = valueLabel.Left,
-                To = newLeft,
                 Duration = duration,
-                EasingFunction = Animator.EaseOutSoft,
-                Setter = left =>
-                {
-                    valueLabel.X = left;
-                }
+                EasingFunction = EasingFunctions.EaseOutSoft,
+                Destination = ()=> dest,
             });
 
             var animation2 = Animator.AnimateAsync(new RGBAnimationOptions()
             {
                 IsCancelled = ()=> valueLifetime.IsExpired,
                 Duration = duration,
-                EasingFunction = Animator.Linear,
+                EasingFunction = EasingFunctions.Linear,
                 Transitions = new List<KeyValuePair<RGB, RGB>>()
                 {
                     new KeyValuePair<RGB, RGB>(Background, newBarBg)

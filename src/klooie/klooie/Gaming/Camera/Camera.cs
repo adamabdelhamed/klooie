@@ -100,10 +100,10 @@ public class Camera : ConsolePanel
     /// <returns>an async task that completes when the animation is finished or cancelled</returns>
     public Task AnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetimeManager lt = null, IDelayProvider delayProvider = null)
     {
-        ease = ease ?? Animator.EaseInOut;
+        ease = ease ?? EasingFunctions.EaseInOut;
         var startX = cameraLocation.Left;
         var startY = cameraLocation.Top;
-        return Animator.AnimateAsync(new FloatAnimatorOptions()
+        return Animator.AnimateAsync(new FloatAnimationOptions()
         {
             Duration = duration,
             EasingFunction = ease,
