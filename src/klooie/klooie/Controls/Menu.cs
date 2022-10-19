@@ -1,20 +1,55 @@
 ﻿namespace klooie;
-public class ArrowBasedListMenu<T> : ProtectedConsolePanel where T : class
+/// <summary>
+/// A panel that lists a set of menu items and lets the user navigate them using the up
+/// and down arrows
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public class Menu<T> : ProtectedConsolePanel where T : class
 {
     private List<T> menuItems;
     private Func<T, ConsoleString> formatter;
     private Func<T, bool> isEnabled;
 
+    /// <summary>
+    /// Gets or sets the selected index
+    /// </summary>
     public int SelectedIndex { get => Get<int>(); set => Set(value); }
+
+    /// <summary>
+    /// Optionally define an alternate key for up to be honored in addition to the up arrow
+    /// </summary>
     public ConsoleKey? AlternateUp { get; set; }
+
+    /// <summary>
+    /// Optionally define an alternate key for down to be honored in addition to the down arrow
+    /// </summary>
     public ConsoleKey? AlternateDown { get; set; }
 
+    /// <summary>
+    /// Gets the currently selected item
+    /// </summary>
     public T? SelectedItem => menuItems.Count > 0 ? menuItems[SelectedIndex] : null;
+
+    /// <summary>
+    /// An event that fires when the user activates the selected item
+    /// </summary>
     public Event<T> ItemActivated { get; private init; } = new Event<T>();
 
-    public ArrowBasedListMenu(List<T> menuItems) : this(menuItems, item => true, item => ("" + item).ToConsoleString()) { }
+    /// <summary>
+    /// Creates a menu given a set of menu items. When this constructor is used the
+    /// menu will call ToString() on the item to create its display string.
+    /// </summary>
+    /// <param name="menuItems">the menu items</param>
+    public Menu(List<T> menuItems) : this(menuItems, item => true, item => ("" + item).ToConsoleString()) { }
 
-    public ArrowBasedListMenu(List<T> menuItems, Func<T, bool> isEnabled, Func<T, ConsoleString> formatter)
+    /// <summary>
+    /// Creates a menu given a set of menu items. This constructor lets you define functions
+    /// that can be used to disable and format items
+    /// </summary>
+    /// <param name="menuItems">the items to display</param>
+    /// <param name="isEnabled">a function that tells the control if an item is enabled</param>
+    /// <param name="formatter">a function that formats an item into a console string</param>
+    public Menu(List<T> menuItems, Func<T, bool> isEnabled, Func<T, ConsoleString> formatter)
     {
         this.menuItems = menuItems;
         this.isEnabled = isEnabled;
