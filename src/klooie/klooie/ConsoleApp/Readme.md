@@ -1,0 +1,7 @@
+﻿The types in this folder represent the main components of a klooie application.
+
+EventLoop is a loop that has a custom SynchronizationContext which ensures that async calls are processed correctly on the UI thread.
+
+ConsoleApp is the main construct that represents an app. It derives from EventLoop. It defines the control tree, exposes focus, handles window resizing, and provides some additional helpers.
+
+FocusManager is an internal helper that manages control focus. It is exposed via ConsoleApp.
