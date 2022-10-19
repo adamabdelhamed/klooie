@@ -4,7 +4,7 @@ using PowerArgs;
 namespace klooie.tests;
 
 [TestClass]
-[TestCategory(Categories.Slow)]
+[TestCategory(Categories.ConsoleApp)]
 public class FixedAspectRatioTests
 {
     public TestContext TestContext { get; set; }

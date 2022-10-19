@@ -166,7 +166,7 @@ public class GameTests
     }
 
     [TestMethod]
-    [TestCategory(Categories.Slow)]
+    [TestCategory(Categories.ConsoleApp)]
     public void Pause_Basic() => GamingTest.Run(FuncRule.Create(async()=>
     {
         var period = 500;
@@ -200,7 +200,7 @@ public class GameTests
 
 
     [TestMethod]
-    [TestCategory(Categories.Slow)]
+    [TestCategory(Categories.ConsoleApp)]
     public void Pause_Idempotent() => GamingTest.Run(FuncRule.Create(async()=>
     {
         var period = 500;

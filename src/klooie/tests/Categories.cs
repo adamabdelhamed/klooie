@@ -9,7 +9,6 @@
         public const string Drawing = "ConsoleBitmap and recording tests";
         public const string Gaming = "Gaming";
         public const string Code = "Gaming.Code";
-        public const string Slow = "Slow";
         public const string Observability = "Observability";
     }
 }
