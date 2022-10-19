@@ -11,6 +11,8 @@ public class Slider : ConsoleControl
     public bool EnableWAndSKeysForUpDown { get; set; }
     public Slider()
     {
+        BarColor = RGB.Gray;
+        HandleColor = RGB.White;
         Min = 0;
         Max = 100;
         Width = 10;
@@ -19,7 +21,7 @@ public class Slider : ConsoleControl
 
         this.Ready.SubscribeOnce(() =>
         {
-            this.Subscribe(ObservableObject.AnyProperty, () =>
+            this.Subscribe(AnyProperty, () =>
             {
                 if (Min > Max) throw new InvalidOperationException("Max must be >= Min");
                 if (Value > Max) throw new InvalidOperationException("Value must be <= Max");
@@ -67,7 +69,7 @@ public class Slider : ConsoleControl
         var percentage = delta / range;
         var left = (int)ConsoleMath.Round(percentage * (Width - 1));
 
-        var barColor = HasFocus ? RGB.Cyan : BarColor;
+        var barColor = HasFocus ? FocusColor : BarColor;
         context.DrawPoint(new ConsoleCharacter(' ', Background, barColor), left, 0);
     }
 }
