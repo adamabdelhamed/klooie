@@ -60,5 +60,4 @@ public class DropdownTests
         await context.PaintAndRecordKeyFrameAsync();
         Assert.AreEqual(expectedId, d.Value.Id);
     }
-     
 }
