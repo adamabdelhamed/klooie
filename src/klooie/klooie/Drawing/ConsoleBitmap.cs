@@ -702,33 +702,7 @@ public class ConsoleBitmap
             PaintOld();
         }
     }
-
-    /*
-    public void Dump(string dest)
-    {
-        using (Bitmap b = new Bitmap(Width * 10, Height * 20))
-        using (var g = Graphics.FromImage(b))
-        {
-            g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
-            for (int y = 0; y < Height; y++)
-            {
-                for (int x = 0; x < Width; x++)
-                {
-                    var pix = GetPixel(x, y);
-                    var bgColor = Color.FromArgb(pix.BackgroundColor.R, pix.BackgroundColor.G, pix.BackgroundColor.B);
-                    var fgColor = Color.FromArgb(pix.ForegroundColor.R, pix.ForegroundColor.G, pix.ForegroundColor.B);
-                    var imgX = x * 10;
-                    var imgY = y * 20;
-                    g.FillRectangle(new SolidBrush(bgColor), imgX, imgY, 10, 20);
-                    g.DrawString(pix.Value.ToString(), new Font("Consolas", 12), new SolidBrush(fgColor), imgX-2, imgY);
-                }
-            }
-            b.Save(dest, ImageFormat.Png);
-        }
-    }
-    */
-
+ 
     private void PaintNew()
     {
         if (Console.WindowHeight == 0) return;
