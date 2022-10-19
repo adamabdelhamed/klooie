@@ -58,7 +58,6 @@ public class MonthCalendarOptions
 /// </summary>
 public class MonthCalendar : ProtectedConsolePanel
 {
-    private const string DayOfWeekTag = "DayOfWeekLabel";
     /// <summary>
     /// The minimum supported width of the MonthCalendar control
     /// </summary>
@@ -68,15 +67,18 @@ public class MonthCalendar : ProtectedConsolePanel
     /// </summary>
     public const int MinHeight = 15;
 
+    private const string DayOfWeekTag = "DayOfWeekLabel";
     private const int NumberOfRowsNeeded = 6;
+
+    private GridLayout gridLayout;
+    private Dictionary<DateTime, Tuple<int, int>> coordinateMemo = new Dictionary<DateTime, Tuple<int, int>>();
+    private Dictionary<string, ConsolePanel> dateCells = new Dictionary<string, ConsolePanel>();
+    private Label monthAndYearLabel;
 
     /// <summary>
     /// The options object that was passed to the constructor
     /// </summary>
-    public MonthCalendarOptions Options { get; private set; }
-    private GridLayout gridLayout;
-    private Dictionary<DateTime, Tuple<int, int>> coordinateMemo = new Dictionary<DateTime, Tuple<int, int>>();
-    private Dictionary<string, ConsolePanel> dateCells = new Dictionary<string, ConsolePanel>();
+    public MonthCalendarOptions Options { get; private init; }
 
     /// <summary>
     /// Initializes the MonthCalendar control
@@ -271,7 +273,7 @@ public class MonthCalendar : ProtectedConsolePanel
         }
     }
 
-    private Label monthAndYearLabel;
+
     private void PopulateMonthAndYearLabel()
     {
         var date = new DateTime(Options.Year, Options.Month, 1);

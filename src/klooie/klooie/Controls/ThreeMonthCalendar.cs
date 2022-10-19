@@ -5,7 +5,7 @@ public class ThreeMonthCarouselOptions : MonthCalendarOptions
     public float AnimationDuration { get; set; } = 350;
 }
 
-public class ThreeMonthCarousel : ProtectedConsolePanel
+public class ThreeMonthCalendar : ProtectedConsolePanel
 {
     public ThreeMonthCarouselOptions Options { get; private set; }
 
@@ -19,7 +19,7 @@ public class ThreeMonthCarousel : ProtectedConsolePanel
     private ConsoleControl centerPlaceHolder;
     private ConsoleControl rightPlaceHolder;
 
-    public ThreeMonthCarousel(ThreeMonthCarouselOptions options = null)
+    public ThreeMonthCalendar(ThreeMonthCarouselOptions options = null)
     {
         options = options ?? new ThreeMonthCarouselOptions();
         this.Options = options;
