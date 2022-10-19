@@ -74,13 +74,8 @@ public class ConsoleBitmapPlayer : ConsolePanel
     /// <summary>
     /// The buttons that appear under the player progress bar
     /// </summary>
-    private Button seekToBeginningButton, seekBack10SButton, seekForward10SButton, seekToEndButton, playButton;
+    private Button seekToBeginningButton, seekBack10SButton, seekBackFrameButton, seekForward10SButton,seekForwardFrameButton, seekToEndButton, playButton;
 
-
-    /// <summary>
-    /// The lifetime of the current play operation (or null if the player is not playing)
-    /// </summary>
-    private Lifetime playLifetime;
 
     /// <summary>
     /// The duration of the currently loaded video.  This is set once the first frame of the video is loaded
@@ -149,17 +144,21 @@ public class ConsoleBitmapPlayer : ConsolePanel
         var buttonBar = Add(new StackPanel() { CanFocus = false, Height = 1, Orientation = Orientation.Horizontal }).FillHorizontally().DockToBottom();
 
         seekToBeginningButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.Home)) { Text = "<<".ToConsoleString(), CanFocus = false });
+        seekBackFrameButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.UpArrow)) { Text = "prev frame".ToConsoleString(), CanFocus = false });
         seekBack10SButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.LeftArrow)) { CanFocus = false });
         playButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.P)) { Text = "".ToConsoleString(), CanFocus = false });
         seekForward10SButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.RightArrow)) { CanFocus = false });
+        seekForwardFrameButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.DownArrow)) { Text = "next frame".ToConsoleString(), CanFocus = false });
         seekToEndButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.End)) { Text = ">>".ToConsoleString(), CanFocus = false });
 
         if (showButtonBar)
         {
             seekToBeginningButton.Pressed.Subscribe(SeekToBeginningButtonPressed, this);
             seekBack10SButton.Pressed.Subscribe(Rewind, this);
+            seekBackFrameButton.Pressed.Subscribe(RewindFrame, this);
             playButton.Pressed.Subscribe(PlayPressed, this);
             seekForward10SButton.Pressed.Subscribe(FastForward, this);
+            seekForwardFrameButton.Pressed.Subscribe(FastForwardFrame, this);
             seekToEndButton.Pressed.Subscribe(SeekToEndButtonPressed, this);
         }
         else
@@ -246,6 +245,22 @@ public class ConsoleBitmapPlayer : ConsolePanel
 
         playStartPosition = TimeSpan.FromSeconds(playerProgressBar.PlayCursorPosition * duration.Value.TotalSeconds);
         playStartTime = DateTime.UtcNow;
+        CurrentFrame = inMemoryVideo.Frames.OrderBy(f => Math.Abs((f.FrameTime - playStartPosition).TotalSeconds)).First().Bitmap;
+    }
+
+    private void RewindFrame()
+    {
+        if (State == PlayerState.Playing) return;
+        if (duration.HasValue == false) throw new InvalidOperationException("Rewind is not permitted before a video is loaded");
+        if (lastFrameIndex == 0) return;
+
+        var previousFrame = inMemoryVideo.Frames[lastFrameIndex - 1];
+        playerProgressBar.PlayCursorPosition = previousFrame.FrameTime.TotalSeconds / inMemoryVideo.Duration.TotalSeconds;
+
+        playStartPosition = previousFrame.FrameTime;
+        playStartTime = DateTime.UtcNow;
+        CurrentFrame = previousFrame.Bitmap;
+        lastFrameIndex--;
     }
 
     /// <summary>
@@ -269,9 +284,23 @@ public class ConsoleBitmapPlayer : ConsolePanel
 
         playStartPosition = TimeSpan.FromSeconds(playerProgressBar.PlayCursorPosition * duration.Value.TotalSeconds);
         playStartTime = DateTime.UtcNow;
+        CurrentFrame = inMemoryVideo.Frames.OrderBy(f => Math.Abs((f.FrameTime - playStartPosition).TotalSeconds)).First().Bitmap;
     }
 
-    public void Play() => PlayPressed();
+    private void FastForwardFrame()
+    {
+        if (State == PlayerState.Playing) return;
+        if (duration.HasValue == false) throw new InvalidOperationException("Rewind is not permitted before a video is loaded");
+        if (lastFrameIndex >= inMemoryVideo.Frames.Count - 1) return;
+
+        var nextFrame = inMemoryVideo.Frames[lastFrameIndex + 1];
+        playerProgressBar.PlayCursorPosition = nextFrame.FrameTime.TotalSeconds / inMemoryVideo.Duration.TotalSeconds;
+
+        playStartPosition = nextFrame.FrameTime;
+        playStartTime = DateTime.UtcNow;
+        CurrentFrame = nextFrame.Bitmap;
+        lastFrameIndex++;
+    }
 
     /// <summary>
     /// The handler for the play button that handles play / pause toggling and resetting to the beginning
@@ -308,11 +337,6 @@ public class ConsoleBitmapPlayer : ConsolePanel
     /// </summary>
     private void StateChanged()
     {
-        if (State != PlayerState.Playing)
-        {
-            playLifetime = null;
-        }
-
         if (State == PlayerState.Playing)
         {
             if (duration.HasValue == false)
@@ -357,9 +381,8 @@ public class ConsoleBitmapPlayer : ConsolePanel
         lastFrameIndex = 0;
         await Task.Delay(1);
         if (State != PlayerState.Playing) return;
-        var playLifetime = this.GetPropertyValueLifetime(nameof(State));
 
-        while (playLifetime.IsExpired == false)
+        while (State == PlayerState.Playing)
         {
             // start a play loop for as long as the state remains unchanged
             var now = DateTime.UtcNow;
@@ -420,8 +443,10 @@ public class ConsoleBitmapPlayer : ConsolePanel
                             playerProgressBar.ShowPlayCursor = true;
                             playButton.CanFocus = true;
                             seekToBeginningButton.CanFocus = true;
+                            seekBackFrameButton.CanFocus = true;
                             seekBack10SButton.CanFocus = true;
                             seekForward10SButton.CanFocus = true;
+                            seekForwardFrameButton.CanFocus = true;
                             seekToEndButton.CanFocus = true;
                             State = PlayerState.Stopped;
                             if (Application.FocusedControl == null)
