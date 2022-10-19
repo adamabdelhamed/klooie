@@ -5,10 +5,11 @@
 /// </summary>
 public class PixelControl : ConsoleControl
 {
+    private ConsoleCharacter _value;
     /// <summary>
     /// Gets or sets the character value to be displayed
     /// </summary>
-    public ConsoleCharacter Value { get => Get<ConsoleCharacter>(); set => Set(value); }
+    public ConsoleCharacter Value { get => _value; set => SetHardIf(ref _value, value, value != _value); }
     /// <summary>
     /// Creates a new pixel control
     /// </summary>
