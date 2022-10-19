@@ -5,19 +5,24 @@
 /// </summary>
 public class Dropdown : ProtectedConsolePanel
 {
-    public List<DialogChoice> Options { get; private set; } = new List<DialogChoice>();
     private Label valueLabel;
     private bool isOpen;
+
+    public List<DialogChoice> Options { get; private set; } = new List<DialogChoice>();
 
     /// <summary>
     /// The currently selected option
     /// </summary>
     public DialogChoice Value { get => Get<DialogChoice>(); set => Set(value); }
 
+    /// <summary>
+    /// If true then W will be treated as Up and S will be treated as down.
+    /// </summary>
     public bool EnableWAndSKeysForUpDown { get; set; }
 
     /// <summary>
     /// Creates a new Dropdown
+    /// <param name="options">the options to display</param>
     /// </summary>
     public Dropdown(IEnumerable<DialogChoice> options)
     {
@@ -25,23 +30,23 @@ public class Dropdown : ProtectedConsolePanel
         Value = this.Options.FirstOrDefault();
         CanFocus = true;
         Height = 1;
+        Width = 15;
         valueLabel = ProtectedPanel.Add(new Label());
 
         Sync(AnyProperty, SyncValueLabel, this);
         Focused.Subscribe(SyncValueLabel, this);
         Unfocused.Subscribe(SyncValueLabel, this);
 
-        this.KeyInputReceived.Subscribe(k =>
+        this.KeyInputReceived.Subscribe(async (k) =>
         {
             if (k.Key == ConsoleKey.Enter || k.Key == ConsoleKey.DownArrow)
             {
-                Open();
+                await Open();
             }
             else if (EnableWAndSKeysForUpDown && (k.Key == ConsoleKey.W || k.Key == ConsoleKey.S))
             {
-                Open();
+                await Open();
             }
-
         }, this);
     }
 
@@ -70,7 +75,7 @@ public class Dropdown : ProtectedConsolePanel
         valueLabel.Text = HasFocus ? text.ToBlack(RGB.Cyan) : isOpen ? text.ToCyan(RGB.DarkGray) : text.ToWhite();
     }
 
-    private async void Open()
+    private async Task Open()
     {
         isOpen = true;
         SyncValueLabel();
