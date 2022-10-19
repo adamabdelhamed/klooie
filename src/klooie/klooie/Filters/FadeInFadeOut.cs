@@ -55,7 +55,7 @@ public static class FadeEx
     }
 }
 
-internal class FadeOutFilter : IConsoleControlFilter
+internal sealed class FadeOutFilter : IConsoleControlFilter
 {
     public float Percentage { get; set; }
 
@@ -82,7 +82,7 @@ internal class FadeOutFilter : IConsoleControlFilter
     }
 }
 
-internal class FadeInFilter : IConsoleControlFilter
+internal sealed class FadeInFilter : IConsoleControlFilter
 {
     public RGB BackgroundColor { get; set; } = RGB.Black;
     public float Percentage { get; set; }

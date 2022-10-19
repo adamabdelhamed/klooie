@@ -2,7 +2,7 @@
 /// <summary>
 /// A lifetime aware event
 /// </summary>
-public class Event
+public sealed class Event
 {
     private List<Subscription> subscribers;
     private List<SubscriptionWithParam> subscribersWithParams;

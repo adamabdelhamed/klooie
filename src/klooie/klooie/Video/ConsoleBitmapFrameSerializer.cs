@@ -4,7 +4,7 @@ namespace klooie;
 /// <summary>
 /// The code that converts console bitmap frames from their in memory structure to lines of text, and vice versa
 /// </summary>
-internal class ConsoleBitmapFrameSerializer
+internal sealed class ConsoleBitmapFrameSerializer
 {
     /// <summary>
     /// The tokenizer that will parse each line during deserialization

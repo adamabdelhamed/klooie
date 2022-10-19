@@ -3,7 +3,7 @@
 /// <summary>
 /// A panel that can pan like a camera.
 /// </summary>
-public class Camera : ConsolePanel
+public sealed class Camera : ConsolePanel
 {
     private LocF cameraLocation;
 

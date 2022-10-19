@@ -3,7 +3,7 @@
 /// <summary>
 /// A rate regulator
 /// </summary>
-public class RateGovernor
+public sealed class RateGovernor
 {
     private TimeSpan lastFire;
 

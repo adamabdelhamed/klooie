@@ -1,12 +1,12 @@
 ﻿namespace klooie.Gaming;
 
-public class GameEvent
+public sealed class GameEvent
 {
     public string Id { get; set; }
     public object? Args { get; set; }
 }
 
-internal class EventBroadcaster
+internal sealed class EventBroadcaster
 {
     private Dictionary<string, Event<GameEvent>> events = new Dictionary<string, Event<GameEvent>>();
 

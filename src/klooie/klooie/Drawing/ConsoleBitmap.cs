@@ -3,7 +3,7 @@
 /// A data structure representing a 2d image that can be pained in
 /// a console window
 /// </summary>
-public class ConsoleBitmap
+public sealed class ConsoleBitmap
 {
     private static ChunkPool chunkPool = new ChunkPool();
     private static List<Chunk> chunksOnLine = new List<Chunk>();

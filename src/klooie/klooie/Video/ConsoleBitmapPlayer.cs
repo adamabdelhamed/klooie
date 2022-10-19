@@ -33,7 +33,7 @@ public enum PlayerState
 /// <summary>
 /// A control that can play console app recordings from a stream
 /// </summary>
-public class ConsoleBitmapPlayer : ConsolePanel
+public sealed class ConsoleBitmapPlayer : ConsolePanel
 {
     /// <summary>
     /// Gets the current state of the player

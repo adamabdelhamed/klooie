@@ -1,5 +1,5 @@
 ﻿namespace klooie;
-public class Friction : Lifetime
+public sealed class Friction : Lifetime
 {
     public const int DefaultFrictionEvalFrequency = 50;
     public float Decay { get; set; } = .9f;

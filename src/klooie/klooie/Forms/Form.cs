@@ -3,7 +3,7 @@
 /// <summary>
 /// A class that represents a form element
 /// </summary>
-public class FormElement
+public sealed class FormElement
 {
     /// <summary>
     /// The label for the form element
@@ -18,7 +18,7 @@ public class FormElement
 /// <summary>
 /// Options for configuring a form
 /// </summary>
-public class FormOptions
+public sealed class FormOptions
 {
     /// <summary>
     /// The percentage of the available width to use for labels
@@ -34,7 +34,7 @@ public class FormOptions
 /// <summary>
 /// A control that lets users edit a set of values as in a form
 /// </summary>
-public class Form : ConsolePanel
+public sealed class Form : ConsolePanel
 {
     /// <summary>
     /// The options that were provided

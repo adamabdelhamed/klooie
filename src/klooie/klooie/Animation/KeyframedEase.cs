@@ -1,5 +1,5 @@
 ﻿namespace klooie;
-public class KeyframedEase
+public sealed class KeyframedEase
 {
     private float[] keyFrames;
     public KeyframedEase(float[] keyFrames)

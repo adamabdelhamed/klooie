@@ -20,7 +20,7 @@ public abstract class ConsoleBitmapFrame
 /// <summary>
 /// A raw frame that contains all of the bitmap data needed to construct a frame
 /// </summary>
-public class ConsoleBitmapRawFrame : ConsoleBitmapFrame
+public sealed class ConsoleBitmapRawFrame : ConsoleBitmapFrame
 {
     /// <summary>
     /// The pixel data for the current frame
@@ -54,7 +54,7 @@ public class ConsoleBitmapRawFrame : ConsoleBitmapFrame
 /// <summary>
 /// A frame that contains only the pixel data for pixels that have changed since the previous frame
 /// </summary>
-public class ConsoleBitmapDiffFrame : ConsoleBitmapFrame
+public sealed class ConsoleBitmapDiffFrame : ConsoleBitmapFrame
 {
     /// <summary>
     /// The pixel diff data, one element for each pixel that has changed since the last frame
@@ -80,7 +80,7 @@ public class ConsoleBitmapDiffFrame : ConsoleBitmapFrame
 /// <summary>
 /// Represents a changed pixel
 /// </summary>
-public class ConsoleBitmapPixelDiff
+public sealed class ConsoleBitmapPixelDiff
 {
     /// <summary>
     /// The x coordinate of the pixel

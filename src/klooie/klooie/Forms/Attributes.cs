@@ -4,27 +4,27 @@
 /// property
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
-public class FormIgnoreAttribute : Attribute { }
+public sealed class FormIgnoreAttribute : Attribute { }
 
 /// <summary>
 /// An attribute that tells the form generator to give this
 /// property a read only treatment
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
-public class FormReadOnlyAttribute : Attribute { }
+public sealed class FormReadOnlyAttribute : Attribute { }
 
 [AttributeUsage(AttributeTargets.Property)]
-public class FormSelectAllOnFocusAttribute : Attribute { }
+public sealed class FormSelectAllOnFocusAttribute : Attribute { }
 
 [AttributeUsage(AttributeTargets.Property)]
-public class FormContrastAttribute : Attribute { }
+public sealed class FormContrastAttribute : Attribute { }
 
 /// <summary>
 /// An attribute that tells the form generator to use yes no labels for a toggle
 /// </summary>
-public class FormYesNoAttribute : Attribute { }
+public sealed class FormYesNoAttribute : Attribute { }
 
-public class FormSliderAttribute : Attribute
+public sealed class FormSliderAttribute : Attribute
 {
     public RGB BarColor { get; set; } = RGB.White;
     public RGB HandleColor { get; set; } = RGB.Gray;
@@ -54,7 +54,7 @@ public class FormSliderAttribute : Attribute
 /// property a specific value width
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
-public class FormWidth : Attribute
+public sealed class FormWidth : Attribute
 {
     public int Width { get; private set; }
 
@@ -73,7 +73,7 @@ public class FormWidth : Attribute
 /// on a form element
 /// </summary>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Enum | AttributeTargets.Field)]
-public class FormLabelAttribute : Attribute
+public sealed class FormLabelAttribute : Attribute
 {
     /// <summary>
     /// The label to display on the form element

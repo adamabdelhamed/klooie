@@ -2,7 +2,7 @@
 /// <summary>
 /// A camera movement that always keeps the focal element in the center
 /// </summary>
-public class AlwaysCenteredMovement : CameraMovement
+public sealed class AlwaysCenteredMovement : CameraMovement
 {
     public override void Init() => FocalElement.Subscribe(nameof(FocalElement.Bounds), Check, EarliestOf(this, FocalElement));
     private void Check() => SituationDetected.Fire(0);

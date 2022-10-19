@@ -1,5 +1,5 @@
 ﻿namespace klooie.Gaming;
-public class ColliderGroup
+public sealed class ColliderGroup
 {
     private const float MaxDTSeconds = .05f;
     private const float MaxDTMilliseconds = MaxDTSeconds * 1000f;

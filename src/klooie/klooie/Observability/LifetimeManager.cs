@@ -63,7 +63,7 @@ public static class ILifetimeManagerEx
 /// <summary>
 /// An implementation of ILifetimeManager
 /// </summary>
-internal class LifetimeManager : ILifetimeManager
+internal sealed class LifetimeManager : ILifetimeManager
 {
     private List<Subscription> subscribers = new List<Subscription>();
     private List<SubscriptionWithParam> subscribersWithParams = new List<SubscriptionWithParam>();

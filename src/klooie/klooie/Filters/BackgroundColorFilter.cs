@@ -1,5 +1,5 @@
 ﻿namespace klooie;
-public class BackgroundColorFilter : IConsoleControlFilter
+public sealed class BackgroundColorFilter : IConsoleControlFilter
 {
     public RGB Color { get; set; }
 

@@ -52,7 +52,7 @@ public class IndexAssignment<T> : IIndexAssignment
 /// An observable list implementation
 /// </summary>
 /// <typeparam name="T">the type of elements this collection will contain</typeparam>
-public class ObservableCollection<T> : IList<T>, IObservableCollection, IObservableObject
+public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, IObservableObject
 {
     private ObservableObject observable;
     private List<T> wrapped;

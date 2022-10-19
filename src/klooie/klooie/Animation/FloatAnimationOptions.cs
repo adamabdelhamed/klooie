@@ -3,7 +3,7 @@
 /// <summary>
 /// Options for doing animations
 /// </summary>
-public class FloatAnimationOptions : CommonAnimationOptions
+public sealed class FloatAnimationOptions : CommonAnimationOptions
 {
     /// <summary>
     /// The starting value of the animated property

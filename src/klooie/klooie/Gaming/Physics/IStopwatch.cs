@@ -8,7 +8,7 @@ public interface IStopwatch
     void Stop();
 }
 
-public class WallClockStopwatch : IStopwatch
+public sealed class WallClockStopwatch : IStopwatch
 {
     private Stopwatch sw = new Stopwatch();
     public TimeSpan Elapsed => sw.Elapsed;

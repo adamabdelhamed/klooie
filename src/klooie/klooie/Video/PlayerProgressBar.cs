@@ -2,7 +2,7 @@
 /// <summary>
 /// A progress bar designed for use with the console bitmap player.  It shows the current play cursor and indicates loading progress
 /// </summary>
-internal class PlayerProgressBar : ConsoleControl
+internal sealed class PlayerProgressBar : ConsoleControl
 {
     /// <summary>
     /// The current position of the loading indicator (0 to 1)

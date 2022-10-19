@@ -3,7 +3,7 @@
 /// <summary>
 /// A rule that targets a property on a ConsoleControl's property
 /// </summary>
-public class Style
+public sealed class Style
 {
     /// <summary>
     /// used internally for usage tracking

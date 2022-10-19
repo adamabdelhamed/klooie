@@ -1,5 +1,5 @@
 ﻿namespace klooie;
-internal class NotificationBufferPool
+internal sealed class NotificationBufferPool
 {
 #if DEBUG
     internal static int HitCount = 0;

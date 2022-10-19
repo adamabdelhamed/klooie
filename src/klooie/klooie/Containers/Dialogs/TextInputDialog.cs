@@ -3,7 +3,7 @@
 /// <summary>
 /// Options for a dialog that shows a text box
 /// </summary>
-public class ShowTextInputOptions : ShowMessageOptions
+public sealed class ShowTextInputOptions : ShowMessageOptions
 {
     /// <summary>
     /// Set this to use a custom text box, otherwise a default will be created

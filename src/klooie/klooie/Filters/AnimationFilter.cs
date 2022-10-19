@@ -23,7 +23,7 @@ public static class AnimateEx
         return filter;
     }
 }
-public class AnimationFilter : IConsoleControlFilter
+public sealed class AnimationFilter : IConsoleControlFilter
 {
     public float Percentage { get; set; }
     public RGB From { get; set; }

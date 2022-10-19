@@ -3,12 +3,12 @@
 /// <summary>
 /// An exception that is thrown when a camera movement needs to be short circuited
 /// </summary>
-public class CameraOperationShortCircuitException : Exception { }
+public sealed class CameraOperationShortCircuitException : Exception { }
 
 /// <summary>
 /// A utility for operating a camera
 /// </summary>
-public class CameraOperator : Lifetime
+public sealed class CameraOperator : Lifetime
 {
     private int currentPri = int.MaxValue;
     private ILifetime moveLt;

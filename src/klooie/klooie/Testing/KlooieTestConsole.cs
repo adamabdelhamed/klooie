@@ -1,5 +1,5 @@
 ﻿namespace klooie.tests;
-public class KlooieTestConsole : IConsoleProvider
+public sealed class KlooieTestConsole : IConsoleProvider
 {
     public RGB ForegroundColor { get; set; }
     public RGB BackgroundColor { get; set; }

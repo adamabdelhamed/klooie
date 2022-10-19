@@ -3,7 +3,7 @@ namespace klooie;
 /// <summary>
 /// An object that can read console bitmap frames from a stream
 /// </summary>
-public class ConsoleBitmapStreamReader
+public sealed class ConsoleBitmapStreamReader
 {
     private ConsoleBitmapFrameSerializer serializer;
     private Stream inputStream;

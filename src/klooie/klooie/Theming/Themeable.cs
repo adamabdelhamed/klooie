@@ -1,6 +1,6 @@
 ﻿namespace klooie;
 
-public class ThemeIgnoreAttribute : Attribute 
+public sealed class ThemeIgnoreAttribute : Attribute 
 {
     public Type ToIgnore { get; private set; }
 

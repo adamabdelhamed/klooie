@@ -1,6 +1,6 @@
 ﻿using klooie.Gaming;
 namespace klooie;
-public class Velocity
+public sealed class Velocity
 {
     public enum CollisionBehaviorMode
     {

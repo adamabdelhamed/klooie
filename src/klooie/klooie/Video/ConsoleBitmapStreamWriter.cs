@@ -2,7 +2,7 @@
 /// <summary>
 /// An object that can write console bitmap video data to a stream
 /// </summary>
-public class ConsoleBitmapVideoWriter
+public sealed class ConsoleBitmapVideoWriter
 {
     public const int DurationLineLength = 30;
     private DateTime? firstFrameTime;

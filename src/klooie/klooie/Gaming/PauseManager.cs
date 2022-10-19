@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 namespace klooie.Gaming;
-internal class PauseManager : IDelayProvider
+internal sealed class PauseManager : IDelayProvider
 {
     private Lifetime? pauseLifetime;
     private bool isPaused;

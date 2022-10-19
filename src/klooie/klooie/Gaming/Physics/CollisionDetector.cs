@@ -10,7 +10,7 @@ public struct Collision
     public override string ToString() => $"{Prediction.LKGX},{Prediction.LKGY} - {ColliderHit?.GetType().Name}";
 }
 
-public class CollisionPrediction
+public sealed class CollisionPrediction
 {
     public bool CollisionPredicted { get; set; }
     public RectF ObstacleHitBounds { get; set; }

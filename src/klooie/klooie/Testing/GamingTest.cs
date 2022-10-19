@@ -2,7 +2,7 @@
 
 namespace klooie.tests;
 
-public class GamingTestOptions
+public sealed class GamingTestOptions
 {
     public IRuleProvider Rules { get; set; } = ArrayRulesProvider.Empty;
     public string TestId { get; set; }
@@ -77,7 +77,7 @@ public static class GamingTest
     }
 }
 
-public class TestGame : Game
+public sealed class TestGame : Game
 {
     protected override IRuleProvider RuleProvider => provider ?? ArrayRulesProvider.Empty;
     private IRuleProvider provider;
@@ -142,7 +142,7 @@ public class TestGame : Game
     public override RectF GameBounds => camera?.BigBounds ?? base.GameBounds;
 }
 
-public class RuleWrapper : IRuleProvider
+public sealed class RuleWrapper : IRuleProvider
 {
     private IRuleProvider wrapped;
     private IEnumerable<IRule> additions;

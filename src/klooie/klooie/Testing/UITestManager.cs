@@ -11,7 +11,7 @@ public enum UITestMode
     HeadOnly,
 }
 
-public class UITestManager
+public sealed class UITestManager
 {
     private ConsoleBitmapVideoWriter keyFrameRecorder;
     private ConsoleApp app;

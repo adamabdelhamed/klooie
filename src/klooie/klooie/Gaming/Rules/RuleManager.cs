@@ -1,6 +1,6 @@
 ﻿namespace klooie.Gaming;
 
-internal class RuleManager
+internal sealed class RuleManager
 {
     private IRuleProvider ruleProvider;
     private IRule[] rules;
