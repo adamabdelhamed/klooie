@@ -283,7 +283,7 @@ public class MonthCalendar : ProtectedConsolePanel
     private void SetupMinimumSizeExperience()
     {
         ConsolePanel shield = null;
-        ConsoleControl min = ProtectedPanel.Add(new MinimumSizeEnforcerPanel(new MinimumSizeEnforcerPanelOptions()
+        ConsoleControl min = ProtectedPanel.Add(new MinimumSizeShield(new MinimumSizeShieldOptions()
         {
             MinWidth = MinWidth,
             MinHeight = MinHeight,
