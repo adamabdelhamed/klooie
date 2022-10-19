@@ -185,6 +185,11 @@ public class ConsoleBitmapPlayer : ConsolePanel
     }
 
     /// <summary>
+    /// Plays the video
+    /// </summary>
+    public void Play() => PlayPressed();
+
+    /// <summary>
     /// Seeks to the beginning of the video.  If the video is playing then it will continue playing
     /// from the beginning of the video
     /// </summary>
