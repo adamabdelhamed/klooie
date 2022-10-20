@@ -36,6 +36,7 @@ public static class HelloWorldProgram
 
 ```
 The sample above creates an application that looks like this.
+
 ![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)
 
 ## Advanced Features

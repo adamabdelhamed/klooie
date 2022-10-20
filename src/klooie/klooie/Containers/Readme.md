@@ -44,4 +44,5 @@ public static class ConsolePanelSampleProgram
 
 ```
 The sample above creates an application that looks like this.
+
 ![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ConsolePanel/ConsolePanelSample.gif?raw=true)

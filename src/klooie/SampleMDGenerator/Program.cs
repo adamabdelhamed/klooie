@@ -141,7 +141,7 @@ class ReadMeTemplate
             builder.Append("```\n");
             if(sample.HasGif)
             {
-                builder.Append("The sample above creates an application that looks like this.\n");
+                builder.Append("The sample above creates an application that looks like this.\n\n");
                 builder.Append(sample.GifMD + "\n");
             }
         }
