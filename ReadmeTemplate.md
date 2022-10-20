@@ -1,4 +1,4 @@
-﻿# klooie
+# klooie
 A framework for building GUI applications within any command line that runs .NET. Klooie provides all the things you would expect from a UX Framework.
 
 ## Key Features
@@ -16,27 +16,7 @@ A framework for building GUI applications within any command line that runs .NET
 
 Here's a hello world console app that just shows a message on the middle of the screen and waits for the user to press enter before exiting.
 
-```cs
-using PowerArgs;
-using klooie;
-namespace klooie.Samples;
-
-// Define your application
-public class HelloWorld : ConsoleApp
-{
-    protected override Task Startup() =>
-        LayoutRoot.Add(new Label("Hello World! Press escape to exit.".ToOrange())).CenterBoth().FadeIn(2000);
-}
-
-// Entry point for your application
-public static class Program
-{
-    public static void Main() => new HelloWorld().Run();
-}
-
-```
-The sample above creates an application that looks like this.
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)
+//#HelloWorld
 
 ## Advanced Features
 

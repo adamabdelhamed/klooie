@@ -19,6 +19,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples", "Samples\Samples.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleMDGenerator", "SampleMDGenerator\SampleMDGenerator.csproj", "{8B221FE7-6FF5-4AA7-B4D3-6181774D887F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{C19CCBD6-DE58-455D-AB02-9452CE6EC6AA}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\ReadmeTemplate.md = ..\..\ReadmeTemplate.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
