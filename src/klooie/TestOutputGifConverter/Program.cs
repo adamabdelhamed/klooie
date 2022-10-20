@@ -159,8 +159,8 @@ public class GifMaker
         for (int j = 0; j < frames.Count; ++j)
         {
             uint frameTimeInHundredthsOfASecond = (uint)ConsoleMath.Round(frames[j].FrameTime.TotalSeconds * 100);
-            uint previousFrameTimeInHundredthsOfASecond = j == 0 ? 0 : (uint)ConsoleMath.Round(frames[j-1].FrameTime.TotalSeconds * 100);
-            var delay = frameTimeInHundredthsOfASecond - previousFrameTimeInHundredthsOfASecond;
+            uint nextFrameTimeInHundredthsOfASecond = j == frames.Count-1 ? 0 : (uint)ConsoleMath.Round(frames[j+1].FrameTime.TotalSeconds * 100);
+            var delay = nextFrameTimeInHundredthsOfASecond - frameTimeInHundredthsOfASecond;
             var frameDelayBytes = BitConverter.GetBytes(delay);
             Array.Copy(frameDelayBytes, 0, frameDelay.Value, j * UintBytes, UintBytes);
         }
