@@ -1,8 +1,4 @@
-﻿The types in this folder provide animation functionality for klooie applications.
-
-**ConsoleControlAnimationOptions** let you animate the size and location of controls.
-
-```cs
+﻿//#Sample -Id AnimationSample
 using PowerArgs;
 using klooie;
 namespace klooie.Samples;
@@ -33,16 +29,20 @@ public static class AnimationSampleProgram
 {
     public static void Main() => new AnimationSample().Run();
 }
+//#EndSample
 
-```
-The sample above creates an application that looks like this.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/AnimationSample.gif?raw=true)
+public class AnimationSampleRunner : IRecordableSample
+{
+    public string OutputPath => @"Animations\AnimationSample.gif";
 
-**Animator** has static methods for performing animations.
+    public int Width => 60;
 
-**FloatAnimationOptions** let you animate a number.
+    public int Height => 25;
 
-**RGBAnimationOptions** let you animate colors.
-
-**EasingFunctions** defines functions that let you ease animations in various ways.
+    public ConsoleApp Define()
+    {
+        var ret = new AnimationSample();
+        return ret;
+    }
+}
