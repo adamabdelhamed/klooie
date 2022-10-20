@@ -8,6 +8,8 @@
 
 **FloatAnimationOptions** let you animate a number.
 
+//#NumberAnimationSample
+
 **RGBAnimationOptions** let you animate colors.
 
 //#ColorAnimationSample
