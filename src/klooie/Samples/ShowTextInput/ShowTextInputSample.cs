@@ -8,13 +8,13 @@ public class ShowTextInputSample : ConsoleApp
 {
     protected override async Task Startup()
     {
-        LayoutRoot.Background = RGB.Gray;
-        await Task.Delay(1000);
-        
-        // note - name is never null in this example, but by default dialogs let
-        // the user cancel with the escape key. In that case name will be null.
         var name = await TextInputDialog.Show("What is your name?".ToYellow());
-        await LayoutRoot.Add(new Label($"Hello {name}!".ToBlack(LayoutRoot.Background))).CenterBoth().FadeIn(2000, bg: LayoutRoot.Background);
+        if (name != null)
+        {
+            await Task.Delay(250);
+            LayoutRoot.Add(new Label($"Hello {name}!")).CenterBoth();
+        }
+        await Task.Delay(1000);
         Stop();
     }
 }
