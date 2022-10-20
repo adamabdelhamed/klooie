@@ -10,4 +10,6 @@
 
 **RGBAnimationOptions** let you animate colors.
 
+//#ColorAnimationSample
+
 **EasingFunctions** defines functions that let you ease animations in various ways.
