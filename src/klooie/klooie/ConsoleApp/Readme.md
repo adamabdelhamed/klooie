@@ -23,7 +23,7 @@ public static class Program
 }
 
 ```
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)
+The sample above creates an application that looks like this.![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)
 
 **FocusManager** is an internal helper that manages control focus. It is exposed via ConsoleApp.
 
