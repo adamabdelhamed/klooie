@@ -39,6 +39,9 @@ public class SampleParameters
 class Sample
 {
     public string SourceFile { get; private init; }
+    public string GifPath => SourceFile.Replace(".cs", ".gif");
+    public bool HasGif => File.Exists(GifPath);
+    public string GifMD => HasGif ? $"![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)" : string.Empty;
     public string Code { get; private init; }
     public SampleParameters Parameters { get; private init; }
 
@@ -124,6 +127,11 @@ class ReadMeTemplate
             var sample = samples[sampleId];
             builder.Append(sample.Code+"\n");
             builder.Append("```\n");
+            if(sample.HasGif)
+            {
+                builder.Append("The sample above creates an application that looks like this.\n");
+                builder.Append(sample.GifMD + "\n");
+            }
         }
 
         var output = builder.ToString();
