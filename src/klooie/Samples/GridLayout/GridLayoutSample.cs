@@ -60,12 +60,10 @@ public class GridLayoutSample : ConsoleApp
         menu.ItemActivated.Fire(menu.SelectedItem);
         for (var i = 1; i < menuItems.Count; i++)
         {
-            await Task.Delay(2000);
+            await Task.Delay(1000);
             menu.SelectedIndex = i;
             menu.ItemActivated.Fire(menu.SelectedItem);
         }
-
-        await Task.Delay(1000);
     }
 }
 
