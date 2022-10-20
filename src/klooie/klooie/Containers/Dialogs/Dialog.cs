@@ -118,7 +118,7 @@ public static class Dialog
         await Task.Delay((int)(200 * options.SpeedPercentage));
         await Reverse(200 * options.SpeedPercentage, content, percentage => dialogContainer.Width = Math.Max(1, ConsoleMath.Round((4 + content.Width) * percentage)));
         dialogContainer.Dispose();
-
+        await ConsoleApp.Current.RequestPaintAsync();
         if(options.PushPop)
         {
             ConsoleApp.Current.PopFocusStack();
