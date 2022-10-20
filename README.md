@@ -3,7 +3,7 @@ A framework for building GUI applications within any command line that runs .NET
 
 ## Key Features
 
-- **Containers and Layout**  Easily organize controls into a usable view
+- [**Containers and Layout**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Containers)  Easily organize controls into a usable view
 - **Built-in & Custom Controls**  Use controls from the library or create your own
 - **Dialogs**  Panels that appear over a view and temporarity restrict focus to the controls within the dialog
 - **Theming**  A clean model for defining one or more themes for your application.
