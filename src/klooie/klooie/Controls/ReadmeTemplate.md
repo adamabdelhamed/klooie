@@ -5,3 +5,9 @@
 You can build complex controls with klooie. Here's how to use the built-in XYChart. This is useful when building quick command line apps that visualize data.
 
 //#XYChartSample
+
+## Custom controls
+
+You can derive from ConsoleControl to create your own controls.
+
+//#CustomControlSample
