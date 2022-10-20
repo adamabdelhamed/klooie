@@ -71,6 +71,7 @@ public class Menu<T> : ProtectedConsolePanel where T : class
         this.CanFocus = true;
         this.Focused.Sync(RefreshLabels, this);
         this.Unfocused.Subscribe(RefreshLabels, this);
+        this.Subscribe(nameof(SelectedIndex), RefreshLabels, this);
         this.KeyInputReceived.Subscribe(OnKeyPress, this);
     }
 
