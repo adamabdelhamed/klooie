@@ -41,7 +41,10 @@ class Sample
     public string SourceFile { get; private init; }
     public string GifPath => SourceFile.Replace(".cs", ".gif");
     public bool HasGif => File.Exists(GifPath);
-    public string GifMD => HasGif ? $"![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)" : string.Empty;
+    public string GifMD => HasGif ? $"![sample image]({CreateGifUrl()})" : string.Empty;
+
+
+
     public string Code { get; private init; }
     public SampleParameters Parameters { get; private init; }
 
@@ -85,6 +88,15 @@ class Sample
                 ret.Add(parameters.Id, new Sample(cSharpFile, sampleCode, parameters));
             }
         }
+        return ret;
+    }
+
+    private string CreateGifUrl()
+    {
+        var fileName = GifPath.Replace('\\', '/');
+        var startIndex = fileName.LastIndexOf("Samples/");
+        var relative = fileName.Substring(startIndex);
+        var ret = $"https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/{relative}?raw=true";
         return ret;
     }
 }

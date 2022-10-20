@@ -1,12 +1,4 @@
-﻿#Containers and Layout
-
-klooie provides several containers that make it easy to layout the controls within your application.
-
-##ConsolePanel
-
-A ConsolePanel is the most basic type of container. You are responsible for sizing and positioning the controls that you add to a panel.
-
-```cs
+﻿//#Sample -Id ConsolePanelSample
 using PowerArgs;
 using klooie;
 namespace klooie.Samples;
@@ -41,7 +33,13 @@ public static class ConsolePanelSampleProgram
 {
     public static void Main() => new ConsolePanelSample().Run();
 }
+//#EndSample
 
-```
-The sample above creates an application that looks like this.
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ConsolePanel/ConsolePanelSample.gif?raw=true)
+
+public class ConsolePanelSampleRunner : IRecordableSample
+{
+    public string OutputPath => @"ConsolePanel\ConsolePanelSample.gif";
+    public int Width => 50;
+    public int Height => 5;
+    public ConsoleApp Define() => new ConsolePanelSample();
+}

@@ -29,7 +29,7 @@ public class HelloWorld : ConsoleApp
 }
 
 // Entry point for your application
-public static class Program
+public static class HelloWorldProgram
 {
     public static void Main() => new HelloWorld().Run();
 }
