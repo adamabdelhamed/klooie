@@ -19,6 +19,15 @@ public class Label : ConsoleControl
     /// </summary>
     /// <param name="initialText">the initial text value</param>
     /// <param name="autoSize">true to auto size the width of the label, false otherwise</param>
+    public Label(string initialText, bool autoSize = true) : this(initialText?.ToConsoleString(), autoSize)
+    {
+
+    }
+    /// <summary>
+    /// Creates a new label
+    /// </summary>
+    /// <param name="initialText">the initial text value</param>
+    /// <param name="autoSize">true to auto size the width of the label, false otherwise</param>
     public Label(ConsoleString? initialText = null, bool autoSize = true)
     {
         this.autoSize = autoSize;
