@@ -22,9 +22,8 @@ public static class Program
     public static void Main() => new HelloWorld().Run();
 }
 
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)
 ```
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)
 
 **FocusManager** is an internal helper that manages control focus. It is exposed via ConsoleApp.
 
