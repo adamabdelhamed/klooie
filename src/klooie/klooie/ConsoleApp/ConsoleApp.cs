@@ -314,24 +314,19 @@ public partial class ConsoleApp : EventLoop
 
     private void DrainPaints()
     {
-        if (paintRequests.Count > 0)
-        {
-            PaintInternal();
+        if (paintRequests.None() && paintRequested == false) return;
 
-            TaskCompletionSource<bool>[] paintRequestsCopy;
-            paintRequestsCopy = paintRequests.ToArray();
-            paintRequests.Clear();
+        PaintInternal();
 
-            for (var i = 0; i < paintRequestsCopy.Length; i++)
-            {
-                paintRequestsCopy[i].SetResult(true);
-            }
-            paintRequested = false;
-        }
-        else if (paintRequested)
+        if (paintRequests.None()) return;
+
+        TaskCompletionSource<bool>[] paintRequestsCopy;
+        paintRequestsCopy = paintRequests.ToArray();
+        paintRequests.Clear();
+
+        for (var i = 0; i < paintRequestsCopy.Length; i++)
         {
-            PaintInternal();
-            paintRequested = false;
+            paintRequestsCopy[i].SetResult(true);
         }
     }
 
@@ -371,6 +366,7 @@ public partial class ConsoleApp : EventLoop
         c.AddedToVisualTreeInternal();
 
         ControlAdded.Fire(c);
+        RequestPaint();
     }
 
     private void ControlRemovedFromVisualTree(ConsoleControl c)
@@ -380,6 +376,7 @@ public partial class ConsoleApp : EventLoop
         {
             focus.RestoreFocus();
         }
+        RequestPaint();
     }
 
     private bool ControlRemovedFromVisualTreeRecursive(ConsoleControl c)
@@ -467,6 +464,7 @@ public partial class ConsoleApp : EventLoop
 
     private void PaintInternal()
     {
+        paintRequested = false;
         Bitmap.Fill(defaultPen);
         LayoutRoot.Paint();
 
