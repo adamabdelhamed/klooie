@@ -307,6 +307,7 @@ public class ConsoleControl : Rectangular
         FocusColor = DefaultColors.FocusColor;
         FocusContrastColor = DefaultColors.FocusContrastColor;
         CompositionMode = CompositionMode.PaintOver;
+        Subscribe(nameof(AnyProperty), () => Application?.RequestPaint(), this);
     }
 
     /// <summary>
