@@ -63,6 +63,8 @@ public class Menu<T> : ProtectedConsolePanel where T : class
     private void AddMenuItems()
     {
         var stack = ProtectedPanel.Add(new StackPanel() { Orientation = Orientation.Vertical, Margin = 1 }).Fill();
+        Sync(nameof(Background), () => stack.Background = Background, this);
+        Sync(nameof(Background), () => stack.Children.ForEach(c => c.Background = Background), this);
         menuItems.ForEach(menuItem => stack.Add(new Label() { Tag = menuItem }).FillHorizontally());
     }
 
