@@ -1,13 +1,23 @@
 ﻿using PowerArgs;
 using System.Reflection;
 using System.Text;
+using klooie.Samples;
 
+//#Running and recording Gifs for all samples
+SampleGifGenerator.RunAll();
+
+Console.WriteLine($"Finding samples...");
 var gitRoot = FindGitRoot();
 var samples = Sample.FindAll(gitRoot);
+$"Samples found: {samples.Count}".ToGreen().WriteLine();
+Console.WriteLine($"Finding templates...");
 var templates = ReadMeTemplate.FindAll(gitRoot);
-foreach(var template in templates)
+$"Templates found: {templates.Count}".ToGreen().WriteLine();
+foreach (var template in templates)
 {
+    Console.Write($"generating readme for template {template.TemplateFilePath}...");
     template.GenerateReadMeFile(samples);
+    " done".ToGreen().WriteLine();
 }
 
 string FindGitRoot()
