@@ -15,3 +15,9 @@ A GridLayout makes it very easy to create more advanced layouts. Here's a basic 
 This sample shows a common layout where there is a fixed size menu on the left and a main panel that takes up the remaining space and shows some controls.
 
 //#GridLayoutSample
+
+## ProtectedConsolePanel
+
+A ProtectedConsolePanel lets you create a custom container that blocks consumers from accessing the children directly.
+
+//#ProtectedConsolePanelSample

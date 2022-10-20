@@ -132,3 +132,27 @@ public static class GridLayoutSampleProgram
 The sample above creates an application that looks like this.
 
 ![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GridLayout/GridLayoutSample.gif?raw=true)
+
+## ProtectedConsolePanel
+
+A ProtectedConsolePanel lets you create a custom container that blocks consumers from accessing the children directly.
+
+```cs
+using PowerArgs;
+using klooie;
+namespace klooie.Samples;
+
+public class CustomPanel : ProtectedConsolePanel
+{
+    public CustomPanel()
+    {
+        // Consumers of CustomPanel will not be able to access the ProtectedPanel property.
+        // This means that you don't have to worry about them calling something like ProtectedPanel.Controls.Clear();
+        this.ProtectedPanel.Add(new Label("Some label".ToGreen())).CenterBoth();
+    }
+}
+
+```
+The sample above creates an application that looks like this.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ProtectedConsolePanel/ProtectedConsolePanelSample.gif?raw=true)

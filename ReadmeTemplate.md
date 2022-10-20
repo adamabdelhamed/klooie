@@ -14,7 +14,7 @@ A framework for building GUI applications within any command line that runs .NET
 
 ## Getting Started
 
-Here's a hello world console app that just shows a message on the middle of the screen and waits for the user to press enter before exiting.
+Here's a hello world console app that just shows a message on the middle of the screen and waits for the user to press escape before exiting.
 
 //#HelloWorld
 
