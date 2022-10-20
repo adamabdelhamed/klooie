@@ -446,18 +446,23 @@ public partial class ConsoleApp : EventLoop
 
     private void ExitInternal()
     {
-        Stopping.Fire();
-
-        if (ClearOnExit)
+        try
         {
-            ConsoleProvider.Current.Clear();
-        }        
-        Bitmap.Console.ForegroundColor = ConsoleString.DefaultForegroundColor;
-        Bitmap.Console.BackgroundColor = ConsoleString.DefaultBackgroundColor;
-        LayoutRoot.Dispose();
-        Stopped.Fire();
-        Dispose();
-        _current = null;
+            Stopping.Fire();
+            LayoutRoot.Dispose();
+            Stopped.Fire();
+            Dispose();
+            _current = null;
+        }
+        finally
+        {
+            ConsoleProvider.Current.ForegroundColor = ConsoleString.DefaultForegroundColor;
+            ConsoleProvider.Current.BackgroundColor = ConsoleString.DefaultBackgroundColor;
+            if (ClearOnExit)
+            {
+                ConsoleProvider.Current.Clear();
+            }
+        }
     }
 
     private void PaintInternal()
