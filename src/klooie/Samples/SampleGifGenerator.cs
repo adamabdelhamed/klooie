@@ -24,6 +24,8 @@ public static class SampleGifGenerator
         foreach (var sample in recordableSamples)
         {
             var outputPath = Path.Combine(samplesRoot, sample.OutputPath);
+            if (File.Exists(outputPath)) continue;
+
             Console.WindowWidth = sample.Width;
             Console.BufferWidth = sample.Width;
             Console.WindowHeight = sample.Height+1;
@@ -37,6 +39,8 @@ public static class SampleGifGenerator
     {
         sampleApp.LayoutRoot.EnableRecording(new ConsoleBitmapVideoWriter(videoText =>
         {
+            var cvPath = outputPath.Replace(".gif", ".cv");
+            File.WriteAllText(cvPath, videoText);
             using (var stream = new MemoryStream())
             {
                 using (var streamWriter = new StreamWriter(stream, leaveOpen:true))
