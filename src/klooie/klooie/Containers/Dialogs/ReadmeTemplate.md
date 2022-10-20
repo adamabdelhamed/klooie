@@ -5,3 +5,7 @@ klooie has built in support for dialogs. Dialogs are useful when showing confirm
 ## Message Dialog
 
 //#ShowMessageSample
+
+## Message Dialog
+
+//#ShowTextInputSample

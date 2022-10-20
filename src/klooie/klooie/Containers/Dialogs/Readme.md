@@ -33,3 +33,37 @@ public static class ShowMessageSampleProgram
 The sample above creates an application that looks like this.
 
 ![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ShowMessage/ShowMessageSample.gif?raw=true)
+
+## Message Dialog
+
+```cs
+using PowerArgs;
+using klooie;
+namespace klooie.Samples;
+
+// Define your application
+public class ShowTextInputSample : ConsoleApp
+{
+    protected override async Task Startup()
+    {
+        LayoutRoot.Background = RGB.Gray;
+        await Task.Delay(1000);
+        
+        // note - name is never null in this example, but by default dialogs let
+        // the user cancel with the escape key. In that case name will be null.
+        var name = await TextInputDialog.Show("What is your name?".ToYellow());
+        await LayoutRoot.Add(new Label($"Hello {name}!".ToBlack(LayoutRoot.Background))).CenterBoth().FadeIn(2000, bg: LayoutRoot.Background);
+        Stop();
+    }
+}
+
+// Entry point for your application
+public static class ShowTextInputSampleProgram
+{
+    public static void Main() => new ShowTextInputSample().Run();
+}
+
+```
+The sample above creates an application that looks like this.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ShowTextInput/ShowTextInputSample.gif?raw=true)
