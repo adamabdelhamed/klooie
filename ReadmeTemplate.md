@@ -6,7 +6,7 @@ A framework for building GUI applications within any command line that runs .NET
 - [**Containers and Layout**](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/klooie/Containers/Readme.md)  Easily organize controls into a usable view Easily organize controls into a usable view
 - **Built-in & Custom Controls**  Use controls from the library or create your own
 - [**Dialogs**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Containers/Dialogs/Readme.md)  Panels that appear over a view and temporarity restrict focus to the controls within the dialog
-- **Theming**  A clean model for defining one or more themes for your application.
+- [**Theming**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Theming/Readme.md)  A clean model for defining one or more themes for your application.
 - **Focus**  Lets the user interact with one primary control at a time
 - **Forms** A structured way to accept multiple inputs from the user 
 - [**Animations**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Animation/Readme.md) You can animate controls sizes, positions, colors, and more. Built-in easing and custom easing supported.
