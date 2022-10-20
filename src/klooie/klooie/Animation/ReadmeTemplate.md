@@ -4,8 +4,6 @@
 
 //#AnimationSample
 
-**Animator** has static methods for performing animations.
-
 **FloatAnimationOptions** let you animate a number.
 
 //#NumberAnimationSample
@@ -13,5 +11,3 @@
 **RGBAnimationOptions** let you animate colors.
 
 //#ColorAnimationSample
-
-**EasingFunctions** defines functions that let you ease animations in various ways.

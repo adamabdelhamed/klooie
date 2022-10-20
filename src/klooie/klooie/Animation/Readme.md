@@ -39,8 +39,6 @@ The sample above creates an application that looks like this.
 
 ![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/AnimationSample.gif?raw=true)
 
-**Animator** has static methods for performing animations.
-
 **FloatAnimationOptions** let you animate a number.
 
 ```cs
@@ -130,5 +128,3 @@ public static class ColorAnimationSampleProgram
 The sample above creates an application that looks like this.
 
 ![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/ColorAnimationSample.gif?raw=true)
-
-**EasingFunctions** defines functions that let you ease animations in various ways.
