@@ -34,7 +34,7 @@ The sample above creates an application that looks like this.
 
 ![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ShowMessage/ShowMessageSample.gif?raw=true)
 
-## Message Dialog
+## Text Input Dialog
 
 ```cs
 using PowerArgs;
