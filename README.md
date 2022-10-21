@@ -9,7 +9,7 @@ Category                                                                        
 [**Built-in and Custom Controls**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Controls/Readme.md) | Use controls from the library or create your own
 [**Dialogs**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Containers/Dialogs/Readme.md)            | Panels that appear over a view and temporarity restrict focus to the controls within the dialog
 [**Theming**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Theming/Readme.md)                       | A model for defining one or more themes for your application.
-[**Focus & Keyboard Input **](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Focus/Readme.md)                           | Lets the user interact with one primary control at a time
+[**Focus** **&** **Keyboard** **Input**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Focus/Readme.md)                           | Lets the user interact with one primary control at a time
 [**Forms**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Forms/Readme.md)                           | A structured way to accept multiple inputs from the user 
 [**Animations**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Animation/Readme.md)                  | You can animate controls sizes, positions, colors, and more. Built-in easing and custom easing supported.
 
