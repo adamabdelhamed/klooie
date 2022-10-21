@@ -8,7 +8,7 @@ A framework for building GUI applications within any command line that runs .NET
 - [**Dialogs**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Containers/Dialogs/Readme.md)  Panels that appear over a view and temporarity restrict focus to the controls within the dialog
 - [**Theming**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Theming/Readme.md)  A clean model for defining one or more themes for your application.
 - **Focus**  Lets the user interact with one primary control at a time
-[**Forms**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Forms/Readme.md) A structured way to accept multiple inputs from the user 
+- [**Forms**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Forms/Readme.md) A structured way to accept multiple inputs from the user 
 - [**Animations**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Animation/Readme.md) You can animate controls sizes, positions, colors, and more. Built-in easing and custom easing supported.
 - **Ansi RGB** klooie writes to the console using ANSI, meaning that a full RGB color set is available
 
