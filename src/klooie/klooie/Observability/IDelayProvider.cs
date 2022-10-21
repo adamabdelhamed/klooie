@@ -23,7 +23,7 @@ public interface IDelayProvider
 /// <summary>
 /// An implementation of IDelayProvider that is based on wall clock time
 /// </summary>
-public class WallClockDelayProvider : IDelayProvider
+public sealed class WallClockDelayProvider : IDelayProvider
 {
     /// <summary>
     /// Delays for the given time
