@@ -193,7 +193,6 @@ public static class Animator
         var animationTime = TimeSpan.FromMilliseconds(options.Duration);
         if (animationTime == TimeSpan.Zero)
         {
-
             options.Setter(options.To);
         }
 
