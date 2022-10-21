@@ -13,42 +13,6 @@ public sealed class FormIgnoreAttribute : Attribute { }
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class FormReadOnlyAttribute : Attribute { }
 
-[AttributeUsage(AttributeTargets.Property)]
-public sealed class FormSelectAllOnFocusAttribute : Attribute { }
-
-[AttributeUsage(AttributeTargets.Property)]
-public sealed class FormContrastAttribute : Attribute { }
-
-/// <summary>
-/// An attribute that tells the form generator to use yes no labels for a toggle
-/// </summary>
-public sealed class FormYesNoAttribute : Attribute { }
-
-public sealed class FormSliderAttribute : Attribute
-{
-    public RGB BarColor { get; set; } = RGB.White;
-    public RGB HandleColor { get; set; } = RGB.Gray;
-    public float Min { get; set; } = 0;
-    public float Max { get; set; } = 100;
-    public float Value { get; set; } = 0;
-    public float Increment { get; set; } = 10;
-    public bool EnableWAndSKeysForUpDown { get; set; } = false;
-
-    public Slider Factory()
-    {
-        return new Slider()
-        {
-            BarColor = BarColor,
-            HandleColor = HandleColor,
-            Min = Min,
-            Max = Max,
-            Value = Value,
-            Increment = Increment,
-            EnableWAndSKeysForUpDown = EnableWAndSKeysForUpDown
-        };
-    }
-}
-
 /// <summary>
 /// An attribute that tells the form generator to give this
 /// property a specific value width
@@ -56,16 +20,13 @@ public sealed class FormSliderAttribute : Attribute
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class FormWidth : Attribute
 {
-    public int Width { get; private set; }
+    public int Width { get; private init; }
 
     /// <summary>
     /// Creates a new FormWidth attribute
     /// </summary>
-    /// <param name="width"></param>
-    public FormWidth(int width)
-    {
-        this.Width = width;
-    }
+    /// <param name="width">the width of the field control</param>
+    public FormWidth(int width) => this.Width = width;
 }
 
 /// <summary>

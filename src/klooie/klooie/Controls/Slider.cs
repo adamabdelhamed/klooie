@@ -73,3 +73,64 @@ public class Slider : ConsoleControl
         context.DrawPoint(new ConsoleCharacter(' ', Background, barColor), left, 0);
     }
 }
+
+public class SliderWithValueLabel : ProtectedConsolePanel
+{
+    private Slider slider;
+    private Label label;
+
+    public float Min
+    {
+        get => slider.Min;
+        set
+        {
+            slider.Min = value;
+            FirePropertyChanged(nameof(Min));
+        }
+    }
+
+    public float Max
+    {
+        get => slider.Max;
+        set
+        {
+            slider.Max = value;
+            FirePropertyChanged(nameof(Max));
+        }
+    }
+
+    public float Value
+    {
+        get => slider.Value;
+        set
+        {
+            slider.Value = value;
+            FirePropertyChanged(nameof(Value));
+        }
+    }
+
+
+    public float Increment
+    {
+        get => slider.Increment;
+        set
+        {
+            slider.Increment = value;
+            FirePropertyChanged(nameof(Increment));
+        }
+    }
+
+    public SliderWithValueLabel()
+    {
+        Height = 1;
+        var stack = ProtectedPanel.Add(new StackPanel() { Height = 1, Orientation = Orientation.Horizontal, Margin = 2, AutoSize = StackPanel.AutoSizeMode.Width }).FillVertically();
+        slider = stack.Add(new Slider());
+        label = stack.Add(new Label());
+
+        Action updateSliderWidth = () => slider.Width = this.Width - (slider.Max.ToString().Length + stack.Margin);
+        this.Sync(nameof(Bounds), updateSliderWidth, this);
+        this.Sync(nameof(slider.Value), updateSliderWidth, this);
+        slider.Sync(nameof(slider.Value), () => label.Text = slider.Value.ToString().ToConsoleString(), this);
+        slider.Subscribe(nameof(slider.Value), () => FirePropertyChanged(nameof(Value)), this);
+    }
+}
