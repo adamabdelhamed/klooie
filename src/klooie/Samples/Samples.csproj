@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\klooie.Windows\klooie.Windows.csproj" />
     <ProjectReference Include="..\klooie\klooie.csproj" />
     <ProjectReference Include="..\TestOutputGifConverter\TestOutputGifConverter.csproj" />
   </ItemGroup>
@@ -18,6 +19,22 @@
     <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Release'">
       <HintPath>..\..\..\..\PowerArgs\PowerArgs\bin\Release\net6.0\PowerArgs.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Sound\SoundEffects.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>SoundEffects.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Sound\SoundEffects.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>SoundEffects.Designer.cs</LastGenOutput>
+      <CustomToolNamespace>klooie.Samples</CustomToolNamespace>
+    </EmbeddedResource>
   </ItemGroup>
   
 </Project>

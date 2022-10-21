@@ -144,7 +144,8 @@ public partial class ConsoleApp : EventLoop
     public int FocusStackDepth => focus.StackDepth;
 
     /// <summary>
-    /// Gets or sets the sound provider for this game
+    /// Gets or sets the sound provider for this application. Note that klooie.Windows (a separate package)
+    /// is required to actually have sound on Windows.
     /// </summary>
     public ISoundProvider Sound { get; set; } = new NoOpSoundProvider();
 

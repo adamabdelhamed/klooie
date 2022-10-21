@@ -17,13 +17,6 @@ public class NoOpSoundProvider : ISoundProvider
     public void Loop(string sound, ILifetimeManager duration) { }
     public void Play(string sound) { }
     public void EndAllLoops() { }
-
     public void Pause() { }
-
     public void Resume() { }
-}
-
-public static class SoundProvider
-{
-    public static ISoundProvider Current = new NoOpSoundProvider();
 }

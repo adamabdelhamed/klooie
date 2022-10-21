@@ -49,7 +49,7 @@ The sample above creates an application that looks like this.
 
 You can have fun with klooie and build games that are fun to play within the command line.
 
-Category                                                                                                                    | Description
-----------------------------------------------------------------------------------------------------------------------------|------------
-[**Physics**](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/klooie/Gaming/Readme.md)      | Enables controls to move with velocity semantics and collision detection
-
+Category                                                                                                                                          | Description
+--------------------------------------------------------------------------------------------------------------------------------------------------|------------
+[**Physics**](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/klooie/Gaming/Readme.md)			                                  | Enables controls to move with velocity semantics and collision detection
+[**Sound** **effects** (windows only)](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Audio/Readme.md)                      | Play sound effects and background music
