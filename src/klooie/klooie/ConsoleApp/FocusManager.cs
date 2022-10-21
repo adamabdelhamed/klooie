@@ -208,6 +208,18 @@ public partial class ConsoleApp : EventLoop
 
             if (newFocusControl.CanFocus == false)
             {
+                if(newFocusControl is Container)
+                {
+                    var firstChild = (newFocusControl as Container).Descendents
+                        .Where(c => c.CanFocus)
+                        .FirstOrDefault();
+                    if(firstChild != null)
+                    {
+                        SetFocus(firstChild);
+                        return;
+                    }
+                }
+
                 throw new InvalidOperationException("The given control cannot be focused");
             }
             else if (newFocusControl == FocusedControl)
