@@ -45,8 +45,6 @@ The sample above creates an application that looks like this.
 ## Advanced Features
 
 
-- Filters - Modify the visual image that a control produced before painting it to the screen
-
 ### klooie.Gaming
 
 You can have fun with klooie and build games that are fun to play within the command line.

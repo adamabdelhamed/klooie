@@ -22,8 +22,6 @@ Here's a hello world console app that just shows a message on the middle of the 
 ## Advanced Features
 
 
-- Filters - Modify the visual image that a control produced before painting it to the screen
-
 ### klooie.Gaming
 
 You can have fun with klooie and build games that are fun to play within the command line.
