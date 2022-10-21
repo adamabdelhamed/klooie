@@ -79,7 +79,7 @@ class Sample
                     var sampleCodeLine = lines[j];
                     if (sampleCodeLine.StartsWith(sampleEnd))
                     {
-                        i = j + 1;
+                        i = j;
                         break;
                     }
                     sampleCode += sampleCodeLine + "\n";
