@@ -20,13 +20,13 @@ public class ListViewerSample : ConsoleApp
 {
     protected override async Task Startup()
     {
-        var data = Enumerable.Range(0, 100)
-            .Select(i => new Person (){ FirstName = "First_" + i, LastName = "Last_" + i, Description = "Description_which_can_be_long" + i })
-            .ToList();
-
         var listViewer = LayoutRoot.Add(new ListViewer<Person>(new ListViewerOptions<Person>()
         {
-            DataSource = data,
+            DataSource = Enumerable
+                .Range(0, 100)
+                .Select(i => new Person() { FirstName = "First_" + i, LastName = "Last_" + i, Description = "Description_which_can_be_long" + i })
+                .ToList(),
+            SelectionMode = ListViewerSelectionMode.Row,
             Columns = new List<HeaderDefinition<Person>>()
             {
                 new HeaderDefinition<Person>()
@@ -54,15 +54,14 @@ public class ListViewerSample : ConsoleApp
         })).Fill();
         
         await Task.Delay(500);
-        listViewer.Focus();
 
+        // simulate the user navigating through the list
+        listViewer.Focus();
         for(var i = 0; i < 100; i++)
         {
             await SendKey(ConsoleKey.DownArrow);
             await Task.Delay(50);
         }
-
-
 
         Stop();
     }
