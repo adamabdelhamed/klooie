@@ -17,6 +17,9 @@ Category                                                                        
 
 Here's a hello world console app that just shows a message on the middle of the screen and waits for the user to press escape before exiting.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -38,9 +41,6 @@ public static class HelloWorldProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GettingStarted/HelloWorld.gif?raw=true)
 
 ## Advanced Features
 

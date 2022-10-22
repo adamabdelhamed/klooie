@@ -2,6 +2,9 @@
 
 **ConsoleControlAnimationOptions** let you animate the size and location of controls.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/AnimationSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -35,12 +38,12 @@ public static class AnimationSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/AnimationSample.gif?raw=true)
 
 **FloatAnimationOptions** let you animate a number.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/NumberAnimationSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -82,12 +85,12 @@ public static class NumberAnimationSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/NumberAnimationSample.gif?raw=true)
 
 **RGBAnimationOptions** let you animate colors.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/ColorAnimationSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -125,6 +128,3 @@ public static class ColorAnimationSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/ColorAnimationSample.gif?raw=true)

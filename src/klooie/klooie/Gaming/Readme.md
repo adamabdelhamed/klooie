@@ -7,6 +7,9 @@ The Game class derives from ConsoleApp and has several convenience features that
 1. Sets up a default collider group that all GameCollider objects will join by default. A collider group is a group of controls that have velocity and can collide with each other.
 2. Implements a Pause aware delay provider that can freeze all physics objects within a collider group while the game is paused.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Gaming/PhysicsSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -145,6 +148,3 @@ public static class PhysicsSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Gaming/PhysicsSample.gif?raw=true)

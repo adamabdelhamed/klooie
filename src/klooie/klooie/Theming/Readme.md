@@ -1,5 +1,8 @@
 ﻿You can certainly set all the colors of your app manually, but if you want to support multiple themes then you might want to use the theming utility.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Theming/ThemingSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -101,6 +104,3 @@ public static class ThemingSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Theming/ThemingSample.gif?raw=true)

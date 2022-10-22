@@ -4,6 +4,9 @@
 
 The ListViewer control displays tabular data in a familiar table style with a pager control. It can receive focus via tab and the user can navigate rows using the up and down arrow keys. Here's how to use the ListViewer.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/ListViewerSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -74,10 +77,10 @@ public static class ListViewerSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/ListViewerSample.gif?raw=true)
+The code for this sample is shown below.
 
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/XYChartSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -117,14 +120,14 @@ public static class XYChartSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/XYChartSample.gif?raw=true)
 
 ## XY Chart
 
 You can build complex controls with klooie. Here's how to use the built-in XYChart. This is useful when building quick command line apps that visualize data.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/XYChartSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -164,14 +167,14 @@ public static class XYChartSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/XYChartSample.gif?raw=true)
 
 ## Custom controls
 
 You can derive from ConsoleControl to create your own controls.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/CustomControlSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -220,6 +223,3 @@ public static class CustomControlSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/CustomControlSample.gif?raw=true)

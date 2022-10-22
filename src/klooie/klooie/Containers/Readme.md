@@ -6,6 +6,9 @@ klooie provides several containers that make it easy to layout the controls with
 
 A ConsolePanel is the most basic type of container. You are responsible for sizing and positioning the controls that you add to a panel.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ConsolePanel/ConsolePanelSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -43,9 +46,6 @@ public static class ConsolePanelSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ConsolePanel/ConsolePanelSample.gif?raw=true)
 
 ## GridLayout
 
@@ -53,6 +53,9 @@ A GridLayout makes it very easy to create more advanced layouts. Here's a basic 
 
 This sample shows a common layout where there is a fixed size menu on the left and a main panel that takes up the remaining space and shows some controls.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GridLayout/GridLayoutSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -129,14 +132,14 @@ public static class GridLayoutSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GridLayout/GridLayoutSample.gif?raw=true)
 
 ## ProtectedConsolePanel
 
 A ProtectedConsolePanel lets you create a custom container that blocks consumers from accessing the children directly.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ProtectedConsolePanel/ProtectedConsolePanelSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -153,6 +156,3 @@ public class CustomPanel : ProtectedConsolePanel
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ProtectedConsolePanel/ProtectedConsolePanelSample.gif?raw=true)

@@ -134,16 +134,19 @@ class ReadMeTemplate
                 builder.Append(line+"\n");
                 continue;
             }
-            builder.Append("```cs\n");
+
             var sampleId = line.Substring("//#".Length);
             var sample = samples[sampleId];
-            builder.Append(sample.Code+"\n");
-            builder.Append("```\n");
-            if(sample.HasGif)
+
+            if (sample.HasGif)
             {
-                builder.Append("The sample above creates an application that looks like this.\n\n");
+                builder.Append("The code for this sample is shown below.\n\n");
                 builder.Append(sample.GifMD + "\n");
             }
+
+            builder.Append("```cs\n");
+            builder.Append(sample.Code+"\n");
+            builder.Append("```\n");
         }
 
         var output = builder.ToString();

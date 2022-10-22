@@ -1,6 +1,9 @@
 ﻿# Forms
 Klooie has a utility to help you build forms that accept user input.
 
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Forms/FormSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -73,6 +76,3 @@ public static class FormSampleProgram
 }
 
 ```
-The sample above creates an application that looks like this.
-
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Forms/FormSample.gif?raw=true)
