@@ -19,21 +19,18 @@ public class ThemingSample : ConsoleApp
         using (var themeLifetime = this.CreateChildLifetime())
         {
             new OrangeTheme().Apply(lt: themeLifetime);
-            await Task.Delay(3000);
+            await Task.Delay(1000);
         }
 
         using (var themeLifetime = this.CreateChildLifetime())
         {
             new DarkTheme().Apply(lt: themeLifetime);
-            await Task.Delay(3000);
+            await Task.Delay(1000);
         }
 
-        using (var themeLifetime = this.CreateChildLifetime())
-        {
-            new LightTheme().Apply(lt: themeLifetime);
-            await Task.Delay(3000);
-        }
-
+        // apply for the remainder of the app lifetime
+        new LightTheme().Apply();
+        await Task.Delay(1500);
         Stop();
     }
 
