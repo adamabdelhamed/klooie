@@ -22,7 +22,8 @@ public class ColorAnimationSample : ConsoleApp
                 // we're just animating one color so we access index 0
                 controlToAnimate.Background = newColors[0];
             },
-            Duration = 4000,
+            Duration = 500,
+            AutoReverse = true,
         });
         Stop();
     }
