@@ -67,11 +67,31 @@ class Sample
 
             for (var i = 0; i < lines.Length; i++)
             {
-                var line = lines[i];
+                var line = lines[i].Replace("\t", "    ");
                 if (line.StartsWith("//#Sample") == false) continue;
                 var cmd = line.Substring(sampleStartLength);
                 var args = Args.Convert(cmd);
                 var parameters = Args.Parse<SampleParameters>(args);
+
+
+                var leastAmountOfLeadingWhitespace = int.MaxValue;
+                for (var j = i + 1; j < lines.Length; j++)
+                {
+                    var sampleCodeLine = lines[j];
+                    var space = 0;
+                    foreach(var c in sampleCodeLine)
+                    {
+                        if (c == ' ') space++;
+                        else break;
+                    }
+
+                    if (sampleCodeLine.StartsWith(sampleEnd))
+                    {
+                        break;
+                    }
+
+                    leastAmountOfLeadingWhitespace = Math.Min(leastAmountOfLeadingWhitespace, space);
+                }
 
                 var sampleCode = "";
                 for (var j = i + 1; j < lines.Length; j++)
@@ -82,6 +102,7 @@ class Sample
                         i = j+1;
                         break;
                     }
+                    sampleCodeLine = sampleCodeLine.Substring(leastAmountOfLeadingWhitespace);
                     sampleCode += sampleCodeLine + "\n";
                 }
 

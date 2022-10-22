@@ -14,15 +14,15 @@ You can programmatically focus a control by using the ConsoleControl.Focus() met
 You can run code when a particular control gets or loses focus by using the Focused and Unfocused events.
 
 ```cs
-        var textBox = new TextBox();
-        textBox.Focused.Subscribe(() =>
-        {
-            // runs whenever the text box gets focus
-        }, textBox);
-        textBox.Unfocused.Subscribe(() =>
-        {
-            // runs whenever the text box loses focus
-        }, textBox);
+var textBox = new TextBox();
+textBox.Focused.Subscribe(() =>
+{
+    // runs whenever the text box gets focus
+}, textBox);
+textBox.Unfocused.Subscribe(() =>
+{
+    // runs whenever the text box loses focus
+}, textBox);
 
 ```
 
@@ -33,10 +33,10 @@ You can use the ConsoleApp.PushKeyForLifetime(...) overloads to register a globa
 Global key handlers registered before a dialog is shown will not be triggered until after the dialog is dismissed. See the Focus Stack section below to learn more.
 
 ```cs
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Spacebar, () =>
-         {
-             // code in here runs whenever spacebar is pressed.
-         }, ConsoleApp.Current);
+ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Spacebar, () =>
+ {
+     // code in here runs whenever spacebar is pressed.
+ }, ConsoleApp.Current);
 
 ```
 
