@@ -22,20 +22,42 @@ public class ConsolePanelSample : ConsoleApp
         // every app comes with a root ConsolePanel called LayoutRoot
         ConsolePanel consolePanel = LayoutRoot;
 
-        // by default the label is positioned at the top right (X == 0, Y == 0)
-        var label = consolePanel.Add(new Label("Label that's manually positioned".ToGreen()));
-        
-        // we'll wait a second and then move the label to the right by 5 units
-        await Task.Delay(2000);
-        label.MoveTo(5, 0);
+        consolePanel.Add(new Label("Docked right, centered vertically".ToGreen()))
+            .DockToRight()
+            .CenterVertically();
 
-        // wait another second and then use layout helpers to position the label to the
-        // right of the app with some padding while centering vertically
-        await Task.Delay(2000);
-        label.DockToRight(padding: 5).CenterVertically();
+        consolePanel.Add(new Label("Docked left, centered vertically".ToGreen()))
+            .DockToLeft()
+            .CenterVertically();
 
-        await Task.Delay(2000);
-        Stop();
+        consolePanel.Add(new Label("Docked top, centered horizontally".ToGreen()))
+          .DockToTop()
+          .CenterHorizontally();
+
+        consolePanel.Add(new Label("Docked bottom, centered horizontally".ToGreen()))
+           .DockToBottom()
+           .CenterHorizontally();
+
+        consolePanel.Add(new Label("center both".ToOrange()))
+            .CenterBoth();
+
+        consolePanel.Add(new Label("Docked bottom left with padding".ToMagenta()))
+           .DockToBottom(padding:2)
+           .DockToLeft(padding: 4);
+
+        consolePanel.Add(new Label("Docked bottom right with padding".ToMagenta()))
+         .DockToBottom(padding: 2)
+         .DockToRight(padding: 4);
+
+        consolePanel.Add(new Label("Docked top left with padding".ToMagenta()))
+           .DockToTop(padding: 2)
+           .DockToLeft(padding: 4);
+
+        consolePanel.Add(new Label("Docked top right with padding".ToMagenta()))
+         .DockToTop(padding: 2)
+         .DockToRight(padding: 4);
+
+        await LayoutRoot.FadeIn(1000);
     }
 }
 

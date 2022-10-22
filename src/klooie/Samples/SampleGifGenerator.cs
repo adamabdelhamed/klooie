@@ -220,7 +220,6 @@ public class GifWriter : IDisposable
                 x += 20;
             }
         }
-        bitmap.Save(@"C:\Users\adama\Source\Repos\klooie\src\klooie\Samples\GridLayout\temp.bmp", ImageFormat.Bmp);
         return quantizer.Quantize(bitmap);
     }
 
