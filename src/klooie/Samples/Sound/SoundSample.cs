@@ -41,5 +41,5 @@ public class SoundSample : ConsoleApp
     {
         public static void Main() => new SoundSample().Run();
     }
-    //#EndSample
 }
+//#EndSample

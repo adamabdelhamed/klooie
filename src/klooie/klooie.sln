@@ -11,8 +11,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.VideoPlayer", "klooi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Playground", "Playground\Playground.csproj", "{1D7E2A64-A1A7-40AF-A55D-A539EC088825}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestOutputGifConverter", "TestOutputGifConverter\TestOutputGifConverter.csproj", "{8C7EB41E-3231-4645-9C97-6E54FC6AA939}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.Windows", "klooie.Windows\klooie.Windows.csproj", "{525B2F1A-2676-4530-8019-250FE430EE5E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples", "Samples\Samples.csproj", "{1A1454B7-21F5-49E6-8ABE-ADD4A0F1C2D6}"
@@ -46,10 +44,6 @@ Global
 		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8C7EB41E-3231-4645-9C97-6E54FC6AA939}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8C7EB41E-3231-4645-9C97-6E54FC6AA939}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8C7EB41E-3231-4645-9C97-6E54FC6AA939}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8C7EB41E-3231-4645-9C97-6E54FC6AA939}.Release|Any CPU.Build.0 = Release|Any CPU
 		{525B2F1A-2676-4530-8019-250FE430EE5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{525B2F1A-2676-4530-8019-250FE430EE5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{525B2F1A-2676-4530-8019-250FE430EE5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
