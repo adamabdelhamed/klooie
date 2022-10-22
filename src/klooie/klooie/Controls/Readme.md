@@ -1,6 +1,6 @@
 ﻿The types in this folder represent the built-in controls that you can use in your applications.
 
-## ListViewer
+## Button
 
 A button can be 'pressed' with the enter key when it has focus. It also supports a shortcut key that can be pressed even when the button does not have focus.
 
