@@ -47,7 +47,7 @@ public class DataGallerySampleRunner : IRecordableSample
 {
     public string OutputPath => @"Containers\DataGallerySample.gif";
     public int Width => 62;
-    public int Height => 40;
+    public int Height => 30;
     public ConsoleApp Define() => new DataGallerySample();
 
 }
