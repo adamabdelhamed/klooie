@@ -1,5 +1,39 @@
 ﻿The types in this folder represent the built-in controls that you can use in your applications.
 
+## Label
+
+Labels are the most basic controls. They display text. By default, labels cannot be focused. If the Text property of the label is unstyled (default foreground and background color) then the control's Foreground and Background properties will be applied to the text. If the Text property is a styled ConsoleString then the text's style will be used.
+
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/LabelSample.gif?raw=true)
+```cs
+using PowerArgs;
+namespace klooie.Samples;
+
+public class LabelSample : ConsoleApp
+{
+    protected override async Task Startup()
+    {
+        var stack = LayoutRoot.Add(new StackPanel() { Orientation = Orientation.Vertical }).Fill();
+        stack.Background = new RGB(50, 50, 50);
+        stack.Add(new Label("Unstyled Text that uses control FG and BG") { Foreground = RGB.White, Background = RGB.DarkYellow });
+        stack.Add(new Label("Red Text that uses the default background".ToRed()));
+        stack.Add(new Label("Magenta Text that blends over the parent's background".ToMagenta()) { CompositionMode = CompositionMode.BlendBackground });
+        stack.Add(new Label(ConsoleString.Parse("[Red]Multi [Green]Colored [Orange]Text [B=Cyan][Black] with custom [D] and blended BG")) { CompositionMode = CompositionMode.BlendBackground });
+        await Task.Delay(100);
+        Stop();
+    }
+}
+
+// Entry point for your application
+public static class LabelSampleProgram
+{
+    public static void Main() => new LabelSample().Run();
+}
+
+```
+
 ## Button
 
 A button can be 'pressed' with the enter key when it has focus. It also supports a shortcut key that can be pressed even when the button does not have focus.

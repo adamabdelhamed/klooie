@@ -1,5 +1,11 @@
 ﻿The types in this folder represent the built-in controls that you can use in your applications.
 
+## Label
+
+Labels are the most basic controls. They display text. By default, labels cannot be focused. If the Text property of the label is unstyled (default foreground and background color) then the control's Foreground and Background properties will be applied to the text. If the Text property is a styled ConsoleString then the text's style will be used.
+
+//#LabelSample
+
 ## Button
 
 A button can be 'pressed' with the enter key when it has focus. It also supports a shortcut key that can be pressed even when the button does not have focus.
