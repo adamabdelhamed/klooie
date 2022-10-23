@@ -18,6 +18,15 @@ The ListViewer control displays tabular data in a familiar table style with a pa
 
 //#ListViewerSample
 
+## MinimumSizeShield
+
+Sometimes you only want the user to see a control if it has enough space to display properly. A MinimumSizeShield is helpful in these cases.
+
+Simply fill a container with a MinimumSizeShield and it will display itself along with a helpful message whenever the container is too small to show the other controls.
+
+//#MinimumSizeShieldSample
+
+
 ## XY Chart
 
 You can build complex controls with klooie. Here's how to use the built-in XYChart. This is useful when building quick command line apps that visualize data.
