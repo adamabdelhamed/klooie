@@ -3,26 +3,21 @@
 namespace klooie.VideoPlayer;
 class Program
 {
-    [ArgExistingFile, ArgPosition(0)]
+    [ArgRequired, ArgExistingFile, ArgPosition(0)]
     public string InputFile { get; set; }
     static void Main(string[] args) => Args.InvokeMain<Program>(args);
+    public void Main() => new VideoPlayerApp().Run();
+}
 
-    public void Main()
+class VideoPlayerApp : ConsoleApp
+{
+    protected override Task Startup()
     {
-        if (InputFile == null)
-        {
-            "No input file specified".ToRed().WriteLine();
-            return;
-        }
-
-        var fancy = ConsoleProvider.Fancy;
-        var app = new ConsoleApp();
-        app.Invoke(() =>
-        {
-            var player = app.LayoutRoot.Add(new ConsoleBitmapPlayer()).Fill();
-            player.Load(File.OpenRead(InputFile));
-        });
-        app.Run();
+        LayoutRoot
+            .Add(new ConsoleBitmapPlayer())
+            .Fill()
+            .Load(File.OpenRead(Args.GetAmbientArgs<Program>().InputFile));
+        return Task.CompletedTask;
     }
 }
 
