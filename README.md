@@ -12,6 +12,7 @@ Category                                                                        
 [**Focus** **&** **Keyboard** **Input**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Focus/Readme.md)                           | Lets the user interact with one primary control at a time
 [**Forms**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Forms/Readme.md)                           | A structured way to accept multiple inputs from the user 
 [**Animations**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Animation/Readme.md)                  | You can animate controls sizes, positions, colors, and more. Built-in easing and custom easing supported.
+[**Observability**](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Observability/Readme.md)           | Constructs that make your application responsive and dynamic.
 
 ## Getting Started
 
