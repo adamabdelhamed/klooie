@@ -22,6 +22,12 @@ A StackPanel stacks a set of controls vertically or horizontally.
 
 //#StackPanelSample
 
+## DataGallery
+
+A DataGallery displays a set of controls as a set of tiles in a flow layout.
+
+//#DataGallerySample
+
 ## ProtectedConsolePanel
 
 A ProtectedConsolePanel lets you create a custom container that blocks consumers from accessing the children directly.
