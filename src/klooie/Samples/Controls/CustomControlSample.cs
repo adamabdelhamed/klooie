@@ -1,6 +1,7 @@
 ﻿//#Sample -Id CustomControlSample
 using PowerArgs;
 using klooie;
+using klooie.Theming;
 namespace klooie.Samples;
 
 public class CustomControl : ConsoleControl
@@ -12,10 +13,12 @@ public class CustomControl : ConsoleControl
     {
         Width = 17;
         Height = 5;
-        BorderColor = RGB.Orange;
+        // these are default colors, but can be overridden by the caller or by a theme
+        BorderColor = RGB.Orange; 
         Background = RGB.Orange.Darker;
         CanFocus = true;
     }
+
     protected override void OnPaint(ConsoleBitmap context)
     {
         // We have raw access to the image we'll be painting.
@@ -26,10 +29,45 @@ public class CustomControl : ConsoleControl
     }
 }
 
+// 
+// To fully implement a themeable control you should follow this pattern.
+// 
+// Step 1. Create a styler that exposes a Fluent API for each of your custom properties.
+// 
+public class CustomControlStyler : StyleBuilder<CustomControlStyler>
+{
+    public CustomControlStyler(StyleBuilder toWrap) : base(toWrap) { }
+    public CustomControlStyler BorderColor(RGB color) => Property(nameof(CustomControl.BorderColor), color);
+
+}
+
+// 
+// Step 2. Create an extension method. The ForX naming convention makes it clear that this is a custom styler.
+// 
+public static class CustomControlThemeExtensions
+{
+    public static CustomControlStyler ForX<T>(this StyleBuilder builder) where T : CustomControl => new CustomControlStyler(builder).For<T>();
+}
+
+//
+// Step 3. Use your extension method when defining your themes.
+//
+public class AppTheme : Theme
+{
+    // because we implemented the ForX extension method we can now
+    // define styles for our custom control's custom property alongside
+    // styles for other controls.
+    public override Style[] Styles => StyleBuilder.Create()
+        .For<Label>().FG(RGB.Green)
+        .ForX<CustomControl>().BorderColor(RGB.Magenta).BG(RGB.DarkMagenta)
+        .ToArray();
+}
+
 public class CustomControlSample : ConsoleApp
 {
     protected override async Task Startup()
     {
+        new AppTheme().Apply();
         var control = LayoutRoot.Add(new CustomControl()).CenterBoth();
         await Task.Delay(1000);
         control.Focus();
