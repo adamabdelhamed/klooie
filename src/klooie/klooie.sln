@@ -9,13 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tests", "tests\tests.csproj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.VideoPlayer", "klooie.VideoPlayer\klooie.VideoPlayer.csproj", "{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Playground", "Playground\Playground.csproj", "{1D7E2A64-A1A7-40AF-A55D-A539EC088825}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "klooie.Windows", "klooie.Windows\klooie.Windows.csproj", "{525B2F1A-2676-4530-8019-250FE430EE5E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.Windows", "klooie.Windows\klooie.Windows.csproj", "{525B2F1A-2676-4530-8019-250FE430EE5E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples", "Samples\Samples.csproj", "{1A1454B7-21F5-49E6-8ABE-ADD4A0F1C2D6}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleMDGenerator", "SampleMDGenerator\SampleMDGenerator.csproj", "{8B221FE7-6FF5-4AA7-B4D3-6181774D887F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples", "Samples\Samples.csproj", "{1A1454B7-21F5-49E6-8ABE-ADD4A0F1C2D6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{C19CCBD6-DE58-455D-AB02-9452CE6EC6AA}"
 	ProjectSection(SolutionItems) = preProject
@@ -40,10 +36,6 @@ Global
 		{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{37B5DE70-C8A0-4E91-A38F-8E735499E8B0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1D7E2A64-A1A7-40AF-A55D-A539EC088825}.Release|Any CPU.Build.0 = Release|Any CPU
 		{525B2F1A-2676-4530-8019-250FE430EE5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{525B2F1A-2676-4530-8019-250FE430EE5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{525B2F1A-2676-4530-8019-250FE430EE5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -52,10 +44,6 @@ Global
 		{1A1454B7-21F5-49E6-8ABE-ADD4A0F1C2D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1A1454B7-21F5-49E6-8ABE-ADD4A0F1C2D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1A1454B7-21F5-49E6-8ABE-ADD4A0F1C2D6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8B221FE7-6FF5-4AA7-B4D3-6181774D887F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8B221FE7-6FF5-4AA7-B4D3-6181774D887F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8B221FE7-6FF5-4AA7-B4D3-6181774D887F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8B221FE7-6FF5-4AA7-B4D3-6181774D887F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
