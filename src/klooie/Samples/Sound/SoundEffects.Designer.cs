@@ -63,9 +63,9 @@ namespace klooie.Samples {
         /// <summary>
         ///   Looks up a localized resource of type System.IO.UnmanagedMemoryStream similar to System.IO.MemoryStream.
         /// </summary>
-        public static System.IO.UnmanagedMemoryStream beep {
+        public static System.IO.UnmanagedMemoryStream Beep {
             get {
-                return ResourceManager.GetStream("beep", resourceCulture);
+                return ResourceManager.GetStream("Beep", resourceCulture);
             }
         }
         

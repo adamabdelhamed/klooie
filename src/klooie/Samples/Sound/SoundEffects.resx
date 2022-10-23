@@ -121,7 +121,7 @@
   <data name="SoundEffectSample" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>SoundEffectSample.mp3;System.IO.MemoryStream, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="beep" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>beep.mp3;System.IO.MemoryStream, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  <data name="Beep" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Beep.mp3;System.IO.MemoryStream, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

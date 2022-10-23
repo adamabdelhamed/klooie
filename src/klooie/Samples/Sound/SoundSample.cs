@@ -26,7 +26,7 @@ public class SoundSample : ConsoleApp
         using(var soundLifetime = this.CreateChildLifetime())
         {
             // plays the sound in a loop until this using block exits
-            Sound.Loop(nameof(SoundEffects.beep), soundLifetime);
+            Sound.Loop(nameof(SoundEffects.Beep), soundLifetime);
             await Task.Delay(5000);
         }
 
