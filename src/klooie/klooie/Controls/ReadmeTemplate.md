@@ -18,6 +18,12 @@ The ListViewer control displays tabular data in a familiar table style with a pa
 
 //#ListViewerSample
 
+## Dropdown
+
+A dropdown lets the user pick from a set of choices.
+
+//#DropdownSample
+
 ## MinimumSizeShield
 
 Sometimes you only want the user to see a control if it has enough space to display properly. A MinimumSizeShield is helpful in these cases.

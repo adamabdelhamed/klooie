@@ -151,6 +151,51 @@ public static class ListViewerSampleProgram
 
 ```
 
+## Dropdown
+
+A dropdown lets the user pick from a set of choices.
+
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/DropdownSample.gif?raw=true)
+```cs
+using PowerArgs;
+namespace klooie.Samples;
+
+public class DropdownSample : ConsoleApp
+{
+    private enum MyEnum
+    {
+        Value1,
+        Value2,
+        Value3
+    }
+
+    protected override async Task Startup()
+    {
+        var dropdown = LayoutRoot.Add(new EnumDropdown<MyEnum>()).DockToTop(padding:1).CenterHorizontally();
+
+        await SendKey(ConsoleKey.Tab);
+        await Task.Delay(1000);
+        await SendKey(ConsoleKey.Enter);
+        await Task.Delay(1000);
+        await SendKey(ConsoleKey.DownArrow);
+        await Task.Delay(1000);
+        await SendKey(ConsoleKey.Enter);
+        await Task.Delay(1000);
+        await MessageDialog.Show(new ShowMessageOptions(ConsoleString.Parse($"Value: [B=Cyan][Black] {dropdown.Value} ")) { MaxLifetime = Task.Delay(3000).ToLifetime(), AllowEnterToClose = false, AllowEscapeToClose = false });
+        Stop();
+    }
+}
+
+// Entry point for your application
+public static class DropdownSampleProgram
+{
+    public static void Main() => new DropdownSample().Run();
+}
+
+```
+
 ## MinimumSizeShield
 
 Sometimes you only want the user to see a control if it has enough space to display properly. A MinimumSizeShield is helpful in these cases.

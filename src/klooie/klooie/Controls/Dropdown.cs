@@ -183,3 +183,32 @@ public class Dropdown : ProtectedConsolePanel
         }
     }
 }
+
+public abstract class Dropdown<T> : ProtectedConsolePanel
+{
+    public T Value { get => Get<T>(); set => Set(value); }
+
+    public Dropdown()
+    {
+        CanFocus = true;
+        Width = 15;
+        var dropdown = ProtectedPanel.Add(new Dropdown(Choices())).Fill();
+        dropdown.Sync(nameof(dropdown.Value), () => this.Value = (T)dropdown.Value.Value, this);
+        this.Subscribe(nameof(Value), () => dropdown.Value = dropdown.Options.Where(o => o.Value.Equals(Value)).Single(), this);
+        this.Focused.Subscribe(() => dropdown.Focus(), this);
+    }
+
+    protected abstract IEnumerable<DialogChoice> Choices();
+}
+
+public class EnumDropdown<T> : Dropdown<T> where T : Enum
+{
+    protected override IEnumerable<DialogChoice> Choices() => Enums
+    .GetEnumValues<T>()
+    .Select(e => new DialogChoice()
+    {
+        DisplayText = e.ToConsoleString(),
+        Id = e.ToString(),
+        Value = e,
+    });
+}

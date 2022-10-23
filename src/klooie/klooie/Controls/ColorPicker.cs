@@ -1,19 +1,12 @@
 ﻿namespace klooie;
 
-public class ColorPicker : ProtectedConsolePanel
+public class ColorPicker : Dropdown<RGB>
 {
-    public RGB Value { get => Get<RGB>(); set => Set(value); }
-
-    public ColorPicker()
+    protected override IEnumerable<DialogChoice> Choices() => RGB.ColorsToNames.Select(c => new DialogChoice 
     {
-        CanFocus = true;
-        var dropdown = ProtectedPanel.Add(new Dropdown(RGB.ColorsToNames
-            .Select(c => new DialogChoice { DisplayText = c.Value.ToConsoleString(), Value = c.Key, Id = c.Value }))).Fill();
-
-        dropdown.Sync(nameof(dropdown.Value), () => this.Value = (RGB)dropdown.Value.Value, this);
-        this.Subscribe(nameof(Value), () => dropdown.Value = dropdown.Options.Where(o => o.Value.Equals(Value)).Single(), this);
-
-        this.Focused.Subscribe(() => dropdown.Focus(), this);
-    }
+        DisplayText = c.Value.ToConsoleString(), 
+        Value = c.Key, 
+        Id = c.Value 
+    });
 }
 
