@@ -8,7 +8,7 @@ public class MySoundEngine : AudioPlaybackEngine
     // Look in the folder where this sample lives. You will find a resource file
     // called SoundEffects. That is what is being referenced below. By using a resource
     // file all our MP3 sound effects get bundled with the application and can be referred
-    // to in a strongly typed was as seen in the sample. 
+    // to in a strongly typed way as seen in the sample. 
     protected override Dictionary<string, byte[]> LoadSounds() => 
         ResourceFileSoundLoader.LoadSounds<SoundEffects>();
 }
