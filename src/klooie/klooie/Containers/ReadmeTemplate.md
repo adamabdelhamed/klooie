@@ -16,6 +16,12 @@ This sample shows a common layout where there is a fixed size menu on the left a
 
 //#GridLayoutSample
 
+## StackPanel
+
+A StackPanel stacks a set of controls vertically or horizontally.
+
+//#StackPanelSample
+
 ## ProtectedConsolePanel
 
 A ProtectedConsolePanel lets you create a custom container that blocks consumers from accessing the children directly.

@@ -60,7 +60,7 @@ public static class ConsolePanelSampleProgram
 
 public class ConsolePanelSampleRunner : IRecordableSample
 {
-    public string OutputPath => @"ConsolePanel\ConsolePanelSample.gif";
+    public string OutputPath => @"Containers\ConsolePanelSample.gif";
     public int Width => 120;
     public int Height => 50;
     public ConsoleApp Define()

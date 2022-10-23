@@ -8,7 +8,7 @@ A ConsolePanel is the most basic type of container. You are responsible for sizi
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ConsolePanel/ConsolePanelSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/ConsolePanelSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -77,7 +77,7 @@ This sample shows a common layout where there is a fixed size menu on the left a
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/GridLayout/GridLayoutSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/GridLayoutSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -151,6 +151,49 @@ public class GridLayoutSample : ConsoleApp
 public static class GridLayoutSampleProgram
 {
     public static void Main() => new GridLayoutSample().Run();
+}
+
+```
+
+## StackPanel
+
+A StackPanel stacks a set of controls vertically or horizontally.
+
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/StackPanelSample.gif?raw=true)
+```cs
+using PowerArgs;
+namespace klooie.Samples;
+
+public class StackPanelSample : ConsoleApp
+{
+    protected override async Task Startup()
+    {
+        var vStack = LayoutRoot.Add(new StackPanel() { Margin = 1, Background = RGB.Black, Orientation = Orientation.Vertical, Width = LayoutRoot.Width/2}).DockToLeft().FillVertically();
+        var hStack = LayoutRoot.Add(new StackPanel() { Margin = 2, Background = RGB.White, Orientation = Orientation.Horizontal, Width = LayoutRoot.Width / 2 }).DockToRight().FillVertically();
+
+        for(var i = 1; i <=vStack.Height/2; i++)
+        {
+            await vStack.Add(new Label($"Vertical label {i}")).FadeIn();
+        }
+
+        var random = new Random();
+        var standardColors = RGB.ColorsToNames.Keys.ToArray();
+        for (var i = 1; i <= vStack.Width/3; i++)
+        {
+            await hStack.Add(new Label($"H".ToConsoleString(standardColors[random.Next(0, standardColors.Length)])) { CompositionMode = CompositionMode.BlendBackground }).FadeIn();
+        }
+
+        await Task.Delay(1000);
+        Stop();
+    }
+}
+
+// Entry point for your application
+public static class StackPanelSampleProgram
+{
+    public static void Main() => new StackPanelSample().Run();
 }
 
 ```

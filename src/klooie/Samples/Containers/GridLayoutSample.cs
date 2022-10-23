@@ -76,7 +76,7 @@ public static class GridLayoutSampleProgram
 
 public class GridLayoutSampleRunner : IRecordableSample
 {
-    public string OutputPath => @"GridLayout\GridLayoutSample.gif";
+    public string OutputPath => @"Containers\GridLayoutSample.gif";
     public int Width => 60;
     public int Height => 25;
     public ConsoleApp Define() => new GridLayoutSample();
