@@ -198,6 +198,59 @@ public static class StackPanelSampleProgram
 
 ```
 
+## TabControl
+
+A TabControl lets you build a view with multiple horizontal tabs that switch the main content below them.
+
+The code for this sample is shown below.
+
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/TabControlSample.gif?raw=true)
+```cs
+using PowerArgs;
+namespace klooie.Samples;
+
+public class TabControlSample : ConsoleApp
+{
+    protected override async Task Startup()
+    {
+        var tabs = LayoutRoot.Add(new TabControl(new TabControlOptions("Tab1", "Tab2", "Tab3")
+        {
+            TabAlignment = TabAlignment.Left,
+            BodyFactory = (string selectedTab) =>
+            {
+                var panel = new ConsolePanel() { Background = new RGB(20, 20, 20) };
+                panel.Add(new Label($"You selected tab {selectedTab}".ToOrange()) { CompositionMode = CompositionMode.BlendBackground }).CenterBoth();
+                return panel;
+            }
+        })
+        { Background = new RGB(10,10,10) }).Fill();
+
+        
+        for(var i = 0; i < tabs.Options.Tabs.Count; i++)
+        {
+            await SendKey(ConsoleKey.Tab);// simulate the user bringing the next tab in focus
+            await Task.Delay(1000);
+        }
+
+        for (var i = 0; i < tabs.Options.Tabs.Count; i++)
+        {
+            await SendKey(ConsoleKey.Tab.KeyInfo(shift:true));// the user can shift+tab to go backwards
+            await Task.Delay(1000);
+        }
+
+        await Task.Delay(1000);
+        Stop();
+    }
+}
+
+// Entry point for your application
+public static class TabControlSampleProgram
+{
+    public static void Main() => new TabControlSample().Run();
+}
+
+```
+
 ## DataGallery
 
 A DataGallery displays a set of controls as a set of tiles in a flow layout.

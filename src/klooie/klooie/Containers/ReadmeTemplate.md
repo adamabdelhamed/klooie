@@ -22,6 +22,12 @@ A StackPanel stacks a set of controls vertically or horizontally.
 
 //#StackPanelSample
 
+## TabControl
+
+A TabControl lets you build a view with multiple horizontal tabs that switch the main content below them.
+
+//#TabControlSample
+
 ## DataGallery
 
 A DataGallery displays a set of controls as a set of tiles in a flow layout.
