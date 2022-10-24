@@ -43,7 +43,7 @@ public static class TabControlSampleProgram
 }
 //#EndSample
 
-public class STabControlSampleRunner : IRecordableSample
+public class TabControlSampleRunner : IRecordableSample
 {
     public string OutputPath => @"Containers\TabControlSample.gif";
     public int Width => 60;
