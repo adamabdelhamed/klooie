@@ -12,7 +12,7 @@
 /// If a control within ScrollableContent gets focus and it not currently in view then
 /// it will be automatically scrolled into view.
 /// </summary>
-public class ScrollablePanel : ConsolePanel
+public class ScrollablePanel : ProtectedConsolePanel
 {
     private Scrollbar verticalScrollbar;
     private Scrollbar horizontalScrollbar;
@@ -59,11 +59,16 @@ public class ScrollablePanel : ConsolePanel
     /// </summary>
     public ScrollablePanel()
     {
-        ScrollableContent = Add(new ConsolePanel()).Fill();
+        ScrollableContent = ProtectedPanel.Add(new ConsolePanel()).Fill();
         Sync(nameof(Background), () => ScrollableContent.Background = Background, this);
-        verticalScrollbar = Add(new Scrollbar(Orientation.Vertical) { Width = 1 }).DockToRight();
-        horizontalScrollbar = Add(new Scrollbar(Orientation.Horizontal) { Height = 1 }).DockToBottom();
+        verticalScrollbar = ProtectedPanel.Add(new Scrollbar(Orientation.Vertical) { ZIndex = 10, Width = 1 }).DockToRight();
+        horizontalScrollbar = ProtectedPanel.Add(new Scrollbar(Orientation.Horizontal) { ZIndex = 10, Height = 1 }).DockToBottom();
         AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
+    }
+
+    public override bool IsInView(ConsoleControl c)
+    {
+        return true;
     }
 
     private void OnAddedToVisualTree()
@@ -242,7 +247,7 @@ public class ScrollablePanel : ConsolePanel
 /// </summary>
 public class Scrollbar : ConsoleControl
 {
-    private ScrollablePanel ScrollablePanel => Parent as ScrollablePanel;
+    private ScrollablePanel ScrollablePanel => Parent?.Parent as ScrollablePanel;
     private Orientation orientation;
 
     internal Scrollbar(Orientation orientation)

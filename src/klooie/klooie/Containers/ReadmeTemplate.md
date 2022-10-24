@@ -28,6 +28,12 @@ A TabControl lets you build a view with multiple horizontal tabs that switch the
 
 //#TabControlSample
 
+## ScrollablePanel
+
+A ScrollablePanel lets you fit large panels inside a smaller one and provides scrollbars and keyboard shortcuts to navigate the larger content.
+
+//#ScrollableSample
+
 ## DataGallery
 
 A DataGallery displays a set of controls as a set of tiles in a flow layout.
