@@ -34,6 +34,12 @@ A DataGallery displays a set of controls as a set of tiles in a flow layout.
 
 //#DataGallerySample
 
+## FixedAspectRatioPanel
+
+A FixedAspectRatioPanel lets hosts another control and maintains its desired aspect ratio as it is resized. 
+
+//#FixedAspectRatioPanelSample
+
 ## ProtectedConsolePanel
 
 A ProtectedConsolePanel lets you create a custom container that blocks consumers from accessing the children directly.
