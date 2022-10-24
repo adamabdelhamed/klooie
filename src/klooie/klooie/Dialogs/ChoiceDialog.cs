@@ -75,7 +75,7 @@ public static class ChoiceDialog
             var layout = new GridLayout(rowSpec, "100%") { Background = options.BackgroundColor, Width = options.DialogWidth, Height = options.DialogHeight };
             var contentContainer = layout.Add(new ScrollablePanel(), 0, 0);
            
-            var content = contentContainer.ScrollableContent.Add(options.ContentFactory(contentContainer));
+            var content = contentContainer.ScrollableContent.Add(options.ContentFactory(contentContainer.ScrollableContent));
 
             content.Sync(nameof(content.Bounds), () =>
             {
