@@ -8,7 +8,7 @@ public class GameCollider : ConsoleControl
     public GameCollider(ColliderGroup? group = null) => Velocity = new Velocity(this, group ?? Game.Current?.MainColliderGroup ?? (AutoAddToColliderGroup == false ? null : throw new ArgumentException($"{nameof(group)} can only be null when Game.Current is not")));
     public GameCollider(RectF bounds, ColliderGroup? group = null) : this(group) => this.Bounds = bounds;
     public GameCollider(float x, float y, float w, float h, ColliderGroup? group = null) : this(new RectF(x, y, w, h), group) { } 
-    public virtual bool CanCollideWith(GameCollider other) => ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
+    public virtual bool CanCollideWith(GameCollider other) => this.IsVisible && ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
     public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstacles(this).WhereAs<GameCollider>();
 
     public bool TryMoveBy(float x, float y) => TryMoveTo(Left + x, Top + y);
