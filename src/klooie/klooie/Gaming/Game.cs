@@ -113,7 +113,7 @@ public class Game : ConsoleApp, IDelayProvider
     /// Adds a rule after startup
     /// </summary>
     /// <param name="rule">the rule to add</param>
-    public void AddDynamicRule(IRule rule) => ruleManager.AddDynamicDirective(rule);
+    public void AddDynamicRule(IRule rule) => Invoke(async()=> await ruleManager.AddDynamicDirective(rule));
 
     /// <summary>
     /// Creates a new Game
