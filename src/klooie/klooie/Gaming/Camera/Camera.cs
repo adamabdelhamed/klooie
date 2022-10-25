@@ -86,7 +86,7 @@ public sealed class Camera : ConsolePanel
     /// <returns>an async task that completes when the animation is finished or cancelled</returns>
     public Task PointAnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetimeManager lt = null, IDelayProvider delayProvider = null)
     {
-        return AnimateTo(dest.Offset(Width / 2f, Height / 2f), duration, ease, lt, delayProvider);
+        return AnimateTo(dest.Offset(-Width / 2f, -Height / 2f), duration, ease, lt, delayProvider);
     }
 
     /// <summary>
