@@ -152,7 +152,7 @@ public sealed class ColliderGroup
                 CollisionDetector.Predict(velocity.Collider, obstacleBuffer, velocity.Angle, colliderBuffer, d, CastingMode.Precise, numColliders, hitPrediction);
                 velocity.NextCollision = hitPrediction;
                 velocity._beforeMove?.Fire();
-
+                if (velocity.Collider.ShouldStop) continue;
                 if (hitPrediction.CollisionPredicted)
                 {
                     var obstacleHit = hitPrediction.ColliderHit;
