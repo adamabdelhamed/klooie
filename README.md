@@ -45,9 +45,6 @@ public static class HelloWorldProgram
 
 ## Advanced Features
 
-
-### klooie.Gaming
-
 You can have fun with klooie and build games that are fun to play within the command line.
 
 Category                                                                                                                                          | Description
