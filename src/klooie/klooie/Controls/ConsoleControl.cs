@@ -36,7 +36,6 @@ public class ConsoleControl : Rectangular
     private Event<ConsoleKeyInfo> _keyInputReceived;
     private Container _parent;
     private RGB _bg, _fg, _focusColor, _focusContrastColor;
-    private bool _transparent;
     private bool _hasFocus;
     private bool _tabSkip;
     private bool _canFocus;
@@ -131,12 +130,6 @@ public class ConsoleControl : Rectangular
     /// Gets or sets the foreground color
     /// </summary>
     public RGB Foreground { get { return _fg; } set { SetHardIf(ref _fg, value, value != _fg); } }
-
-    /// <summary>
-    /// Gets or sets whether or not this control should paint its background color or leave it transparent.  By default
-    /// this value is false.
-    /// </summary>
-    public bool TransparentBackground { get { return _transparent; } set { SetHardIf(ref _transparent, value, _transparent != value); } }
 
     /// <summary>
     /// An arbitrary reference to an object to associate with this control
@@ -517,10 +510,7 @@ public class ConsoleControl : Rectangular
             return;
         }
 
-        if (TransparentBackground == false)
-        {
-            Bitmap.Fill(new ConsoleCharacter(' ', null, Background));
-        }
+        Bitmap.Fill(new ConsoleCharacter(' ', null, Background));
 
         OnPaint(Bitmap);
         if (Recorder != null && Recorder.IsFinished == false)

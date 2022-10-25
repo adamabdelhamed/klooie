@@ -7,7 +7,6 @@ public class TextCollider : GameCollider
 
     public TextCollider(ConsoleString content, ColliderGroup group = null) : base(group)
     {
-        this.TransparentBackground = true;
         this.Content = content;
         Sync(nameof(Content), () => ResizeTo(Content.Length, 1), this);
     }
