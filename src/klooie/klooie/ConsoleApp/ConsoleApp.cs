@@ -520,17 +520,17 @@ public partial class ConsoleApp : EventLoop
 
     private void DebounceResize()
     {
-        if (lastConsoleWidth == ConsoleProvider.Current.BufferWidth && lastConsoleHeight == ConsoleProvider.Current.WindowHeight)return;
+        if (lastConsoleWidth == ConsoleProvider.Current.BufferWidth && lastConsoleHeight == ConsoleProvider.Current.WindowHeight - 1)return;
         ConsoleProvider.Current.Clear();
 
         var lastSyncTime = DateTime.UtcNow;
         var hasABitOfTimePassedSinceSync = ()=> DateTime.UtcNow - lastSyncTime > TimeSpan.FromSeconds(.25f);
         while (hasABitOfTimePassedSinceSync() == false)
         {
-            if (ConsoleProvider.Current.BufferWidth != lastConsoleWidth || ConsoleProvider.Current.WindowHeight != lastConsoleHeight)
+            if (ConsoleProvider.Current.BufferWidth != lastConsoleWidth || ConsoleProvider.Current.WindowHeight - 1 != lastConsoleHeight)
             {
                 lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
-                lastConsoleHeight = ConsoleProvider.Current.WindowHeight;
+                lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
                 lastSyncTime = DateTime.UtcNow;
             }
         }
