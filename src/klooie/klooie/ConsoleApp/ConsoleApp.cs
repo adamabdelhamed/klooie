@@ -53,6 +53,13 @@ public partial class ConsoleApp : EventLoop
     public Event OnKeyInputThrottled { get; private set; } = new Event();
 
     /// <summary>
+    /// An event that fires when the user resizes the window. The Bounds of
+    /// LayoutRoot will be updated before this event fires.
+    /// </summary>
+    public Event OnWindowResized { get; private init; } = new Event();
+
+
+    /// <summary>
     /// An event that fires whenever a key is pressed. Other handlers will also run.
     /// </summary>
     public Event<ConsoleKeyInfo> GlobalKeyPressed { get; private set; } = new Event<ConsoleKeyInfo>();
@@ -536,6 +543,7 @@ public partial class ConsoleApp : EventLoop
         this.LayoutRoot.Width = Bitmap.Console.BufferWidth;
         this.LayoutRoot.Height = Bitmap.Console.WindowHeight - 1;
         RequestPaint();
+        OnWindowResized.Fire();
     }
 
     public class SetIntervalHandle : Lifetime
