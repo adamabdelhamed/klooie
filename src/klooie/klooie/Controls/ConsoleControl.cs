@@ -46,6 +46,14 @@ public class ConsoleControl : Rectangular
     private bool hasBeenAddedToVisualTree;
     private HashSet<string> tags;
 
+    internal int FocusStackDepth { get; set; }
+
+    /// <summary>
+    /// returns true unless a dialog is on the screen above the control or if
+    /// your application is making use of the focus stack in some other way.
+    /// </summary>
+    public bool IsFocusStackAtMyLevel => ConsoleApp.Current != null && FocusStackDepth == ConsoleApp.Current.FocusStackDepth;
+
     /// <summary>
     /// Used to stabilize the z-index sorting for painting
     /// </summary>

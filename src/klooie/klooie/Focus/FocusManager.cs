@@ -164,6 +164,7 @@ public partial class ConsoleApp : EventLoop
 
         public void Add(ConsoleControl c)
         {
+            c.FocusStackDepth = StackDepth;
             if (focusStack.Peek().Controls.Contains(c))
             {
                 throw new InvalidOperationException("Item already being tracked");
