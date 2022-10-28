@@ -454,8 +454,11 @@ public partial class ConsoleApp : EventLoop
         try
         {
             Stopping.Fire();
-            LayoutRoot.Dispose();
-            Stopped.Fire();
+            OnDisposed(() =>
+            {
+                LayoutRoot.Dispose();
+                Stopped.Fire();
+            });
             Dispose();
             _current = null;
         }
