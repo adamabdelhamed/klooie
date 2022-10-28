@@ -55,17 +55,19 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         }
     }
 
+    protected virtual string ReplaceSoundHook(string aboutToPlay) => aboutToPlay;
+
     /// <summary>
     /// Plays the given sound
     /// </summary>
     /// <param name="soundId">the id of the sound</param>
-    public void Play(string soundId)
+    public void Play(string soundId, ILifetimeManager maxDuration = null)
     {
         try
         {
-            var slowId = soundId + "slow";
-
-            if (cachedSounds.TryGetValue(soundId, out byte[] bytes))
+            var overrideSound = ReplaceSoundHook(soundId);
+            var toPlay = cachedSounds.ContainsKey(overrideSound) ? overrideSound : soundId;
+            if (cachedSounds.TryGetValue(toPlay, out byte[] bytes))
             {
                 var sample = CreateNewSample(bytes);
 
@@ -73,6 +75,12 @@ public abstract class AudioPlaybackEngine : ISoundProvider
                 {
                     sample = new VolumeSampleProvider(sample) { Volume = NewPlaySoundVolume };
                 }
+
+                if (maxDuration != null)
+                {
+                    sample = AddMixerInput(new LifetimeAwareSampleProvider(sample, maxDuration));
+                }
+
                 AddMixerInput(sample);
             }
         }

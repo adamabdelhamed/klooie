@@ -3,7 +3,7 @@ public interface ISoundProvider
 {
     float MasterVolume { get; set; }
     float NewPlaySoundVolume { get; set; }
-    void Play(string sound);
+    void Play(string sound, ILifetimeManager maxDuration = null);
     void Loop(string sound, ILifetimeManager duration);
     void EndAllLoops();
     void Pause();
@@ -15,7 +15,7 @@ public class NoOpSoundProvider : ISoundProvider
     public float NewPlaySoundVolume { get; set; } = 1;
     public float MasterVolume { get; set; } = 1;
     public void Loop(string sound, ILifetimeManager duration) { }
-    public void Play(string sound) { }
+    public void Play(string sound, ILifetimeManager maxDuration = null) { }
     public void EndAllLoops() { }
     public void Pause() { }
     public void Resume() { }
