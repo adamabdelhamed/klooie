@@ -1,6 +1,9 @@
 # klooie
 A framework for building GUI applications within any command line that runs .NET. Klooie provides all the things you would expect from a UX Framework.
 
+## Binary
+[klooie](https://www.nuget.org/packages/klooie) is available at the Official NuGet Gallery.
+
 ## Key Features
 
 Category                                                                                                                    | Description
