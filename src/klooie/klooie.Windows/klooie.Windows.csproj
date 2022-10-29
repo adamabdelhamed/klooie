@@ -5,15 +5,18 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Authors>Adam Abdelhamed</Authors>
+    <RepositoryUrl>https://github.com/adamabdelhamed/klooie</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/adamabdelhamed/klooie</PackageProjectUrl>
+    <Description>Audio playback support for klooie applications on Windows.</Description>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="klooie" Version="1.0.0" />
     <PackageReference Include="NAudio" Version="2.1.0" />
     <PackageReference Include="PowerArgs" Version="4.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\klooie\klooie.csproj" />
   </ItemGroup>
 
 </Project>
