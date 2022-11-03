@@ -6,7 +6,7 @@ klooie has built in support for dialogs. Dialogs are useful when showing confirm
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ShowMessage/ShowMessageSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/ShowMessage/ShowMessageSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -38,7 +38,7 @@ public static class ShowMessageSampleProgram
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ShowTextInput/ShowTextInputSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/ShowTextInput/ShowTextInputSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;

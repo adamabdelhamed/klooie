@@ -4,7 +4,7 @@
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/AnimationSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Animations/AnimationSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -49,7 +49,7 @@ public static class AnimationSampleProgram
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/NumberAnimationSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Animations/NumberAnimationSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -96,7 +96,7 @@ public static class NumberAnimationSampleProgram
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Animations/ColorAnimationSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Animations/ColorAnimationSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;

@@ -9,7 +9,7 @@ The Game class derives from ConsoleApp and has several convenience features that
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Gaming/PhysicsSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Gaming/PhysicsSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;

@@ -6,7 +6,7 @@ Labels are the most basic controls. They display text. By default, labels cannot
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/LabelSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Controls/LabelSample.gif?raw=true)
 ```cs
 using PowerArgs;
 namespace klooie.Samples;
@@ -40,7 +40,7 @@ A button can be 'pressed' with the enter key when it has focus. It also supports
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/ButtonSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Controls/ButtonSample.gif?raw=true)
 ```cs
 using PowerArgs;
 namespace klooie.Samples;
@@ -79,7 +79,7 @@ The ListViewer control displays tabular data in a familiar table style with a pa
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/ListViewerSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Controls/ListViewerSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -157,7 +157,7 @@ A dropdown lets the user pick from a set of choices.
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/DropdownSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Controls/DropdownSample.gif?raw=true)
 ```cs
 using PowerArgs;
 namespace klooie.Samples;
@@ -204,7 +204,7 @@ Simply fill a container with a MinimumSizeShield and it will display itself alon
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/MinimumSizeShieldSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Controls/MinimumSizeShieldSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -264,7 +264,7 @@ You can build complex controls with klooie. Here's how to use the built-in XYCha
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/XYChartSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Controls/XYChartSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -311,7 +311,7 @@ You can derive from ConsoleControl to create your own controls.
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Controls/CustomControlSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Controls/CustomControlSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;

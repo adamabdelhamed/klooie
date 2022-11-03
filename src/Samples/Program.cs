@@ -117,7 +117,7 @@ class Sample
         var fileName = GifPath.Replace('\\', '/');
         var startIndex = fileName.LastIndexOf("Samples/");
         var relative = fileName.Substring(startIndex);
-        var ret = $"https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/{relative}?raw=true";
+        var ret = $"https://github.com/adamabdelhamed/klooie/blob/main/src/{relative}?raw=true";
         return ret;
     }
 }

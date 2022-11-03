@@ -8,7 +8,7 @@ A ConsolePanel is the most basic type of container. You are responsible for sizi
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/ConsolePanelSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Containers/ConsolePanelSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -77,7 +77,7 @@ This sample shows a common layout where there is a fixed size menu on the left a
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/GridLayoutSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Containers/GridLayoutSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
@@ -161,7 +161,7 @@ A StackPanel stacks a set of controls vertically or horizontally.
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/StackPanelSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Containers/StackPanelSample.gif?raw=true)
 ```cs
 using PowerArgs;
 namespace klooie.Samples;
@@ -204,7 +204,7 @@ A TabControl lets you build a view with multiple horizontal tabs that switch the
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/TabControlSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Containers/TabControlSample.gif?raw=true)
 ```cs
 using PowerArgs;
 namespace klooie.Samples;
@@ -257,7 +257,7 @@ A ScrollablePanel lets you fit large panels inside a smaller one and provides sc
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/ScrollableSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Containers/ScrollableSample.gif?raw=true)
 ```cs
 using PowerArgs;
 namespace klooie.Samples;
@@ -328,7 +328,7 @@ A DataGallery displays a set of controls as a set of tiles in a flow layout.
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/DataGallerySample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Containers/DataGallerySample.gif?raw=true)
 ```cs
 using PowerArgs;
 namespace klooie.Samples;
@@ -381,7 +381,7 @@ A FixedAspectRatioPanel lets hosts another control and maintains its desired asp
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Containers/FixedAspectRatioPanelSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Containers/FixedAspectRatioPanelSample.gif?raw=true)
 ```cs
 using PowerArgs;
 namespace klooie.Samples;
@@ -422,7 +422,7 @@ A ProtectedConsolePanel lets you create a custom container that blocks consumers
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/ProtectedConsolePanel/ProtectedConsolePanelSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/ProtectedConsolePanel/ProtectedConsolePanelSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;

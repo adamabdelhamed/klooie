@@ -2,7 +2,7 @@
 
 The code for this sample is shown below.
 
-![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/Samples/Theming/ThemingSample.gif?raw=true)
+![sample image](https://github.com/adamabdelhamed/klooie/blob/main/src/Samples/Theming/ThemingSample.gif?raw=true)
 ```cs
 using PowerArgs;
 using klooie;
