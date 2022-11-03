@@ -32,4 +32,4 @@ You can have fun with klooie and build games that are fun to play within the com
 Category                                                                                                                                          | Description
 --------------------------------------------------------------------------------------------------------------------------------------------------|------------
 [**Physics**](https://github.com/adamabdelhamed/klooie/blob/main/src/klooie/klooie/Gaming/Readme.md)			                                  | Enables controls to move with velocity semantics and collision detection
-[**Sound** **effects** (windows only)](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Audio/Readme.md)                      | Play sound effects and background music
+[**Sound** **effects** (Windows only)](https://github.com/adamabdelhamed/klooie/tree/main/src/klooie/klooie/Audio/Readme.md)                      | Play sound effects and background music
