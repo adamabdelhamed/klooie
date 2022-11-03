@@ -17,14 +17,6 @@
     <ProjectReference Include="..\klooie\klooie.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Debug'">
-      <HintPath>..\..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
-    </Reference>
-    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Release'">
-      <HintPath>..\..\..\..\PowerArgs\PowerArgs\bin\Release\net6.0\PowerArgs.dll</HintPath>
-    </Reference>
-  </ItemGroup>
 
   <ItemGroup>
     <Compile Update="Sound\SoundEffects.Designer.cs">
