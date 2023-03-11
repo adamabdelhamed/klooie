@@ -16,7 +16,7 @@
   <ItemGroup>
     <PackageReference Include="klooie" Version="1.0.0" />
     <PackageReference Include="NAudio" Version="2.1.0" />
-    <PackageReference Include="PowerArgs" Version="4.0.0" />
+    <PackageReference Include="PowerArgs" Version="4.0.1" />
   </ItemGroup>
 
 </Project>
