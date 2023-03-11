@@ -450,13 +450,12 @@ public class EventLoop : Lifetime
     public Task InvokeAsync(Func<Task> work)
     {
         var tcs = new TaskCompletionSource<bool>();
-        Invoke(() =>
+        Invoke(async () =>
         {
             try
             {
-                var ret = work();
+                await work();
                 tcs.SetResult(true);
-                return ret;
             }
             catch(Exception ex)
             {
