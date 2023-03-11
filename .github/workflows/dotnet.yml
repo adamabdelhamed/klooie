@@ -18,8 +18,8 @@ jobs:
       with:
         dotnet-version: 6.0.x
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore ./src/klooie.sln
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build ./src/klooie.sln --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test  ./src/klooie.sln --no-build --verbosity normal
