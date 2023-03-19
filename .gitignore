@@ -34,6 +34,6 @@ _ReSharper*/
 DoxygenOutput*/
 [Pp]ackages*/
 .vs/*
-/src/klooie/.vs/*
+src/.vs/*
 FYI/*
 TestOutputGifs/*
