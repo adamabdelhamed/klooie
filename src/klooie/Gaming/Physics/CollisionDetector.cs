@@ -239,6 +239,9 @@ public static class CollisionDetector
         }
     }
 
+    // Old code that had lots of strange handling of edge cases 
+/*
+     
     public static bool TryFindIntersectionPoint(in Edge ray, in Edge stationaryEdge, out float x, out float y)
     {
 
@@ -344,10 +347,10 @@ public static class CollisionDetector
 
             var shortestD = float.MaxValue;
             var shortestEdge = default(Edge);
-            for(var i = 0; i < edgeIndex; i++)
+            for (var i = 0; i < edgeIndex; i++)
             {
                 var finalTestSlope = edgeBuffer[i].From.CalculateAngleTo(edgeBuffer[i].To);
-                
+
                 // if the lines had the same slope, but were separated by a very small margin then the slope
                 // will be different so we can count it out
                 if (finalTestSlope != raySlope) continue;
@@ -361,7 +364,7 @@ public static class CollisionDetector
                 if (isOnEdge == false) continue;
 
                 var d = edgeBuffer[i].From.CalculateDistanceTo(edgeBuffer[i].To);
-                if(d < shortestD)
+                if (d < shortestD)
                 {
                     shortestD = d;
                     shortestEdge = edgeBuffer[i];
@@ -405,6 +408,81 @@ public static class CollisionDetector
             return false;
         }
     }
+*/
+
+    // new implementation from chatGPT (GPT4) - much cleaner, tests passing, and chatGPT even added a few more tests
+    public static bool TryFindIntersectionPoint(in Edge ray, in Edge stationaryEdge, out float x, out float y)
+    {
+        var x1 = ray.X1;
+        var y1 = ray.Y1;
+        var x2 = ray.X2;
+        var y2 = ray.Y2;
+
+        var x3 = stationaryEdge.X1;
+        var y3 = stationaryEdge.Y1;
+        var x4 = stationaryEdge.X2;
+        var y4 = stationaryEdge.Y2;
+
+        var den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+        if (den == 0)
+        {
+            // Check if the segments are collinear
+            var det = (x1 - x3) * (y2 - y3) - (y1 - y3) * (x2 - x3);
+            if (det != 0)
+            {
+                x = 0;
+                y = 0;
+                return false;
+            }
+
+            // Check if the segments overlap
+            if (Math.Max(x1, x2) < Math.Min(x3, x4) || Math.Max(x3, x4) < Math.Min(x1, x2) ||
+                Math.Max(y1, y2) < Math.Min(y3, y4) || Math.Max(y3, y4) < Math.Min(y1, y2))
+            {
+                x = 0;
+                y = 0;
+                return false;
+            }
+
+            // Find the intersection point as the point where the two segments start overlapping
+            if (x2 >= x3 && x1 <= x3 && y2 >= y3 && y1 <= y3)
+            {
+                x = x3;
+                y = y3;
+            }
+            else
+            {
+                x = x1;
+                y = y1;
+            }
+            return true;
+        }
+
+        var t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
+
+        x = x1 + t * (x2 - x1);
+        y = y1 + t * (y2 - y1);
+
+        bool between(float a, float b, float c)
+        {
+            return a <= b && b <= c || c <= b && b <= a;
+        }
+
+        if (between(x1, x, x2) && between(y1, y, y2) && between(x3, x, x4) && between(y3, y, y4))
+        {
+            return true;
+        }
+        else
+        {
+            x = 0;
+            y = 0;
+            return false;
+        }
+    }
+
+
+
 
     private static RectF[] CreateObstaclesFromColliders(ConsoleControl[] colliders)
     {

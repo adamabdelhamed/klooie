@@ -104,6 +104,53 @@ public class HitDetectionTests
         Assert.IsTrue(CollisionDetector.TryFindIntersectionPoint(a, b, out float x, out float y));
     }
 
+    [TestMethod]
+    public void HitDetection_LineIntersectionAtStartPoints()
+    {
+        var a = new Edge(0, 0, 1, 1);
+        var b = new Edge(0, 0, -1, 1);
+        Assert.IsTrue(CollisionDetector.TryFindIntersectionPoint(a, b, out float x, out float y));
+        Assert.AreEqual(0f, x);
+        Assert.AreEqual(0f, y);
+    }
+
+    [TestMethod]
+    public void HitDetection_LineIntersectionAtEndPoints()
+    {
+        var a = new Edge(0, 0, 1, 1);
+        var b = new Edge(-1, 0, 1, 1);
+        Assert.IsTrue(CollisionDetector.TryFindIntersectionPoint(a, b, out float x, out float y));
+        Assert.AreEqual(1f, x);
+        Assert.AreEqual(1f, y);
+    }
+
+    [TestMethod]
+    public void HitDetection_LineIntersectionCollinearNoOverlap()
+    {
+        var a = new Edge(0, 0, 1, 1);
+        var b = new Edge(2, 2, 3, 3);
+        Assert.IsFalse(CollisionDetector.TryFindIntersectionPoint(a, b, out float x, out float y));
+    }
+
+    [TestMethod]
+    public void HitDetection_LineIntersectionNonParallelNoIntersection()
+    {
+        var a = new Edge(0, 0, 1, 1);
+        var b = new Edge(2, 0, 2, 1);
+        Assert.IsFalse(CollisionDetector.TryFindIntersectionPoint(a, b, out float x, out float y));
+    }
+
+    [TestMethod]
+    public void HitDetection_LineIntersectionStartPointAndEndPoint()
+    {
+        var a = new Edge(0, 0, 1, 1);
+        var b = new Edge(1, 1, 2, 2);
+        Assert.IsTrue(CollisionDetector.TryFindIntersectionPoint(a, b, out float x, out float y));
+        Assert.AreEqual(1f, x);
+        Assert.AreEqual(1f, y);
+    }
+
+    
     public static void AssertCloseEnough(float expected, float actual)
     {
         var minAccepted = expected - CollisionDetector.VerySmallNumber;
