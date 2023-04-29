@@ -85,4 +85,26 @@ public class TabControlTests
         ret.Add(new Label(tabString.ToDarkGreen()) { CompositionMode = CompositionMode.BlendBackground }).CenterBoth();
         return ret;
     }
+
+    [TestMethod]
+    public void TabControl_DownArrow() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
+    {
+        var options = new TabControlOptions("Tab1", "Tab2")
+        {
+            BodyFactory = s =>
+            {
+                var ret = new ConsolePanel();
+                ret.Add(new Button() { Text = "Some Button".ToWhite() }).CenterBoth();
+                return ret;
+            },
+        };
+
+        var tabControl = ConsoleApp.Current.LayoutRoot.Add(new TabControl(options)).Fill();
+        tabControl.Focus();
+        await context.PaintAndRecordKeyFrameAsync();
+        await ConsoleApp.Current.SendKey(System.ConsoleKey.DownArrow.KeyInfo());
+        await context.PaintAndRecordKeyFrameAsync();
+        Assert.IsTrue(ConsoleApp.Current.FocusedControl is Button);
+        ConsoleApp.Current.Stop();
+    });
 }

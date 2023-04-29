@@ -73,7 +73,7 @@ public class TabControl : ProtectedConsolePanel
         var hasFocus = tabStack.Controls.Contains(ConsoleApp.Current.FocusedControl);
         if (hasFocus)
         {
-            SetupArrowKeyNavitation();
+            SetupArrowKeyNavigation();
             currentTabLabel = ConsoleApp.Current.FocusedControl as Label;
             CurrentTab = currentTabLabel.Text.ToString();
         }
@@ -119,7 +119,7 @@ public class TabControl : ProtectedConsolePanel
         RefreshFocus();
     }
 
-    private void SetupArrowKeyNavitation()
+    private void SetupArrowKeyNavigation()
     {
         arrowKeyLifetime?.Dispose();
         var hasFocus = tabStack.Controls.Contains(ConsoleApp.Current.FocusedControl);
@@ -138,6 +138,11 @@ public class TabControl : ProtectedConsolePanel
             else tabs.Last().Focus();
         };
 
+        var down = () =>
+        {
+            body?.Focus();
+        };
+
         if (Options.TreatAKeyAndDKeyAsLeftRight)
         {
             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.D, next, arrowKeyLifetime);
@@ -145,6 +150,8 @@ public class TabControl : ProtectedConsolePanel
         }
         ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, next, arrowKeyLifetime);
         ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, previous, arrowKeyLifetime);
+
+        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.DownArrow, down, arrowKeyLifetime);
     }
 }
 
