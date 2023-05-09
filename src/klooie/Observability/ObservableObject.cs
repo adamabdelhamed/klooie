@@ -28,7 +28,7 @@ public interface IObservableObject
             public void Sync(string p, Action h, ILifetimeManager l) => observable.Sync(p, h, l);
             public object GetPrevious(string p) => observable.GetPrevious<object>(p);
             public T Get<T>(string name) => observable.Get<T>(name);
-            public void Set<T>(T value, string name) => Set(value, name);
+            public void Set<T>(T value, string name) => observable.Set(value, name);
             public ILifetimeManager GetPropertyValueLifetime(string p) => observable.GetPropertyValueLifetime(p);
         }
      */
