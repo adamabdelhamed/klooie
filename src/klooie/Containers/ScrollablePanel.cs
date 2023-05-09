@@ -262,7 +262,7 @@ public class Scrollbar : ConsoleControl
         base.OnPaint(context);
         if (HasFocus)
         {
-            context.FillRectUnsafe(new ConsoleCharacter(' ', backgroundColor: DefaultColors.FocusColor), 0, 0, Width, Height);
+            context.FillRectUnsafe(new ConsoleCharacter(' ', backgroundColor: FocusColor), 0, 0, Width, Height);
         }
     }
 
