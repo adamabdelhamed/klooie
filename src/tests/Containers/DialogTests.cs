@@ -57,55 +57,40 @@ public class DialogTests
         }
         ConsoleApp.Current.Stop();
     });
-    
-
-    [TestMethod]
-    public void Dialog_Yes()
-    {
-        var app = new ConsoleApp();
-        app.Invoke(async () =>
-        {
-            app.Invoke(async () =>
-            {
-                await Task.Delay(300);
-                await app.SendKey(ConsoleKey.Tab, shift: true);
-                await app.SendKey(ConsoleKey.Enter);
-            });
-            var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
-            Assert.IsTrue("yes".Equals(choice.Id, StringComparison.OrdinalIgnoreCase));
-            app.Stop();
-        });
-        app.Run();
-    }
-
-    [TestMethod]
-    public void Dialog_No()
-    {
-        var app = new ConsoleApp();
-        app.Invoke(async () =>
-        {
-            Dialog.Shown.SubscribeOnce(async () => await app.SendKey(ConsoleKey.Enter));
-            var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
-            Assert.IsTrue("no".Equals(choice.Id, StringComparison.OrdinalIgnoreCase));
-            app.Stop();
-        });
-        app.Run();
-    }
 
 
     [TestMethod]
-    public void Dialog_Cancel()
+    public void Dialog_Yes() => AppTest.Run(TestContext.TestId(), UITestMode.Headless, async (context) =>
     {
-        var app = new ConsoleApp();
-        app.Invoke(async () =>
+        ConsoleApp.Current.Invoke(async () =>
         {
-            Dialog.Shown.SubscribeOnce(async () => await app.SendKey(ConsoleKey.Escape));
-            var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
-            Assert.IsNull(choice);
-            app.Stop();
+            await Task.Delay(300);
+            await ConsoleApp.Current.SendKey(ConsoleKey.Tab, shift: true);
+            await ConsoleApp.Current.SendKey(ConsoleKey.Enter);
         });
-        app.Run();
-    }
+        var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
+        Assert.IsTrue("yes".Equals(choice.Id, StringComparison.OrdinalIgnoreCase));
+        ConsoleApp.Current.Stop();
+    });
+
+    [TestMethod]
+    public void Dialog_No() => AppTest.Run(TestContext.TestId(), UITestMode.Headless, async (context) =>
+    {
+        Dialog.Shown.SubscribeOnce(async () => await ConsoleApp.Current.SendKey(ConsoleKey.Enter));
+        var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
+        Assert.IsTrue("no".Equals(choice.Id, StringComparison.OrdinalIgnoreCase));
+        ConsoleApp.Current.Stop();
+    });
+
+
+    [TestMethod]
+    public void Dialog_Cancel() => AppTest.Run(TestContext.TestId(), UITestMode.Headless, async (context) =>
+    {
+        Dialog.Shown.SubscribeOnce(async () => await ConsoleApp.Current.SendKey(ConsoleKey.Escape));
+        var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
+        Assert.IsNull(choice);
+        ConsoleApp.Current.Stop();
+    });
 
     [TestMethod]
     public void Dialog_ShowTextInputPorted() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified,async (context) =>
