@@ -12,11 +12,12 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/adamabdelhamed/klooie</RepositoryUrl>
     <PackageTags>cli;command line;text UI, TUI;GUI;UX Framework</PackageTags>
-    <Version>1.0.3</Version>
+    <Version>2.0</Version>
     <AssemblyVersion>1.0</AssemblyVersion>
     <FileVersion>1.0</FileVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
+    <PackageReleaseNotes>Removed explicit focus stack manipulation to fix the use case when controls would be added underneath dialogs after the dialog was added. The side affect was that those controls would be focusable while the dialog was alive, and then never focusable after the dialog was disposed. This version fixes that issue, but required a breaking change that should only affect advanced usage.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

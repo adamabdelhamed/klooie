@@ -42,26 +42,11 @@ ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Spacebar, () =>
 
 ## Focus Stack
 
-The Focus Stack is used to enable modal dialogs and dialog-like experiences. If you are using klooie's built-in dialogs then you should not have to deal with the focus stack directly. But you should be aware of how it works and see the warning below.
+The Focus Stack is used to enable modal dialogs and dialog-like experiences. If you are using klooie's built-in dialogs then you should not have to deal with the focus stack directly. But you should be aware of how it works.
 
-ConsoleApp exposes 2 powerful, yet dangerous methods.
-
-```cs
-ConsoleApp.PushFocusStack();
-PushFocusStack.PopFocusStack();
-```
-
-Before displaying a dialog on the screen klooie calls ConsoleApp.PushFocusStack(). This will ensure that controls that were added on the lower layer(s) of the stack are unfocused and cannot be focused until the dialog is gone.
+Before displaying a dialog on the screen klooie sets the dialog's FocusStackDepth property to one value higher than its parent. This will ensure that controls that were added on the lower layer(s) of the stack are unfocused and cannot be focused until the dialog is gone.
 
 This creates an experience where the user can tab through the focusable controls on the dialog without the controls 'underneath' the dialog being included in the cycling.
 
-After the dialog closes klooie calls ConsoleApp.PopFocusStack(). This will restore focus to the control that had it before the dialog was shown.
+After the dialog closes the app attempts to restore focus to the control that had it before the dialog was shown.
 
-### Focus Stack Warning
-
-When using dialogs or the focus stack more broadly you can get into trouble. Adding controls to containers below the dialog while the dialog is still alive will cause issues:
-
-1. The user will be able to cycle to that control via the tab key. If that control is underneath the dialog then the user may think their keystroke was ignored. Furthermore, any additional keystrokes will be forwarded to the hidden control.
-2. After the dialog closes, the user will not be able to tab to the control even if it's CanFocus property is set to true.
-
-If you have logic like auto-refreshing panels below the dialog you may want to disable that functionality while dialogs are shown.

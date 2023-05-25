@@ -46,7 +46,16 @@ public class ConsoleControl : Rectangular
     private bool hasBeenAddedToVisualTree;
     private HashSet<string> tags;
 
-    internal int FocusStackDepth { get; set; }
+    internal int FocusStackDepthInternal { get; set; }
+    public int FocusStackDepth 
+    { 
+        get => FocusStackDepthInternal; 
+        set 
+        {
+            if (Application != null) throw new NotSupportedException($"You cannot modify {nameof(FocusStackDepth)} after a control has been added to the application");
+            FocusStackDepthInternal = value;
+        }
+    }
 
     /// <summary>
     /// returns true unless a dialog is on the screen above the control or if

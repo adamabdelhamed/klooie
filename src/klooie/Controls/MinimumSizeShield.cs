@@ -12,6 +12,7 @@ public class MinimumSizeShield : ConsolePanel
     private MinimumSizeShieldOptions options;
     private Label messageLabel;
     private Lifetime tooSmallLifetime;
+    private ConsoleControl focusThief;
     public MinimumSizeShield(MinimumSizeShieldOptions options)
     {
         this.options = options;
@@ -31,7 +32,7 @@ public class MinimumSizeShield : ConsolePanel
                 tooSmallLifetime = new Lifetime();
                 IsVisible = true;
 
-                Application.PushFocusStack();
+                focusThief = Add(new ConsoleControl() { IsVisible = false, CanFocus = false, FocusStackDepth = this.FocusStackDepth + 1 });
                 Application.ClearFocus();
                 Application.PushKeyForLifetime(ConsoleKey.Escape, () => { }, this);
                 options.OnMinimumSizeNotMet?.Invoke();
@@ -45,7 +46,7 @@ public class MinimumSizeShield : ConsolePanel
             {
                 tooSmallLifetime.Dispose();
                 tooSmallLifetime = null;
-                Application.PopFocusStack();
+                focusThief?.Dispose();
                 options.OnMinimumSizeMet?.Invoke();
             }
             else

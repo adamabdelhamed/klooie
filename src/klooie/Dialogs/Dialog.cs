@@ -79,11 +79,6 @@ public static class Dialog
         options = options ?? new DialogOptions();
         options.Parent = options.Parent ?? ConsoleApp.Current.LayoutRoot;
 
-        if (options.PushPop)
-        {
-            ConsoleApp.Current.PushFocusStack();
-        }
-
         var content = contentFactory();
         var borderColor = options.BorderColor.HasValue ? options.BorderColor : content.Background.Darker;
 
@@ -93,7 +88,7 @@ public static class Dialog
         }
 
         content.IsVisible = false;
-        var dialogContainer = options.Parent.Add(new BorderPanel(content) { BorderColor = borderColor, Background = content.Background, Width = 1, Height = 1, ZIndex = options.ZIndex }).CenterBoth();
+        var dialogContainer = options.Parent.Add(new BorderPanel(content) { FocusStackDepth = options.PushPop ? options.Parent.FocusStackDepth + 1 : options.Parent.FocusStackDepth, BorderColor = borderColor, Background = content.Background, Width = 1, Height = 1, ZIndex = options.ZIndex }).CenterBoth();
         dialogContainer.AddTag(Tag);
         options.Tags?.ForEach(t => dialogContainer.AddTag(t));
 
@@ -119,10 +114,6 @@ public static class Dialog
         await Reverse(200 * options.SpeedPercentage, content, percentage => dialogContainer.Width = Math.Max(1, ConsoleMath.Round((4 + content.Width) * percentage)));
         dialogContainer.Dispose();
         await ConsoleApp.Current.RequestPaintAsync();
-        if(options.PushPop)
-        {
-            ConsoleApp.Current.PopFocusStack();
-        }
         return cancelled;
     }
 

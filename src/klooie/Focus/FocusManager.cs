@@ -164,12 +164,19 @@ public partial class ConsoleApp : EventLoop
 
         public void Add(ConsoleControl c)
         {
-            c.FocusStackDepth = StackDepth;
-            if (focusStack.Peek().Controls.Contains(c))
-            {
-                throw new InvalidOperationException("Item already being tracked");
-            }
-            focusStack.Peek().Controls.Add(c);
+            // This method used to always add the control to the top of the stack, but that was a bad idea
+            // because it meant that controls that were added below dialogs would be treated as if they
+            // were a part of the dialog, and would be able to get focus on tab.  What's worse was that when the dialog
+            // was closed, the controls would never be able to be focused again because they were being
+            // tracked by the dialog's focus context, which was now gone.  So now we add the control to the
+            // focus context that is appropriate for its FocusStackDepth, which may be on or below the top.
+
+            if (focusStack.SelectMany(s => s.Controls).Contains(c)) throw new InvalidOperationException("Item already being tracked");
+            var effectiveDepth = Math.Max(c.FocusStackDepth, c.Anscestors.Select(a => a.FocusStackDepth).Max());
+            if (effectiveDepth > focusStack.Count) throw new NotSupportedException($"{nameof(c.FocusStackDepth)} can only exceed the current focus stack depth by 1");
+            c.FocusStackDepthInternal = effectiveDepth;
+            if (focusStack.Count <= c.FocusStackDepth) Push(c);
+            focusStack.Reverse().ToArray()[c.FocusStackDepth].Controls.Add(c);
         }
 
         public void Remove(ConsoleControl c)
@@ -178,16 +185,22 @@ public partial class ConsoleApp : EventLoop
             {
                 context.Controls.Remove(c);
             }
+            if(focusStack.Peek().Controls.None() && focusStack.Count > 1) Pop();
         }
 
-        public void Push()
+        private void Push(ConsoleControl cause)
         {
-            ClearFocus();
+            var containerContains = cause is Container && (cause as Container).Descendents.Contains(FocusedControl);
+            var shouldClear = FocusedControl != null && FocusedControl != cause && containerContains == false;
+            if (shouldClear)
+            {
+                ClearFocus();
+            }
             focusStack.Push(new FocusContext());
             FirePropertyChanged(nameof(StackDepth));
         }
 
-        public void Pop()
+        private void Pop()
         {
             if (focusStack.Count == 1)
             {

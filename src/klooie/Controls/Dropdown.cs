@@ -82,7 +82,6 @@ public class Dropdown : ProtectedConsolePanel
         Unfocus();
         try
         {
-            Application.PushFocusStack();
             var appropriatePopupWidth = 2 + 1 + Options.Select(o => o.DisplayText.Length).Max() + 1 + 1 + 2;
             var scrollPanel = new ScrollablePanel();
             scrollPanel.Width = appropriatePopupWidth - 4;
@@ -96,7 +95,7 @@ public class Dropdown : ProtectedConsolePanel
             scrollPanel.ScrollableContent.Width = optionsStack.Width + 2;
             scrollPanel.ScrollableContent.Height = optionsStack.Height;
 
-            var popup = new BorderPanel(scrollPanel) { BorderColor = RGB.DarkCyan };
+            var popup = new BorderPanel(scrollPanel) { FocusStackDepth = this.Parent.FocusStackDepth + 1, BorderColor = RGB.DarkCyan };
             popup.Width = scrollPanel.Width + 4;
             popup.Height = scrollPanel.Height + 2;
             popup.X = this.AbsoluteX;
@@ -178,7 +177,7 @@ public class Dropdown : ProtectedConsolePanel
         finally
         {
             isOpen = false;
-            Application.PopFocusStack();
+            SyncValueLabel();
             Focus();
         }
     }

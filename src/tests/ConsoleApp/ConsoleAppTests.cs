@@ -174,12 +174,12 @@ public class ConsoleAppTests
         Assert.IsTrue(c.HasFocus);
 
         // push to the focus stack and expect focus to be cleared
-        ConsoleApp.Current.PushFocusStack();
+        var focusThief = ConsoleApp.Current.LayoutRoot.Add(new ConsoleControl() { CanFocus = false, FocusStackDepth = ConsoleApp.Current.LayoutRoot.FocusStackDepth + 1 });
         Assert.IsNull(ConsoleApp.Current.FocusedControl);
         Assert.IsFalse(c.HasFocus);
 
         // pop the focus stack and expect focus to be restored back to the control
-        ConsoleApp.Current.PopFocusStack();
+        focusThief.Dispose();
         Assert.AreSame(c, ConsoleApp.Current.FocusedControl);
         Assert.IsTrue(c.HasFocus);
 
@@ -200,12 +200,12 @@ public class ConsoleAppTests
         Assert.AreEqual(1, count);
 
         // push the focus stack and expect the next key to be ignored
-        ConsoleApp.Current.PushFocusStack();
+        var focusThief = ConsoleApp.Current.LayoutRoot.Add(new ConsoleControl() { CanFocus = false, FocusStackDepth = ConsoleApp.Current.LayoutRoot.FocusStackDepth + 1 });
         await ConsoleApp.Current.SendKey(new ConsoleKeyInfo('!', ConsoleKey.Enter, false, false, false));
         Assert.AreEqual(1, count);
 
         // pop the focus stack and expect the next key to increment count
-        ConsoleApp.Current.PopFocusStack();
+        focusThief.Dispose();
         await ConsoleApp.Current.SendKey(new ConsoleKeyInfo('!', ConsoleKey.Enter, false, false, false));
         Assert.AreEqual(2, count);
 
