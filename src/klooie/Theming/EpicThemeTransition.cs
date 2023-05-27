@@ -14,8 +14,8 @@ public abstract class EpicThemeTransition
         root.Paint();
         var bitmapOfNewTheme = root.Bitmap.Clone();
         var mask = root.Add(new BitmapControl(bitmapOfOldTheme) { ZIndex = int.MaxValue, AutoSize = true });
-        BitmapOfOldTheme = bitmapOfNewTheme;
-        BitmapOfNewTheme = bitmapOfOldTheme;
+        BitmapOfOldTheme = bitmapOfOldTheme;
+        BitmapOfNewTheme = bitmapOfNewTheme;
         Mask = mask.Bitmap;
         await Execute();
         mask.Dispose();
