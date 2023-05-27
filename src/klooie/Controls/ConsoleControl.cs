@@ -454,6 +454,9 @@ public class ConsoleControl : Rectangular
     /// </summary>
     public void Unfocus() => Application?.MoveFocus(true);
 
+    public void SyncBackground(params ConsoleControl[] others) => Sync<RGB>(nameof(Background), others);
+    public void SyncForeground(params ConsoleControl[] others) => Sync<RGB>(nameof(Foreground), others);
+
     /// <summary>
     /// You should override this method if you are building a custom control, from scratch, and need to control
     /// every detail of the painting process.  If possible, prefer to create your custom control by deriving from

@@ -217,6 +217,8 @@ public class ObservableObject : Lifetime, IObservableObject
         GetEvent(propertyName).Sync(handler, lifetimeManager);
     }
 
+    public void Sync<T>(string prop, params ObservableObject[] others) => others.ForEach(other => this.Sync(prop, () => other.Set(Get<T>(prop), prop), other));
+
     /// <summary>
     /// Gets a lifetime that represents the value of the given property
     /// </summary>
