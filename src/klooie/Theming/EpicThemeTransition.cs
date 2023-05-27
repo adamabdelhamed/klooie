@@ -7,10 +7,17 @@ public enum EpicTransitionKind
     WipeDown,
 }
 
+public class EpicThemeOptions
+{
+    public Func<int,int> DelayFunc { get; set; } = groupKey => ConsoleMath.Round(125 * Math.Pow(groupKey, .5f));
+    internal Func<IGrouping<int, (int x, int y, ConsoleCharacter mine, ConsoleCharacter other, float distanceFromCenter)>, double> DurationFunc { get; set; } = group => 600;
+}
+
 public class EpicThemeTransition
 {
-    internal static async Task Apply(ConsolePanel root, Action application, EpicTransitionKind kind = EpicTransitionKind.Radial)
+    internal static async Task Apply(ConsolePanel root, Action application, EpicTransitionKind kind = EpicTransitionKind.Radial, EpicThemeOptions options = null)
     {
+        options = options ?? new EpicThemeOptions();
         // make sure we know which panel we're dealing with
         root = root ?? ConsoleApp.Current.LayoutRoot;
 
@@ -27,15 +34,15 @@ public class EpicThemeTransition
 
         if (kind == EpicTransitionKind.Radial)
         {
-            await RadialTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask.Bitmap);
+            await RadialTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask.Bitmap, options);
         }
         else if(kind == EpicTransitionKind.WipeRight)
         {
-            await WipeRightTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask.Bitmap);
+            await WipeRightTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask.Bitmap, options);
         }
         else if (kind == EpicTransitionKind.WipeDown)
         {
-            await WipeDownTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask.Bitmap);
+            await WipeDownTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask.Bitmap, options);
         }
         else
         {
@@ -45,24 +52,23 @@ public class EpicThemeTransition
         // remove the mask and reveal the new themed controls
         mask.Dispose();
     }
-    private static Task RadialTransition(ConsoleBitmap bitmapOfOldTheme, ConsoleBitmap bitmapOfNewTheme, ConsoleBitmap mask) =>
-        GroupedTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask, p => ConsoleMath.Round(p.distanceFromCenter));
+    private static Task RadialTransition(ConsoleBitmap bitmapOfOldTheme, ConsoleBitmap bitmapOfNewTheme, ConsoleBitmap mask, EpicThemeOptions options) =>
+        GroupedTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask, p => ConsoleMath.Round(p.distanceFromCenter), options);
 
-    private static Task WipeRightTransition(ConsoleBitmap bitmapOfOldTheme, ConsoleBitmap bitmapOfNewTheme, ConsoleBitmap mask) =>
-        GroupedTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask, p => ConsoleMath.Round(p.x));
+    private static Task WipeRightTransition(ConsoleBitmap bitmapOfOldTheme, ConsoleBitmap bitmapOfNewTheme, ConsoleBitmap mask, EpicThemeOptions options) =>
+        GroupedTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask, p => ConsoleMath.Round(p.x), options);
 
-    private static Task WipeDownTransition(ConsoleBitmap bitmapOfOldTheme, ConsoleBitmap bitmapOfNewTheme, ConsoleBitmap mask) =>
-        GroupedTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask, p => ConsoleMath.Round(p.y));
+    private static Task WipeDownTransition(ConsoleBitmap bitmapOfOldTheme, ConsoleBitmap bitmapOfNewTheme, ConsoleBitmap mask, EpicThemeOptions options) =>
+        GroupedTransition(bitmapOfOldTheme, bitmapOfNewTheme, mask, p => ConsoleMath.Round(p.y), options);
 
-    private static async Task GroupedTransition(ConsoleBitmap bitmapOfOldTheme, ConsoleBitmap bitmapOfNewTheme, ConsoleBitmap mask, Func<(int x, int y, ConsoleCharacter mine, ConsoleCharacter other, float distanceFromCenter), int> groupBy)
+    private static async Task GroupedTransition(ConsoleBitmap bitmapOfOldTheme, ConsoleBitmap bitmapOfNewTheme, ConsoleBitmap mask, Func<(int x, int y, ConsoleCharacter mine, ConsoleCharacter other, float distanceFromCenter), int> groupBy, EpicThemeOptions options)
     {
         List<Task> tasks = new List<Task>();
         foreach (var group in EnumeratePixels(bitmapOfOldTheme, bitmapOfNewTheme).GroupBy(groupBy))
         {
             // capture loop variables because we're going to use them in a closure
             var myGroup = group;
-            var delay = ConsoleMath.Round(125 * Math.Pow(myGroup.Key, .5f));
-
+            var delay = options.DelayFunc(myGroup.Key);
             tasks.Add(ConsoleApp.Current.InvokeAsync(async () =>
             {
                 if (delay > 0) await Task.Delay(delay);
@@ -77,12 +83,11 @@ public class EpicThemeTransition
                     {
                         for (int i = 0; i < colors.Length; i += 2)
                         {
-                            var color = colors[i];
                             var pixel = myGroup.ElementAt(i / 2);
                             mask.SetPixel(pixel.x, pixel.y, new ConsoleCharacter(mask.GetPixel(pixel.x, pixel.y).Value, colors[i], colors[i + 1]));
                         }
                     },
-                    Duration = 600,
+                    Duration = options.DurationFunc(myGroup),
                     EasingFunction = EasingFunctions.Linear,
                 });
             }));
