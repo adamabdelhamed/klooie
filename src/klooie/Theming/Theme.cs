@@ -24,25 +24,8 @@ public abstract class Theme
         tracker = ThemeEvaluator.Apply(Styles, root, lt);
         (lt ?? root)?.OnDisposed(() => tracker = null);
     }
-
-    public virtual Task Apply(EpicTransitionKind transition, ConsolePanel root = null, ILifetimeManager lt = null)
-    {
-        var application = () =>
-        {
-            tracker = ThemeEvaluator.Apply(Styles, root, lt);
-            (lt ?? root)?.OnDisposed(() => tracker = null);
-        };
-
-        if (transition == null)
-        {
-            application();
-            return Task.CompletedTask;
-        }
-        else
-        {
-            return EpicThemeTransition.Apply(root, application, transition);
-        }
-    }
+    public virtual Task Apply(BuiltInEpicThemeTransitionKind kind, ConsolePanel root = null, ILifetimeManager lt = null) => Apply(new BuiltInEpicThemeTransition(kind), root, lt);
+    public virtual Task Apply(EpicThemeTransition effect, ConsolePanel root = null, ILifetimeManager lt = null) => effect.Apply(this, root, lt);
 
     /// <summary>
     /// Gets all styles that have never been applied
