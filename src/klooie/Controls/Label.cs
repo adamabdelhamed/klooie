@@ -8,7 +8,7 @@ public class Label : ConsoleControl
     private bool autoSize;
     private ConsoleString _text;
     private ConsoleString _cleaned;
-
+    public bool EnableCharacterByCharacterStyleDetection { get; set; }
     /// <summary>
     /// The text to display
     /// </summary>
@@ -57,7 +57,9 @@ public class Label : ConsoleControl
         Width = autoSize ? _text.Length : Width;
     }
 
-    private void NormalizeNewlinesTabsAndStyleText() => _cleaned = TextCleaner.NormalizeNewlinesTabsAndStyle(_text, HasFocus ? FocusContrastColor : Foreground, HasFocus ? FocusColor : Background);
+    private void NormalizeNewlinesTabsAndStyleText() => _cleaned = EnableCharacterByCharacterStyleDetection ?
+        TextCleaner.NormalizeNewlinesTabsAndStyleV2(_text, HasFocus ? FocusContrastColor : Foreground, HasFocus ? FocusColor : Background) :
+        TextCleaner.NormalizeNewlinesTabsAndStyle(_text, HasFocus ? FocusContrastColor : Foreground, HasFocus ? FocusColor : Background);
     public override string ToString() => $"Label: " + Text;
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(_cleaned, 0, 0);
 }

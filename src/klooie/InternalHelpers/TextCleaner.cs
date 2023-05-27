@@ -23,6 +23,29 @@ internal static class TextCleaner
         return ret;
     }
 
+    public static ConsoleString NormalizeNewlinesTabsAndStyleV2(ConsoleString str, RGB fg, RGB bg)
+    {
+        var buffer = new List<ConsoleCharacter>();
+
+        for (var i = 0; i < str.Length; i++)
+        {
+            var c = str[i];
+            var isUnstyled = c.ForegroundColor == ConsoleString.DefaultForegroundColor &&
+                c.BackgroundColor == ConsoleString.DefaultBackgroundColor;
+            if (ProcessTab(buffer, c, isUnstyled, fg, bg)) continue;
+            ConsoleCharacter? next = i < str.Length - 1 ? str[i + 1] : null;
+            if (ProcessNewLine(buffer, c, next, isUnstyled, fg, bg)) continue;
+
+            var fgC = isUnstyled ? fg : c.ForegroundColor;
+            var bgC = isUnstyled ? bg : c.BackgroundColor;
+
+            buffer.Add(new ConsoleCharacter(c.Value, fgC, bgC));
+
+        }
+        var ret = new ConsoleString(buffer);
+        return ret;
+    }
+
     private static bool ProcessNewLine(List<ConsoleCharacter> buffer, ConsoleCharacter c, ConsoleCharacter? next, bool isUnstyled, RGB fg, RGB bg)
     {
         if (c.Value != '\r') return false;

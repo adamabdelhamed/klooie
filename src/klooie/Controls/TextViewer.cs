@@ -17,6 +17,9 @@ public class TextViewer : ConsoleControl
         /// </summary>
         Height,
     }
+
+    public bool EnableCharacterByCharacterStyleDetection { get; set; }
+
     private ConsoleString _text;
     private ConsoleString cleaned;
     private List<List<ConsoleCharacter>> lines;
@@ -66,7 +69,9 @@ public class TextViewer : ConsoleControl
 
     private void RefreshLines()
     {
-        cleaned = TextCleaner.NormalizeNewlinesTabsAndStyle(_text, Foreground, Background);
+        cleaned = EnableCharacterByCharacterStyleDetection ?
+            TextCleaner.NormalizeNewlinesTabsAndStyleV2(_text, Foreground, Background) :
+            TextCleaner.NormalizeNewlinesTabsAndStyle(_text, Foreground, Background);
         this.lines.Clear();
         List<ConsoleCharacter> currentLine = null;
         SmartWrapNewLine(lines, ref currentLine);
