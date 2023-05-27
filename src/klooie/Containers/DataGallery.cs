@@ -38,7 +38,7 @@ public abstract class Gallery : ProtectedConsolePanel
         foreach (var child in Children)
         {
             var proposed = new RectF(x, y, child.Width, child.Height);
-            if (this.Bounds.Contains(proposed))
+            if (new RectF(0,0,Width, Height).Contains(proposed))
             {
                 child.X = x;
                 child.Y = y;
