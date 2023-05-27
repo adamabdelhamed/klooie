@@ -7,6 +7,12 @@ public enum TabAlignment
     Left
 }
 
+public class TabLabel : Label 
+{
+    public TabLabel() { }
+    public TabLabel(ConsoleString str) : base(str) { }
+}
+
 public class TabControlOptions
 {
     public ObservableCollection<string> Tabs { get; private init; } = new ObservableCollection<string>();
@@ -20,13 +26,14 @@ public class TabControlOptions
 
 public class TabControl : ProtectedConsolePanel
 {
+    public RGB SelectedAndUnfocusedTabColor { get => Get<RGB>(); set => Set(value); }
     private GridLayout layout;
     private ConsolePanel tabContainer;
     private StackPanel tabStack;
     private ConsolePanel body;
     private Label currentTabLabel;
     private Lifetime arrowKeyLifetime;
-    private List<Label> tabs = new List<Label>();
+    private List<TabLabel> tabs = new List<TabLabel>();
     private string _currentTab;
 
     public string CurrentTab
@@ -49,6 +56,7 @@ public class TabControl : ProtectedConsolePanel
     {
         this.Options = options;
         Foreground = RGB.Yellow;
+        SelectedAndUnfocusedTabColor = RGB.DarkGray;
         Ready.SubscribeOnce(Init);
     }
 
@@ -78,8 +86,8 @@ public class TabControl : ProtectedConsolePanel
             CurrentTab = currentTabLabel.Text.ToString();
         }
 
-        var currentTabFg = hasFocus ? FocusColor : RGB.Gray;
-        var currentTabBg = hasFocus ? FocusContrastColor : RGB.DarkGray;
+        var currentTabFg = hasFocus ? FocusContrastColor : Foreground;
+        var currentTabBg = hasFocus ? FocusColor : SelectedAndUnfocusedTabColor;
         foreach (var label in tabStack.Controls.WhereAs<Label>())
         {
             var tabString = label.Text.ToString();
@@ -105,14 +113,14 @@ public class TabControl : ProtectedConsolePanel
         else
         {
             tabStack.CenterVertically();
-            tabStack.X = 2;
+            tabStack.X = 0;
         }
         
         CurrentTab = (CurrentTab != null && Options.Tabs.Where(t => t.ToString() == CurrentTab).Any()) ? CurrentTab : Options.Tabs.First().ToString();
         currentTabLabel = null;
         foreach(var str in Options.Tabs)
         {
-            var label = tabStack.Add(new Label(str.ToConsoleString()) { CompositionMode = CompositionMode.BlendBackground, CanFocus = true });
+            var label = tabStack.Add(new TabLabel(str.ToConsoleString()) { CompositionMode = CompositionMode.BlendBackground, CanFocus = true });
             currentTabLabel = str == CurrentTab ? label : currentTabLabel;
             tabs.Add(label);
         }
