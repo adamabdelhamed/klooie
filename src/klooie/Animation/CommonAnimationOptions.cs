@@ -2,6 +2,7 @@
 
 public class CommonAnimationOptions
 {
+    public int TargetFramesPerSecond { get; set; } = Animator.DeafultTargetFramesPerSecond;
     public EasingFunction EasingFunction { get; set; } = EasingFunctions.Linear;
 
     /// <summary>

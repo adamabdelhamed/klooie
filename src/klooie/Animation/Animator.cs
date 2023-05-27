@@ -6,7 +6,7 @@ namespace klooie;
 /// </summary>
 public static class Animator
 {
-    private const int TargetFramesPerSecond = 20;
+    internal const int DeafultTargetFramesPerSecond = 20;
 
     /// <summary>
     /// Performs the animation specified in the options
@@ -196,7 +196,7 @@ public static class Animator
             options.Setter(options.To);
         }
 
-        var numberOfFrames = (float)(ConsoleMath.Round(animationTime.TotalSeconds * TargetFramesPerSecond));
+        var numberOfFrames = (float)(ConsoleMath.Round(animationTime.TotalSeconds * options.TargetFramesPerSecond));
         numberOfFrames = Math.Max(numberOfFrames, 2);
 
         var timeBetweenFrames = TimeSpan.FromMilliseconds(ConsoleMath.Round(animationTime.TotalMilliseconds / numberOfFrames));
