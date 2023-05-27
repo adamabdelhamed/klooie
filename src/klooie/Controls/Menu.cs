@@ -58,14 +58,15 @@ public class Menu<T> : ProtectedConsolePanel where T : class
         GuardAgainstInvalidSelectedIndexSetter();
         AddMenuItems();
         SetupEventHandlers();
+        Subscribe(AnyProperty,RefreshLabels, this);
     }
 
     private void AddMenuItems()
     {
         var stack = ProtectedPanel.Add(new StackPanel() { Orientation = Orientation.Vertical, Margin = 1 }).Fill();
-        Sync(nameof(Background), () => stack.Background = Background, this);
-        Sync(nameof(Background), () => stack.Children.ForEach(c => c.Background = Background), this);
+        SyncBackground(stack);
         menuItems.ForEach(menuItem => stack.Add(new Label() { Tag = menuItem }).FillHorizontally());
+        SyncBackground(stack.Children.ToArray());
     }
 
     private void SetupEventHandlers()
@@ -104,7 +105,7 @@ public class Menu<T> : ProtectedConsolePanel where T : class
         }
     }
 
-    private ConsoleString SelectedItemFormatter(T item)=> (formatter(item).StringValue).ToConsoleString(HasFocus ? RGB.Black : Foreground, HasFocus ? RGB.Cyan : Background);
+    private ConsoleString SelectedItemFormatter(T item)=> (formatter(item).StringValue).ToConsoleString(HasFocus ? Background : Foreground, HasFocus ? FocusColor : Background);
     
     private void RefreshLabels()
     {
