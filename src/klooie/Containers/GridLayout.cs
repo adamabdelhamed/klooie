@@ -35,7 +35,8 @@ public class GridLayoutOptions
 
     private string ToSpec<T>(List<T> spec) where T : GridValueDefinition
     {
-        var ret = string.Concat(spec.Select(s => $"{s.Value}{ToSpecType(s.Type)};"));
+        Func<T,int> valueFormatter = t => t.Type == GridValueType.Percentage ? (int)(t.Value * 100) : (int)t.Value;
+        var ret = string.Concat(spec.Select(s => $"{valueFormatter(s)}{ToSpecType(s.Type)};"));
         ret = ret.Substring(0, ret.Length - 1);
         return ret;
     }
