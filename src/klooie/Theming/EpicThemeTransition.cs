@@ -32,7 +32,7 @@ public enum BuiltInEpicThemeTransitionKind
 public class BuiltInEpicThemeTransition : EpicThemeTransition
 {
     protected virtual Func<int, int> DelayFunc { get; set; } = groupKey => ConsoleMath.Round(125 * Math.Pow(groupKey, .5f));
-    protected virtual Func<IGrouping<int, (int x, int y, ConsoleCharacter mine, ConsoleCharacter other, float distanceFromCenter)>, double> DurationFunc { get; set; } = group => 600;
+    protected virtual Func<IGrouping<int, (int x, int y, ConsoleCharacter mine, ConsoleCharacter other, float distanceFromCenter)>, double> DurationFunc { get; set; } = group => 0;
 
     private Func<(int x, int y, ConsoleCharacter mine, ConsoleCharacter other, float distanceFromCenter), int> groupBy;
 
@@ -57,7 +57,7 @@ public class BuiltInEpicThemeTransition : EpicThemeTransition
                 if (delay > 0) await Task.Delay(delay);
                 await Animator.AnimateAsync(new RGBAnimationOptions()
                 {
-                    Transitions = group.SelectMany(pixel => new KeyValuePair<RGB, RGB>[]
+                    Transitions = myGroup.SelectMany(pixel => new KeyValuePair<RGB, RGB>[]
                     {
                             new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).ForegroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).ForegroundColor),
                             new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).BackgroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).BackgroundColor),
