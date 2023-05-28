@@ -86,6 +86,10 @@ public class TabControl : ProtectedConsolePanel
             currentTabLabel = ConsoleApp.Current.FocusedControl as Label;
             CurrentTab = currentTabLabel.Text.ToString();
         }
+        else
+        {
+            arrowKeyLifetime?.TryDispose();
+        }
 
         var currentTabFg = hasFocus ? FocusContrastColor : Foreground;
         var currentTabBg = hasFocus ? FocusColor : SelectedAndUnfocusedTabColor;
