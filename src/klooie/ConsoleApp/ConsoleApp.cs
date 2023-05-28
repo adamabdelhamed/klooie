@@ -166,7 +166,7 @@ public partial class ConsoleApp : EventLoop
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
         cycleRateMeter = new FrameRateMeter();
         EndOfCycle.Subscribe(Cycle, this);
-        LayoutRoot = new ConsolePanel();
+        LayoutRoot = new LayoutRootPanel();
         LayoutRoot.ResizeTo(lastConsoleWidth, lastConsoleHeight);
         focus = new FocusManager();
         LayoutRoot.Application = this;
@@ -607,3 +607,4 @@ internal class FrameRateMeter
         a.Second == b.Second;
 }
 
+public class LayoutRootPanel : ConsolePanel { }
