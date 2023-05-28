@@ -118,6 +118,14 @@ public class StyleBuilder
     }
 
     /// <summary>
+    /// Adds the styles for the given chained theme.
+    /// </summary>
+    /// <typeparam name="T">The base theme type</typeparam>
+    /// <param name="theme">The base theme</param>
+    /// <returns>This builder</returns>
+    public StyleBuilder For<T>(ChainedTheme<T> theme) where T : Theme => theme.Chain(this);
+
+    /// <summary>
     /// Adds a style for the Foreground property with the given value
     /// </summary>
     /// <param name="color">the foreground color</param>

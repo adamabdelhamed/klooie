@@ -55,3 +55,29 @@ public abstract class Theme
     }
 }
 
+/// <summary>
+/// A theme that can be chained to another theme, enabling complex
+/// themes to be built up from simpler ones.
+/// </summary>
+/// <typeparam name="T">The host theme type that defines global styles for the app</typeparam>
+public abstract class ChainedTheme<T> where T : Theme
+{
+    /// <summary>
+    /// Gets the theme that this theme is chained to
+    /// </summary>
+    protected T Theme { get; private set; }
+
+    /// <summary>
+    /// Creates a chained theme given a host theme
+    /// </summary>
+    /// <param name="theme">the host theme</param>
+    public ChainedTheme(T theme) => this.Theme = theme;
+
+    /// <summary>
+    /// Chains this theme's styles into the given builder
+    /// </summary>
+    /// <param name="builder">a style builder to cahin onto</param>
+    /// <returns>the same builder you passed in</returns>
+    public abstract StyleBuilder Chain(StyleBuilder builder);
+}
+
