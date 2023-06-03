@@ -207,4 +207,10 @@ public readonly struct Thickness
         this.Top = t;
         this.Bottom = b;
     }
+
+    // A thickness that is optimized for the console by making
+    // the left and right 2 pixels and the top and bottom 1. This
+    // is because characters are typically about twice as tall as
+    // they are wide.
+    public static Thickness Square = new Thickness(2, 2, 1, 1);
 }
