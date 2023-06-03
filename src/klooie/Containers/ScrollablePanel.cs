@@ -71,6 +71,24 @@ public class ScrollablePanel : ProtectedConsolePanel
         return true;
     }
 
+    public void ScrollToTop()
+    {
+        VerticalScrollUnits = 0;
+    }
+
+    public void ScrollToBottom()
+    {
+        VerticalScrollUnits = 0;
+        if (ScrollableContent.Height > Height)
+        {
+            var bottom = ScrollableContent.Height - Height;
+            if (VerticalScrollUnits != bottom)
+            {
+                VerticalScrollUnits = bottom;
+            }
+        }
+    }
+
     private void OnAddedToVisualTree()
     {
         Application.FocusChanged.Subscribe(FocusChanged, this);
