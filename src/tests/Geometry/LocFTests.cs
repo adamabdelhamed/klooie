@@ -69,9 +69,9 @@ public class LocFTests
         var converted = l.ToLoc();
         var convertedF = converted.ToLocF();
         Assert.AreEqual(converted, new Loc(1, 1));
-        Assert.AreEqual(converted, convertedF);
+        Assert.IsTrue(converted.Equals(convertedF));
         Assert.AreEqual(new Loc(1, 1), converted);
-        Assert.AreEqual(convertedF, converted);
+        Assert.IsTrue(convertedF.Equals(converted));
     }
 }
 

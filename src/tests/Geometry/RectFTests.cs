@@ -86,10 +86,10 @@ public class RectFTests
         var r = new RectF(.5f, .5f, .5f, .5f);
         var converted = r.ToRect();
         var convertedF = converted.ToRectF();
-        Assert.AreEqual(converted, new RectF(1, 1,1,1));
-        Assert.AreEqual(converted, convertedF);
-        Assert.AreEqual(new RectF(1, 1, 1, 1), converted);
-        Assert.AreEqual(convertedF, converted);
+        Assert.IsTrue(converted.Equals(new RectF(1, 1, 1, 1)));
+        Assert.IsTrue(converted.Equals(convertedF));
+        Assert.IsTrue(new RectF(1, 1, 1, 1).Equals(converted));
+        Assert.IsTrue(convertedF.Equals(converted));
     }
 }
 
