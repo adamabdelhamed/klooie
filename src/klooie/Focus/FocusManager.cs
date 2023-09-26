@@ -173,10 +173,10 @@ public partial class ConsoleApp : EventLoop
 
             if (focusStack.SelectMany(s => s.Controls).Contains(c)) throw new InvalidOperationException("Item already being tracked");
             var effectiveDepth = Math.Max(c.FocusStackDepth, c.Anscestors.Select(a => a.FocusStackDepth).Max());
-            if (effectiveDepth > focusStack.Count) throw new NotSupportedException($"{nameof(c.FocusStackDepth)} can only exceed the current focus stack depth by 1");
+            if (effectiveDepth > focusStack.Count + 1) throw new NotSupportedException($"{nameof(c.FocusStackDepth)} can only exceed the current focus stack depth by 1");
             c.FocusStackDepthInternal = effectiveDepth;
-            if (focusStack.Count <= c.FocusStackDepth) Push(c);
-            focusStack.Reverse().ToArray()[c.FocusStackDepth].Controls.Add(c);
+            if (focusStack.Count < c.FocusStackDepth) Push(c);
+            focusStack.Reverse().ToArray()[c.FocusStackDepth-1].Controls.Add(c);
         }
 
         public void Remove(ConsoleControl c)
