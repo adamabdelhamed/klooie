@@ -25,10 +25,19 @@ public sealed class TextBoxGenerator : FormFieldGeneratorAttribute
 
     protected void SyncTextBox(PropertyInfo property, TextBox textBox, IObservableObject formModel)
     {
-        var reviver = () => ArgRevivers.Revive(property.PropertyType, property.Name, "" + textBox.Value);
+        var reviver = () =>
+        {
+            try
+            {
+                return ArgRevivers.Revive(property.PropertyType, property.Name, "" + textBox.Value);
+            }
+            catch (Exception ex)
+            {
+                return property.GetValue(formModel);
+            }
+        };
 
         formModel.Sync(property.Name, () => textBox.Value = property.GetValue(formModel).ToConsoleString(), textBox);
         textBox.Subscribe(nameof(textBox.Value), () => property.SetValue(formModel, reviver()), textBox);
-        
     }
 }

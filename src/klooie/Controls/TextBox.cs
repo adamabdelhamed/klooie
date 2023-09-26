@@ -111,8 +111,14 @@ public class TextBox : ConsoleControl
         else if (isAllSelected)
         {
             isAllSelected = false;
-            Value = ConsoleString.Empty;
+            ConsoleCharacter? p = this.Value.Length == 0 ? null : this.Value[this.Value.Length - 1];
+            var c = new ConsoleCharacter(info.KeyChar,
+                p.HasValue ? p.Value.ForegroundColor : ConsoleString.DefaultForegroundColor,
+                p.HasValue ? p.Value.BackgroundColor : ConsoleString.DefaultBackgroundColor);
+
+            Value = RichTextCommandLineReader.IsWriteable(info) ? new ConsoleString(new ConsoleCharacter[] { c }) : ConsoleString.Empty;
             StartBlinking();
+            return;
         }
 
         ConsoleCharacter? prototype = this.Value.Length == 0 ? null : this.Value[this.Value.Length - 1];
