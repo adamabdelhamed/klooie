@@ -36,7 +36,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     {
         try
         {
-            cachedSounds = new Dictionary<string, byte[]>();
+            cachedSounds = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
             currentSoundLifetimes = new List<Lifetime>();
             runningLoops = new Dictionary<ISampleProvider, LoopInfo>();
             var sw = Stopwatch.StartNew();
