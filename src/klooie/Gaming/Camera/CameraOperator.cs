@@ -24,8 +24,6 @@ public sealed class CameraOperator : Lifetime
     public CameraOperator(Camera camera, ConsoleControl focalElement, Velocity focalVelocity, IDelayProvider delayProvider, params CameraMovement[] movements)
     {
         if (focalElement == null || focalVelocity == null) throw new ArgumentNullException("focalElement and focalVelocity cannot be null");
-        camera.CameraLocation = new LocF();
-        camera.CameraLocation = focalElement.Center().Offset(-camera.Width/2, -camera.Height/2);
 
         foreach (CameraMovement m in movements)
         {
