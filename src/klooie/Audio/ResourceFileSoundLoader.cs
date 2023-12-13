@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 
 namespace klooie;
 
@@ -11,7 +6,7 @@ public static class ResourceFileSoundLoader
 {
     public static Dictionary<string, byte[]> LoadSounds<T>() where T : class
     {
-        var ret = new Dictionary<string, byte[]>();
+        var ret = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         var flags = BindingFlags.Public | BindingFlags.Static;
         var soundType = typeof(UnmanagedMemoryStream);
 
