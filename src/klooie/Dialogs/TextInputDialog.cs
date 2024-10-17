@@ -40,7 +40,7 @@ public sealed class ShowTextInputOptions : ShowMessageOptions
         TextBox.Y = 4;
 
         content.Sync(nameof(content.Bounds), () => { TextBox.Width = Math.Max(0, content.Width - 4); }, content);
-        TextBox.Subscribe(nameof(TextBox.Value), () => Value = TextBox.Value, TextBox);
+        TextBox.Sync(nameof(TextBox.Value), () => Value = TextBox.Value, TextBox);
 
         TextBox.AddedToVisualTree.SubscribeOnce(() => TextBox.Application.InvokeNextCycle(() => TextBox.Focus()));
         return content;

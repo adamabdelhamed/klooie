@@ -1,0 +1,83 @@
+{
+  "SceneWidth": 1000,
+  "PlayerSpeed": 25.0,
+  "PlayerHP": 25.0,
+  "Ammo": [],
+  "Enemies": [],
+  "EnemyWaves": [
+    {
+      "Display": "[Red]letters",
+      "HP": 1.0,
+      "Period": 1000.0,
+      "StartDistance": 150.0,
+      "EndDistance": 75.0,
+      "Speed": 10.0,
+      "X": -350.0,
+      "Top": true
+    },
+    {
+      "Display": "[White]a",
+      "HP": 10.0,
+      "Period": 1000.0,
+      "StartDistance": 200.0,
+      "EndDistance": 100.0,
+      "Speed": 30.0,
+      "X": -330.0,
+      "Top": true
+    },
+    {
+      "Display": "[White]b",
+      "HP": 1.0,
+      "Period": 1000.0,
+      "StartDistance": 200.0,
+      "EndDistance": 100.0,
+      "Speed": 30.0,
+      "X": -320.0,
+      "Top": true
+    },
+    {
+      "Display": "[White]c",
+      "HP": 1.0,
+      "Period": 1000.0,
+      "StartDistance": 200.0,
+      "EndDistance": 100.0,
+      "Speed": 30.0,
+      "X": -320.0,
+      "Top": false
+    },
+    {
+      "Display": "[White]d",
+      "HP": 1.0,
+      "Period": 1000.0,
+      "StartDistance": 200.0,
+      "EndDistance": 100.0,
+      "Speed": 30.0,
+      "X": -330.0,
+      "Top": false
+    }
+  ],
+  "Weapons": [
+    {
+      "Type": "MachineGun",
+      "Ammo": 100,
+      "Strength": 2.0,
+      "BurstWindow": 1000.0,
+      "MinShotsBeforeEnforced": 2,
+      "MaxShotsInBurstWindow": 8,
+      "X": -450.0,
+      "Top": true
+    }
+  ],
+  "Obstacles": [
+    {
+      "HP": 2.0,
+      "X": -410.0,
+      "Top": true
+    },
+    {
+      "HP": 10.0,
+      "X": -410.0,
+      "Top": false
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "SceneWidth": 1000,
+  "PlayerSpeed": 25.0,
+  "PlayerHP": 25.0,
+  "Ammo": [
+    {
+      "Amount": 25,
+      "X": -380.0,
+      "Top": true
+    }
+  ],
+  "Enemies": [],
+  "EnemyWaves": [
+    {
+      "Display": "[153,102,51]poop",
+      "HP": 3.0,
+      "Period": 1000.0,
+      "StartDistance": 150.0,
+      "EndDistance": 50.0,
+      "Speed": 15.0,
+      "X": -340.0,
+      "Top": true
+    },
+    {
+      "Display": "[153,102,51]poop",
+      "HP": 3.0,
+      "Period": 1000.0,
+      "StartDistance": 150.0,
+      "EndDistance": 50.0,
+      "Speed": 15.0,
+      "X": -330.0,
+      "Top": false
+    },
+    {
+      "Display": "[Red]zombie",
+      "HP": 4.0,
+      "Period": 750.0,
+      "StartDistance": 150.0,
+      "EndDistance": 50.0,
+      "Speed": 15.0,
+      "X": -290.0,
+      "Top": true
+    },
+    {
+      "Display": "[Red]zombie",
+      "HP": 4.0,
+      "Period": 750.0,
+      "StartDistance": 150.0,
+      "EndDistance": 50.0,
+      "Speed": 15.0,
+      "X": -270.0,
+      "Top": false
+    },
+    {
+      "Display": "[Red]BOSS_MAN",
+      "HP": 50.0,
+      "Period": 3000.0,
+      "StartDistance": 70.0,
+      "EndDistance": 140.0,
+      "Speed": 5.0,
+      "X": -110.0,
+      "Top": false
+    },
+    {
+      "Display": "[Magenta]BOSS_WOMAN",
+      "HP": 50.0,
+      "Period": 3000.0,
+      "StartDistance": 140.0,
+      "EndDistance": 70.0,
+      "Speed": 5.0,
+      "X": -110.0,
+      "Top": true
+    }
+  ],
+  "Weapons": [
+    {
+      "Type": "MachineGun",
+      "Ammo": 75,
+      "Strength": 4.0,
+      "BurstWindow": 400.0,
+      "MinShotsBeforeEnforced": 2,
+      "MaxShotsInBurstWindow": 8,
+      "X": -460.0,
+      "Top": true
+    },
+    {
+      "Type": "Pistol",
+      "Ammo": 1,
+      "Strength": 1.0,
+      "BurstWindow": 1.0,
+      "MinShotsBeforeEnforced": 1,
+      "MaxShotsInBurstWindow": 1,
+      "X": -460.0,
+      "Top": false
+    },
+    {
+      "Type": "Shotgun",
+      "Ammo": 10,
+      "Strength": 10.0,
+      "BurstWindow": 400.0,
+      "MinShotsBeforeEnforced": 1,
+      "MaxShotsInBurstWindow": 1,
+      "X": -380.0,
+      "Top": false
+    },
+    {
+      "Type": "MissileLauncher",
+      "Ammo": 10,
+      "Strength": 50.0,
+      "BurstWindow": 1000.0,
+      "MinShotsBeforeEnforced": 1,
+      "MaxShotsInBurstWindow": 1,
+      "X": -210.0,
+      "Top": false
+    }
+  ],
+  "Obstacles": [
+    {
+      "HP": 10.0,
+      "X": -390.0,
+      "Top": true
+    },
+    {
+      "HP": 5.0,
+      "X": -390.0,
+      "Top": false
+    },
+    {
+      "HP": 20.0,
+      "X": -300.0,
+      "Top": false
+    },
+    {
+      "HP": 4.0,
+      "X": -300.0,
+      "Top": true
+    },
+    {
+      "HP": 4.0,
+      "X": -220.0,
+      "Top": true
+    },
+    {
+      "HP": 40.0,
+      "X": -220.0,
+      "Top": false
+    }
+  ]
+}
