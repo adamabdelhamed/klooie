@@ -189,12 +189,11 @@ public abstract class Dropdown<T> : ProtectedConsolePanel
 
     public Dropdown()
     {
-        CanFocus = true;
+        CanFocus = false;
         Width = 15;
         var dropdown = ProtectedPanel.Add(new Dropdown(Choices())).Fill();
         dropdown.Sync(nameof(dropdown.Value), () => this.Value = (T)dropdown.Value.Value, this);
         this.Subscribe(nameof(Value), () => dropdown.Value = dropdown.Options.Where(o => o.Value.Equals(Value)).Single(), this);
-        this.Focused.Subscribe(() => dropdown.Focus(), this);
     }
 
     protected abstract IEnumerable<DialogChoice> Choices();
