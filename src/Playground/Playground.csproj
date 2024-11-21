@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,8 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="PowerArgs">
+    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Debug'">
       <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net9.0\PowerArgs.dll</HintPath>
+    </Reference>
+    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Release'">
+      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Release\net9.0\PowerArgs.dll</HintPath>
     </Reference>
     <ProjectReference Include="..\klooie\klooie.csproj" />
   </ItemGroup>
