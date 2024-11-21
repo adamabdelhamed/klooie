@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -14,9 +14,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="klooie" Version="2.3.5" />
     <PackageReference Include="NAudio" Version="2.2.1" />
-    <PackageReference Include="PowerArgs" Version="4.0.3" />
+    <ProjectReference Include="..\klooie\klooie.csproj" />
+    <Reference Include="PowerArgs">
+      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

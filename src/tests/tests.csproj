@@ -15,7 +15,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="PowerArgs" Version="4.0.3" />
+    <Reference Include="PowerArgs">
+      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

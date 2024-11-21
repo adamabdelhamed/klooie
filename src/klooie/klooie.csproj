@@ -12,8 +12,8 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/adamabdelhamed/klooie</RepositoryUrl>
     <PackageTags>cli;command line;text UI, TUI;GUI;UX Framework</PackageTags>
-    <Version>2.3.5</Version>
-    <AssemblyVersion>1.0</AssemblyVersion>
+    <Version>2.5</Version>
+    <AssemblyVersion>2.5</AssemblyVersion>
     <FileVersion>1.0</FileVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
@@ -28,6 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="PowerArgs" Version="4.0.3" />
+    <Reference Include="PowerArgs">
+      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>

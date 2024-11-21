@@ -8,10 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="PowerArgs" Version="4.0.3" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <Reference Include="PowerArgs">
+      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
+    </Reference>
     <ProjectReference Include="..\klooie\klooie.csproj" />
   </ItemGroup>
 
