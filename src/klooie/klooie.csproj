@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
@@ -12,9 +12,9 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/adamabdelhamed/klooie</RepositoryUrl>
     <PackageTags>cli;command line;text UI, TUI;GUI;UX Framework</PackageTags>
-    <Version>2.5</Version>
-    <AssemblyVersion>2.5</AssemblyVersion>
-    <FileVersion>1.0</FileVersion>
+    <Version>3.0</Version>
+    <AssemblyVersion>3.0</AssemblyVersion>
+    <FileVersion>3.0</FileVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IncludeSymbols>True</IncludeSymbols>
     <PackageReleaseNotes></PackageReleaseNotes>
@@ -29,7 +29,7 @@
 
   <ItemGroup>
     <Reference Include="PowerArgs">
-      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
+      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net9.0\PowerArgs.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>

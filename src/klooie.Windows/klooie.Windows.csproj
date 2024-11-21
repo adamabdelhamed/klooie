@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Authors>Adam Abdelhamed</Authors>
@@ -17,7 +17,7 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
     <ProjectReference Include="..\klooie\klooie.csproj" />
     <Reference Include="PowerArgs">
-      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net6.0\PowerArgs.dll</HintPath>
+      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net9.0\PowerArgs.dll</HintPath>
     </Reference>
   </ItemGroup>
 
