@@ -1,4 +1,6 @@
-﻿namespace klooie;
+﻿using System.Text;
+
+namespace klooie;
 /// <summary>
 /// A data structure representing a 2d image that can be pained in
 /// a console window
@@ -72,6 +74,16 @@ public sealed class ConsoleBitmap
         }
     }
 
+    /// <summary>
+    /// Coonverts this ConsoleBitmap to the Console Video Format
+    /// </summary>
+    /// <param name="outputStream">The sream to write the video to</param>
+    public void ToSingleFrameVideo(Stream outputStream)
+    {
+        var bitmapVideoWriter = new ConsoleBitmapVideoWriter(s => outputStream.Write(Encoding.Default.GetBytes(s)));
+        bitmapVideoWriter.WriteFrame(this).Clone();
+        bitmapVideoWriter.Finish();
+    }
 
     /// <summary>
     /// Converts this ConsoleBitmap to a ConsoleString
