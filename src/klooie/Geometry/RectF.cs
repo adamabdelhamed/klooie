@@ -162,34 +162,13 @@ public readonly struct RectF
 
     public static float CalculateDistanceTo(in RectF a, in RectF b)
     {
-        var ar = a.Left + a.Width;
-        var ab = a.Top + a.Height;
+        float dx = Math.Max(a.Left - (b.Left + b.Width), b.Left - (a.Left + a.Width));
+        float dy = Math.Max(a.Top - (b.Top + b.Height), b.Top - (a.Top + a.Height));
 
-        var br = b.Left + b.Width;
-        var bb = b.Top + b.Height;
+        dx = Math.Max(dx, 0);
+        dy = Math.Max(dy, 0);
 
-        var left = br < a.Left;
-        var right = ar < b.Left;
-        var bottom = bb < a.Top;
-        var top = ab < b.Top;
-        if (top && left)
-            return LocF.CalculateDistanceTo(a.Left, ab, br, b.Top);
-        else if (left && bottom)
-            return LocF.CalculateDistanceTo(a.Left, a.Top, br, bb);
-        else if (bottom && right)
-            return LocF.CalculateDistanceTo(ar, a.Top, b.Left, bb);
-        else if (right && top)
-            return LocF.CalculateDistanceTo(ar, ab, b.Left, b.Top);
-        else if (left)
-            return a.Left - br;
-        else if (right)
-            return b.Left - ar;
-        else if (bottom)
-            return a.Top - bb;
-        else if (top)
-            return b.Top - ab;
-        else
-            return 0;
+        return (float)Math.Sqrt(dx * dx + dy * dy);
     }
 
     public static float CalculateDistanceTo(float ax, float ay, float aw, float ah, float bx, float by, float bw, float bh)

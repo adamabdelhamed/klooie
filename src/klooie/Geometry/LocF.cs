@@ -167,49 +167,18 @@ public readonly struct LocF
 
     public static Angle CalculateAngleTo(float x1, float y1, float x2, float y2)
     {
-        float dx = x2 - x1;
-        float dy = y2 - y1;
-        float d = CalculateDistanceTo(x1, y1, x2, y2);
+        float dx = x2 - x1; // x difference
+        float dy = y2 - y1; // y difference (downward positive)
 
-        if (dy == 0 && dx > 0) return 0;
-        else if (dy == 0) return 180;
-        else if (dx == 0 && dy > 0) return 90;
-        else if (dx == 0) return 270;
+        double angleInRadians = Math.Atan2(dy, dx);
+        double angleInDegrees = angleInRadians * (180.0 / Math.PI);
 
-        double radians, increment;
-        if (dx >= 0 && dy >= 0)
+        if (angleInDegrees < 0)
         {
-            // Sin(a) = dy / d
-            radians = Math.Asin(dy / d);
-            increment = 0;
-
-        }
-        else if (dx < 0 && dy > 0)
-        {
-            // Sin(a) = dx / d
-            radians = Math.Asin(-dx / d);
-            increment = 90;
-        }
-        else if (dy < 0 && dx < 0)
-        {
-            radians = Math.Asin(-dy / d);
-            increment = 180;
-        }
-        else if (dx > 0 && dy < 0)
-        {
-            radians = Math.Asin(dx / d);
-            increment = 270;
-        }
-        else
-        {
-            throw new Exception($"Failed to calculate angle from {x1},{y1} to {x2},{y2}");
+            angleInDegrees += 360.0;
         }
 
-        var ret = (float)(increment + radians * 180 / Math.PI);
-
-        if (ret == 360) ret = 0;
-
-        return ret;
+        return (float)angleInDegrees;
     }
 
     public static float CalculateDistanceTo(float x1, float y1, float x2, float y2)
