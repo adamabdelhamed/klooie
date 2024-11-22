@@ -8,7 +8,6 @@ public class GameCollider : ConsoleControl
     public GameCollider(ColliderGroup? group = null) => Velocity = new Velocity(this, group ?? Game.Current?.MainColliderGroup ?? (AutoAddToColliderGroup == false ? null : throw new ArgumentException($"{nameof(group)} can only be null when Game.Current is not")));
     public GameCollider(RectF bounds, ColliderGroup? group = null) : this(group) => this.Bounds = bounds;
     public GameCollider(float x, float y, float w, float h, ColliderGroup? group = null) : this(new RectF(x, y, w, h), group) { }
-    // todo - put splatter in cliborg in its own velocity group so it can't collide and I can remove virtual from this method, which popped on the profiler
     public virtual bool CanCollideWith(GameCollider other) => this.IsVisible && ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
     public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstacles(this).WhereAs<GameCollider>();
 
