@@ -7,6 +7,7 @@ namespace klooie;
 /// </summary>
 public sealed class ConsoleBitmap
 {
+    private static FastConsoleWriter fastConsoleWriter;
     private static ChunkPool chunkPool = new ChunkPool();
     private static List<Chunk> chunksOnLine = new List<Chunk>();
     private static ChunkAwarePaintBuffer paintBuilder = new ChunkAwarePaintBuffer();
@@ -578,6 +579,7 @@ public sealed class ConsoleBitmap
 
         if (ConsoleProvider.Fancy)
         {
+            fastConsoleWriter ??= new FastConsoleWriter();
             PaintNew();
         }
         else
@@ -826,7 +828,7 @@ public sealed class ConsoleBitmap
                 chunksOnLine.Clear();
             }
             Ansi.Cursor.Move.ToLocation(Width-1, Height-1, paintBuilder);
-            Console.Write(paintBuilder.Buffer, paintBuilder.Length);
+            fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
         }
         catch (IOException)
         {
@@ -1000,5 +1002,44 @@ public static class ConsoleStringEx
         }
 
         return ret;
+    }
+}
+
+public class FastConsoleWriter
+{
+    private readonly Stream _outputStream;
+    private readonly byte[] _byteBuffer;
+    private readonly Encoder _encoder;
+    private readonly int _maxCharCount;
+    private int _bufferPosition;
+
+    public FastConsoleWriter(int bufferSize = 8192)
+    {
+        _outputStream = Console.OpenStandardOutput();
+        _byteBuffer = new byte[bufferSize];
+        _encoder = Encoding.UTF8.GetEncoder();
+        _maxCharCount = Encoding.UTF8.GetMaxCharCount(bufferSize);
+        _bufferPosition = 0;
+    }
+
+    public void Write(char[] buffer, int length)
+    {
+        int charsProcessed = 0;
+        while (charsProcessed < length)
+        {
+            int charsToProcess = Math.Min(_maxCharCount, length - charsProcessed);
+
+            bool completed;
+            int bytesUsed;
+            int charsUsed;
+
+            _encoder.Convert(
+                buffer, charsProcessed, charsToProcess,
+                _byteBuffer, 0, _byteBuffer.Length,
+                false, out charsUsed, out bytesUsed, out completed);
+
+            _outputStream.Write(_byteBuffer, 0, bytesUsed);
+            charsProcessed += charsUsed;
+        }
     }
 }
