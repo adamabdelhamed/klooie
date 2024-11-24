@@ -172,7 +172,7 @@ public partial class ConsoleApp : EventLoop
             // focus context that is appropriate for its FocusStackDepth, which may be on or below the top.
 
             if (focusStack.SelectMany(s => s.Controls).Contains(c)) throw new InvalidOperationException("Item already being tracked");
-            var effectiveDepth = Math.Max(c.FocusStackDepth, c.Anscestors.Select(a => a.FocusStackDepth).Max());
+            var effectiveDepth = Math.Max(c.FocusStackDepth, c.Anscestors.Select(a => a.FocusStackDepth).MaxOrDefault(1));
             if (effectiveDepth > focusStack.Count + 1) throw new NotSupportedException($"{nameof(c.FocusStackDepth)} can only exceed the current focus stack depth by 1");
             c.FocusStackDepthInternal = effectiveDepth;
             if (focusStack.Count < c.FocusStackDepth) Push(c);
