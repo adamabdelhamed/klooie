@@ -1,4 +1,6 @@
-﻿namespace klooie;
+﻿using System.Diagnostics;
+
+namespace klooie;
 
 /// <summary>
 /// A class representing a console application that uses a message pump to synchronize work on a UI thread
@@ -485,29 +487,39 @@ public partial class ConsoleApp : EventLoop
         AfterPaint.Fire();
     }
 
+    private static readonly long CycleThrottlerIntervalTicks = Stopwatch.Frequency / 1000 * 25; // 25ms in ticks
+    private long lastCycleThrottlerCheck;
+
     private void Cycle()
     {
         cycleRateMeter.Increment();
-        DebounceResize();
 
-        if (ConsoleProvider.Current.KeyAvailable)
+        // Check if enough time has passed since the last key check
+        var delta = Stopwatch.GetTimestamp() - lastCycleThrottlerCheck;
+        if (delta >= CycleThrottlerIntervalTicks)
         {
-            var info = ConsoleProvider.Current.ReadKey(true);
+            DebounceResize();
+            lastCycleThrottlerCheck = Stopwatch.GetTimestamp();
 
-            var effectiveMinTimeBetweenKeyPresses = MinTimeBetweenKeyPresses;
-            if (KeyThrottlingEnabled && info.Key == lastKey && DateTime.UtcNow - lastKeyPressTime < effectiveMinTimeBetweenKeyPresses)
+            if (ConsoleProvider.Current.KeyAvailable)
             {
-                // the user is holding the key down and throttling is enabled
-                OnKeyInputThrottled.Fire();
-            }
-            else
-            {
-                lastKeyPressTime = DateTime.UtcNow;
-                lastKey = info.Key;
-                InvokeNextCycle(() => HandleKeyInput(info));
+                var info = ConsoleProvider.Current.ReadKey(true);
+
+                var effectiveMinTimeBetweenKeyPresses = MinTimeBetweenKeyPresses;
+                if (KeyThrottlingEnabled && info.Key == lastKey && DateTime.UtcNow - lastKeyPressTime < effectiveMinTimeBetweenKeyPresses)
+                {
+                    // The user is holding the key down and throttling is enabled
+                    OnKeyInputThrottled.Fire();
+                }
+                else
+                {
+                    lastKeyPressTime = DateTime.UtcNow;
+                    lastKey = info.Key;
+                    InvokeNextCycle(() => HandleKeyInput(info));
+                }
             }
         }
-            
+
         if (sendKeys.Count > 0)
         {
             var request = sendKeys.Dequeue();
@@ -519,14 +531,14 @@ public partial class ConsoleApp : EventLoop
         }
     }
 
+
     private void DebounceResize()
     {
         if (lastConsoleWidth == ConsoleProvider.Current.BufferWidth && lastConsoleHeight == ConsoleProvider.Current.WindowHeight - 1)return;
         ConsoleProvider.Current.Clear();
 
         var lastSyncTime = DateTime.UtcNow;
-        var hasABitOfTimePassedSinceSync = ()=> DateTime.UtcNow - lastSyncTime > TimeSpan.FromSeconds(.25f);
-        while (hasABitOfTimePassedSinceSync() == false)
+        while (DateTime.UtcNow - lastSyncTime > TimeSpan.FromSeconds(.25f) == false)
         {
             if (ConsoleProvider.Current.BufferWidth != lastConsoleWidth || ConsoleProvider.Current.WindowHeight - 1 != lastConsoleHeight)
             {
