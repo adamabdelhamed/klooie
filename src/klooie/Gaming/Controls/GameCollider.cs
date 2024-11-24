@@ -9,7 +9,7 @@ public class GameCollider : ConsoleControl
     public GameCollider(RectF bounds, ColliderGroup? group = null) : this(group) => this.Bounds = bounds;
     public GameCollider(float x, float y, float w, float h, ColliderGroup? group = null) : this(new RectF(x, y, w, h), group) { }
     public virtual bool CanCollideWith(GameCollider other) => this.IsVisible && ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
-    public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstacles(this).WhereAs<GameCollider>();
+    public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstacles(this);
 
     public bool TryMoveBy(float x, float y) => TryMoveTo(Left + x, Top + y);
 

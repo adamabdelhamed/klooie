@@ -272,10 +272,7 @@ public sealed class ColliderGroup
             for (var j = 0; j < entry.Length; j++)
             {
                 var item = entry[j]?.Collider;
-                if (item == null) continue;
-                if (item == owner) continue;
-                if (owner.CanCollideWith(item) == false) continue;
-                if (item.CanCollideWith(owner) == false) continue;
+                if (item == null || item == owner || owner.CanCollideWith(item) == false || item.CanCollideWith(owner) == false) continue;
                 list.Add(item);
             }
         }
