@@ -131,7 +131,7 @@ public partial class ConsoleApp : EventLoop
         }
     }
 
-    private class FocusManager : ObservableObject
+    private partial class FocusManager : IObservableObject
     {
         public class FocusContext
         {
@@ -150,16 +150,16 @@ public partial class ConsoleApp : EventLoop
 
         public Stack<FocusContext> Stack => focusStack;
 
-        public int StackDepth => focusStack.Count;
+        public partial int StackDepth {get;set;}
 
         public KeyboardInterceptionManager GlobalKeyHandlers => focusStack.Peek().Interceptors;
 
-        public ConsoleControl FocusedControl { get => Get<ConsoleControl>(); set => Set(value); }
-
+        public partial ConsoleControl FocusedControl { get; set; }
         public FocusManager()
         {
             focusStack = new Stack<FocusContext>();
             focusStack.Push(new FocusContext());
+            StackDepth = 1;
         }
 
         public void Add(ConsoleControl c)
@@ -197,7 +197,7 @@ public partial class ConsoleApp : EventLoop
                 ClearFocus();
             }
             focusStack.Push(new FocusContext());
-            FirePropertyChanged(nameof(StackDepth));
+            StackDepth++;
         }
 
         private void Pop()
@@ -209,7 +209,7 @@ public partial class ConsoleApp : EventLoop
 
             focusStack.Pop();
             RestoreFocus();
-            FirePropertyChanged(nameof(StackDepth));
+            StackDepth--;
         }
 
         public void SetFocus(ConsoleControl newFocusControl)

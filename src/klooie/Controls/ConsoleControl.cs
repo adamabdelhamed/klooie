@@ -318,6 +318,8 @@ public class ConsoleControl : Rectangular
         FocusContrastColor = DefaultColors.FocusContrastColor;
         CompositionMode = CompositionMode.PaintOver;
         Subscribe(nameof(AnyProperty), () => Application?.RequestPaint(), this);
+        Subscribe(nameof(Bounds), ResizeBitmapOnBoundsChanged, this);
+        Subscribe(nameof(CanFocus), () => { if (HasFocus && CanFocus == false && ShouldContinue) Application?.MoveFocus(); }, this);
     }
 
     /// <summary>
@@ -468,23 +470,7 @@ public class ConsoleControl : Rectangular
     /// <param name="context">The scoped bitmap that you can paint on</param>
     protected virtual void OnPaint(ConsoleBitmap context) { }
 
-    protected override void OnPropertyChanged(string propertyName)
-    {
-        if (propertyName == nameof(Bounds))
-        {
-            ResizeBitmapOnBoundsChanged();
-        }
-        else if (propertyName == nameof(CanFocus) && IsExpired == false && CanFocus == false && HasFocus)
-        {
-            ConsoleApp.Current?.MoveFocus();
-        }
 
-        if (this.Application != null && this.Application.IsRunning && this.Application.IsDrainingOrDrained == false)
-        {
-            ConsoleApp.AssertAppThread(this.Application);
-            this.Application.RequestPaint();
-        }
-    }
 
     internal void FireFocused(bool focused)
     {

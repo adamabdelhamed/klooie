@@ -211,7 +211,6 @@ public class ObservableObject : Lifetime, IObservableObject
     /// <param name="propertyName">the name of the property that changed</param>
     public void FirePropertyChanged(string propertyName)
     {
-        OnPropertyChanged(propertyName);
         if (subscribers == null) return;
         if (subscribers.TryGetValue(propertyName, out Event ev))
         {
@@ -223,12 +222,6 @@ public class ObservableObject : Lifetime, IObservableObject
             ev2.Fire();
         }
     }
-
-    /// <summary>
-    /// derived types can override
-    /// </summary>
-    /// <param name="propertyName">the name of the property that was changed</param>
-    protected virtual void OnPropertyChanged(string propertyName) { }
 
     /// <summary>
     /// A generic equals implementation that allows nulls to be passed for either parameter.  Objects should not call this from
