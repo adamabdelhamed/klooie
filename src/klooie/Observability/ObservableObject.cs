@@ -10,10 +10,6 @@ public interface IObservableObject
 {
     void Subscribe(string propertyName, Action handler, ILifetimeManager lifetimeManager);
     void Sync(string propertyName, Action handler, ILifetimeManager lifetimeManager);
-    object GetPrevious(string propertyName);
-
-    T Get<T>(string name);
-    void Set<T>(T value, string name);
 
     ILifetimeManager GetPropertyValueLifetime(string propertyName);
     /*
@@ -46,7 +42,6 @@ public class ObservableObject : Lifetime, IObservableObject
 
     private Dictionary<string, Event> subscribers;
     private Dictionary<string, object> values;
-    private Dictionary<string, object> previousValues;
 
     /// <summary>
     /// Converts this object into a dictionary
@@ -61,10 +56,6 @@ public class ObservableObject : Lifetime, IObservableObject
     /// <returns>a read only dictionary</returns>
     public IReadOnlyDictionary<string, object> ToReadOnlyDictionary() => values != null ? new ReadOnlyDictionary<string, object>(values) : new Dictionary<string, object>();
 
-    /// <summary>
-    /// Gets the name of the property that is changing now
-    /// </summary>
-    public string CurrentlyChangingPropertyName { get; private set; }
 
     /// <summary>
     /// returns true if this object has a property with the given key
@@ -91,7 +82,6 @@ public class ObservableObject : Lifetime, IObservableObject
     public bool TryGetValue<T>(string key, out T val)
     {
         values = values ?? new Dictionary<string, object>();
-        previousValues = previousValues ?? new Dictionary<string, object>();
         object ret;
         if (values.TryGetValue(key, out ret))
         {
@@ -115,15 +105,7 @@ public class ObservableObject : Lifetime, IObservableObject
             return false;
         }
     }
-
-    /// <summary>
-    /// Gets the previous value of the given property name
-    /// </summary>
-    /// <typeparam name="T">the type of property to get</typeparam>
-    /// <param name="name">the name of the property</param>
-    /// <returns>the previous value or default(T) if there was none</returns>
-    public T GetPrevious<T>([CallerMemberName] string name = "") => previousValues.TryGetValue(name, out object ret) ? (T)ret : default;
-    object IObservableObject.GetPrevious(string name) => this.GetPrevious<object>(name);
+ 
 
     /// <summary>
     /// This should be called by a property getter to set the value.
@@ -138,10 +120,6 @@ public class ObservableObject : Lifetime, IObservableObject
 
         if (values.ContainsKey(name))
         {
-            if (isEqualChange == false)
-            {
-                previousValues[name] = current;
-            }
             values[name] = value;
         }
         else
@@ -151,7 +129,6 @@ public class ObservableObject : Lifetime, IObservableObject
 
         if (isEqualChange == false)
         {
-            CurrentlyChangingPropertyName = name;
             FirePropertyChanged(name);
         }
     }
@@ -174,7 +151,6 @@ public class ObservableObject : Lifetime, IObservableObject
     {
         if (condition == false) return false;
         current = value;
-        CurrentlyChangingPropertyName = name;
         FirePropertyChanged(name);
         return true;
     }

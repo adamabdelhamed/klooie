@@ -8,12 +8,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
     <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Debug'">
       <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net9.0\PowerArgs.dll</HintPath>
     </Reference>
     <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Release'">
       <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Release\net9.0\PowerArgs.dll</HintPath>
     </Reference>
+    <ProjectReference Include="..\klooie.Analyzers\klooie.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"  GeneratePathProperty="true" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.11.0" GeneratePathProperty="true" PrivateAssets="all"/>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" GeneratePathProperty="true" PrivateAssets="all" />
     <ProjectReference Include="..\klooie\klooie.csproj" />
   </ItemGroup>
 

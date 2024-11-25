@@ -135,13 +135,7 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
 
         changedAction();
     }
-
-    /// <summary>
-    /// Gets the previous value of the given property
-    /// </summary>
-    /// <param name="name">the name of the property to lookup</param>
-    /// <returns>the previous value or null if there was no value</returns>
-    public object GetPrevious(string name) => observable.GetPrevious<object>(name);
+ 
 
     /// <summary>
     /// Gets a lifetime that expires when the given item is removed from the collection

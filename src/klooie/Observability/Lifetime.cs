@@ -210,16 +210,19 @@ public class Lifetime : Disposable, ILifetime
     {
         if (!IsExpired)
         {
+            var man = _manager;
             IsExpiring = true;
             _manager.IsExpiring = true;
             try
             {
                 _manager.Finish();
+                _manager.IsExpired = true;
                 _manager = null;
             }
             finally
             {
                 IsExpiring = false;
+                man.IsExpiring = false;
             }
         }
     }
