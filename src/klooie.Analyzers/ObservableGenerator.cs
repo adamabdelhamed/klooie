@@ -33,10 +33,6 @@ namespace klooie
                 if (!classSymbol.AllInterfaces.Any(i => i.Equals(iObservableObjectSymbol, SymbolEqualityComparer.Default))) continue;
 
                 var source = ProcessClass(classSymbol);
-                if (classSymbol.Name.Contains("Dropdown"))
-                {
-                    //Debugger.Launch();                    
-                }
                 context.AddSource($"{classSymbol.Name}_ObservableProperties.g.cs", SourceText.From(source, Encoding.UTF8));
             }
         }
@@ -92,8 +88,13 @@ namespace klooie
 
                 var baseTypesClause = baseTypes.Any() ? " : " + string.Join(", ", baseTypes) : string.Empty;
 
+                // Determine modifiers
+                var modifiers = new List<string>();
+                if (currentClassSymbol.IsAbstract) modifiers.Add("abstract");
+                if (currentClassSymbol.IsSealed) modifiers.Add("sealed");
+
                 // Append the class signature
-                sb.AppendLine($"{Indent(indent)}{currentClassSymbol.DeclaredAccessibility.ToString().ToLower()} partial class {currentClassSymbol.Name}{typeParameters}{baseTypesClause}");
+                sb.AppendLine($"{Indent(indent)}{currentClassSymbol.DeclaredAccessibility.ToString().ToLower()} {string.Join(" ", modifiers)} partial class {currentClassSymbol.Name}{typeParameters}{baseTypesClause}");
 
                 // Append constraints, if any
                 foreach (var constraint in constraints)

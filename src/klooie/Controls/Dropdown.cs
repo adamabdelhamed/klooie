@@ -3,7 +3,7 @@
 /// <summary>
 /// A control that lets the user view and edit the current value among a set of options.
 /// </summary>
-public class Dropdown : ProtectedConsolePanel
+public partial class Dropdown : ProtectedConsolePanel
 {
     private Label valueLabel;
     private bool isOpen;
@@ -13,7 +13,7 @@ public class Dropdown : ProtectedConsolePanel
     /// <summary>
     /// The currently selected option
     /// </summary>
-    public DialogChoice Value { get => Get<DialogChoice>(); set => Set(value); }
+    public partial DialogChoice Value { get; set; }
 
     /// <summary>
     /// If true then W will be treated as Up and S will be treated as down.

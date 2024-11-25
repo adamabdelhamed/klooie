@@ -2,17 +2,17 @@
 /// <summary>
 /// A panel that displays its children as a grid of tiles
 /// </summary>
-public abstract class Gallery : ProtectedConsolePanel
+public abstract partial class Gallery : ProtectedConsolePanel
 {
     /// <summary>
     /// The horizontal margin used to space out the tiles
     /// </summary>
-    public int HMargin { get => Get<int>(); set => Set(value); }
+    public partial int HMargin { get; set; }
 
     /// <summary>
     /// The vertical margin used to space out the tiles
     /// </summary>
-    public int VMargin { get => Get<int>(); set => Set(value); }
+    public partial int VMargin { get; set; }
 
     /// <summary>
     /// Creates a new gallery

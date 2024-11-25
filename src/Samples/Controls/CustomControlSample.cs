@@ -1,13 +1,12 @@
 ﻿//#Sample -Id CustomControlSample
-using PowerArgs;
-using klooie;
 using klooie.Theming;
+using PowerArgs;
 namespace klooie.Samples;
 
-public class CustomControl : ConsoleControl
+public partial class CustomControl : ConsoleControl
 {
     // look closely at the getter and setter. This syntax makes the properties observable and themeable.
-    public RGB BorderColor { get => Get<RGB>(); set => Set(value); }
+    public partial RGB BorderColor { get; set; }
 
     public CustomControl()
     {

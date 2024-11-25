@@ -8,30 +8,30 @@ namespace klooie.tests;
 
 [TestClass]
 [TestCategory(Categories.ConsoleApp)]
-public class FormTests
+public partial class FormTests
 {
     public TestContext TestContext { get; set; }
 
-    class SimpleFormModel : ObservableObject
+    partial class SimpleFormModel : ObservableObject
     {
         [FormLabel("[Orange]First Name")]
-        public string FirstName { get => Get<string>(); set => Set(value); }
+        public partial string FirstName { get; set; }
 
-        public string LastName { get => Get<string>(); set => Set(value); }
+        public partial string LastName { get; set; }
 
         [FormReadOnly]
-        public string SSN { get => Get<string>(); set => Set(value); } 
+        public partial string SSN { get; set; }
 
-        public bool IsHappy { get => Get<bool>(); set => Set(value); }
+        public partial bool IsHappy { get; set; }
 
         [FormToggle("Good","Bad")]
-        public bool Mood { get => Get<bool>(); set => Set(value); }
+        public partial bool Mood { get; set; }
 
-        public ConsoleColor FavoriteColor { get => Get<ConsoleColor>(); set => Set(value); }
+        public partial ConsoleColor FavoriteColor { get; set; }
 
         [FormSlider(Min = 0, Max = 125)]
         [FormWidth(25)]
-        public short Age { get => Get<short>(); set => Set(value); }
+        public partial short Age { get; set; }
 
         [FormIgnore]
         public string Ignored { get; set; }

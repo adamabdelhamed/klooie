@@ -1,13 +1,13 @@
 ﻿namespace klooie;
-public class Slider : ConsoleControl
+public partial class Slider : ConsoleControl
 {
-    public RGB BarColor { get => Get<RGB>(); set => Set(value); }
-    public RGB HandleColor { get => Get<RGB>(); set => Set(value); }
+    public partial RGB BarColor { get; set; }
+    public partial RGB HandleColor { get; set; }
 
-    public float Min { get => Get<float>(); set => Set(value); }
-    public float Max { get => Get<float>(); set => Set(value); }
-    public float Value { get => Get<float>(); set => Set(value); }
-    public float Increment { get; set; } = 1;
+    public partial float Min { get; set; }
+    public partial float Max { get; set; }
+    public partial float Value { get; set; }
+    public partial float Increment { get; set; }
     public bool EnableWAndSKeysForUpDown { get; set; }
     public Slider()
     {
@@ -17,6 +17,7 @@ public class Slider : ConsoleControl
         Max = 100;
         Width = 10;
         Height = 1;
+        Increment = 1;
         ILifetime focusLt = null;
 
         this.Ready.SubscribeOnce(() =>

@@ -4,30 +4,30 @@ using klooie;
 namespace klooie.Samples;
 
 // define a class where each property will map to a form input field
-public class FormModel : ObservableObject
+public partial class FormModel : ObservableObject
 {
     [FormWidth(25)] // this attribute controls the width of the input control
     [FormLabel("First Name")] // this attribute lets you customize the label
-    public string FirstName { get => Get<string>(); set => Set(value); }
+    public partial string FirstName { get; set; }
 
     [FormWidth(25)]
     [FormLabel("Last Name")]
-    public string LastName { get => Get<string>(); set => Set(value); }
+    public partial string LastName { get; set; }
 
     [FormReadOnly] // this attribute makes the value display as a label that can't be edited
-    public string SSN { get => Get<string>(); set => Set(value); }
+    public partial string SSN { get; set; }
 
     [FormToggle("Yes", "No")] // this attribute lets you customize the labels on the toggle control.
     [FormLabel("Loves Klooie?")]
-    public bool LovesKlooie { get => Get<bool>(); set => Set(value); }
+    public partial bool LovesKlooie { get; set; }
 
     [FormWidth(25)]
     [FormLabel("Favorite Color")]
-    public ConsoleColor FavoriteColor { get => Get<ConsoleColor>(); set => Set(value); }
+    public partial ConsoleColor FavoriteColor { get; set; }
 
     [FormSlider(Min = 0, Max = 125)] // this attribute makes the age input a slider rather than a text box
     [FormWidth(25)]
-    public short Age { get => Get<short>(); set => Set(value); }
+    public partial short Age { get; set; }
 
     [FormIgnore] // this property is ignored and not included in the form
     public string IgnoredProperty { get; set; }

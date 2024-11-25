@@ -2,32 +2,32 @@
 /// <summary>
 /// A progress bar designed for use with the console bitmap player.  It shows the current play cursor and indicates loading progress
 /// </summary>
-internal sealed class PlayerProgressBar : ConsoleControl
+internal sealed partial class PlayerProgressBar : ConsoleControl
 {
     /// <summary>
     /// The current position of the loading indicator (0 to 1)
     /// </summary>
-    public double LoadProgressPosition { get { return Get<double>(); } set { Set(value); } }
+    public partial double LoadProgressPosition { get; set; }
 
     /// <summary>
     /// The current position of the play cursor (0 to 1)
     /// </summary>
-    public double PlayCursorPosition { get { return Get<double>(); } set { Set(value); } }
+    public partial double PlayCursorPosition { get; set; }
 
     /// <summary>
     /// The color of the portion of the bar that represents loaded content, defaults to white
     /// </summary>
-    public RGB LoadingProgressColor { get { return Get<RGB>(); } set { Set(value); } }
+    public partial RGB LoadingProgressColor { get; set; }
 
     /// <summary>
     /// True if you want to render the play cursor, false otherwise
     /// </summary>
-    public bool ShowPlayCursor { get { return Get<bool>(); } set { Set(value); } }
+    public partial bool ShowPlayCursor { get; set; }
 
     /// <summary>
     /// The color of the play cursor, defaults to green
     /// </summary>
-    public RGB PlayCursorColor { get { return Get<RGB>(); } set { Set(value); } }
+    public partial RGB PlayCursorColor { get; set; }
 
     public PlayerProgressBar()
     {

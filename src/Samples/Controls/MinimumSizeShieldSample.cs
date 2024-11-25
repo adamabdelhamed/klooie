@@ -59,13 +59,13 @@ public class FMinimumSizeShieldSampleRunner : IRecordableSample
 }
 
 // define a class where each property will map to a form input field
-public class SampleFormModel : ObservableObject
+public partial class SampleFormModel : IObservableObject
 {
     [FormWidth(25)] // this attribute controls the width of the input control
     [FormLabel("First Name")] // this attribute lets you customize the label
-    public string FirstName { get => Get<string>(); set => Set(value); }
+    public partial string FirstName { get; set; }
 
     [FormWidth(25)]
     [FormLabel("Last Name")]
-    public string LastName { get => Get<string>(); set => Set(value); }
+    public partial string LastName { get; set; }
 }

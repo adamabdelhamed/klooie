@@ -33,12 +33,12 @@ public enum PlayerState
 /// <summary>
 /// A control that can play console app recordings from a stream
 /// </summary>
-public sealed class ConsoleBitmapPlayer : ConsolePanel
+public sealed partial class ConsoleBitmapPlayer : ConsolePanel
 {
     /// <summary>
     /// Gets the current state of the player
     /// </summary>
-    public PlayerState State { get { return Get<PlayerState>(); } private set { Set(value); } }
+    public partial PlayerState State { get; set; }
 
     /// <summary>
     /// An event that fires when the player stops
@@ -54,7 +54,7 @@ public sealed class ConsoleBitmapPlayer : ConsolePanel
     /// <summary>
     /// Gets or sets the rewind and fast forward increment, defaults to 10 seconds
     /// </summary>
-    public TimeSpan RewindAndFastForwardIncrement { get { return Get<TimeSpan>(); } set { Set(value); } }
+    public partial TimeSpan RewindAndFastForwardIncrement { get; set; }
 
     /// <summary>
     /// The bar that's rendered below the player.  It shows the current play cursor and loading progress.
@@ -165,8 +165,7 @@ public sealed class ConsoleBitmapPlayer : ConsolePanel
         {
             buttonBar.IsVisible = false;
         }
-
-        this.Subscribe(nameof(State), StateChanged, this);
+        this.StateChanged.Subscribe(OnStateChanged, this);
 
         this.Sync(nameof(RewindAndFastForwardIncrement), () =>
         {
@@ -340,7 +339,7 @@ public sealed class ConsoleBitmapPlayer : ConsolePanel
     /// <summary>
     /// The state change handler that defines what happens whenever the player changes state
     /// </summary>
-    private void StateChanged()
+    private void OnStateChanged()
     {
         if (State == PlayerState.Playing)
         {

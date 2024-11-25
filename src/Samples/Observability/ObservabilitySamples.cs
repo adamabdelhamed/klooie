@@ -1,6 +1,6 @@
 ﻿namespace klooie.Samples;
 
-internal class ObservabilitySamples
+internal partial class ObservabilitySamples
 {
     public static async Task Foo()
     {
@@ -65,25 +65,25 @@ internal class ObservabilitySamples
 //#EndSample
     }
 
-//#Sample -id ObservableObjectSampleDefined
-    public class SomeObservableObject : ObservableObject
+    //#Sample -id ObservableObjectSampleDefined
+    public partial class SomeObservableObject : IObservableObject
     {
         // This is the easiest way to make a property observable. Just use the base
         // class's Get and Set methods. 
-        public string ObservableString { get => Get<string>(); set => Set(value); }
+        public partial string ObservableString { get; set; }
     }
-//#EndSample
+    //#EndSample
 
     private static void Observer()
     {
 //#Sample -id ObservableObjectSampleConsumed
         var observable = new SomeObservableObject();
-
+        observable.ObservableStringChanged.Subscribe(() => { /* handler here */ }, ConsoleApp.Current);
         //Subscribes to changes in ObservableString for the duration of the app
-        observable.Subscribe(nameof(observable.ObservableString), () => { }, ConsoleApp.Current);
-        
+
+
         // same as the above subscription except it also calls the notification callback one time when the subscription is registered
-        observable.Sync(nameof(observable.ObservableString), () => { }, ConsoleApp.Current);
+        observable.ObservableStringChanged.Sync(() => { /* handler here */ }, ConsoleApp.Current);
 //#EndSample
     }
 

@@ -12,7 +12,7 @@
 /// If a control within ScrollableContent gets focus and it not currently in view then
 /// it will be automatically scrolled into view.
 /// </summary>
-public class ScrollablePanel : ProtectedConsolePanel
+public partial class ScrollablePanel : ProtectedConsolePanel
 {
     private Scrollbar verticalScrollbar;
     private Scrollbar horizontalScrollbar;
@@ -25,34 +25,12 @@ public class ScrollablePanel : ProtectedConsolePanel
     /// <summary>
     /// Gets or sets the current horizontal scroll amount in pixels
     /// </summary>
-    public int HorizontalScrollUnits
-    {
-        get
-        {
-            return Get<int>();
-        }
-        set
-        {
-            if (value < 0) throw new IndexOutOfRangeException("Value must be >= 0");
-            Set(value);
-        }
-    }
+    public partial int HorizontalScrollUnits{ get; set; }
 
     /// <summary>
     /// Gets or sets the current vertical scroll amount in pixels
     /// </summary>
-    public int VerticalScrollUnits
-    {
-        get
-        {
-            return Get<int>();
-        }
-        set
-        {
-            if (value < 0) throw new IndexOutOfRangeException("Value must be >= 0");
-            Set(value);
-        }
-    }
+    public partial int VerticalScrollUnits { get; set; }
 
     /// <summary>
     /// Creates a scrollable panel
@@ -64,6 +42,15 @@ public class ScrollablePanel : ProtectedConsolePanel
         verticalScrollbar = ProtectedPanel.Add(new Scrollbar(Orientation.Vertical) { ZIndex = 10, Width = 1 }).DockToRight();
         horizontalScrollbar = ProtectedPanel.Add(new Scrollbar(Orientation.Horizontal) { ZIndex = 10, Height = 1 }).DockToBottom();
         AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
+        HorizontalScrollUnitsChanged.Subscribe(() =>
+        {
+            if (HorizontalScrollUnits < 0) throw new Exception("HorizontalScrollUnits must be >= 0");
+        }, this);
+        VerticalScrollUnitsChanged.Subscribe(() =>
+        {
+            if (VerticalScrollUnits < 0) throw new Exception("VerticalScrollUnits must be >= 0");
+        }, this);
+
     }
 
     public override bool IsInView(ConsoleControl c)

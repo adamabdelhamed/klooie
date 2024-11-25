@@ -3,7 +3,7 @@
 /// <summary>
 /// A control that renders multi-line text and supports text wrapping
 /// </summary>
-public class TextViewer : ConsoleControl
+public partial class TextViewer : ConsoleControl
 {
     public enum AutoSizeMode
     {
@@ -47,7 +47,7 @@ public class TextViewer : ConsoleControl
     /// <summary>
     /// Gets or sets the max height. 
     /// </summary>
-    public int? MaxHeight { get { return Get<int?>(); } set { Set(value); } }
+    public partial int? MaxHeight { get; set; }
 
     /// <summary>
     /// Creates a new TextViewer

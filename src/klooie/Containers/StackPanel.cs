@@ -17,7 +17,7 @@ public enum Orientation
 /// <summary>
 /// A panel that handles stacking child controls
 /// </summary>
-public class StackPanel : ConsolePanel
+public partial class StackPanel : ConsolePanel
 {
     /// <summary>
     /// Specifies how auto sizing works
@@ -37,12 +37,12 @@ public class StackPanel : ConsolePanel
     /// <summary>
     /// Gets or sets the orientation of the control
     /// </summary>
-    public Orientation Orientation { get { return Get<Orientation>(); } set { Set(value); } }
+    public partial Orientation Orientation { get; set; }
 
     /// <summary>
     /// Gets or sets the value, in number of console pixels to space between child elements.  Defaults to 0.
     /// </summary>
-    public int Margin { get { return Get<int>(); } set { Set(value); } }
+    public partial int Margin { get; set; }
 
     /// <summary>
     /// Control the auto size behavior of the stack panel Defaults to None.

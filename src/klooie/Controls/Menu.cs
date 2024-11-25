@@ -4,7 +4,7 @@
 /// and down arrows
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public class Menu<T> : ProtectedConsolePanel where T : class
+public partial class Menu<T> : ProtectedConsolePanel where T : class
 {
     private List<T> menuItems;
     private Func<T, ConsoleString> formatter;
@@ -13,7 +13,7 @@ public class Menu<T> : ProtectedConsolePanel where T : class
     /// <summary>
     /// Gets or sets the selected index
     /// </summary>
-    public int SelectedIndex { get => Get<int>(); set => Set(value); }
+    public partial int SelectedIndex { get; set; }
 
     /// <summary>
     /// Optionally define an alternate key for up to be honored in addition to the up arrow

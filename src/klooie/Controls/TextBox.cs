@@ -2,7 +2,7 @@
 /// <summary>
 /// A control that lets the user provide text input
 /// </summary>
-public class TextBox : ConsoleControl
+public partial class TextBox : ConsoleControl
 {
     private static readonly TimeSpan BlinkInterval = TimeSpan.FromMilliseconds(500);
     private ConsoleApp.SetIntervalHandle blinkTimerHandle;
@@ -23,7 +23,7 @@ public class TextBox : ConsoleControl
     /// <summary>
     /// Gets or sets the value in the text box
     /// </summary>
-    public ConsoleString Value { get => Get<ConsoleString>(); set => Set(value); }
+    public partial ConsoleString Value { get; set; }
 
     /// <summary>
     /// Set to true to block input while continuing to allow focus.

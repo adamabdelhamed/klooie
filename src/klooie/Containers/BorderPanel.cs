@@ -2,14 +2,14 @@
 /// <summary>
 /// A panel that will have a uniform colored border around it
 /// </summary>
-public class BorderPanel : ProtectedConsolePanel
+public partial class BorderPanel : ProtectedConsolePanel
 {
     private ConsolePanel container;
 
     /// <summary>
     /// Set this to override the border color. By default the panel will try to find a dark version of your content's background color.
     /// </summary>
-    public RGB? BorderColor { get => Get<RGB?>(); set => Set(value); }
+    public partial RGB? BorderColor { get; set; }
 
     /// <summary>
     /// Creates a new BorderPanel

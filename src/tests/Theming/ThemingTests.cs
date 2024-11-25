@@ -180,9 +180,9 @@ public class ThemingTests
 
 
 [ThemeIgnore(typeof(Label))]
-public class TestThemeableControl : ProtectedConsolePanel
+public partial class TestThemeableControl : ProtectedConsolePanel
 {
-    public RGB CustomThemeableColor { get => Get<RGB>(); set => Set(value); }
+    public partial RGB CustomThemeableColor { get; set; }
  
     public TestThemeableControl()
     {

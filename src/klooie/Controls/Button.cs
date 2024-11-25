@@ -33,7 +33,7 @@ public class KeyboardShortcut
 /// <summary>
 /// A button control that can be 'pressed' by the user
 /// </summary>
-public class Button : ConsoleControl
+public partial class Button : ConsoleControl
 {
     private KeyboardShortcut shortcut;
     private ConsoleString display;
@@ -45,7 +45,7 @@ public class Button : ConsoleControl
     /// <summary>
     /// Gets or sets the text that is displayed on the button
     /// </summary>
-    public ConsoleString? Text { get => Get<ConsoleString>(); set => Set(value); }
+    public partial ConsoleString? Text { get; set; }
 
     /// <summary>
     /// Creates a new button control

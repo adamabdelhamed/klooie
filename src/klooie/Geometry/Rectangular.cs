@@ -1,14 +1,12 @@
 ﻿namespace klooie;
 
-public class Rectangular : ObservableObject
+public partial class Rectangular : ObservableObject, IObservableObject
 {
     private int x, y, w, h;
     private RectF fBounds;
 
 
-    private int z;
-
-    public int ZIndex { get => z; set => SetHardIf(ref z, value, z != value); }
+    public partial int ZIndex { get; set; }
 
     internal int ColliderHashCode { get; set; } = -1;
 

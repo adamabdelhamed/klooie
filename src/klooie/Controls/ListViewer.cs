@@ -28,7 +28,7 @@ public class HeaderDefinition<T> : HeaderDefinition where T : class
     public Func<T, ConsoleControl> Formatter { get; set; }
 }
 
-public class ListViewer<T> : ProtectedConsolePanel where T : class
+public partial class ListViewer<T> : ProtectedConsolePanel where T : class
 {
     private ListViewerOptions<T> options;
     private int lastTopOfPageIndex;
@@ -39,8 +39,8 @@ public class ListViewer<T> : ProtectedConsolePanel where T : class
     private List<Lifetime> highlightLifetimes = new List<Lifetime>();
 
     public Event SelectionChanged { get; private init; } = new Event();
-    public int SelectedRowIndex { get => Get<int>(); set => Set(value); }
-    public int SelectedColumnIndex { get => Get<int>(); set => Set(value); }
+    public partial int SelectedRowIndex { get; set; }
+    public partial int SelectedColumnIndex { get; set; }
     public int PageIndex => (int)Math.Floor(topOfPageDataIndex / (double)presenter.MaxRowsThatCanBePresented);
     public int PageCount => (int)Math.Ceiling(options.DataSource.Count / (double)presenter.MaxRowsThatCanBePresented);
 

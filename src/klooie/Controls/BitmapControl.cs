@@ -2,27 +2,27 @@
 /// <summary>
 /// A control that displays a ConsoleBitmap
 /// </summary>
-public class BitmapControl : ConsoleControl
+public partial class BitmapControl : ConsoleControl
 {
     /// <summary>
     /// Gets or sets the horizontal offset to apply when deciding which pixels to draw from the bitmap
     /// </summary>
-    public int OffsetX { get => Get<int>(); set => Set(value); }
+    public partial int OffsetX { get; set; }
 
     /// <summary>
     /// Gets or sets the vertical offset to apply when deciding which pixels to draw from the bitmap
     /// </summary>
-    public int OffsetY { get => Get<int>(); set => Set(value); }
+    public partial int OffsetY { get; set; }
 
     /// <summary>
     /// The Bitmap image to render in the control
     /// </summary>
-    public ConsoleBitmap Bitmap { get => Get<ConsoleBitmap>(); set => Set(value);  }
+    public partial ConsoleBitmap Bitmap { get; set; }
 
     /// <summary>
     /// If true then this control will auto size itself based on its target bitmap
     /// </summary>
-    public bool AutoSize { get => Get<bool>();  set => Set(value);  }
+    public partial bool AutoSize { get; set; }
 
     /// <summary>
     /// Creates a new Bitmap control
@@ -30,10 +30,10 @@ public class BitmapControl : ConsoleControl
     /// </summary>
     public BitmapControl(ConsoleBitmap initialValue = null)
     {
-        this.Subscribe(nameof(AutoSize), BitmapOrAutoSizeChanged, this);
-        this.Subscribe(nameof(Bitmap), BitmapOrAutoSizeChanged, this);
-        this.Subscribe(nameof(OffsetX), BitmapOrAutoSizeChanged, this);
-        this.Subscribe(nameof(OffsetY), BitmapOrAutoSizeChanged, this);
+        AutoSizeChanged.Subscribe( BitmapOrAutoSizeChanged, this);
+        BitmapChanged.Subscribe(BitmapOrAutoSizeChanged, this);
+        OffsetXChanged.Subscribe(BitmapOrAutoSizeChanged, this);
+        OffsetYChanged.Subscribe(BitmapOrAutoSizeChanged, this);
         Bitmap = initialValue;
     }
 

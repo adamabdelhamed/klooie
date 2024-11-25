@@ -24,9 +24,9 @@ public class TabControlOptions
     public TabAlignment TabAlignment { get; set; } = TabAlignment.Center;
 }
 
-public class TabControl : ProtectedConsolePanel
+public partial class TabControl : ProtectedConsolePanel
 {
-    public RGB SelectedAndUnfocusedTabColor { get => Get<RGB>(); set => Set(value); }
+    public partial RGB SelectedAndUnfocusedTabColor { get; set; }
     private GridLayout layout;
     private ConsolePanel tabContainer;
     private StackPanel tabStack;

@@ -3,14 +3,14 @@
 /// <summary>
 /// A control that toggles between on and off
 /// </summary>
-public class ToggleControl : ProtectedConsolePanel
+public partial class ToggleControl : ProtectedConsolePanel
 {
     private Label valueLabel;
     private Lifetime valueLifetime;
     /// <summary>
     /// Gets or sets the current On / Off value
     /// </summary>
-    public bool On { get => Get<bool>(); set => Set(value); }
+    public partial bool On { get; set; }
 
     /// <summary>
     /// The On label text
@@ -25,12 +25,12 @@ public class ToggleControl : ProtectedConsolePanel
     /// <summary>
     /// The On color
     /// </summary>
-    public RGB OnColor { get => Get<RGB>(); set => Set(value); }
+    public partial RGB OnColor { get; set; }
 
     /// <summary>
     /// The Off color
     /// </summary>
-    public RGB OffColor { get => Get<RGB>(); set => Set(value); }
+    public partial RGB OffColor { get; set; }
 
     /// <summary>
     /// Creates a new ToggleControl

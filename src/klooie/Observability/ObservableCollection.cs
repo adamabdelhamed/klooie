@@ -52,9 +52,8 @@ public class IndexAssignment<T> : IIndexAssignment
 /// An observable list implementation
 /// </summary>
 /// <typeparam name="T">the type of elements this collection will contain</typeparam>
-public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, IObservableObject
+public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
 {
-    private ObservableObject observable;
     private List<T> wrapped;
     private Dictionary<T, Lifetime> membershipLifetimes;
     private Event<object> _untypedAdded = new Event<object>();
@@ -64,15 +63,8 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
     private Event<IIndexAssignment> untyped_Assigned = new Event<IIndexAssignment>();
     Event<IIndexAssignment> IObservableCollection.AssignedToIndex => untyped_Assigned;
 
-    public void Subscribe(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.Subscribe(propertyName, handler, lifetimeManager);
-    public void Sync(string propertyName, Action handler, ILifetimeManager lifetimeManager) => observable.Sync(propertyName, handler, lifetimeManager);
-    public T Get<T>([CallerMemberName] string name = null) => observable.Get<T>(name);
-    public void Set<T>(T value, [CallerMemberName] string name = null) => observable.Set<T>(value);
-    public ILifetimeManager GetPropertyValueLifetime(string propertyName) => observable.GetPropertyValueLifetime(propertyName);
+   
     public int LastModifiedIndex { get; private set; }
-
-    public string Id { get => observable.Get<string>(); set => observable.Set(value); }
-
     /// <summary>
     /// Called before an item is added to the list
     /// </summary>
@@ -111,7 +103,6 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
     {
         wrapped = new List<T>();
         membershipLifetimes = new Dictionary<T, Lifetime>();
-        observable = new ObservableObject();
     }
 
     /// <summary>
