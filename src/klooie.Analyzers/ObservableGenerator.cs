@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -14,6 +15,7 @@ namespace klooie
 
         public void Execute(GeneratorExecutionContext context)
         {
+
             var compilation = context.Compilation;
 
             var iObservableObjectSymbol = compilation.GetTypeByMetadataName("klooie.IObservableObject");
@@ -31,6 +33,10 @@ namespace klooie
                 if (!classSymbol.AllInterfaces.Any(i => i.Equals(iObservableObjectSymbol, SymbolEqualityComparer.Default))) continue;
 
                 var source = ProcessClass(classSymbol);
+                if (classSymbol.Name.Contains("Dropdown"))
+                {
+                    //Debugger.Launch();                    
+                }
                 context.AddSource($"{classSymbol.Name}_ObservableProperties.g.cs", SourceText.From(source, Encoding.UTF8));
             }
         }
@@ -40,6 +46,7 @@ namespace klooie
             var sb = new StringBuilder();
 
             sb.AppendLine("using System;");
+            sb.AppendLine("using System.Linq;");
             sb.AppendLine("using klooie;");
 
             var namespaceName = classSymbol.ContainingNamespace.IsGlobalNamespace ? null : classSymbol.ContainingNamespace.ToDisplayString();
@@ -133,12 +140,31 @@ namespace klooie
             }
 
             sb.AppendLine($"{Indent(indent)}public void Subscribe(string propertyName, Action handler, ILifetimeManager lifetimeManager)");
-            sb.AppendLine(Indent(indent)+"{");
+            sb.AppendLine(Indent(indent) + "{");
             indent += standardIndent;
+
+            // Try to get the property and subscribe if found
             sb.AppendLine(Indent(indent) + "var eventProp = GetType().GetProperty($\"{propertyName}Changed\", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);");
-            sb.AppendLine(Indent(indent) + "if (eventProp == null) throw new ArgumentException($\"No event found for property {propertyName}\");");
+            sb.AppendLine(Indent(indent) + "if (eventProp != null)");
+            sb.AppendLine(Indent(indent) + "{");
+            indent += standardIndent;
             sb.AppendLine(Indent(indent) + "var eventInstance = (Event)eventProp.GetValue(this);");
             sb.AppendLine(Indent(indent) + "eventInstance.Subscribe(handler, lifetimeManager);");
+            sb.AppendLine(Indent(indent) + "return;");
+            indent -= standardIndent;
+            sb.AppendLine(Indent(indent) + "}");
+
+            // Check if the current object derives from ObservableObject
+            sb.AppendLine(Indent(indent) + "if (((object)this) is ObservableObject observableObject)");
+            sb.AppendLine(Indent(indent) + "{");
+            indent += standardIndent;
+            sb.AppendLine(Indent(indent) + "observableObject.Subscribe(propertyName, handler, lifetimeManager);");
+            sb.AppendLine(Indent(indent) + "return;");
+            indent -= standardIndent;
+            sb.AppendLine(Indent(indent) + "}");
+
+            // If no event and not an ObservableObject, throw an exception
+            sb.AppendLine(Indent(indent) + "throw new ArgumentException($\"No event found for property {propertyName}\");");
             indent -= standardIndent;
             sb.AppendLine(Indent(indent) + "}");
             sb.AppendLine();
