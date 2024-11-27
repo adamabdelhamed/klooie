@@ -97,7 +97,7 @@ public class MovementTests
         var factory = () =>
         {
             c = new GameCollider();
-            c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
+            c.BoundsChanged.Sync(() => ev.Fire(c.Center()), c);
             return c;
         };
         GamingTest.Run(new GamingTestOptions()
@@ -167,7 +167,7 @@ public class MovementTests
             cMover.MoveTo(Game.Current.Width / 2f, Game.Current.Height / 2f);
         }
 
-        cMover.Subscribe(nameof(cMover.Bounds), () =>
+        cMover.BoundsChanged.Subscribe(() =>
         {
             var overlaps = cMover.GetObstacles()
             .Where(o => o.OverlapPercentage(cMover) > 0).ToArray();

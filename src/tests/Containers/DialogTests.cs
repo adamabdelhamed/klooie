@@ -135,7 +135,7 @@ public class DialogTests
         {
             var ret = new ConsolePanel() { Width = 60, Height = 7, Background = RGB.Red, IsVisible = false };
             ret.Ready.SubscribeOnce(() => Assert.IsFalse(label.HasFocus));
-            ret.SubscribeOnce(nameof(ret.IsVisible), async () =>
+            ret.IsVisibleChanged.SubscribeOnce(async () =>
             {
                 if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
                 Assert.IsTrue(ret.IsVisible);

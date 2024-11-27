@@ -66,7 +66,6 @@ public static class ILifetimeManagerEx
 internal sealed class LifetimeManager : ILifetimeManager
 {
     private List<Subscription> subscribers = new List<Subscription>();
-    private List<SubscriptionWithParam> subscribersWithParams = new List<SubscriptionWithParam>();
 
     /// <summary>
     /// returns true if expired
@@ -77,7 +76,7 @@ internal sealed class LifetimeManager : ILifetimeManager
 
     public bool ShouldStop => !ShouldContinue;
 
-    internal void Finish() => NotificationBufferPool.Notify(subscribers, subscribersWithParams);
+    internal void Finish() => NotificationBufferPool.Notify(subscribers);
 
     /// <summary>
     /// Registers the given disposable to dispose when the lifetime being
@@ -104,22 +103,6 @@ internal sealed class LifetimeManager : ILifetimeManager
         {
             Callback = cleanupCode,
             Lifetime = this,
-        });
-    }
-
-    /// <summary>
-    /// Registers the given cleanup code to run when the lifetime being
-    /// managed by this manager ends
-    /// </summary>
-    /// <param name="cleanupCode">the code to run</param>
-    /// <param name="param">the parameter to pass</param>
-    public void OnDisposed(Action<object> cleanupCode, object param)
-    {
-        subscribersWithParams.Add(new SubscriptionWithParam()
-        {
-            Callback = cleanupCode,
-            Lifetime = this,
-            Param = param
         });
     }
 }

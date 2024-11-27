@@ -23,7 +23,7 @@ public class ScrollablePanelTests
 
         // IMPORTANT - The ScrollableContent container is the thing that will scroll if it's bigger than the view
         //             so make sure it's height gets bigger as its content grows.
-        stack.Subscribe(nameof(stack.Bounds), () => scrollPanel.ScrollableContent.Height = stack.Height, stack);
+        stack.BoundsChanged.Subscribe(() => scrollPanel.ScrollableContent.Height = stack.Height, stack);
 
         // Step 3 - Add 100 focusable rows to the stack panel. Making the rows focusable is critical since
         //          the scroll panel will automatically take care of scrolling to the currently focused control

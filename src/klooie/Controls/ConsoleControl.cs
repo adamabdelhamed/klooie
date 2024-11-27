@@ -30,19 +30,10 @@ public class ConsoleControlFilter : IConsoleControlFilter
 /// <summary>
 /// A class that represents a visual element within a CLI application
 /// </summary>
-public class ConsoleControl : Rectangular
+public partial class ConsoleControl : Rectangular
 {
     private Event _focused, _unfocused, _addedToVisualTree, _beforeAddedToVisualTree, _removedFromVisualTree, _beforeRemovedFromVisualTree, _ready, _tagsChanged;
     private Event<ConsoleKeyInfo> _keyInputReceived;
-    private Container _parent;
-    private RGB _bg, _fg, _focusColor, _focusContrastColor;
-    private bool _hasFocus;
-    private bool _tabSkip;
-    private bool _canFocus;
-    private bool _isVisible;
-    private object _tag;
-    private string _id;
-    private CompositionMode _composition;
     private bool hasBeenAddedToVisualTree;
     private HashSet<string> tags;
 
@@ -72,49 +63,42 @@ public class ConsoleControl : Rectangular
     /// <summary>
     /// Controls how controls are painted when multiple controls overlap
     /// </summary>
-    public CompositionMode CompositionMode { get { return _composition; } set { SetHardIf(ref _composition, value, value != _composition); } }
+    public partial CompositionMode CompositionMode { get; set; }
 
     /// <summary>
-    /// Gets the Id of the control which can only be set at initialization time
+    /// Gets or sets the id of the control
     /// </summary>
-    public string Id { get => _id; 
-        set
-        {
-            if (_id != null) throw new ArgumentException("Id already set");
-            if (value == null) throw new ArgumentNullException("value cannot be null");
-            SetHardIf(ref _id, value, _id != value);
-        }
-    }
+    public string Id { get; set; }
 
     /// <summary>
     /// An event that fires after this control gets focus
     /// </summary>
-    public Event Focused { get => _focused ?? (_focused = new Event()); }
+    public Event Focused { get => _focused ?? (_focused = EventPool.Rent()); }
 
     /// <summary>
     /// An event that fires after this control loses focus
     /// </summary>
-    public Event Unfocused { get => _unfocused ?? (_unfocused = new Event()); }
+    public Event Unfocused { get => _unfocused ?? (_unfocused = EventPool.Rent()); }
 
     /// <summary>
     /// An event that fires when this control is added to the visual tree of a ConsoleApp. 
     /// </summary>
-    public Event AddedToVisualTree { get => _addedToVisualTree ?? (_addedToVisualTree = new Event()); }
+    public Event AddedToVisualTree { get => _addedToVisualTree ?? (_addedToVisualTree = EventPool.Rent()); }
 
     /// <summary>
     /// An event that fires just before this control is added to the visual tree of a ConsoleApp
     /// </summary>
-    public Event BeforeAddedToVisualTree { get => _beforeAddedToVisualTree ?? (_beforeAddedToVisualTree = new Event()); }
+    public Event BeforeAddedToVisualTree { get => _beforeAddedToVisualTree ?? (_beforeAddedToVisualTree = EventPool.Rent()); }
 
     /// <summary>
     /// An event that fires when this control is removed from the visual tree of a ConsoleApp.
     /// </summary>
-    public Event RemovedFromVisualTree { get => _removedFromVisualTree ?? (_removedFromVisualTree = new Event()); }
+    public Event RemovedFromVisualTree { get => _removedFromVisualTree ?? (_removedFromVisualTree = EventPool.Rent()); }
 
     /// <summary>
     /// An event that fires just before this control is removed from the visual tree of a ConsoleApp
     /// </summary>
-    public Event BeforeRemovedFromVisualTree { get => _beforeRemovedFromVisualTree ?? (_beforeRemovedFromVisualTree = new Event()); }
+    public Event BeforeRemovedFromVisualTree { get => _beforeRemovedFromVisualTree ?? (_beforeRemovedFromVisualTree = EventPool.Rent()); }
 
     /// <summary>
     /// An event that fires when a key is pressed while this control has focus and the control has decided not to process
@@ -125,7 +109,7 @@ public class ConsoleControl : Rectangular
     /// <summary>
     /// An event that fires any time its tags changes
     /// </summary>
-    public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = new Event()); }
+    public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = EventPool.Rent()); }
 
     /// <summary>
     /// Gets a reference to the application this control is a part of
@@ -136,22 +120,22 @@ public class ConsoleControl : Rectangular
     /// Gets a reference to this control's parent in the visual tree.  It will be null if this control is not in the visual tree 
     /// and also if this control is the root of the visual tree.
     /// </summary>
-    public Container Parent { get { return _parent; } internal set { SetHardIf(ref _parent, value, _parent == null); } }
+    public partial Container Parent { get; set; }
 
     /// <summary>
     /// Gets or sets the background color
     /// </summary>
-    public RGB Background { get { return _bg; } set { SetHardIf(ref _bg, value, value != _bg); } }
+    public partial RGB Background { get; set; }
 
     /// <summary>
     /// Gets or sets the foreground color
     /// </summary>
-    public RGB Foreground { get { return _fg; } set { SetHardIf(ref _fg, value, value != _fg); } }
+    public partial RGB Foreground { get; set; }
 
     /// <summary>
     /// An arbitrary reference to an object to associate with this control
     /// </summary>
-    public object Tag { get { return _tag; } set { SetHardIf(ref _tag, value, ReferenceEquals(_tag, value) == false); } }
+    public partial object Tag { get; set; }
 
     /// <summary>
     /// An arbitrary set of tags, which can be interpreted as raw strings or key value pairs when the
@@ -163,34 +147,34 @@ public class ConsoleControl : Rectangular
     /// Gets or sets whether or not this control is visible.  Invisible controls are still fully functional, except that they
     /// don't get painted
     /// </summary>
-    public virtual bool IsVisible { get { return _isVisible; } set { SetHardIf(ref _isVisible, value, _isVisible != value); } }
+    public partial bool IsVisible { get; set; }
 
     /// <summary>
     /// Gets or sets whether or not this control can accept focus.  By default this is set to true, but can
     /// be overridden by derived classes to be false by default.
     /// </summary>
-    public virtual bool CanFocus { get { return _canFocus; } set { SetHardIf(ref _canFocus, value, _canFocus != value); } }
+    public partial bool CanFocus { get; set; }
 
     /// <summary>
     /// Gets or sets whether or not this control can accept focus via the tab key. By default this is set to false. This
     /// is useful if you to control how focus is managed for larger collections.
     /// </summary>
-    public virtual bool TabSkip { get { return _tabSkip; } set { SetHardIf(ref _tabSkip, value, _tabSkip != value); } }
+    public partial bool TabSkip { get; set; }
 
     /// <summary>
     /// Gets whether or not this control currently has focus
     /// </summary>
-    public bool HasFocus { get { return _hasFocus; } internal set { SetHardIf(ref _hasFocus, value, _hasFocus != value); } }
+    public partial bool HasFocus { get; set; }
 
     /// <summary>
     /// Gets the color used to indicate focus
     /// </summary>
-    public RGB FocusColor { get { return _focusColor; } set { SetHardIf(ref _focusColor, value, _focusColor != value); } }
+    public partial RGB FocusColor { get; set; }
 
     /// <summary>
     /// Gets the color used to indicate focus contrast
     /// </summary>
-    public RGB FocusContrastColor { get { return _focusContrastColor; } set { SetHardIf(ref _focusContrastColor, value, _focusContrastColor != value); } }
+    public partial RGB FocusContrastColor { get; set; }
 
     /// <summary>
     /// The writer used to record the visual state of the control
@@ -211,7 +195,7 @@ public class ConsoleControl : Rectangular
     /// <summary>
     /// An event that fires when this control is both added to an app and that app is running
     /// </summary>
-    public Event Ready { get => _ready ?? (_ready = new Event()); }
+    public Event Ready { get => _ready ?? (_ready = EventPool.Rent()); }
 
     /// <summary>
     /// Gets the x coordinate of this control relative to the application root
@@ -267,10 +251,67 @@ public class ConsoleControl : Rectangular
         }
     }
 
+    private ConsoleBitmap _bitmap;
     /// <summary>
     /// Gets this controls bitmap, which can be painted onto its parent
     /// </summary>
-    public ConsoleBitmap Bitmap { get; internal set; }
+    public ConsoleBitmap Bitmap
+    { 
+        get
+        {
+            _bitmap = _bitmap ?? new ConsoleBitmap(Width, Height);
+            return _bitmap;
+        }
+        internal set
+        {
+            _bitmap = value;
+        }
+    }
+
+    private void ReturnEvents()
+    {
+        //_focused, _unfocused, _addedToVisualTree, _beforeAddedToVisualTree, _removedFromVisualTree, _beforeRemovedFromVisualTree, _ready, _tagsChanged
+        if (_focused != null)
+        {
+            EventPool.Return(_focused);
+            _focused = null;
+        }
+        if (_unfocused != null)
+        {
+            EventPool.Return(_unfocused);
+            _unfocused = null;
+        }
+        if (_addedToVisualTree != null)
+        {
+            EventPool.Return(_addedToVisualTree);
+            _addedToVisualTree = null;
+        }
+        if (_beforeAddedToVisualTree != null)
+        {
+            EventPool.Return(_beforeAddedToVisualTree);
+            _beforeAddedToVisualTree = null;
+        }
+        if (_removedFromVisualTree != null)
+        {
+            EventPool.Return(_removedFromVisualTree);
+            _removedFromVisualTree = null;
+        }
+        if (_beforeRemovedFromVisualTree != null)
+        {
+            EventPool.Return(_beforeRemovedFromVisualTree);
+            _beforeRemovedFromVisualTree = null;
+        }
+        if (_ready != null)
+        {
+            EventPool.Return(_ready);
+            _ready = null;
+        }
+        if (_tagsChanged != null)
+        {
+            EventPool.Return(_tagsChanged);
+            _tagsChanged = null;
+        }
+    }
 
     /// <summary>
     /// Creates a ConsoleControl with an Id
@@ -278,7 +319,7 @@ public class ConsoleControl : Rectangular
     /// <param name="id">the id</param>
     public ConsoleControl(string id) : this()
     {
-        this._id = id;
+        this.Id = id;
     }
 
     /// <summary>
@@ -295,9 +336,8 @@ public class ConsoleControl : Rectangular
     /// </summary>
     /// <param name="id">the id</param>
     /// <param name="initialTags">the tags</param>
-    public ConsoleControl(string id, IEnumerable<string> initialTags) : this()
+    public ConsoleControl(string id, IEnumerable<string> initialTags) : this(id)
     {
-        this._id = id;
         AddTags(initialTags);
     }
 
@@ -308,18 +348,21 @@ public class ConsoleControl : Rectangular
     {
         CanFocus = true;
         TabSkip = false;
-        this.Bitmap = new ConsoleBitmap(1, 1);
-        this.Width = Bitmap.Width;
-        this.Height = Bitmap.Height;
+        this.Width = 1;
+        this.Height = 1;
         Background = DefaultColors.BackgroundColor;
         this.Foreground = DefaultColors.ForegroundColor;
         this.IsVisible = true;
         FocusColor = DefaultColors.FocusColor;
         FocusContrastColor = DefaultColors.FocusContrastColor;
         CompositionMode = CompositionMode.PaintOver;
-        Subscribe(nameof(AnyProperty), () => Application?.RequestPaint(), this);
-        Subscribe(nameof(Bounds), ResizeBitmapOnBoundsChanged, this);
-        Subscribe(nameof(CanFocus), () => { if (HasFocus && CanFocus == false && ShouldContinue) Application?.MoveFocus(); }, this);
+        SubscribeToAnyPropertyChange(() =>
+        {
+            Application?.RequestPaint();
+        }, this);
+        BoundsChanged.Subscribe(ResizeBitmapOnBoundsChanged, this);
+        CanFocusChanged.Subscribe(() => { if (HasFocus && CanFocus == false && ShouldContinue) Application?.MoveFocus(); }, this);
+        OnDisposed(ReturnEvents);
     }
 
     /// <summary>
@@ -336,7 +379,7 @@ public class ConsoleControl : Rectangular
         }
         var h = this.Height;
         var w = this.Width;
-        this.Subscribe(nameof(Bounds), () =>
+        BoundsChanged.Subscribe(() =>
         {
             if (Width != w || Height != h)
             {
@@ -457,10 +500,10 @@ public class ConsoleControl : Rectangular
     public void Unfocus() => Application?.MoveFocus(true);
 
     public void SyncBackground(params ConsoleControl[] others)
-        => others.ForEach(other => this.Sync(nameof(Background), () => other.Background = this.Background, other));
+        => others.ForEach(other => BackgroundChanged.Sync(() => other.Background = this.Background, other));
 
     public void SyncForeground(params ConsoleControl[] others)
-        => others.ForEach(other => this.Sync(nameof(Foreground), () => other.Foreground = this.Foreground, other));
+        => others.ForEach(other => ForegroundChanged.Sync(() => other.Foreground = this.Foreground, other));
 
     /// <summary>
     /// You should override this method if you are building a custom control, from scratch, and need to control
@@ -518,7 +561,6 @@ public class ConsoleControl : Rectangular
         {
             return;
         }
-
         Bitmap.Fill(new ConsoleCharacter(' ', null, Background));
 
         OnPaint(Bitmap);
@@ -574,7 +616,14 @@ public class ConsoleControl : Rectangular
     private void ResizeBitmapOnBoundsChanged()
     {
         if (ShouldContinue == false || Width <= 0 || Height <= 0) return;
-        Bitmap.Resize(Width, Height);
+        if (Bitmap == null)
+        {
+            Bitmap = new ConsoleBitmap(Width, Height);
+        }
+        else
+        {
+            Bitmap.Resize(Width, Height);
+        }
     }
 
     private string ParseTagValue(string tag)

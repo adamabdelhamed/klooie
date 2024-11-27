@@ -38,7 +38,7 @@ public partial class ScrollablePanel : ProtectedConsolePanel
     public ScrollablePanel()
     {
         ScrollableContent = ProtectedPanel.Add(new ConsolePanel()).Fill();
-        Sync(nameof(Background), () => ScrollableContent.Background = Background, this);
+        BackgroundChanged.Sync(()=> ScrollableContent.Background = Background, this);
         verticalScrollbar = ProtectedPanel.Add(new Scrollbar(Orientation.Vertical) { ZIndex = 10, Width = 1 }).DockToRight();
         horizontalScrollbar = ProtectedPanel.Add(new Scrollbar(Orientation.Horizontal) { ZIndex = 10, Height = 1 }).DockToBottom();
         AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
@@ -79,10 +79,10 @@ public partial class ScrollablePanel : ProtectedConsolePanel
     private void OnAddedToVisualTree()
     {
         Application.FocusChanged.Subscribe(FocusChanged, this);
-        Sync(nameof(HorizontalScrollUnits), UpdateScrollbars, this);
-        Sync(nameof(VerticalScrollUnits), UpdateScrollbars, this);
-        ScrollableContent.Subscribe(nameof(Bounds), UpdateScrollbars, this);
-        ScrollableContent.Controls.Sync(c => c.Subscribe(nameof(Bounds), UpdateScrollbars, c), (c) => { }, () => { }, this);
+        HorizontalScrollUnitsChanged.Sync(UpdateScrollbars, this);
+        VerticalScrollUnitsChanged.Sync(UpdateScrollbars, this);
+        ScrollableContent.BoundsChanged.Subscribe(UpdateScrollbars, this);
+        ScrollableContent.Controls.Sync(c => c.BoundsChanged.Subscribe(UpdateScrollbars, c), (c) => { }, () => { }, this);
     }
 
     private void UpdateScrollbars()

@@ -55,12 +55,12 @@ public partial class Button : ConsoleControl
     {
         this.shortcut = shortcut;
         Height = 1;
-        this.Subscribe(nameof(Text), UpdateText, this);
-        this.Subscribe(nameof(Foreground),UpdateText, this);
-        this.Subscribe(nameof(Background),UpdateText, this);
+        TextChanged.Subscribe(UpdateText, this);
+        ForegroundChanged.Subscribe(UpdateText, this);
+        BackgroundChanged.Subscribe(UpdateText, this);
+        CanFocusChanged.Subscribe(UpdateText, this);
         this.Focused.Subscribe(UpdateText, this);
         this.Unfocused.Subscribe(UpdateText, this);
-        this.Subscribe(nameof(CanFocus), UpdateText, this);
         this.AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
         this.KeyInputReceived.Subscribe(OnKeyInputReceived, this);
     }

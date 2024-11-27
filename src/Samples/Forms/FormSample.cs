@@ -4,7 +4,7 @@ using klooie;
 namespace klooie.Samples;
 
 // define a class where each property will map to a form input field
-public partial class FormModel : ObservableObject
+public partial class FormModel : IObservableObject
 {
     [FormWidth(25)] // this attribute controls the width of the input control
     [FormLabel("First Name")] // this attribute lets you customize the label

@@ -68,13 +68,13 @@ public partial class TabControl : ProtectedConsolePanel
         Options.Tabs.Changed.Sync(RefreshTabs, this);
         ConsoleApp.Current.FocusChanged.Subscribe(c => RefreshFocus(), this);
 
-        Sync(nameof(Background), () =>
+        BackgroundChanged.Sync(() =>
         {
             layout.Background = this.Background;
             tabContainer.Background = this.Background;
             if(tabStack != null) tabStack.Background = this.Background;
         }, this);
-        Subscribe(AnyProperty, RefreshFocus, this);
+        SubscribeToAnyPropertyChange(RefreshFocus, this);
     }
 
     private void RefreshFocus()

@@ -18,7 +18,7 @@ public class MinimumSizeShield : ConsolePanel
         this.options = options;
         IsVisible = false;
         messageLabel = this.Add(new Label()).CenterBoth();
-        this.Subscribe(nameof(Bounds), CheckSize, this);
+        BoundsChanged.Subscribe(CheckSize, this);
         ZIndex = int.MaxValue;
     }
 

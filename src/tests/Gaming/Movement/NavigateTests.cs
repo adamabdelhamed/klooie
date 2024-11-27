@@ -58,7 +58,7 @@ public class NavigateTests
         var factory = () =>
         {
             c = new GameCollider();
-            c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
+            c.BoundsChanged.Sync(() => ev.Fire(c.Center()), c);
             return c;
         };
         GamingTest.Run(new GamingTestOptions()
@@ -113,7 +113,7 @@ public class NavigateTests
         }
         foreach(var collider in Game.Current.GamePanel.Controls.WhereAs<TextCollider>())
         {
-            collider.Sync(nameof(collider.Bounds), () =>
+            collider.BoundsChanged.Sync(() =>
             {
                 if (collider.OverlapPercentage(left) > 0 || collider.OverlapPercentage(top) > 0 || collider.OverlapPercentage(right) > 0 || collider.OverlapPercentage(bottom) > 0)
                 {
@@ -141,7 +141,7 @@ public class NavigateTests
         var factory = () =>
         {
             c = new GameCollider();
-            c.Sync(nameof(c.Bounds), () => ev.Fire(c.Center()), c);
+            c.BoundsChanged.Sync(() => ev.Fire(c.Center()), c);
             return c;
         };
         GamingTest.Run(new GamingTestOptions()
@@ -195,7 +195,7 @@ public class NavigateTests
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
 
         var path = new List<RectF>() { cMover.Bounds };
-        cMover.Subscribe(nameof(cMover.Bounds), () =>
+        cMover.BoundsChanged.Subscribe(() =>
          {
              if (success) return;
              path.Add(cMover.Bounds);

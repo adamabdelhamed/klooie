@@ -1,37 +1,23 @@
-﻿namespace klooie;
+﻿using PowerArgs.Samples;
+using System.Collections.Concurrent;
+
+namespace klooie;
 /// <summary>
 /// A lifetime aware event
 /// </summary>
 public sealed class Event
 {
-    private List<Subscription> subscribers;
-    private List<SubscriptionWithParam> subscribersWithParams;
+    private List<Subscription>? subscribers;
 
     /// <summary>
     /// returns true if there is at least one subscriber
     /// </summary>
-    public bool HasSubscriptions => subscribers.Any() || subscribersWithParams.Any();
+    public bool HasSubscriptions => subscribers?.Any() == true;
          
-    /// <summary>
-    /// creates a new event
-    /// </summary>
-    public Event()
-    {
-        subscribers = new List<Subscription>();
-        subscribersWithParams = new List<SubscriptionWithParam>();
-    }
-
     /// <summary>
     /// Fires the event. All subscribers will be notified
     /// </summary>
-    public void Fire() => NotificationBufferPool.Notify(subscribers, subscribersWithParams);
-
-    public void Subscribe(Action<object> handler, object param, ILifetimeManager lifetimeManager)
-    {
-        var subRecord = new SubscriptionWithParam() { Callback = handler, Lifetime = lifetimeManager, Param = param };
-        subscribersWithParams.Add(subRecord);
-        lifetimeManager.OnDisposed(() => subscribersWithParams.Remove(subRecord));
-    }
+    public void Fire() => NotificationBufferPool.Notify(subscribers);
 
     /// <summary>
     /// Subscribes to this event such that the given handler will be called when the event fires. Notifications will stop
@@ -42,8 +28,9 @@ public sealed class Event
     public void Subscribe(Action handler, ILifetimeManager lifetimeManager)
     {
         var subRecord = new Subscription() { Callback = handler, Lifetime = lifetimeManager };
+        subscribers = subscribers ?? new List<Subscription>();
         subscribers.Add(subRecord);
-        lifetimeManager.OnDisposed(() => subscribers.Remove(subRecord));
+        lifetimeManager.OnDisposed(() => subscribers?.Remove(subRecord));
     }
 
     /// <summary>
@@ -80,29 +67,6 @@ public sealed class Event
         Subscribe(wrappedAction, lt);
     }
 
-    /// <summary>
-    /// Subscribes once
-    /// </summary>
-    /// <param name="handler">the callback to call</param>
-    /// <param name="param">the object to pass to the callback</param>
-    public void SubscribeOnce(Action<object> handler, object param)
-    {
-        Action wrappedAction = null;
-        var lt = new Lifetime();
-        wrappedAction = () =>
-        {
-            try
-            {
-                handler(param);
-            }
-            finally
-            {
-                lt.Dispose();
-            }
-        };
-
-        Subscribe(wrappedAction, lt);
-    }
 
     /// <summary>
     /// Creates a lifetime that will end the next time this
@@ -125,6 +89,11 @@ public sealed class Event
         var tcs = new TaskCompletionSource();
         this.SubscribeOnce(()=> tcs.SetResult());
         return tcs.Task;
+    }
+
+    internal void Reset()
+    {
+        subscribers = null;
     }
 }
 
@@ -182,5 +151,49 @@ public class Event<T>
         var tcs = new TaskCompletionSource<T>();
         this.SubscribeOnce(args => tcs.SetResult(args));
         return tcs.Task;
+    }
+
+    internal void Reset()
+    {
+        innerEvent.Reset();
+    }
+}
+
+public static class EventPool
+{
+#if DEBUG
+    public static int EventsCreated { get; private set; }
+    public static int EventsRented { get; private set; }
+    public static int EventsReturned { get; private set; }
+
+    public static int AllocationsSaved => EventsRented - EventsCreated;
+
+#endif
+    private static readonly ConcurrentBag<Event> _pool = new ConcurrentBag<Event>();
+
+    public static Event Rent()
+    {
+#if DEBUG
+        EventsRented++;
+#endif
+        if (_pool.TryTake(out var evt))
+        {
+            return evt;
+        }
+
+#if DEBUG
+        EventsCreated++;
+#endif
+
+        return new Event();
+    }
+
+    public static void Return(Event evt)
+    {
+#if DEBUG
+        EventsReturned++;
+#endif
+        evt.Reset(); // Clear subscribers and any other state
+        _pool.Add(evt);
     }
 }

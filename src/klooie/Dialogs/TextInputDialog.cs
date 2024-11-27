@@ -32,15 +32,15 @@ public sealed class ShowTextInputOptions : ShowMessageOptions
     public override ConsoleControl ContentFactory(ConsolePanel contentContainer)
     {
         ConsolePanel content = new ConsolePanel();
-        content.SubscribeOnce(nameof(content.Parent), () => content.Fill());
+        content.ParentChanged.SubscribeOnce(() => content.Fill());
 
         Label messageLabel = content.Add(new Label() { Text = Message, X = 2, Y = 1 });
         var TextBox = TextBoxFactory?.Invoke() ?? new TextBox() { Foreground = RGB.Black, Background = RGB.White };
         content.Add(TextBox).CenterHorizontally();
         TextBox.Y = 4;
 
-        content.Sync(nameof(content.Bounds), () => { TextBox.Width = Math.Max(0, content.Width - 4); }, content);
-        TextBox.Sync(nameof(TextBox.Value), () => Value = TextBox.Value, TextBox);
+        content.BoundsChanged.Sync(()=> TextBox.Width = Math.Max(0, content.Width - 4), content);
+        TextBox.ValueChanged.Sync(()=> Value = TextBox.Value, TextBox);
 
         TextBox.AddedToVisualTree.SubscribeOnce(() => TextBox.Application.InvokeNextCycle(() => TextBox.Focus()));
         return content;

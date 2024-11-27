@@ -172,9 +172,11 @@ public partial class ConsoleApp : EventLoop
         LayoutRoot.ResizeTo(lastConsoleWidth, lastConsoleHeight);
         focus = new FocusManager();
         LayoutRoot.Application = this;
-        focus.Subscribe(nameof(focus.StackDepth), () => FocusStackDepthChanged.Fire(focus.StackDepth), this);
-        focus.Subscribe(nameof(focus.FocusedControl), () => FocusChanged.Fire(focus.FocusedControl), this);
-        focus.Subscribe(nameof(focus.FocusedControl), () => RequestPaintAsync(), this);
+        focus.StackDepthChanged.Subscribe(() => FocusStackDepthChanged.Fire(focus.StackDepth), this);
+        focus.FocusedControlChanged.Subscribe(() => FocusChanged.Fire(focus.FocusedControl), this);
+        focus.FocusedControlChanged.Subscribe(() => RequestPaintAsync(), this);
+
+
         LayoutRoot.Controls.BeforeAdded.Subscribe((c) => { c.Application = this; c.BeforeAddedToVisualTreeInternal(); }, this);
         LayoutRoot.Controls.BeforeRemoved.Subscribe((c) => { c.BeforeRemovedFromVisualTreeInternal(); }, this);
         LayoutRoot.Controls.Added.Subscribe(ControlAddedToVisualTree, this);

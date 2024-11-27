@@ -91,16 +91,9 @@ public sealed class TestGame : Game
             if (options.Camera)
             {
                 camera = LayoutRoot.Add(new Camera()).Fill();
-                LayoutRoot.Sync(nameof(LayoutRoot.Background), () =>
-                {
-                    camera.Background = LayoutRoot.Background;
-                }, camera);
+                LayoutRoot.BackgroundChanged.Subscribe(() =>  camera.Background = LayoutRoot.Background, camera);
 
-                camera.Subscribe(nameof(camera.Background), () =>
-                {
-                    var bg = camera.Background;
-                }, camera);
-
+    
                 camera.BigBounds = new RectF(-500, -500, 1000, 1000);
                 camera.PointAt(camera.BigBounds.Center);
 

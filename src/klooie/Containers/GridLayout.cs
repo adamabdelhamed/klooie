@@ -149,7 +149,7 @@ public class GridLayout : ProtectedConsolePanel
             Rows = ParseSpec<GridRowDefinition>(rowSpec),
             Columns = ParseSpec<GridColumnDefinition>(columnSpec),
         };
-        this.Sync(nameof(Bounds), RefreshLayout, this);
+        BoundsChanged.Sync(RefreshLayout, this);
         ProtectedPanel.Controls.Removed.Subscribe(HandleControlRemoved, this);
     }
 

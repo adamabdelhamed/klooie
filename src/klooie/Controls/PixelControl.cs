@@ -3,20 +3,19 @@
 /// <summary>
 /// A control that renders a single pixel
 /// </summary>
-public class PixelControl : ConsoleControl
+public partial class PixelControl : ConsoleControl
 {
-    private ConsoleCharacter _value;
     /// <summary>
     /// Gets or sets the character value to be displayed
     /// </summary>
-    public ConsoleCharacter Value { get => _value; set => SetHardIf(ref _value, value, value != _value); }
+    public partial ConsoleCharacter Value { get; set; }
     /// <summary>
     /// Creates a new pixel control
     /// </summary>
     public PixelControl()
     {
         ResizeTo(1, 1);
-        Subscribe(nameof(Bounds), EnsureNoResize, this);
+        BoundsChanged.Subscribe(EnsureNoResize, this);
         Value = new ConsoleCharacter(' ', Foreground, Background);
     }
 

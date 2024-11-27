@@ -146,7 +146,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
         seekToBeginningButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.Home)) { Text = "<<".ToConsoleString(), CanFocus = false });
         seekBackFrameButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.UpArrow)) { Text = "prev frame".ToConsoleString(), CanFocus = false });
         seekBack10SButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.LeftArrow)) { CanFocus = false });
-        playButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.P)) { Text = "".ToConsoleString(), CanFocus = false });
+        playButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.P)) { Text = "Play".ToConsoleString(), CanFocus = false });
         seekForward10SButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.RightArrow)) { CanFocus = false });
         seekForwardFrameButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.DownArrow)) { Text = "next frame".ToConsoleString(), CanFocus = false });
         seekToEndButton = buttonBar.Add(new Button(new KeyboardShortcut(ConsoleKey.End)) { Text = ">>".ToConsoleString(), CanFocus = false });
@@ -167,14 +167,14 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
         }
         this.StateChanged.Subscribe(OnStateChanged, this);
 
-        this.Sync(nameof(RewindAndFastForwardIncrement), () =>
+        RewindAndFastForwardIncrementChanged.Sync(() =>
         {
             seekBack10SButton.Text = $"< {RewindAndFastForwardIncrement.TotalSeconds}s".ToConsoleString();
             seekForward10SButton.Text = $"{RewindAndFastForwardIncrement.TotalSeconds}s >".ToConsoleString();
         }, this);
 
         State = PlayerState.NotLoaded;
-        Subscribe(nameof(State), () =>
+        StateChanged.Subscribe(() =>
         {
             if(State == PlayerState.Stopped)
             {

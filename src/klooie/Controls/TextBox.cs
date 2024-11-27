@@ -44,7 +44,7 @@ public partial class TextBox : ConsoleControl
         this.Focused.Subscribe(TextBox_Focused, this);
         this.Unfocused.Subscribe(TextBox_Unfocused, this);
         KeyInputReceived.Subscribe(OnKeyInputReceived, this);
-        Subscribe(nameof(Value), () =>
+        ValueChanged.Subscribe(() =>
         {
             if (Value == null) throw new ArgumentNullException(nameof(Value));
             Editor.CurrentValue = Value;

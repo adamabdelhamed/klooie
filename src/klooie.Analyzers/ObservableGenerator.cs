@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -11,6 +12,7 @@ namespace klooie
     [Generator]
     public class ObservableGenerator : ISourceGenerator
     {
+        private INamedTypeSymbol iObservableObjectSymbol;
         public void Initialize(GeneratorInitializationContext context) { }
 
         public void Execute(GeneratorExecutionContext context)
@@ -18,7 +20,7 @@ namespace klooie
 
             var compilation = context.Compilation;
 
-            var iObservableObjectSymbol = compilation.GetTypeByMetadataName("klooie.IObservableObject");
+            iObservableObjectSymbol = compilation.GetTypeByMetadataName("klooie.IObservableObject");
 
             var classes = compilation.SyntaxTrees
                 .SelectMany(st => st.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>())
@@ -33,7 +35,7 @@ namespace klooie
                 if (!classSymbol.AllInterfaces.Any(i => i.Equals(iObservableObjectSymbol, SymbolEqualityComparer.Default))) continue;
 
                 var source = ProcessClass(classSymbol);
-                context.AddSource($"{classSymbol.Name}_ObservableProperties.g.cs", SourceText.From(source, Encoding.UTF8));
+                context.AddSource($"{classSymbol.Name}_{Guid.NewGuid()}_ObservableProperties.g.cs", SourceText.From(source, Encoding.UTF8));
             }
         }
 
@@ -43,6 +45,7 @@ namespace klooie
 
             sb.AppendLine("using System;");
             sb.AppendLine("using System.Linq;");
+            sb.AppendLine("using System.Reflection;");
             sb.AppendLine("using klooie;");
 
             var namespaceName = classSymbol.ContainingNamespace.IsGlobalNamespace ? null : classSymbol.ContainingNamespace.ToDisplayString();
@@ -106,13 +109,16 @@ namespace klooie
                 indent += standardIndent;
             }
 
+            // Check if base type is a partial class implementing IObservableObject
+            var baseTypeSymbol = classSymbol.BaseType as INamedTypeSymbol;
+            var baseIsObservable = baseTypeSymbol != null && baseTypeSymbol.ImplementsObservableInterface(iObservableObjectSymbol);
 
 
             foreach (var property in classSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.IsPartial() && p.IsAutoProperty()))
             {
                 var propertyName = property.Name;
                 sb.AppendLine($"{Indent(indent)}private Event _{propertyName}Changed;");
-                sb.AppendLine($"{Indent(indent)}{property.DeclaredAccessibility.ToString().ToLower()} Event {propertyName}Changed => _{propertyName}Changed ?? (_{propertyName}Changed = new Event());");
+                sb.AppendLine($"{Indent(indent)}{property.DeclaredAccessibility.ToString().ToLower()} Event {propertyName}Changed => _{propertyName}Changed ?? (_{propertyName}Changed = Rent());");
             }
 
             sb.AppendLine();
@@ -121,74 +127,102 @@ namespace klooie
                 var propertyName = property.Name;
                 var propertyType = property.Type.ToDisplayString();
                 var fieldName = $"_{char.ToLower(propertyName[0])}{propertyName.Substring(1)}";
+                var accessibility = property.DeclaredAccessibility.ToString().ToLower();
+                var getterAccessibility = property.GetMethod?.DeclaredAccessibility.ToString().ToLower();
+                var setterAccessibility = property.SetMethod?.DeclaredAccessibility.ToString().ToLower();
+                var omitGetterAccessibility = getterAccessibility == accessibility;
+                var omitSetterAccessibility = setterAccessibility == accessibility;
 
                 sb.AppendLine($"{Indent(indent)}private {propertyType} {fieldName};");
-                sb.AppendLine($"{Indent(indent)}{property.DeclaredAccessibility.ToString().ToLower()} partial {propertyType} {propertyName}");
-                sb.AppendLine(Indent(indent)+"{");
+                sb.AppendLine($"{Indent(indent)}{accessibility} partial {propertyType} {propertyName}");
+                sb.AppendLine(Indent(indent) + "{");
                 indent += standardIndent;
-                sb.AppendLine($"{Indent(indent)}get => {fieldName};");
-                sb.AppendLine($"{Indent(indent)}set");
-                sb.AppendLine(Indent(indent)+"{");
+
+                // Generate getter
+                if (!omitGetterAccessibility && !string.IsNullOrEmpty(getterAccessibility))
+                {
+                    sb.AppendLine($"{Indent(indent)}{getterAccessibility} get => {fieldName};");
+                }
+                else
+                {
+                    sb.AppendLine($"{Indent(indent)}get => {fieldName};");
+                }
+
+                // Generate setter
+                if (!omitSetterAccessibility && !string.IsNullOrEmpty(setterAccessibility))
+                {
+                    sb.AppendLine($"{Indent(indent)}{setterAccessibility} set");
+                }
+                else
+                {
+                    sb.AppendLine($"{Indent(indent)}set");
+                }
+
+                sb.AppendLine(Indent(indent) + "{");
                 indent += standardIndent;
                 sb.AppendLine($"{Indent(indent)}if (EqualsSafe(value, {fieldName})) return;");
                 sb.AppendLine($"{Indent(indent)}{fieldName} = value;");
                 sb.AppendLine($"{Indent(indent)}_{propertyName}Changed?.Fire();");
                 indent -= standardIndent;
-                sb.AppendLine(Indent(indent)+"}");
+                sb.AppendLine(Indent(indent) + "}");
+                indent -= standardIndent;
+
+                sb.AppendLine(Indent(indent) + "}");
+                sb.AppendLine();
+            }
+            if (baseIsObservable)
+            {
+                sb.AppendLine(Indent(indent) + "public override void SubscribeToAnyPropertyChange(Action handler, ILifetimeManager lifetimeManager)");
+            }
+            else
+            {
+                sb.AppendLine(Indent(indent) + "public virtual void SubscribeToAnyPropertyChange(Action handler, ILifetimeManager lifetimeManager)");
+            }
+            sb.AppendLine(Indent(indent) + "{");
+            indent += standardIndent;
+
+            if (baseIsObservable)
+            {
+                sb.AppendLine($"{Indent(indent)}base.SubscribeToAnyPropertyChange(handler, lifetimeManager);");
+            }
+
+            foreach (var property in classSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.IsPartial() && p.IsAutoProperty()))
+            {
+                var propertyName = property.Name;
+                sb.AppendLine($"{Indent(indent)}{propertyName}Changed.Subscribe(handler, lifetimeManager);");
+            }
+
+            indent -= standardIndent;
+            sb.AppendLine(Indent(indent) + "}");
+            sb.AppendLine();
+
+            if (!baseIsObservable)
+            {
+                sb.AppendLine(Indent(indent) + "public void SubscribeOld(string propertyName, Action handler, ILifetimeManager lifetimeManager)");
+                sb.AppendLine(Indent(indent) + "{");
+                indent += standardIndent;
+                sb.AppendLine(Indent(indent) + "var eventProp = GetType().GetProperty($\"{propertyName}Changed\", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);");
+                sb.AppendLine(Indent(indent) + "if (eventProp != null)");
+                sb.AppendLine(Indent(indent) + "{");
+                indent += standardIndent;
+                sb.AppendLine(Indent(indent) + "var eventInstance = (Event)eventProp.GetValue(this);");
+                sb.AppendLine(Indent(indent) + "eventInstance.Subscribe(handler, lifetimeManager);");
+                sb.AppendLine(Indent(indent) + "return;");
+                indent -= standardIndent;
+                sb.AppendLine(Indent(indent) + "}");
+                indent -= standardIndent;
+                sb.AppendLine(Indent(indent) + "}");
+                sb.AppendLine();
+
+                sb.AppendLine(Indent(indent) + "public void SyncOld(string propertyName, Action handler, ILifetimeManager lifetimeManager)");
+                sb.AppendLine(Indent(indent) + "{");
+                indent += standardIndent;
+                sb.AppendLine(Indent(indent) + "SubscribeOld(propertyName, handler, lifetimeManager);");
+                sb.AppendLine(Indent(indent) + "handler();");
                 indent -= standardIndent;
                 sb.AppendLine(Indent(indent) + "}");
                 sb.AppendLine();
             }
-
-            sb.AppendLine($"{Indent(indent)}public void Subscribe(string propertyName, Action handler, ILifetimeManager lifetimeManager)");
-            sb.AppendLine(Indent(indent) + "{");
-            indent += standardIndent;
-
-            // Try to get the property and subscribe if found
-            sb.AppendLine(Indent(indent) + "var eventProp = GetType().GetProperty($\"{propertyName}Changed\", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);");
-            sb.AppendLine(Indent(indent) + "if (eventProp != null)");
-            sb.AppendLine(Indent(indent) + "{");
-            indent += standardIndent;
-            sb.AppendLine(Indent(indent) + "var eventInstance = (Event)eventProp.GetValue(this);");
-            sb.AppendLine(Indent(indent) + "eventInstance.Subscribe(handler, lifetimeManager);");
-            sb.AppendLine(Indent(indent) + "return;");
-            indent -= standardIndent;
-            sb.AppendLine(Indent(indent) + "}");
-
-            // Check if the current object derives from ObservableObject
-            sb.AppendLine(Indent(indent) + "if (((object)this) is ObservableObject observableObject)");
-            sb.AppendLine(Indent(indent) + "{");
-            indent += standardIndent;
-            sb.AppendLine(Indent(indent) + "observableObject.Subscribe(propertyName, handler, lifetimeManager);");
-            sb.AppendLine(Indent(indent) + "return;");
-            indent -= standardIndent;
-            sb.AppendLine(Indent(indent) + "}");
-
-            // If no event and not an ObservableObject, throw an exception
-            sb.AppendLine(Indent(indent) + "throw new ArgumentException($\"No event found for property {propertyName}\");");
-            indent -= standardIndent;
-            sb.AppendLine(Indent(indent) + "}");
-            sb.AppendLine();
-            sb.AppendLine(Indent(indent) + "public void Sync(string propertyName, Action handler, ILifetimeManager lifetimeManager)");
-            sb.AppendLine(Indent(indent) + "{");
-            indent += standardIndent;
-            sb.AppendLine(Indent(indent) + "Subscribe(propertyName, handler, lifetimeManager);");
-            sb.AppendLine(Indent(indent) + "handler();");
-            indent -= standardIndent;
-            sb.AppendLine(Indent(indent) + "}");
-            sb.AppendLine();
-            sb.AppendLine(Indent(indent) + "public ILifetimeManager GetPropertyValueLifetime(string propertyName)");
-            sb.AppendLine(Indent(indent) + "{");
-            indent += standardIndent;
-            sb.AppendLine(Indent(indent) + "var eventProperty = GetType().GetProperty($\"{propertyName}Changed\", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);");
-            sb.AppendLine(Indent(indent) + "if (eventProperty == null) throw new ArgumentException($\"No event found for property {propertyName}\");");
-            sb.AppendLine(Indent(indent) + "var eventInstance = (Event)eventProperty.GetValue(this);");
-            sb.AppendLine(Indent(indent) + "var lifetime = new Lifetime();");
-            sb.AppendLine(Indent(indent) + "eventInstance.SubscribeOnce(() => lifetime.Dispose());");
-            sb.AppendLine(Indent(indent) + "return lifetime.Manager;");
-            indent -= standardIndent;
-            sb.AppendLine(Indent(indent) + "}");
-            sb.AppendLine();
             sb.AppendLine(Indent(indent) + "private static bool EqualsSafe(object a, object b)");
             sb.AppendLine(Indent(indent) + "{");
             indent += standardIndent;
@@ -199,13 +233,47 @@ namespace klooie
             indent -= standardIndent;
             sb.AppendLine(Indent(indent) + "}");
 
+
+            sb.AppendLine(Indent(indent) + $"private void _ReturnEventsToPool()");
+            sb.AppendLine(Indent(indent) + "{");
+            indent += standardIndent;
+            foreach (var property in classSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.IsPartial() && p.IsAutoProperty()))
+            {
+                var propertyName = property.Name;
+                sb.AppendLine($"{Indent(indent)}if(_{propertyName}Changed != null) {{EventPool.Return(_{propertyName}Changed);_{propertyName}Changed = null;}}");
+            }
+            indent -= standardIndent;
+            sb.AppendLine(Indent(indent) + "}");
+            sb.AppendLine();
+            if (classSymbol.AllInterfaces.Any(i => i.Name == "ILifetimeManager"))
+            {
+                sb.AppendLine(Indent(indent) + $"private bool disposeRegistered = false;");
+            }
+            sb.AppendLine(Indent(indent) + $"private Event Rent()");
+            sb.AppendLine(Indent(indent) + "{");
+            indent += standardIndent;
+            if (classSymbol.AllInterfaces.Any(i => i.Name == "ILifetimeManager"))
+            {
+                sb.AppendLine($"{Indent(indent)}if (disposeRegistered == false)");
+                sb.AppendLine(Indent(indent) + "{");
+                indent += standardIndent;
+                    sb.AppendLine($"{Indent(indent)}this.OnDisposed(_ReturnEventsToPool);");
+                    sb.AppendLine($"{Indent(indent)}disposeRegistered = true;");
+                indent -= standardIndent;
+                sb.AppendLine(Indent(indent) + "}");
+            }
+              
+            sb.AppendLine($"{Indent(indent)}return EventPool.Rent();");
+                indent -= standardIndent;
+            sb.AppendLine(Indent(indent) + "}");
+            sb.AppendLine();
+
             // Close nested classes
             for (int i = 0; i < classHierarchy.Count; i++)
             {
                 indent -= standardIndent;
                 sb.AppendLine(Indent(indent) + "}");
             }
-
             // Close namespace if needed
             if (namespaceName != null)
             {
@@ -220,6 +288,20 @@ namespace klooie
 
     public static class PropertySymbolExtensions
     {
+        public static bool ImplementsObservableInterface(this INamedTypeSymbol typeSymbol, INamedTypeSymbol iObservableObjectSymbol)
+        {
+            if (typeSymbol == null)
+                return false;
+
+            // Check if the current type implements the interface
+            if (typeSymbol.AllInterfaces.Any(i => i.Equals(iObservableObjectSymbol, SymbolEqualityComparer.Default)))
+                return true;
+
+            // Recursively check the base type
+            return ImplementsObservableInterface(typeSymbol.BaseType, iObservableObjectSymbol);
+        }
+
+
         public static bool IsPartial(this IPropertySymbol propertySymbol)
         {
             return propertySymbol.DeclaringSyntaxReferences

@@ -41,8 +41,8 @@ public partial class ToggleControl : ProtectedConsolePanel
         Width = 10;
         Height = 1;
         valueLabel = ProtectedPanel.Add(new Label());
-        Sync(nameof(On), async () => await Update(125), this);
-        Sync(nameof(IsVisible), async () => await Update(0), this);
+        OnChanged.Sync(async () => await Update(125), this);
+        IsVisibleChanged.Sync(async () => await Update(0), this);
         Focused.Subscribe(async () => await Update(0), this);
         Unfocused.Subscribe(async () => await Update(0), this);
         KeyInputReceived.Subscribe(k => On = k.Key == ConsoleKey.Enter ? !On : On, this);

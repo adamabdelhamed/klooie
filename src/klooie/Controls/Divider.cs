@@ -19,7 +19,7 @@ public class Divider : ConsoleControl
         Func<int> limitedPropValue = Orientation == Orientation.Vertical ? () => Width : () => Height;
         Func<int> limitedPropSetter = Orientation == Orientation.Vertical ? () => Width = 1 : () => Height = 1;
         limitedPropSetter();
-        Subscribe(nameof(Bounds), () => ThrowArgumentExceptionIf(limitedPropName, limitedPropValue() != 1, $"{limitedPropName} must equal 1 for a {Orientation} divider"), this);
+        BoundsChanged.Subscribe(() => ThrowArgumentExceptionIf(limitedPropName, limitedPropValue() != 1, $"{limitedPropName} must equal 1 for a {Orientation} divider"), this);
     }
     
     private void ThrowArgumentExceptionIf(string propertyName, bool condition, string message)

@@ -7,7 +7,9 @@ namespace klooie;
 /// </summary>
 public sealed class ConsoleBitmap
 {
-    private static FastConsoleWriter fastConsoleWriter;
+    private static readonly ConsoleCharacter EmptySpace = new ConsoleCharacter(' ');
+
+    private static FastConsoleWriter fastConsoleWriter = new FastConsoleWriter();
     private static ChunkPool chunkPool = new ChunkPool();
     private static List<Chunk> chunksOnLine = new List<Chunk>();
     private static ChunkAwarePaintBuffer paintBuilder = new ChunkAwarePaintBuffer();
@@ -45,7 +47,6 @@ public sealed class ConsoleBitmap
     /// you can break the object.
     /// </summary>
     public ConsoleCharacter[][] Pixels;
-    private ConsoleCharacter[][] lastDrawnPixels;
 
     private int lastBufferWidth;
 
@@ -62,15 +63,15 @@ public sealed class ConsoleBitmap
         this.Console = ConsoleProvider.Current;
         this.lastBufferWidth = this.Console.BufferWidth;
         Pixels = new ConsoleCharacter[this.Width][];
-        lastDrawnPixels = new ConsoleCharacter[this.Width][];
+       
         for (int x = 0; x < this.Width; x++)
         {
             Pixels[x] = new ConsoleCharacter[this.Height];
-            lastDrawnPixels[x] = new ConsoleCharacter[this.Height];
+
             for (int y = 0; y < Pixels[x].Length; y++)
             {
                 Pixels[x][y] = new ConsoleCharacter(' ');
-                lastDrawnPixels[x][y] = new ConsoleCharacter(' ');
+
             }
         }
     }
@@ -135,7 +136,7 @@ public sealed class ConsoleBitmap
 
         return true;
     }
-
+    
     /// <summary>
     /// Resizes this image, preserving the data in the pixels that remain in the new area
     /// </summary>
@@ -153,17 +154,15 @@ public sealed class ConsoleBitmap
             newLastDrawnCharacters[x] = new ConsoleCharacter[h];
             for (int y = 0; y < newPixels[x].Length; y++)
             {
-                var c = x < Pixels.Length && y < Pixels[0].Length ? Pixels[x][y] : new ConsoleCharacter(' ');
+                var c = x < Pixels.Length && y < Pixels[0].Length ? Pixels[x][y] : EmptySpace;
                 newPixels[x][y] = c;
                 newLastDrawnCharacters[x][y] = c;
             }
         }
 
         Pixels = newPixels;
-        lastDrawnPixels = newLastDrawnCharacters;
         this.Width = w;
         this.Height = h;
-        this.Invalidate();
     }
 
     /// <summary>
@@ -566,165 +565,11 @@ public sealed class ConsoleBitmap
     /// </summary>
     public void Paint()
     {
-        if (ConsoleProvider.Fancy != wasFancy)
-        {
-            this.Invalidate();
-            wasFancy = ConsoleProvider.Fancy;
-
-            if (ConsoleProvider.Fancy)
-            {
-                Console.Write(Ansi.Cursor.Hide + Ansi.Text.BlinkOff);
-            }
-        }
-
-        if (ConsoleProvider.Fancy)
-        {
-            fastConsoleWriter ??= new FastConsoleWriter();
-            PaintNew();
-        }
-        else
-        {
-            PaintOld();
-        }
-    }
-
-    /// <summary>
-    /// Paints this image to the current Console
-    /// </summary>
-    private void PaintOld()
-    {
-        if (Console.WindowHeight == 0) return;
-
-        var changed = false;
-        if (lastBufferWidth != this.Console.BufferWidth)
-        {
-            lastBufferWidth = this.Console.BufferWidth;
-            Invalidate();
-            this.Console.Clear();
-            changed = true;
-        }
-        try
-        {
-            Chunk currentChunk = null;
-            var chunksOnLine = new List<Chunk>();
-            ConsoleCharacter pixel;
-            ConsoleCharacter lastDrawn;
-            char val;
-            RGB fg;
-            RGB bg;
-            bool pixelChanged;
-            for (int y = 0; y < Height; y++)
-            {
-                var changeOnLine = false;
-                for (int x = 0; x < Width; x++)
-                {
-                    pixel = Pixels[x][y];
-                    lastDrawn = lastDrawnPixels[x][y];
-                    pixelChanged = pixel != lastDrawn;
-                    changeOnLine = changeOnLine || pixelChanged;
-                    val = pixel.Value;
-                    fg = pixel.ForegroundColor;
-                    bg = pixel.BackgroundColor;
-                    if (currentChunk == null)
-                    {
-                        // first pixel always gets added to the current empty chunk
-                        currentChunk = new Chunk(Width);
-                        currentChunk.FG = fg;
-                        currentChunk.BG = bg;
-                        currentChunk.HasChanged = pixelChanged;
-                        currentChunk.Add(val);
-                    }
-                    else if (currentChunk.HasChanged == false && pixelChanged == false)
-                    {
-                        // characters that have not changed get chunked even if their styles differ
-                        currentChunk.Add(val);
-                    }
-                    else if (currentChunk.HasChanged && pixelChanged && fg == currentChunk.FG && bg == currentChunk.BG)
-                    {
-                        // characters that have changed only get chunked if their styles match to minimize the number of writes
-                        currentChunk.Add(val);
-                    }
-                    else
-                    {
-                        // either the styles of consecutive changing characters differ or we've gone from a non changed character to a changed one
-                        // in either case we end the current chunk and start a new one
-                        chunksOnLine.Add(currentChunk);
-                        currentChunk = new Chunk(Width);
-                        currentChunk.FG = fg;
-                        currentChunk.BG = bg;
-                        currentChunk.HasChanged = pixelChanged;
-                        currentChunk.Add(val);
-                    }
-                    lastDrawnPixels[x][y] = pixel;
-                }
-
-                if (currentChunk.Length > 0)
-                {
-                    chunksOnLine.Add(currentChunk);
-                }
-
-                currentChunk = null;
-
-                if (changeOnLine)
-                {
-                    Console.CursorTop = y; // we know there will be a change on this line so move the cursor top
-                    var left = 0;
-                    var leftChanged = true;
-                    for (var i = 0; i < chunksOnLine.Count; i++)
-                    {
-                        var chunk = chunksOnLine[i];
-                        if (chunk.HasChanged)
-                        {
-                            if (leftChanged)
-                            {
-                                Console.CursorLeft = left;
-                                leftChanged = false;
-                            }
-
-                            Console.ForegroundColor = chunk.FG;
-                            Console.BackgroundColor = chunk.BG;
-                            Console.Write(chunk.ToString());
-                            left += chunk.Length;
-                            changed = true;
-                        }
-                        else
-                        {
-                            left += chunk.Length;
-                            leftChanged = true;
-                        }
-                    }
-                }
-                chunksOnLine.Clear();
-            }
-
-            if (changed)
-            {
-                Console.CursorLeft = 0;
-                Console.CursorTop = 0;
-                Console.ForegroundColor = ConsoleString.DefaultForegroundColor;
-                Console.BackgroundColor = ConsoleString.DefaultBackgroundColor;
-            }
-        }
-        catch (IOException)
-        {
-            Invalidate();
-            PaintOld();
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            Invalidate();
-            PaintOld();
-        }
-    }
- 
-    private void PaintNew()
-    {
         if (Console.WindowHeight == 0) return;
 
         if (lastBufferWidth != this.Console.BufferWidth)
         {
             lastBufferWidth = this.Console.BufferWidth;
-            Invalidate();
             this.Console.Clear();
         }
 
@@ -736,17 +581,14 @@ public sealed class ConsoleBitmap
             RGB fg;
             RGB bg;
             bool underlined;
-            bool changeOnLine;
-            bool pixelChanged;
+
             for (int y = 0; y < Height; y++)
             {
-                changeOnLine = false;
                 for (int x = 0; x < Width; x++)
                 {
                     ref var pixel = ref Pixels[x][y];
-                    ref var lastDrawn = ref lastDrawnPixels[x][y];
-                    pixelChanged = pixel != lastDrawn;
-                    changeOnLine = changeOnLine || pixelChanged;
+
+     
 
                     val = pixel.Value;
                     fg = pixel.ForegroundColor;
@@ -760,15 +602,9 @@ public sealed class ConsoleBitmap
                         currentChunk.FG = fg;
                         currentChunk.BG = bg;
                         currentChunk.Underlined = underlined;
-                        currentChunk.HasChanged = pixelChanged;
                         currentChunk.Add(val);
                     }
-                    else if (currentChunk.HasChanged == false && pixelChanged == false)
-                    {
-                        // characters that have not changed get chunked even if their styles differ
-                        currentChunk.Add(val);
-                    }
-                    else if (currentChunk.HasChanged && pixelChanged && fg == currentChunk.FG && bg == currentChunk.BG && underlined == currentChunk.Underlined)
+                    else if (fg == currentChunk.FG && bg == currentChunk.BG && underlined == currentChunk.Underlined)
                     {
                         // characters that have changed only get chunked if their styles match to minimize the number of writes
                         currentChunk.Add(val);
@@ -780,10 +616,8 @@ public sealed class ConsoleBitmap
                         currentChunk.FG = fg;
                         currentChunk.BG = bg;
                         currentChunk.Underlined = underlined;
-                        currentChunk.HasChanged = pixelChanged;
                         currentChunk.Add(val);
                     }
-                    lastDrawnPixels[x][y] = pixel;
                 }
 
                 if (currentChunk.Length > 0)
@@ -793,14 +627,12 @@ public sealed class ConsoleBitmap
 
                 currentChunk = null;
 
-                if (changeOnLine)
-                {
+                
                     var left = 0;
                     for (var i = 0; i < chunksOnLine.Count; i++)
                     {
                         var chunk = chunksOnLine[i];
-                        if (chunk.HasChanged)
-                        {
+                       
 
                             if (chunk.Underlined)
                             {
@@ -815,11 +647,11 @@ public sealed class ConsoleBitmap
                             {
                                 paintBuilder.Append(Ansi.Text.UnderlinedOff);
                             }
-                        }
+                        
 
                         left += chunk.Length;
                     }
-                }
+                
 
                 foreach(var chunk in chunksOnLine)
                 {
@@ -832,31 +664,15 @@ public sealed class ConsoleBitmap
         }
         catch (IOException)
         {
-            Invalidate();
-            PaintNew();
+            Paint();
         }
         catch (ArgumentOutOfRangeException)
         {
-            Invalidate();
-            PaintNew();
+            Paint();
         }
     }
 
-    /// <summary>
-    /// Clears the cached paint state of each pixel so that
-    /// all pixels will forcefully be painted the next time Paint
-    /// is called
-    /// </summary>
-    public void Invalidate()
-    {
-        for (int y = 0; y < Height; y++)
-        {
-            for (int x = 0; x < Width; x++)
-            {
-                lastDrawnPixels[x][y] = default;
-            }
-        }
-    }
+ 
 
     /// <summary>
     /// Gets a string representation of this image 
@@ -920,7 +736,6 @@ internal class Chunk
 {
     public RGB FG;
     public RGB BG;
-    public bool HasChanged;
     public short Length;
     public char[] buffer;
     public bool Underlined;
@@ -936,7 +751,6 @@ internal class Chunk
         FG = default;
         BG = default;
         Underlined = default;
-        HasChanged = false;
     }
 
     public void Add(char c) => buffer[Length++] = c;

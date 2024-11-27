@@ -1,4 +1,6 @@
-﻿namespace klooie.Gaming;
+﻿using System.Runtime.CompilerServices;
+using System.Linq;
+namespace klooie.Gaming;
 
 /// <summary>
 /// The base class for a game built with klooie. These games are event driven.
@@ -80,7 +82,7 @@ public class Game : ConsoleApp, IDelayProvider
     /// <summary>
     /// Variables that can be referenced by rules
     /// </summary>
-    public ObservableObject RuleVariables { get; protected set; }
+    public SpecialReverseDictionary RuleVariables { get; protected set; }
 
     /// <summary>
     /// Subscribes to a game event for some amount of time. You can use boolean expressions using and ('&'), or ('|') and
@@ -122,7 +124,7 @@ public class Game : ConsoleApp, IDelayProvider
     {
         this.eventBroadcaster = new EventBroadcaster();
         this.pauseManager = new PauseManager();
-        RuleVariables = new ObservableObject();
+        RuleVariables = new SpecialReverseDictionary();
     }
 
     /// <summary>
@@ -155,3 +157,57 @@ public class Game : ConsoleApp, IDelayProvider
     public Task Delay(TimeSpan timeout) => pauseManager.Delay(timeout);
 }
 
+public class SpecialReverseDictionary
+{
+    private Dictionary<string, (object Value, Event Changed)> dict = new Dictionary<string, (object Value, Event Changed)>();
+
+
+    public void Subscribe(string key, Action handler, ILifetimeManager lifetime)
+    {
+        if (dict.ContainsKey(key) == false)
+        {
+            dict.Add(key, (null, new Event()));
+        }
+
+        dict[key].Changed.Subscribe(handler, lifetime);
+    }
+
+    public void Sync(string key, Action handler, ILifetimeManager lifetime)
+    {
+        Subscribe(key, handler, lifetime);
+        handler();
+    }
+
+    public void Set<T>(T value, [CallerMemberName]string key = null)
+    {
+        if (dict.ContainsKey(key))
+        {
+            dict[key] = (value, dict[key].Changed);
+            dict[key].Changed.Fire();
+        }
+        else
+        {
+            dict.Add(key, (value, new Event()));
+        }
+    }
+
+    public T Get<T>([CallerMemberName]string key = null) => dict.ContainsKey(key) ?  (T)(dict[key].Value) : default;
+
+    public bool TryGetValue<T>(string key, out T value)
+    {
+        if (dict.TryGetValue(key, out var val))
+        {
+            value = (T)val.Value;
+            return true;
+        }
+        else
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    public bool ContainsKey(string key) => dict.ContainsKey(key);
+
+    public Dictionary<string,object> ToDictionary() => dict.ToDictionary(d2 => d2.Key, d2 => d2.Value.Value);
+}

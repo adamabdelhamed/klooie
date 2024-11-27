@@ -291,7 +291,7 @@ public class XYChart : ConsolePanel
     {
         this.options = options;
         AddDataPoints();
-        this.Subscribe(nameof(Bounds), PositionDataPoints, this);
+        BoundsChanged.Subscribe(PositionDataPoints, this);
 
         var defaultSeriesTitle = ConsoleString.Empty;
 

@@ -88,7 +88,7 @@ public class MonthCalendar : ProtectedConsolePanel
     {
         var now = DateTime.Today;
         this.Options = options ?? new MonthCalendarOptions() { Year = now.Year, Month = now.Month };
-        Sync(nameof(Bounds), Refresh, this);
+        BoundsChanged.Sync(Refresh, this);
         SetupKeyboardInput();
     }
 

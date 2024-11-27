@@ -37,7 +37,7 @@ public sealed class TextBoxGenerator : FormFieldGeneratorAttribute
             }
         };
 
-        formModel.Sync(property.Name, () => textBox.Value = property.GetValue(formModel).ToConsoleString(), textBox);
-        textBox.Subscribe(nameof(textBox.Value), () => property.SetValue(formModel, reviver()), textBox);
+        formModel.SyncOld(property.Name, () => textBox.Value = property.GetValue(formModel).ToConsoleString(), textBox);
+        textBox.ValueChanged.Subscribe(() => property.SetValue(formModel, reviver()), textBox);
     }
 }

@@ -22,7 +22,7 @@ public partial class Slider : ConsoleControl
 
         this.Ready.SubscribeOnce(() =>
         {
-            this.Subscribe(AnyProperty, () =>
+            SubscribeToAnyPropertyChange(() =>
             {
                 if (Min > Max) throw new InvalidOperationException("Max must be >= Min");
                 if (Value > Max) throw new InvalidOperationException("Value must be <= Max");
@@ -75,51 +75,17 @@ public partial class Slider : ConsoleControl
     }
 }
 
-public class SliderWithValueLabel : ProtectedConsolePanel
+public partial class SliderWithValueLabel : ProtectedConsolePanel
 {
     private Slider slider;
     private Label label;
 
-    public float Min
-    {
-        get => slider.Min;
-        set
-        {
-            slider.Min = value;
-            FirePropertyChanged(nameof(Min));
-        }
-    }
+    public partial float Min { get; set; }
+    public partial float Max { get; set; }
 
-    public float Max
-    {
-        get => slider.Max;
-        set
-        {
-            slider.Max = value;
-            FirePropertyChanged(nameof(Max));
-        }
-    }
+    public partial float Value { get; set; }
 
-    public float Value
-    {
-        get => slider.Value;
-        set
-        {
-            slider.Value = value;
-            FirePropertyChanged(nameof(Value));
-        }
-    }
-
-
-    public float Increment
-    {
-        get => slider.Increment;
-        set
-        {
-            slider.Increment = value;
-            FirePropertyChanged(nameof(Increment));
-        }
-    }
+    public partial float Increment { get; set; }
 
     public SliderWithValueLabel()
     {
@@ -129,9 +95,20 @@ public class SliderWithValueLabel : ProtectedConsolePanel
         label = stack.Add(new Label());
 
         Action updateSliderWidth = () => slider.Width = this.Width - (slider.Max.ToString().Length + stack.Margin);
-        this.Sync(nameof(Bounds), updateSliderWidth, this);
-        this.Sync(nameof(slider.Value), updateSliderWidth, this);
-        slider.Sync(nameof(slider.Value), () => label.Text = slider.Value.ToString().ToConsoleString(), this);
-        slider.Subscribe(nameof(slider.Value), () => FirePropertyChanged(nameof(Value)), this);
+        this.BoundsChanged.Sync(updateSliderWidth, this);
+        
+        this.ValueChanged.Sync(updateSliderWidth, this);
+        slider.ValueChanged.Subscribe(() => label.Text = slider.Value.ToString().ToConsoleString(), this);
+        slider.ValueChanged.Subscribe(() => ValueChanged.Fire(), this);
+
+        MinChanged.Subscribe(() => slider.Min = Min, this);
+        MaxChanged.Subscribe(() => slider.Max = Max, this);
+        ValueChanged.Subscribe(() => slider.Value = Value, this);
+        IncrementChanged.Subscribe(() => slider.Increment = Increment, this);
+
+        slider.MinChanged.Subscribe(() => this.Min = slider.Min, this);
+        slider.MaxChanged.Subscribe(() => this.Max = slider.Max, this);
+        slider.ValueChanged.Subscribe(() => this.Value = slider.Value, this);
+        slider.IncrementChanged.Subscribe(() => this.Increment = slider.Increment, this);
     }
 }

@@ -33,7 +33,8 @@ public partial class Dropdown : ProtectedConsolePanel
         Width = 15;
         valueLabel = ProtectedPanel.Add(new Label());
 
-        Sync(AnyProperty, SyncValueLabel, this);
+        SubscribeToAnyPropertyChange(SyncValueLabel, this);
+        SyncValueLabel();
         Focused.Subscribe(SyncValueLabel, this);
         Unfocused.Subscribe(SyncValueLabel, this);
 
@@ -183,17 +184,17 @@ public partial class Dropdown : ProtectedConsolePanel
     }
 }
 
-public abstract class Dropdown<T> : ProtectedConsolePanel
+public abstract partial class Dropdown<T> : ProtectedConsolePanel
 {
-    public T Value { get => Get<T>(); set => Set(value); }
+    public partial T Value { get; set; }
 
     public Dropdown()
     {
         CanFocus = false;
         Width = 15;
         var dropdown = ProtectedPanel.Add(new Dropdown(Choices())).Fill();
-        dropdown.Sync(nameof(dropdown.Value), () => this.Value = (T)dropdown.Value.Value, this);
-        this.Subscribe(nameof(Value), () => dropdown.Value = dropdown.Options.Where(o => o.Value.Equals(Value)).Single(), this);
+        dropdown.ValueChanged.Subscribe(() => this.Value = (T)dropdown.Value.Value, this);
+        this.ValueChanged.Subscribe(() => dropdown.Value = dropdown.Options.Where(o => o.Value.Equals(Value)).Single(), this);
     }
 
     protected abstract IEnumerable<DialogChoice> Choices();

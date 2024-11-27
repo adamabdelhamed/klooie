@@ -12,7 +12,7 @@ public class ScrollableSample : ConsoleApp
         
         // We make sure that the scrollable content size is the same as the stack of controls. If we forget to do this then the
         // stack will outgrow the scrollable content and it won't scroll properly.
-        stack.Sync(nameof(stack.Bounds), () => scrollable.ScrollableContent.ResizeTo(stack.Width, stack.Height), stack);
+        stack.BoundsChanged.Sync(() => scrollable.ScrollableContent.ResizeTo(stack.Width, stack.Height), stack);
 
         for(var i = 0; i < 100; i++)
         {

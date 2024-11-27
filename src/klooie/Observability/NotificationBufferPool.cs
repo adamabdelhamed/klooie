@@ -6,32 +6,30 @@ internal sealed class NotificationBufferPool
     internal static int MissCount = 0;
     internal static int PartialHitCount = 0;
 #endif
-    private List<NotificationBuffer> pool = new List<NotificationBuffer>();
+    private List<Subscription[]> pool = new List<Subscription[]>();
     public static readonly NotificationBufferPool Instance = new NotificationBufferPool();
+    private readonly System.Threading.Lock _lock = new System.Threading.Lock();
 
-    public NotificationBuffer Get(int mainSize, int paramSize)
+    private NotificationBufferPool() { }
+
+    public Subscription[] Get(int mainSize)
     {
-        lock (pool)
+        lock (_lock)
         {
-            mainSize = mainSize < 100 ? 100 : mainSize;
-            paramSize = paramSize < 100 ? 100 : paramSize;
+            mainSize = mainSize < 10 ? 10 : mainSize;
             // if no buffers, create one
             if (pool.Count == 0)
             {
 #if DEBUG
                 MissCount++;
 #endif
-                return new NotificationBuffer()
-                {
-                    MainBuffer = new Subscription[mainSize * 2],
-                    ParamBuffer = new SubscriptionWithParam[paramSize * 2]
-                };
+                return new Subscription[mainSize * 2];
             }
 
             // try to find an existing buffer that is big enough
             for (var i = 0; i < pool.Count; i++)
             {
-                if (pool[i].MainBuffer.Length >= mainSize && pool[i].ParamBuffer.Length >= paramSize)
+                if (pool[i].Length >= mainSize)
                 {
                     var toRent = pool[i];
                     pool.RemoveAt(i);
@@ -45,57 +43,42 @@ internal sealed class NotificationBufferPool
 #if DEBUG
             PartialHitCount++;
 #endif
-
+            var resized = new Subscription[mainSize * 2];
             // resize existing buffer to be big enough and use it
-            var firstBuffer = pool.First();
-            firstBuffer.MainBuffer = new Subscription[mainSize * 2];
-            firstBuffer.ParamBuffer = new SubscriptionWithParam[paramSize * 2];
+            pool[0] = resized;
             pool.RemoveAt(0);
-            return firstBuffer;
+            return resized;
         }
     }
 
-    public void Return(NotificationBuffer buffer)
+    public void Return(Subscription[] buffer)
     {
-        lock (pool)
+        lock (_lock)
         {
+            Array.Clear(buffer, 0, buffer.Length);
             pool.Add(buffer);
         }
     }
 
-    public static void Notify(List<Subscription> subscribers, List<SubscriptionWithParam> subscribersWithParams)
+    public static void Notify(List<Subscription>? subscribers)
     {
+        if (subscribers == null) return;
         var subscriberCount = subscribers.Count;
-        var subscriberCountWithParams = subscribersWithParams.Count;
-        var buffer = Instance.Get(subscriberCount, subscriberCountWithParams);
+        // buffer used to allow concurrent modification to subscribers during notification
+        // buffer also reduces memory allocations insead of doign a ToArray() on the list
+        var buffer = Instance.Get(subscriberCount); 
         try
         {
-            var subSpan = buffer.MainBuffer.AsSpan();
-            var paramSpan = buffer.ParamBuffer.AsSpan();
-
             for (var i = 0; i < subscriberCount; i++)
             {
-                subSpan[i] = subscribers[i];
-            }
-
-            for (var i = 0; i < subscriberCountWithParams; i++)
-            {
-                paramSpan[i] = subscribersWithParams[i];
+                buffer[i] = subscribers[i];
             }
 
             for (var i = 0; i < subscriberCount; i++)
             {
-                if (subSpan[i].Lifetime.IsExpired == false)
+                if (buffer[i].Lifetime.IsExpired == false)
                 {
-                    subSpan[i].Callback();
-                }
-            }
-
-            for (var i = 0; i < subscriberCountWithParams; i++)
-            {
-                if (paramSpan[i].Lifetime.IsExpired == false)
-                {
-                    paramSpan[i].Callback(paramSpan[i].Param);
+                    buffer[i].Callback();
                 }
             }
         }
@@ -110,17 +93,4 @@ internal class Subscription
 {
     public Action Callback { get; set; }
     public ILifetimeManager Lifetime { get; set; }
-}
-
-internal class SubscriptionWithParam
-{
-    public Action<object> Callback { get; set; }
-    public ILifetimeManager Lifetime { get; set; }
-    public object Param { get; set; }
-}
-
-internal class NotificationBuffer
-{
-    public Subscription[] MainBuffer;
-    public SubscriptionWithParam[] ParamBuffer;
 }

@@ -77,7 +77,7 @@ public static class ChoiceDialog
            
             var content = contentContainer.ScrollableContent.Add(options.ContentFactory(contentContainer.ScrollableContent));
 
-            content.Sync(nameof(content.Bounds), () =>
+            content.BoundsChanged.Sync(() =>
             {
                 contentContainer.ScrollableContent.Height = Math.Max(contentContainer.Height, content.Height);
                 contentContainer.ScrollableContent.Width = Math.Max(contentContainer.Width, content.Width);

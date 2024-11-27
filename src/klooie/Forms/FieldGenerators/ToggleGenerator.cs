@@ -25,8 +25,8 @@ public sealed class ToggleGenerator : FormFieldGeneratorAttribute
 
     protected void SyncToggle(PropertyInfo property, ToggleControl toggle, IObservableObject formModel)
     {
-        formModel.Sync(property.Name, () => toggle.On = (bool)property.GetValue(formModel), toggle);
-        toggle.Subscribe(nameof(toggle.On), () => property.SetValue(formModel,toggle.On), toggle);
+        formModel.SyncOld(property.Name, () => toggle.On = (bool)property.GetValue(formModel), toggle);
+        toggle.OnChanged.Subscribe(() => property.SetValue(formModel, toggle.On), toggle);
     }
 }
 

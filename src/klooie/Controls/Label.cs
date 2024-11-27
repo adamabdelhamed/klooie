@@ -1,18 +1,19 @@
-﻿namespace klooie;
+﻿using Microsoft.CodeAnalysis.Text;
+
+namespace klooie;
 
 /// <summary>
 /// A control that displays a single line of text
 /// </summary>
-public class Label : ConsoleControl
+public partial class Label : ConsoleControl
 {
     private bool autoSize;
-    private ConsoleString _text;
     private ConsoleString _cleaned;
     public bool EnableCharacterByCharacterStyleDetection { get; set; }
     /// <summary>
     /// The text to display
     /// </summary>
-    public ConsoleString Text { get => _text; set => TextChanged(value); }
+    public partial ConsoleString Text { get; set; }
 
     /// <summary>
     /// Creates a new label
@@ -33,10 +34,11 @@ public class Label : ConsoleControl
         this.autoSize = autoSize;
         Text = initialText ?? ConsoleString.Empty;
         CanFocus = false;
-        Subscribe(nameof(Text), NormalizeNewlinesTabsAndStyleText, this);
-        Subscribe(nameof(Bounds), NormalizeNewlinesTabsAndStyleText, this);
-        Subscribe(nameof(Foreground), NormalizeNewlinesTabsAndStyleText, this);
-        Subscribe(nameof(Background), NormalizeNewlinesTabsAndStyleText, this);
+
+        TextChanged.Sync(OnTextChanged, this);
+        ForegroundChanged.Subscribe(NormalizeNewlinesTabsAndStyleText, this);
+        BackgroundChanged.Subscribe(NormalizeNewlinesTabsAndStyleText, this);
+        BoundsChanged.Subscribe(NormalizeNewlinesTabsAndStyleText, this);
         Focused.Subscribe(FocusChanged, this);
         Unfocused.Subscribe(FocusChanged, this);
     }
@@ -44,16 +46,13 @@ public class Label : ConsoleControl
     private void FocusChanged()
     {
         NormalizeNewlinesTabsAndStyleText();
-        FirePropertyChanged(nameof(Text));
+        TextChanged.Fire();
     }
 
-    private void TextChanged(ConsoleString value)
+    private void OnTextChanged()
     {
-        if (value == null) throw new ArgumentNullException(nameof(Text));
-        if (_text == value) return;
-        _text = value;
+        if (Text == null) throw new ArgumentNullException(nameof(Text));
         NormalizeNewlinesTabsAndStyleText();
-        FirePropertyChanged(nameof(Text));
         Width = autoSize ? _text.Length : Width;
     }
 

@@ -222,7 +222,7 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
         set
         {
             var oldItem = wrapped[index];
-            if (ObservableObject.EqualsSafe(oldItem, value))
+            if (EqualsSafe(oldItem, value))
             {
                 return;
             }
@@ -238,6 +238,15 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
             FireRemoved(oldItem);
             FireAdded(value);
         }
+    }
+
+    public static bool EqualsSafe(object a, object b)
+    {
+        if (a == null && b == null) return true;
+        if (a == null ^ b == null) return false;
+        if (object.ReferenceEquals(a, b)) return true;
+
+        return a.Equals(b);
     }
 
     object IObservableCollection.this[int index]
@@ -308,7 +317,7 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
 
             for (var i = 0; i < wrapped.Count; i++)
             {
-                if (ObservableObject.EqualsSafe(wrapped[i], item))
+                if (EqualsSafe(wrapped[i], item))
                 {
                     LastModifiedIndex = i;
                     wrapped.RemoveAt(i);

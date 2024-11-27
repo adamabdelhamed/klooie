@@ -5,7 +5,7 @@
 /// </summary>
 public sealed class OutOfBoundsMovement : CameraMovement
 {
-    public override void Init() => FocalElement.Subscribe(nameof(FocalElement.Bounds), Check, EarliestOf(this, FocalElement));
+    public override void Init() => FocalElement.BoundsChanged.Subscribe(Check, EarliestOf(this, FocalElement));
     private void Check()
     {
         if (IsOutOfBounds == false || IsMoving) return;

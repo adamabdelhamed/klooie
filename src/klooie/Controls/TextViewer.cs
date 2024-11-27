@@ -20,7 +20,6 @@ public partial class TextViewer : ConsoleControl
 
     public bool EnableCharacterByCharacterStyleDetection { get; set; }
 
-    private ConsoleString _text;
     private ConsoleString cleaned;
     private List<List<ConsoleCharacter>> lines;
     private Tokenizer<Token> tokenizer;
@@ -33,15 +32,7 @@ public partial class TextViewer : ConsoleControl
     /// <summary>
     /// Gets or sets the text displayed in the viewer
     /// </summary>
-    public ConsoleString Text
-    { 
-        get => _text;
-        set 
-        {
-            if (value == null) throw new ArgumentNullException(nameof(Text));
-            if (SetHardIf(ref _text, value, _text != value) == false) return;
-        }
-    }
+    public partial ConsoleString Text { get; set; }
 
 
     /// <summary>
@@ -60,18 +51,20 @@ public partial class TextViewer : ConsoleControl
         lines = new List<List<ConsoleCharacter>>();
         Text = initialText ?? ConsoleString.Empty;
         this.AutoSize = autoSize;
-        Subscribe(nameof(Text), RefreshLines, this);
-        Subscribe(nameof(MaxHeight), RefreshLines, this);
-        Subscribe(nameof(Bounds), RefreshLines, this);
-        Subscribe(nameof(Foreground), RefreshLines, this);
-        Subscribe(nameof(Background), RefreshLines, this);
+
+        TextChanged.Subscribe(RefreshLines, this);
+        MaxHeightChanged.Subscribe(RefreshLines, this);
+        ForegroundChanged.Subscribe(RefreshLines, this);
+        BackgroundChanged.Subscribe(RefreshLines, this);
+        BoundsChanged.Subscribe(RefreshLines, this);
     }
 
     private void RefreshLines()
     {
+        if(Text == null) throw new ArgumentNullException(nameof(Text));
         cleaned = EnableCharacterByCharacterStyleDetection ?
-            TextCleaner.NormalizeNewlinesTabsAndStyleV2(_text, Foreground, Background) :
-            TextCleaner.NormalizeNewlinesTabsAndStyle(_text, Foreground, Background);
+            TextCleaner.NormalizeNewlinesTabsAndStyleV2(Text, Foreground, Background) :
+            TextCleaner.NormalizeNewlinesTabsAndStyle(Text, Foreground, Background);
         this.lines.Clear();
         List<ConsoleCharacter> currentLine = null;
         SmartWrapNewLine(lines, ref currentLine);

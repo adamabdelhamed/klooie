@@ -67,8 +67,9 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
         presenter.PreviousPageClicked.Subscribe(PreviousPageClicked, this);
         presenter.NextPageClicked.Subscribe(NextPageClicked, this);
         presenter.LastPageClicked.Subscribe(LastPageClicked, this);
-        this.Subscribe(nameof(SelectedRowIndex), SelectedRowChanged, this);
-        this.Subscribe(nameof(SelectedColumnIndex), SelectedColumnChanged, this);
+
+        SelectedRowIndexChanged.Subscribe(SelectedRowChanged, this);
+        SelectedColumnIndexChanged.Subscribe(SelectedColumnChanged, this);
     }
 
     /// <summary>
@@ -357,7 +358,7 @@ internal class ListViewerPanel : ProtectedConsolePanel
     {
         this.Options = options;
         layoutOptions = new GridLayoutOptions() { Columns = options.Columns.Cast<GridColumnDefinition>().ToList(), Rows = new List<GridRowDefinition>() };
-        Subscribe(nameof(Bounds), Recompose, this);
+        BoundsChanged.Subscribe(Recompose, this);
     }
 
     public void Recompose()

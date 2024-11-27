@@ -24,7 +24,7 @@ public partial class BorderPanel : ProtectedConsolePanel
             ProtectedPanel.Background = content.Background;
             container.Add(content);
         }
-        this.Subscribe(nameof(Background), () => container.Background = this.Background, this);
+        BackgroundChanged.Subscribe(() => container.Background = this.Background, this);
     }
 
     protected override void OnPaint(ConsoleBitmap context)

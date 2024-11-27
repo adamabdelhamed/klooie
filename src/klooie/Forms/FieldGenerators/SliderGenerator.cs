@@ -57,8 +57,9 @@ public sealed class SliderGenerator : FormFieldGeneratorAttribute
 
     protected void SyncSlider(PropertyInfo property, SliderWithValueLabel slider, IObservableObject formModel)
     {
-        formModel.Sync(property.Name, () => slider.Value = (float)Convert.ChangeType(property.GetValue(formModel), typeof(float)), slider);
-        slider.Subscribe(nameof(slider.Value), () => property.SetValue(formModel, Convert.ChangeType(slider.Value, property.PropertyType)) , slider);
+        formModel.SyncOld(property.Name, () => slider.Value = (float)Convert.ChangeType(property.GetValue(formModel), typeof(float)), slider);
+
+        slider.ValueChanged.Subscribe(() => property.SetValue(formModel, Convert.ChangeType(slider.Value, property.PropertyType)), slider);
     }
 }
 

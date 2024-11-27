@@ -150,7 +150,7 @@ public class VelocityTests
                 };
 
                 collider.Velocity.BeforeMove.Subscribe(checkBounds, collider);
-                collider.Sync(nameof(collider.Bounds), checkBounds, collider);
+                collider.BoundsChanged.Sync(checkBounds, collider);
             }
 
             for(var i = 0; i < 10000; i++)

@@ -12,7 +12,7 @@ public partial class FormTests
 {
     public TestContext TestContext { get; set; }
 
-    partial class SimpleFormModel : ObservableObject
+    partial class SimpleFormModel : IObservableObject
     {
         [FormLabel("[Orange]First Name")]
         public partial string FirstName { get; set; }

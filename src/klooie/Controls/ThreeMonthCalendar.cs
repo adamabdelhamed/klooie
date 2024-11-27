@@ -24,7 +24,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
         options = options ?? new ThreeMonthCarouselOptions();
         this.Options = options;
         SetupInvisiblePlaceholders();
-        this.Sync(nameof(Bounds), Refresh, this);
+        BoundsChanged.Sync(Refresh, this);
         SetupKeyboardHandling();
     }
 

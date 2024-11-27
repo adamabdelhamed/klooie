@@ -85,7 +85,8 @@ public sealed class Style
             if (c.ShouldContinue == false) return;
             prop?.SetValue(c, unstyledValue);
         });
-        c.Subscribe(PropertyName, () =>
+
+        c.SubscribeOld(PropertyName, () =>
         {
             if (lt.ShouldContinue == false) return;
             prop.SetValue(c, Value);

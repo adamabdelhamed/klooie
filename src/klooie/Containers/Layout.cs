@@ -144,9 +144,13 @@ public static class Layout
     private static T DoTwoWayLayoutAction<T>(this T child, Action<T, Container> a) where T : ConsoleControl
     {
         if (child.Parent == null) throw new ArgumentException("This control does yet have a parent");
-        var syncAction = () => a(child, child.Parent);
-        child.Subscribe(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
-        child.Parent.Subscribe(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
+        var syncAction = () =>
+        {
+            if (child.ShouldContinue == false || child.Parent == null || child.Parent.ShouldContinue == false) return;
+            a(child, child.Parent);
+        };
+        child.BoundsChanged.Subscribe(syncAction, child.Parent);
+        child.Parent.BoundsChanged.Subscribe(syncAction, child.Parent);
         syncAction();
         return child;
     }
@@ -154,8 +158,14 @@ public static class Layout
     private static T DoParentTriggeredLayoutAction<T>(this T child, Action<T, Container> a) where T : ConsoleControl
     {
         if (child.Parent == null) throw new ArgumentException("This control does yet have a parent");
-        var syncAction = () => a(child, child.Parent);
-        child.Parent.Subscribe(nameof(ConsoleControl.Bounds), syncAction, child.Parent);
+        var parent = child.Parent;
+        var syncAction = () =>
+        {
+            if (child.ShouldContinue == false || child.Parent == null || child.Parent.ShouldContinue == false) return;
+            a(child, child.Parent);
+              
+        };
+        child.Parent.BoundsChanged.Subscribe(syncAction, child.Parent);
         syncAction();
         return child;
     }

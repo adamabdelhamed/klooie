@@ -31,7 +31,7 @@ public class ConsolePanel : Container
             c.Parent = this;
             sortedControls.Add(c);
             SortZ();
-            c.Subscribe(nameof(c.ZIndex), () => SortZ(), Controls.GetMembershipLifetime(c));
+            c.ZIndexChanged.Subscribe(SortZ, Controls.GetMembershipLifetime(c));
         }, this);
         Controls.AssignedToIndex.Subscribe((assignment) => throw new NotSupportedException("Index assignment is not supported in Controls collection"), this);
         Controls.Removed.Subscribe((c) =>

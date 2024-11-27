@@ -54,13 +54,13 @@ public partial class StackPanel : ConsolePanel
     /// </summary>
     public StackPanel()
     {
-        Subscribe(nameof(Bounds), RedoLayout, this);
-        Subscribe(nameof(Margin), RedoLayout, this);
+        BoundsChanged.Subscribe(RedoLayout, this);
+        MarginChanged.Subscribe(RedoLayout, this);
         Controls.Added.Subscribe(Controls_Added, this);
         Controls.Changed.Subscribe(RedoLayout, this);
     }
 
-    private void Controls_Added(ConsoleControl obj) => obj.Sync(nameof(Bounds), RedoLayout, Controls.GetMembershipLifetime(obj));
+    private void Controls_Added(ConsoleControl obj) => obj.BoundsChanged.Sync(RedoLayout, Controls.GetMembershipLifetime(obj));
     
     private void RedoLayout()
     {

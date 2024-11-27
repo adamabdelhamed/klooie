@@ -3,8 +3,9 @@
 /// <summary>
 /// A panel that can pan like a camera.
 /// </summary>
-public sealed class Camera : ConsolePanel
+public sealed partial class Camera : ConsolePanel
 {
+    public Event CameraLocationChanged { get; } = new Event();
     private LocF cameraLocation;
 
     /// <summary>
@@ -12,18 +13,20 @@ public sealed class Camera : ConsolePanel
     /// this property's setter will enforce that the camera stays within the boundaries
     /// defined by BigBounds
     /// </summary>
-    public LocF CameraLocation 
+    public LocF CameraLocation
     {
-        get => cameraLocation; 
-        set 
+        get => cameraLocation;
+        set
         {
             var proposed = new RectF(ConsoleMath.Round(value.Left), ConsoleMath.Round(value.Top), Width, Height);
             var final = EnsureWithinBigBounds(proposed).TopLeft;
-            if(SetHardIf(ref cameraLocation, final, cameraLocation != final))
+            if (cameraLocation != final)
             {
-                FirePropertyChanged(nameof(CameraBounds));
+                cameraLocation = final;
+                CameraLocationChanged.Fire();
+                CameraBounds = new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height);
             }
-        } 
+        }
     }
 
     /// <summary>
@@ -50,8 +53,8 @@ public sealed class Camera : ConsolePanel
     /// <summary>
     /// Gets the current camera boundaries
     /// </summary>
-    public RectF CameraBounds => new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height);
-     
+    public partial RectF CameraBounds { get; set; }
+
     /// <summary>
     /// Optionally set this property to constrain the camera's movement to an arbitrary rectangle
     /// </summary>
@@ -116,7 +119,7 @@ public sealed class Camera : ConsolePanel
                 var yDelta = dest.Top - startY;
                 var frameX = startX + (v * xDelta);
                 var frameY = startY + (v * yDelta);
-                if (lt == null ||(lt.IsExpiring == false && lt.IsExpired == false))
+                if (lt == null || (lt.IsExpiring == false && lt.IsExpired == false))
                 {
                     CameraLocation = new LocF(frameX, frameY);
                 }
@@ -185,7 +188,7 @@ public sealed class Camera : ConsolePanel
     /// </summary>
     /// <param name="c">the control to test</param>
     /// <returns>true if the control is within the camera bounds</returns>
-    public override bool IsInView(ConsoleControl c) => 
+    public override bool IsInView(ConsoleControl c) =>
         new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height).Touches(c.Bounds);
 
     /// <summary>

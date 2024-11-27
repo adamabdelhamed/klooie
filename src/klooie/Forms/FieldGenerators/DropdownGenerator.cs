@@ -24,11 +24,11 @@ public sealed class DropdownGenerator : FormFieldGeneratorAttribute
 
     protected void SyncDropdown(PropertyInfo property, Dropdown dropdown, IObservableObject formModel)
     {
-        formModel.Sync(property.Name, () =>
+        formModel.SyncOld(property.Name, () =>
         {
             var latestValue = property.GetValue(formModel);
             dropdown.Value = dropdown.Options.Where(o => o.Value.Equals(latestValue)).Single();
         }, dropdown);
-        dropdown.Subscribe(nameof(dropdown.Value), () => property.SetValue(formModel,dropdown.Value.Value), dropdown);
+        dropdown.ValueChanged.Subscribe(() => property.SetValue(formModel, dropdown.Value.Value), dropdown);
     }
 }

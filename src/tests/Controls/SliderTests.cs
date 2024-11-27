@@ -24,8 +24,8 @@ public class SliderTests
         }).CenterBoth();
 
         var label = ConsoleApp.Current.LayoutRoot.Add(new Label());
-        slider.Sync(nameof(slider.Value), () => label.Text = $" {slider.Value.ToString()} ".ToBlack(RGB.Orange), Lifetime.EarliestOf(label, slider));
-        slider.Sync(nameof(slider.Bounds), () => label.MoveTo(slider.X, slider.Bottom()), Lifetime.EarliestOf(label, slider));
+        slider.ValueChanged.Sync(() => label.Text = $" {slider.Value.ToString()} ".ToBlack(RGB.Orange), Lifetime.EarliestOf(label, slider));
+        slider.BoundsChanged.Sync(() => label.MoveTo(slider.X, slider.Bottom()), Lifetime.EarliestOf(label, slider));
 
 
         await context.PaintAndRecordKeyFrameAsync();

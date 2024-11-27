@@ -5,14 +5,14 @@ namespace klooie.tests;
 
 [TestClass]
 [TestCategory(Categories.Observability)]
-public class ObservabilityTests
+public partial class ObservabilityTests
 {
-    public class SomeOtherObservable : ObservableObject
+    public partial class SomeOtherObservable : Lifetime, IObservableObject
     {
-        public string Name { get { return Get<string>(); } set { Set(value); } }
+        public partial string Name { get; set; }
     }
 
-    public class SomeObservable : ObservableObject
+    public partial class SomeObservable : Lifetime, IObservableObject
     {
         public Event SomeEvent { get; private set; } = new Event();
         public Event<string> SomeEventWithAString { get; private set; } = new Event<string>();
@@ -22,8 +22,8 @@ public class ObservabilityTests
         public ObservableCollection<SomeOtherObservable> Children { get; private set; } = new ObservableCollection<SomeOtherObservable>();
 
 
-        public string Name { get { return Get<string>(); } set { Set(value); } }
-        public int Number { get { return Get<int>(); } set { Set(value); } }
+        public partial string Name { get; set; }
+        public partial int Number { get; set; }
     }
 
 
@@ -36,7 +36,7 @@ public class ObservabilityTests
 
         using (Lifetime lifetime = new Lifetime())
         {
-            observable.Subscribe(nameof(SomeObservable.Name), () =>
+            observable.NameChanged.Subscribe(() =>
             {
                 triggerCount++;
             }, lifetime);
@@ -59,8 +59,7 @@ public class ObservabilityTests
 
         using (var lifetime = new Lifetime())
         {
-
-            observable.Subscribe(nameof(SomeObservable.Name), () =>
+            observable.NameChanged.Subscribe(() =>
             {
                 triggerCount++;
             }, lifetime);
@@ -79,7 +78,7 @@ public class ObservabilityTests
     {
         var observable = new SomeObservable();
         var triggerCount = 0;
-        observable.SubscribeOnce(nameof(SomeObservable.Name), () => { triggerCount++; });
+        observable.NameChanged.SubscribeOnce(() => { triggerCount++; });
         Assert.AreEqual(0, triggerCount);
         observable.Name = "Some value";
         Assert.AreEqual(1, triggerCount);
@@ -95,7 +94,7 @@ public class ObservabilityTests
 
         using (var lifetime = new Lifetime())
         {
-            observable.Subscribe(ObservableObject.AnyProperty, () => { numChanged++; }, lifetime);
+            observable.SubscribeToAnyPropertyChange(() => { numChanged++; }, lifetime);
 
             Assert.AreEqual(0, numChanged);
             observable.Name = "Foo";
@@ -221,11 +220,10 @@ public class ObservabilityTests
         int numChildrenRemoved = 0;
         observable.Children.Sync((c) =>
         {
-            c.Sync(nameof(SomeOtherObservable.Name), () =>
+            c.NameChanged.Sync(() =>
             {
                 numChildrenChanged++;
-            }
-            , observable.Children.GetMembershipLifetime(c));
+            }, observable.Children.GetMembershipLifetime(c));
             numChildrenAdded++;
         },
         (c) =>

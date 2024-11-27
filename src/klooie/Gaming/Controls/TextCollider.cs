@@ -1,14 +1,13 @@
 ﻿namespace klooie.Gaming;
 
-public class TextCollider : GameCollider
+public partial class TextCollider : GameCollider
 {
-    private ConsoleString _content;
-    public ConsoleString Content { get => _content; set => SetHardIf(ref _content, value, _content != value); }
+    public partial ConsoleString Content { get; set; }
 
     public TextCollider(ConsoleString content, ColliderGroup group = null) : base(group)
     {
         this.Content = content;
-        Sync(nameof(Content), () => ResizeTo(Content.Length, 1), this);
+        ContentChanged.Sync(() => ResizeTo(Content.Length, 1), this);
     }
 
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);

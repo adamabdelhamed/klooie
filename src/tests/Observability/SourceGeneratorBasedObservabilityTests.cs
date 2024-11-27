@@ -25,7 +25,8 @@ public class SourceGeneratorBasedObservabilityTests
             Assert.AreEqual(1, nameChangedCount);
             Assert.AreEqual("new name", observable.Name);
         }
-        propValLt = observable.GetPropertyValueLifetime(nameof(SomeObservable.Name));
+        propValLt = observable.NameChanged.CreateNextFireLifetime();
+        
         Assert.IsFalse(propValLt.IsExpired);
         observable.Name = "new name2";
         var a = 1;

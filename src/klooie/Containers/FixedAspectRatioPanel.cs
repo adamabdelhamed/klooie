@@ -18,7 +18,7 @@ public class FixedAspectRatioPanel : ProtectedConsolePanel
         this.content = content;
         this.widthOverHeight = widthOverHeight;
         ProtectedPanel.Add(content).CenterBoth();
-        this.Sync(nameof(Bounds), UpdateContentSize, this);
+        BoundsChanged.Sync(UpdateContentSize, this);
     }
 
     private void UpdateContentSize()

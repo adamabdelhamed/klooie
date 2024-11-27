@@ -1,33 +1,15 @@
 ﻿namespace klooie;
 
-public partial class Rectangular : ObservableObject, IObservableObject
+public partial class Rectangular :  Lifetime, IObservableObject
 {
     private int x, y, w, h;
-    private RectF fBounds;
-
+ 
 
     public partial int ZIndex { get; set; }
 
     internal int ColliderHashCode { get; set; } = -1;
 
-    public RectF Bounds
-    {
-        get { return fBounds; }
-        set
-        {
-            fBounds = value;
-            var newX = ConsoleMath.Round(value.Left);
-            var newY = ConsoleMath.Round(value.Top);
-            var newW = ConsoleMath.Round(value.Width);
-            var newH = ConsoleMath.Round(value.Height);
-            x = newX;
-            y = newY;
-            w = newW;
-            h = newH;
-
-            FirePropertyChanged(nameof(Bounds));
-        }
-    }
+    public partial RectF Bounds { get; set; }
 
     public int Width
     {
@@ -39,8 +21,7 @@ public partial class Rectangular : ObservableObject, IObservableObject
         {
             if (w == value) return;
             w = value;
-            fBounds = new RectF(fBounds.Left, fBounds.Top, w, fBounds.Height);
-            FirePropertyChanged(nameof(Bounds));
+            SyncBounds(new RectF(Bounds.Left, Bounds.Top, w, Bounds.Height));
         }
     }
     public int Height
@@ -53,8 +34,7 @@ public partial class Rectangular : ObservableObject, IObservableObject
         {
             if (h == value) return;
             h = value;
-            fBounds = new RectF(fBounds.Left, fBounds.Top, fBounds.Width, h);
-            FirePropertyChanged(nameof(Bounds));
+            SyncBounds(new RectF(Bounds.Left, Bounds.Top, Bounds.Width, h));
         }
     }
     public int X
@@ -67,8 +47,7 @@ public partial class Rectangular : ObservableObject, IObservableObject
         {
             if (x == value) return;
             x = value;
-            fBounds = new RectF(x, fBounds.Top, fBounds.Width, fBounds.Height);
-            FirePropertyChanged(nameof(Bounds));
+            SyncBounds(new RectF(x, Bounds.Top, Bounds.Width, Bounds.Height));
         }
     }
     public int Y
@@ -81,14 +60,18 @@ public partial class Rectangular : ObservableObject, IObservableObject
         {
             if (y == value) return;
             y = value;
-            fBounds = new RectF(fBounds.Left, y, fBounds.Width, fBounds.Height);
-            FirePropertyChanged(nameof(Bounds));
+            SyncBounds(new RectF(Bounds.Left, y, Bounds.Width, Bounds.Height));
         }
     }
 
     public float Left => Bounds.Left;
 
     public float Top => Bounds.Top;
+
+    public Rectangular()
+    {
+        BoundsChanged.Subscribe(()=>SyncBounds(Bounds), this);
+    }
 
     public void MoveTo(LocF loc, int? z = null) => MoveTo(loc.Left, loc.Top, z);
 
@@ -135,6 +118,19 @@ public partial class Rectangular : ObservableObject, IObservableObject
     {
         MoveBy(.1f, .1f);
         ResizeTo(Width - .2f, Height - .2f);
+    }
+
+    private void SyncBounds(RectF newBounds)
+    {
+        var newX = ConsoleMath.Round(newBounds.Left);
+        var newY = ConsoleMath.Round(newBounds.Top);
+        var newW = ConsoleMath.Round(newBounds.Width);
+        var newH = ConsoleMath.Round(newBounds.Height);
+        x = newX;
+        y = newY;
+        w = newW;
+        h = newH;
+        Bounds = newBounds;
     }
 
     public float NumberOfPixelsThatOverlap(RectF other) => this.Bounds.NumberOfPixelsThatOverlap(other);

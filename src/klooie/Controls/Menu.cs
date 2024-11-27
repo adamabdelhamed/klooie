@@ -28,7 +28,7 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
     /// <summary>
     /// Gets the currently selected item
     /// </summary>
-    public T? SelectedItem => menuItems.Count > 0 ? menuItems[SelectedIndex] : null;
+    public partial T? SelectedItem { get; private set; }
 
     /// <summary>
     /// An event that fires when the user activates the selected item
@@ -58,7 +58,7 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         GuardAgainstInvalidSelectedIndexSetter();
         AddMenuItems();
         SetupEventHandlers();
-        Subscribe(AnyProperty,RefreshLabels, this);
+        SubscribeToAnyPropertyChange(RefreshLabels, this);
     }
 
     private void AddMenuItems()
@@ -74,7 +74,8 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         this.CanFocus = true;
         this.Focused.Sync(RefreshLabels, this);
         this.Unfocused.Subscribe(RefreshLabels, this);
-        this.Subscribe(nameof(SelectedIndex), RefreshLabels, this);
+        SelectedIndexChanged.Sync(() => SelectedItem = menuItems[SelectedIndex], this);
+        SelectedIndexChanged.Subscribe(RefreshLabels, this);
         this.KeyInputReceived.Subscribe(OnKeyPress, this);
     }
 
@@ -90,13 +91,11 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         if (wasUpPressed && canAdvanceBackwards)
         {
             SelectedIndex--;
-            FirePropertyChanged(nameof(SelectedItem));
             RefreshLabels();
         }
         else if (wasDownPressed && canAdvanceForwards)
         {
             SelectedIndex++;
-            FirePropertyChanged(nameof(SelectedItem));
             RefreshLabels();
         }
         else if (wasEnterPressed && canActivateItem)
@@ -105,8 +104,11 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         }
     }
 
-    private ConsoleString SelectedItemFormatter(T item)=> (formatter(item).StringValue).ToConsoleString(HasFocus ? Background : Foreground, HasFocus ? FocusColor : Background);
-    
+    private ConsoleString SelectedItemFormatter(T item)
+    {
+        var ret = (formatter(item).StringValue).ToConsoleString(HasFocus ? Background : Foreground, HasFocus ? FocusColor : Background);
+        return ret;
+    }
     private void RefreshLabels()
     {
         foreach (var label in ProtectedPanel.Descendents.WhereAs<Label>().Where(l => l.Tag is T))
@@ -119,7 +121,7 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
 
     private void GuardAgainstInvalidSelectedIndexSetter()
     {
-        Subscribe(nameof(SelectedIndex), () =>
+        SelectedIndexChanged.Subscribe(() =>
         {
             if (SelectedIndex < 0 || SelectedIndex >= menuItems.Count)
             {

@@ -111,8 +111,8 @@ public class Lifetime : Disposable, ILifetime
     /// <returns>an async task</returns>
     public Task AsTask()
     {
-        var tcs = new TaskCompletionSource<bool>();
-        OnDisposed(SetResultTrue, tcs);
+        var tcs = new TaskCompletionSource();
+        OnDisposed(()=> tcs.SetResult());
         return tcs.Task;
     }
 
@@ -126,19 +126,6 @@ public class Lifetime : Disposable, ILifetime
         if (IsExpired == false)
         {
             _manager.OnDisposed(cleanupCode);
-        }
-    }
-
-    /// <summary>
-    /// Registers an action to run when this lifetime ends
-    /// </summary>
-    /// <param name="cleanupCode">code to run when this lifetime ends</param>
-    /// <param name="param">a parameter to send to the callback</param>
-    public void OnDisposed(Action<object> cleanupCode, object param)
-    {
-        if (IsExpired == false)
-        {
-            _manager.OnDisposed(cleanupCode, param);
         }
     }
 

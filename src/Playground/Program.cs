@@ -1,56 +1,30 @@
-﻿
-
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using klooie;
-
-
-BenchmarkRunner.Run<EventBenchmark>();
-/*
-var b = new EventBenchmark();
-b.Setup();
-b.OldObservable();
-b.NewObservable();
-*/
+using PowerArgs;
+//BenchmarkRunner.Run<Benchmark>();
+new Benchmark().CreateAppWithSomeControls();
 [MemoryDiagnoser]
-public class EventBenchmark
+public class Benchmark
 {
-    
-    private OldObservable oldObservable;
-    private NewObservable newObservable;
-
-
-    private int oldCount;
-    private int newCount;
-    [GlobalSetup]
-    public void Setup()
-    {
-        oldObservable = new OldObservable();
-        newObservable = new NewObservable();
-    }
-
-    public int GetCounts() => oldCount + newCount;
-    
-
-    [Benchmark(Baseline = true)]
-    public void OldObservableTest()
-    {
-        oldObservable.Set<string>("",nameof(OldObservable.Name));
-    }
-
     [Benchmark]
-    public void NewObservableTest()
+    public void CreateAppWithSomeControls()
     {
- 
+        var app = new ConsoleApp();
+        app.Invoke(async () =>
+        {
+            while (true)
+            {
+                app.LayoutRoot.Add(new TextBox { Value = ConsoleString.Empty });
+                app.LayoutRoot.Add(new Label { Text = ConsoleString.Empty });
+                app.LayoutRoot.Add(new Button() { Text = ConsoleString.Empty });
+
+                await Task.Yield();
+                app.LayoutRoot.Controls.Clear();
+                await Task.Yield();
+            }
+        });
+        app.Run();
     }
 }
 
-public class OldObservable : ObservableObject
-{
-    public string Name { get => Get<string>(); set => Set(value); }
-}
-
-public partial class NewObservable : IObservableObject
-{
-    public partial string Name { get; set; }
-}

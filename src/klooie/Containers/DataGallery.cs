@@ -21,10 +21,9 @@ public abstract partial class Gallery : ProtectedConsolePanel
     {
         HMargin = 2;
         VMargin = 1;
-
-        Subscribe(nameof(Bounds), Refresh, this);
-        Subscribe(nameof(HMargin), Refresh, this);
-        Subscribe(nameof(VMargin), Refresh, this);
+        BoundsChanged.Subscribe(Refresh, this);
+        HMarginChanged.Subscribe(Refresh, this);
+        VMarginChanged.Subscribe(Refresh, this);
     }
 
     /// <summary>

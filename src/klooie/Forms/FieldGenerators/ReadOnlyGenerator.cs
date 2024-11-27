@@ -18,5 +18,5 @@ public sealed class ReadOnlyGenerator : FormFieldGeneratorAttribute
     public override float GetConfidence(PropertyInfo property, IObservableObject formModel) => property.HasAttr<FormReadOnlyAttribute>() ? .85f : .1f;
 
     protected void SyncLabel(PropertyInfo property, Label label, IObservableObject formModel) =>
-        formModel.Sync(property.Name, () => label.Text = property.GetValue(formModel).ToConsoleString() , label);
+        formModel.SyncOld(property.Name, () => label.Text = property.GetValue(formModel).ToConsoleString() , label);
 }
