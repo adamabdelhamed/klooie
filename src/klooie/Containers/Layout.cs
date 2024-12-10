@@ -162,8 +162,7 @@ public static class Layout
         var syncAction = () =>
         {
             if (child.ShouldContinue == false || child.Parent == null || child.Parent.ShouldContinue == false) return;
-            a(child, child.Parent);
-              
+            a(child, child.Parent);  
         };
         child.Parent.BoundsChanged.Subscribe(syncAction, child.Parent);
         syncAction();

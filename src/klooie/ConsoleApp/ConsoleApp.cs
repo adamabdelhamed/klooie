@@ -107,16 +107,6 @@ public partial class ConsoleApp : EventLoop
     public Event Stopped { get; private set; } = new Event();
 
     /// <summary>
-    /// An event that fires when a control is added to the visual tree
-    /// </summary>
-    public Event<ConsoleControl> ControlAdded { get; private set; } = new Event<ConsoleControl>();
-
-    /// <summary>
-    /// An event that fires when a control is removed from the visual tree
-    /// </summary>
-    public Event<ConsoleControl> ControlRemoved { get; private set; } = new Event<ConsoleControl>();
-
-    /// <summary>
     /// Gets the bitmap that will be painted to the console
     /// </summary>
     public ConsoleBitmap Bitmap => LayoutRoot.Bitmap;
@@ -175,12 +165,6 @@ public partial class ConsoleApp : EventLoop
         focus.StackDepthChanged.Subscribe(() => FocusStackDepthChanged.Fire(focus.StackDepth), this);
         focus.FocusedControlChanged.Subscribe(() => FocusChanged.Fire(focus.FocusedControl), this);
         focus.FocusedControlChanged.Subscribe(() => RequestPaintAsync(), this);
-
-
-        LayoutRoot.Controls.BeforeAdded.Subscribe((c) => { c.Application = this; c.BeforeAddedToVisualTreeInternal(); }, this);
-        LayoutRoot.Controls.BeforeRemoved.Subscribe((c) => { c.BeforeRemovedFromVisualTreeInternal(); }, this);
-        LayoutRoot.Controls.Added.Subscribe(ControlAddedToVisualTree, this);
-        LayoutRoot.Controls.Removed.Subscribe(ControlRemovedFromVisualTree, this);
         LoopStarted.SubscribeOnce(() => _current = this);
         EndOfCycle.Subscribe(DrainPaints, this);
         Invoke(Startup);
@@ -223,8 +207,8 @@ public partial class ConsoleApp : EventLoop
 
     public void PushKeyForLifetime(ConsoleKey k, ConsoleModifiers? modifier, Action a, ILifetimeManager lt) => focus.GlobalKeyHandlers.PushForLifetime(k, modifier, a, lt);
     public void PushKeyForLifetime(ConsoleKey k, Action a, ILifetimeManager lt) => focus.GlobalKeyHandlers.PushForLifetime(k, null, a, lt);
-    public void PushKeyForLifetime(ConsoleKey k, ConsoleModifiers modifier, Action a, ILifetimeManager lt, int stackIndex) => focus.Stack.ToArray()[stackIndex].Interceptors.PushForLifetime(k, modifier, a, lt);
-    public void PushKeyForLifetime(ConsoleKey k, Action a, ILifetimeManager lt, int stackIndex) => focus.Stack.ToArray()[stackIndex].Interceptors.PushForLifetime(k, null, a, lt);
+    public void PushKeyForLifetime(ConsoleKey k, ConsoleModifiers modifier, Action a, ILifetimeManager lt, int stackIndex) => focus.Stack[stackIndex].Interceptors.PushForLifetime(k, modifier, a, lt);
+    public void PushKeyForLifetime(ConsoleKey k, Action a, ILifetimeManager lt, int stackIndex) => focus.Stack[stackIndex].Interceptors.PushForLifetime(k, null, a, lt);
  
 
 
@@ -342,83 +326,6 @@ public partial class ConsoleApp : EventLoop
 
 
 
-    private void ControlAddedToVisualTree(ConsoleControl c)
-    {
-        c.Application = this;
-        c.OnDisposed(() =>
-        {
-            if (c.Application == this && c.Parent != null && c.Parent.Application == this)
-            {
-                if (c.Parent is ConsolePanel)
-                {
-                    (c.Parent as ConsolePanel).Controls.Remove(c);
-                }
-                else
-                {
-                    throw new NotSupportedException($"You cannot manually dispose child controls of parent type {c.Parent.GetType().Name}");
-                }
-            }
-        });
-
-        if (c is ConsolePanel)
-        {
-            var childPanel = c as ConsolePanel;
-            childPanel.Controls.Sync((cp) => { ControlAddedToVisualTree(cp); }, (cp) => { ControlRemovedFromVisualTree(cp); }, () => { }, c);
-        }
-        else if (c is ProtectedConsolePanel)
-        {
-            var childPanel = c as ProtectedConsolePanel;
-            ControlAddedToVisualTree(childPanel.ProtectedPanelInternal);
-            childPanel.OnDisposed(() => ControlRemovedFromVisualTree(childPanel.ProtectedPanelInternal));
-        }
-
-        focus.Add(c);
-        c.AddedToVisualTreeInternal();
-
-        ControlAdded.Fire(c);
-        RequestPaint();
-    }
-
-    private void ControlRemovedFromVisualTree(ConsoleControl c)
-    {
-        c.IsBeingRemoved = true;
-        if (ControlRemovedFromVisualTreeRecursive(c))
-        {
-            focus.RestoreFocus();
-        }
-        RequestPaint();
-    }
-
-    private bool ControlRemovedFromVisualTreeRecursive(ConsoleControl c)
-    {
-        bool focusChanged = false;
-
-        if (c is ConsolePanel)
-        {
-            foreach (var child in (c as ConsolePanel).Controls.ToArray())
-            {
-                child.IsBeingRemoved = true;
-                focusChanged = ControlRemovedFromVisualTreeRecursive(child) || focusChanged;
-            }
-        }
-
-        if (focus.FocusedControl == c)
-        {
-            focus.ClearFocus();
-            focusChanged = true;
-        }
-
-        focus.Remove(c);
-
-        c.RemovedFromVisualTreeInternal();
-        c.Application = null;
-        ControlRemoved.Fire(c);
-        if (c.IsExpired == false && c.IsExpiring == false)
-        {
-            c.Dispose();
-        }
-        return focusChanged;
-    }
 
     private void HandleKeyInput(ConsoleKeyInfo info)
     {

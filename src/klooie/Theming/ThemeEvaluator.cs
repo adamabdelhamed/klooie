@@ -8,12 +8,12 @@ internal static class ThemeEvaluator
         styles.For((s, i) => s.Index = i);
         var tracker = new ThemeApplicationTracker(styles);
         root = root ?? ConsoleApp.Current.LayoutRoot;
-        lt = lt ?? root.Manager;
+        lt = lt ?? root;
 
         // Evaluates the root, all descendents, and any future descendents
 
         EvaulateAllControls(root, lt, styles, tracker);
-        ConsoleApp.Current.ControlAdded.Subscribe(c =>
+        ConsoleApp.Current.LayoutRoot.DescendentAdded.Subscribe(c =>
         {
             if (ShouldEvaluate(c, root) == false) return;
             EvaluateControl(c, lt, styles, tracker);

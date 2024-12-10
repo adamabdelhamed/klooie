@@ -115,6 +115,7 @@ public static class CollisionDetector
             ref var obstacle = ref obstacles[i];
 
             if (from == colliders[i]) continue;
+            if (colliders[i].ShouldStop) continue;
 
             if (from is GameCollider && colliders[i] is GameCollider)
             {

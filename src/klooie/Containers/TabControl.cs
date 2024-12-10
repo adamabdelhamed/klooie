@@ -32,7 +32,7 @@ public partial class TabControl : ProtectedConsolePanel
     private StackPanel tabStack;
     private ConsolePanel body;
     private Label currentTabLabel;
-    private Lifetime arrowKeyLifetime;
+    private ILifetime arrowKeyLifetime;
     private List<TabLabel> tabs = new List<TabLabel>();
     private string _currentTab;
 

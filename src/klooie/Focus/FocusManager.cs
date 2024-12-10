@@ -146,20 +146,22 @@ public partial class ConsoleApp : EventLoop
             }
         }
 
-        private Stack<FocusContext> focusStack;
+        private List<FocusContext> focusStack;
 
-        public Stack<FocusContext> Stack => focusStack;
+        public List<FocusContext> Stack => focusStack;
 
         public partial int StackDepth {get;set;}
 
-        public KeyboardInterceptionManager GlobalKeyHandlers => focusStack.Peek().Interceptors;
+        public KeyboardInterceptionManager GlobalKeyHandlers => focusStack[focusStack.Count - 1].Interceptors;
 
         public partial ConsoleControl FocusedControl { get; set; }
         public FocusManager()
         {
-            focusStack = new Stack<FocusContext>();
-            focusStack.Push(new FocusContext());
+            focusStack = new List<FocusContext>();
+            focusStack.Add(new FocusContext());
             StackDepth = 1;
+            ConsoleApp.Current.LayoutRoot.DescendentAdded.Subscribe(Add, ConsoleApp.Current);
+            ConsoleApp.Current.LayoutRoot.DescendentRemoved.Subscribe(Remove, ConsoleApp.Current);
         }
 
         public void Add(ConsoleControl c)
@@ -171,21 +173,57 @@ public partial class ConsoleApp : EventLoop
             // tracked by the dialog's focus context, which was now gone.  So now we add the control to the
             // focus context that is appropriate for its FocusStackDepth, which may be on or below the top.
 
-            if (focusStack.SelectMany(s => s.Controls).Contains(c)) throw new InvalidOperationException("Item already being tracked");
-            var effectiveDepth = Math.Max(c.FocusStackDepth, c.Anscestors.Select(a => a.FocusStackDepth).MaxOrDefault(1));
+
+            CheckNotAlreadyBeingTracked(c);
+            var effectiveDepth = FindEffectiveDepth(c);
             if (effectiveDepth > focusStack.Count + 1) throw new NotSupportedException($"{nameof(c.FocusStackDepth)} can only exceed the current focus stack depth by 1");
             c.FocusStackDepthInternal = effectiveDepth;
             if (focusStack.Count < c.FocusStackDepth) Push(c);
-            focusStack.Reverse().ToArray()[c.FocusStackDepth-1].Controls.Add(c);
+            focusStack[c.FocusStackDepth - 1].Controls.Add(c);
+        }
+
+        private int FindEffectiveDepth(ConsoleControl c)
+        {
+            var ansector = c.Parent;
+            var max = Math.Max(1, c.FocusStackDepth);
+            while (ansector != null)
+            {
+                max = Math.Max(max, ansector.FocusStackDepth);
+                ansector = ansector.Parent;
+            }
+            return max;
+        }
+
+        private void CheckNotAlreadyBeingTracked(ConsoleControl c)
+        {
+            for(var i = 0; i < focusStack.Count; i++)
+            {
+                for(var j = 0; j < focusStack[i].Controls.Count; j++)
+                {
+                    if (focusStack[i].Controls[j] == c) throw new InvalidOperationException("Item already being tracked");
+                }
+            }
         }
 
         public void Remove(ConsoleControl c)
         {
+            bool cleared = false;
+            if (FocusedControl == c)
+            {
+                ClearFocus();
+                cleared = true;
+            }
+
             foreach (var context in focusStack)
             {
                 context.Controls.Remove(c);
             }
-            if(focusStack.Peek().Controls.None() && focusStack.Count > 1) Pop();
+            if(focusStack.Last().Controls.None() && focusStack.Count > 1) Pop();
+
+            if (cleared)
+            {
+                RestoreFocus();
+            }
         }
 
         private void Push(ConsoleControl cause)
@@ -196,7 +234,7 @@ public partial class ConsoleApp : EventLoop
             {
                 ClearFocus();
             }
-            focusStack.Push(new FocusContext());
+            focusStack.Add(new FocusContext());
             StackDepth++;
         }
 
@@ -207,14 +245,14 @@ public partial class ConsoleApp : EventLoop
                 throw new InvalidOperationException("Cannot pop the last item off the focus stack");
             }
 
-            focusStack.Pop();
+            focusStack.RemoveAt(focusStack.Count-1);
             RestoreFocus();
             StackDepth--;
         }
 
         public void SetFocus(ConsoleControl newFocusControl)
         {
-            var index = focusStack.Peek().Controls.IndexOf(newFocusControl);
+            var index = focusStack[focusStack.Count-1].Controls.IndexOf(newFocusControl);
             if (index < 0)
             {
                 throw new InvalidOperationException("The given control is not in the focus stack. ");
@@ -250,7 +288,7 @@ public partial class ConsoleApp : EventLoop
                 newFocusControl.HasFocus = true;
                 FocusedControl = newFocusControl;
 
-                focusStack.Peek().FocusIndex = index;
+                focusStack[focusStack.Count - 1].FocusIndex = index;
 
                 if (oldFocusedControl != null)
                 {
@@ -266,19 +304,19 @@ public partial class ConsoleApp : EventLoop
 
         public void MoveFocus(bool forward = true)
         {
-            if (focusStack.Peek().Controls.Count == 0)
+            if (focusStack[focusStack.Count - 1].Controls.Count == 0)
             {
                 return;
             }
 
-            int initialPosition = focusStack.Peek().FocusIndex;
+            int initialPosition = focusStack[focusStack.Count - 1].FocusIndex;
 
             if(FocusedControl != null)
             {
-                var focusedIndex = focusStack.Peek().Controls.IndexOf(FocusedControl);
+                var focusedIndex = focusStack[focusStack.Count - 1].Controls.IndexOf(FocusedControl);
                 if(focusedIndex != initialPosition)
                 {
-                    focusStack.Peek().FocusIndex = focusedIndex;
+                    focusStack[focusStack.Count - 1].FocusIndex = focusedIndex;
                     initialPosition = focusedIndex;
                 }
             }
@@ -286,7 +324,7 @@ public partial class ConsoleApp : EventLoop
             do
             {
                 bool wrapped = CycleFocusIndex(forward);
-                var nextControl = focusStack.Peek().Controls[focusStack.Peek().FocusIndex];
+                var nextControl = focusStack[focusStack.Count - 1].Controls[focusStack[focusStack.Count - 1].FocusIndex];
                 if (nextControl.CanFocus && nextControl.TabSkip == false)
                 {
                     SetFocus(nextControl);
@@ -295,17 +333,17 @@ public partial class ConsoleApp : EventLoop
 
                 if (wrapped && initialPosition < 0) break;
             }
-            while (focusStack.Peek().FocusIndex != initialPosition);
+            while (focusStack[focusStack.Count - 1].FocusIndex != initialPosition);
         }
 
         public void RestoreFocus()
         {
-            if (focusStack.Peek().Controls.Where(c => c.CanFocus).Count() == 0)
+            if (focusStack[focusStack.Count - 1].Controls.Where(c => c.CanFocus).Count() == 0)
             {
                 return;
             }
 
-            int initialPosition = focusStack.Peek().FocusIndex;
+            int initialPosition = focusStack[focusStack.Count - 1].FocusIndex;
 
             bool skipOnce = true;
             do
@@ -320,9 +358,9 @@ public partial class ConsoleApp : EventLoop
                     wrapped = CycleFocusIndex(true);
                 }
 
-                var newFocusIndex = Math.Max(0, Math.Min(focusStack.Peek().FocusIndex, focusStack.Peek().Controls.Count - 1));
-                focusStack.Peek().FocusIndex = newFocusIndex;
-                var nextControl = focusStack.Peek().Controls[focusStack.Peek().FocusIndex];
+                var newFocusIndex = Math.Max(0, Math.Min(focusStack[focusStack.Count - 1].FocusIndex, focusStack[focusStack.Count - 1].Controls.Count - 1));
+                focusStack[focusStack.Count - 1].FocusIndex = newFocusIndex;
+                var nextControl = focusStack[focusStack.Count - 1].Controls[focusStack[focusStack.Count - 1].FocusIndex];
                 if (nextControl.CanFocus)
                 {
                     SetFocus(nextControl);
@@ -331,7 +369,7 @@ public partial class ConsoleApp : EventLoop
 
                 if (wrapped && initialPosition < 0) break;
             }
-            while (focusStack.Peek().FocusIndex != initialPosition);
+            while (focusStack[focusStack.Count - 1].FocusIndex != initialPosition);
         }
 
         public void ClearFocus()
@@ -349,21 +387,21 @@ public partial class ConsoleApp : EventLoop
         {
             if (forward)
             {
-                focusStack.Peek().FocusIndex++;
+                focusStack[focusStack.Count - 1].FocusIndex++;
             }
             else
             {
-                focusStack.Peek().FocusIndex--;
+                focusStack[focusStack.Count - 1].FocusIndex--;
             }
 
-            if (focusStack.Peek().FocusIndex >= focusStack.Peek().Controls.Count)
+            if (focusStack[focusStack.Count - 1].FocusIndex >= focusStack[focusStack.Count - 1].Controls.Count)
             {
-                focusStack.Peek().FocusIndex = 0;
+                focusStack[focusStack.Count - 1].FocusIndex = 0;
                 return true;
             }
-            else if (focusStack.Peek().FocusIndex < 0)
+            else if (focusStack[focusStack.Count - 1].FocusIndex < 0)
             {
-                focusStack.Peek().FocusIndex = focusStack.Peek().Controls.Count - 1;
+                focusStack[focusStack.Count - 1].FocusIndex = focusStack[focusStack.Count - 1].Controls.Count - 1;
                 return true;
             }
 

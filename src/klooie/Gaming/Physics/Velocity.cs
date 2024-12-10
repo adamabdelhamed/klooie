@@ -1,6 +1,7 @@
 ﻿using klooie.Gaming;
+using klooie.Observability;
 namespace klooie;
-public sealed class Velocity
+public sealed class Velocity : Recyclable
 {
     public enum CollisionBehaviorMode
     {
@@ -69,7 +70,10 @@ public sealed class Velocity
         }
     }
 
-    public Velocity(GameCollider collider, ColliderGroup group)
+    public Velocity() { }
+ 
+
+    internal void Init(GameCollider collider, ColliderGroup group)
     {
         this.Group = group;
         this.Collider = collider;
@@ -91,4 +95,11 @@ public sealed class Velocity
 
     public IEnumerable<GameCollider> GetObstacles(List<GameCollider> buffer = null) => Group.GetObstacles(Collider, buffer);
     public void Stop() => Speed = 0;
+}
+
+public class VelocityPool : Pool<Velocity>
+{
+    protected static VelocityPool _instance;
+    public static VelocityPool Instance => _instance ??= new VelocityPool();
+    protected override Velocity Factory() => new Velocity();
 }

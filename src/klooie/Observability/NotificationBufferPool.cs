@@ -89,8 +89,16 @@ internal sealed class NotificationBufferPool
     }
 }
 
-internal class Subscription
+public class Subscription
 {
     public Action Callback { get; set; }
     public ILifetimeManager Lifetime { get; set; }
+    public List<Subscription> Subscribers { get; set; }
+    internal void Dispose()
+    {
+        Callback = null;
+        Lifetime = null;
+        Subscribers?.Remove(this);
+        Subscribers = null;
+    }
 }

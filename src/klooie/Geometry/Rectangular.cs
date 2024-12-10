@@ -1,6 +1,6 @@
 ﻿namespace klooie;
 
-public partial class Rectangular :  Lifetime, IObservableObject
+public partial class Rectangular :  Recyclable, IObservableObject
 {
     private int x, y, w, h;
  
@@ -70,7 +70,16 @@ public partial class Rectangular :  Lifetime, IObservableObject
 
     public Rectangular()
     {
-        BoundsChanged.Subscribe(()=>SyncBounds(Bounds), this);
+        ProtectedInit();
+    }
+
+    private Action cachedSyncBoundsAction;
+    protected override void ProtectedInit()
+    {
+        base.ProtectedInit();
+        ColliderHashCode = -1;
+        cachedSyncBoundsAction = cachedSyncBoundsAction ?? (() => SyncBounds(Bounds));
+        BoundsChanged.Subscribe(cachedSyncBoundsAction, this);
     }
 
     public void MoveTo(LocF loc, int? z = null) => MoveTo(loc.Left, loc.Top, z);

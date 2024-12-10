@@ -9,13 +9,16 @@ public class LabelTests
 {
     public TestContext TestContext { get; set; }
 
-    
     [TestMethod]
     public void Label_Basic() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
-        ConsoleApp.Current.LayoutRoot.Add(new Label("Hello World".ToGreen(bg: RGB.Orange))).CenterBoth();
+        var label = RecycleablePool<Label>.Instance.Rent();
+        label.Text = "Hello World".ToGreen(bg: RGB.Orange);
+        ConsoleApp.Current.LayoutRoot.Add(label).CenterBoth();
         await context.PaintAndRecordKeyFrameAsync();
         ConsoleApp.Current.Stop();
+        Assert.IsFalse(label.IsInUse);
+        Assert.IsTrue(label.ShouldStop);
     });
 
     [TestMethod]

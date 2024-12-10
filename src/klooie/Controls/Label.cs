@@ -1,6 +1,4 @@
-﻿using Microsoft.CodeAnalysis.Text;
-
-namespace klooie;
+﻿namespace klooie;
 
 /// <summary>
 /// A control that displays a single line of text
@@ -14,6 +12,9 @@ public partial class Label : ConsoleControl
     /// The text to display
     /// </summary>
     public partial ConsoleString Text { get; set; }
+
+
+    public Label() : this(string.Empty,true) { }
 
     /// <summary>
     /// Creates a new label

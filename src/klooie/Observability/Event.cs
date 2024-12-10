@@ -1,5 +1,4 @@
-﻿using PowerArgs.Samples;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 
 namespace klooie;
 /// <summary>
@@ -27,10 +26,11 @@ public sealed class Event
     /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
     public void Subscribe(Action handler, ILifetimeManager lifetimeManager)
     {
-        var subRecord = new Subscription() { Callback = handler, Lifetime = lifetimeManager };
         subscribers = subscribers ?? new List<Subscription>();
-        subscribers.Add(subRecord);
-        lifetimeManager.OnDisposed(() => subscribers?.Remove(subRecord));
+        var subscription = SubscriptionPool.Rent(handler, lifetimeManager);
+        subscription.Subscribers = subscribers;
+        subscribers.Add(subscription);
+        lifetimeManager.OnDisposed(subscription);
     }
 
     /// <summary>
@@ -93,7 +93,7 @@ public sealed class Event
 
     internal void Reset()
     {
-        subscribers = null;
+        subscribers?.Clear();
     }
 }
 
@@ -165,7 +165,6 @@ public static class EventPool
     public static int EventsCreated { get; private set; }
     public static int EventsRented { get; private set; }
     public static int EventsReturned { get; private set; }
-
     public static int AllocationsSaved => EventsRented - EventsCreated;
 
 #endif
@@ -195,5 +194,84 @@ public static class EventPool
 #endif
         evt.Reset(); // Clear subscribers and any other state
         _pool.Add(evt);
+    }
+}
+
+
+public static class EventPool<T>
+{
+#if DEBUG
+    public static int EventsCreated { get; private set; }
+    public static int EventsRented { get; private set; }
+    public static int EventsReturned { get; private set; }
+    public static int AllocationsSaved => EventsRented - EventsCreated;
+
+#endif
+    private static readonly ConcurrentBag<Event<T>> _pool = new ConcurrentBag<Event<T>>();
+
+    public static Event<T> Rent()
+    {
+#if DEBUG
+        EventsRented++;
+#endif
+        if (_pool.TryTake(out var evt))
+        {
+            return evt;
+        }
+
+#if DEBUG
+        EventsCreated++;
+#endif
+
+        return new Event<T>();
+    }
+
+    public static void Return(Event<T> evt)
+    {
+#if DEBUG
+        EventsReturned++;
+#endif
+        evt.Reset(); // Clear subscribers and any other state
+        _pool.Add(evt);
+    }
+}
+
+public static class SubscriptionPool
+{
+#if DEBUG
+    public static int Created { get; private set; }
+    public static int Rented { get; private set; }
+    public static int Returned { get; private set; }
+    public static int AllocationsSaved => Rented - Created;
+
+#endif
+    private static readonly ConcurrentBag<Subscription> _pool = new ConcurrentBag<Subscription>();
+
+    internal static Subscription Rent(Action callback, ILifetimeManager lifetime)
+    {
+#if DEBUG
+        Rented++;
+#endif
+        if (_pool.TryTake(out var evt))
+        {
+            evt.Callback = callback;
+            evt.Lifetime = lifetime;
+            return evt;
+        }
+
+#if DEBUG
+        Created++;
+#endif
+
+        return new Subscription() { Callback = callback, Lifetime = lifetime };
+    }
+
+    internal static void Return(Subscription subscription)
+    {
+#if DEBUG
+        Returned++;
+#endif
+        subscription.Dispose();
+        _pool.Add(subscription);
     }
 }

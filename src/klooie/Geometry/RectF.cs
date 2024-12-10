@@ -2,7 +2,7 @@
 
 namespace klooie;
 [ArgReviverType]
-public readonly struct RectF
+public readonly struct RectF : IEquatable<RectF>
 {
     public readonly float Left;
     public readonly float Top;
@@ -48,7 +48,8 @@ public readonly struct RectF
     public override string ToString() => $"{Left},{Top} {Width}x{Height}";
     public bool Equals(in Rect other) => Equals(other.ToRectF());
     public bool Equals(in RectF other) => Left == other.Left && Top == other.Top && Width == other.Width && Height == other.Height;
-    public override bool Equals(object? obj) => (obj is RectF && Equals((RectF)obj)) || (obj is Rect && Equals((Rect)obj));
+    public bool Equals(RectF other) => Left == other.Left && Top == other.Top && Width == other.Width && Height == other.Height;
+    public override bool Equals(object? obj) => obj is RectF && Equals((RectF)obj);
     public static bool operator ==(in RectF a, in RectF b) => a.Equals(b);
     public static bool operator !=(in RectF a, in RectF b) => a.Equals(b) == false;
 

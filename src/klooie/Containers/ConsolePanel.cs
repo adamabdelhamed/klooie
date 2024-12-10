@@ -20,35 +20,100 @@ public class ConsolePanel : Container
     /// </summary>
     public override IEnumerable<ConsoleControl> Children => Controls;
 
+    private Event<ConsoleControl> _descendentAdded, _descendentRemoved;
+
+    public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = EventPool<ConsoleControl>.Rent()); }
+    public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = EventPool<ConsoleControl>.Rent()); }
+
     /// <summary>
     /// Creates a new console panel
     /// </summary>
     public ConsolePanel()
     {
         Controls = new ObservableCollection<ConsoleControl>();
-        Controls.Added.Subscribe((c) =>
-        {
-            c.Parent = this;
-            sortedControls.Add(c);
-            SortZ();
-            c.ZIndexChanged.Subscribe(SortZ, Controls.GetMembershipLifetime(c));
-        }, this);
+        Controls.Added.Subscribe(OnControlAddedInternal, this);
         Controls.AssignedToIndex.Subscribe((assignment) => throw new NotSupportedException("Index assignment is not supported in Controls collection"), this);
-        Controls.Removed.Subscribe((c) =>
-        {
-            sortedControls.Remove(c);
-            c.Parent = null;
-        }, this);
+        Controls.Removed.Subscribe(OnControlRemovedInternal, this);
+        this.OnDisposed(DisposeChildren);
 
-        this.OnDisposed(() =>
-        {
-            foreach (var child in Controls.ToArray())
-            {
-                child.TryDispose();
-            }
-        });
-
+        Controls.Added.Subscribe(ControlAddedToVisualTree, this);
+        Controls.Removed.Subscribe(ControlRemovedFromVisualTree, this);
         this.CanFocus = false;
+    }
+
+    private void DisposeChildren()
+    {
+        foreach (var child in Controls.ToArray())
+        {
+            child.TryDispose();
+        }
+    }
+
+    private void ControlAddedToVisualTree(ConsoleControl c)
+    {
+        c.Application = this.Application;
+        c.BeforeAddedToVisualTreeInternal();
+        if (c is ConsolePanel)
+        {
+            var childPanel = c as ConsolePanel;
+            childPanel.Controls.Sync(ControlAddedToVisualTree, ControlRemovedFromVisualTree, null, c);
+        }
+        else if (c is ProtectedConsolePanel)
+        {
+            var childPanel = c as ProtectedConsolePanel;
+            ControlAddedToVisualTree(childPanel.ProtectedPanelInternal);
+            childPanel.OnDisposed(() => ControlRemovedFromVisualTree(childPanel.ProtectedPanelInternal));
+        }
+
+ 
+        c.AddedToVisualTreeInternal();
+
+        DescendentAdded.Fire(c);
+        Application.RequestPaint();
+    }
+
+    private void ControlRemovedFromVisualTree(ConsoleControl c)
+    {
+        c.IsBeingRemoved = true;
+        ControlRemovedFromVisualTreeRecursive(c);
+        Application?.RequestPaint();
+    }
+
+    private void ControlRemovedFromVisualTreeRecursive(ConsoleControl c)
+    {
+        c.BeforeRemovedFromVisualTreeInternal();
+        if (c is ConsolePanel)
+        {
+            foreach (var child in (c as ConsolePanel).Controls.ToArray())
+            {
+                child.IsBeingRemoved = true;
+            }
+        }
+
+
+
+        c.RemovedFromVisualTreeInternal();
+        c.Application = null;
+        DescendentRemoved.Fire(c);
+        if (c.IsExpired == false && c.IsExpiring == false)
+        {
+            c.Dispose();
+        }
+    }
+
+    private void OnControlRemovedInternal(ConsoleControl c)
+    {
+        sortedControls.Remove(c);
+        c.Parent = null;
+    }
+    private Action _sortZDelegate;
+    private void OnControlAddedInternal(ConsoleControl c)
+    {
+        c.Parent = this;
+        sortedControls.Add(c);
+        SortZ();
+        _sortZDelegate = _sortZDelegate ?? SortZ;
+        c.ZIndexChanged.Subscribe(_sortZDelegate, Controls.GetMembershipLifetime(c));
     }
 
     /// <summary>

@@ -122,8 +122,8 @@ public sealed class ColliderGroup
             for (var j = 0; j < entry.Length; j++)
             {
                 var item = entry[j];
-                // item is null if our sparse hashtable is empty in this spot
-                if (item == null) continue;
+                // item is null if our sparse hashtable is empty in this spot or if the item has expired
+                if (item == null || item.Velocity.ShouldStop) continue;
 
                 // no need to evaluate this velocity if it's not moving
                 var velocity = item.Velocity;

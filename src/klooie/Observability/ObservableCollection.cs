@@ -55,7 +55,7 @@ public class IndexAssignment<T> : IIndexAssignment
 public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
 {
     private List<T> wrapped;
-    private Dictionary<T, Lifetime> membershipLifetimes;
+    private Dictionary<T, Recyclable> membershipLifetimes;
     private Event<object> _untypedAdded = new Event<object>();
     Event<Object> IObservableCollection.Added => _untypedAdded;
     private Event<object> _untypedRemove = new Event<object>();
@@ -102,7 +102,7 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
     public ObservableCollection()
     {
         wrapped = new List<T>();
-        membershipLifetimes = new Dictionary<T, Lifetime>();
+        membershipLifetimes = new Dictionary<T, Recyclable>();
     }
 
     /// <summary>
@@ -117,14 +117,17 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
     {
         Added.Subscribe(addAction, manager);
         Removed.Subscribe(removeAction, manager);
-        Changed.Subscribe(changedAction, manager);
+        if (changedAction != null)
+        {
+            Changed.Subscribe(changedAction, manager);
+        }
 
         foreach (var obj in this.ToArray())
         {
             addAction(obj);
         }
 
-        changedAction();
+        changedAction?.Invoke();
     }
  
 
@@ -141,7 +144,7 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
     /// <param name="item">The item that was added</param>
     internal void FireAdded(T item)
     {
-        membershipLifetimes.Add(item, new Lifetime());
+        membershipLifetimes.Add(item, RecycleablePool<Recyclable>.Instance.Rent());
         Added.Fire(item);
         _untypedAdded.Fire(item);
         Changed.Fire();
@@ -158,7 +161,7 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
         Changed.Fire();
         var itemLifetime = membershipLifetimes[item];
         membershipLifetimes.Remove(item);
-        itemLifetime.Dispose();
+        RecycleablePool<Recyclable>.Instance.Return(itemLifetime);
     }
 
     internal void FireAssignedToIndex(T added, T removed)

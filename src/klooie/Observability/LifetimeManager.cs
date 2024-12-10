@@ -22,6 +22,8 @@ public interface ILifetimeManager
     /// <returns>a Task that resolves after the object is disposed</returns>
     void OnDisposed(IDisposable obj);
 
+    void OnDisposed(Subscription obj);
+
     /// <summary>
     /// returns true if expired
     /// </summary>
@@ -65,7 +67,8 @@ public static class ILifetimeManagerEx
 /// </summary>
 internal sealed class LifetimeManager : ILifetimeManager
 {
-    private List<Subscription> subscribers = new List<Subscription>();
+    private List<Subscription> toNotify;
+    private List<Subscription> toDisposeOf;
 
     /// <summary>
     /// returns true if expired
@@ -76,33 +79,38 @@ internal sealed class LifetimeManager : ILifetimeManager
 
     public bool ShouldStop => !ShouldContinue;
 
-    internal void Finish() => NotificationBufferPool.Notify(subscribers);
+    internal void Finish()
+    {
+        if(toDisposeOf != null)
+        {
+            foreach (var sub in toDisposeOf) SubscriptionPool.Return(sub);
+            toDisposeOf.Clear();
+        }
+        if(toNotify != null)
+        {
+            NotificationBufferPool.Notify(toNotify);
+            foreach (var sub in toNotify) SubscriptionPool.Return(sub);
+            toNotify.Clear();
+        }
+    }
+
+    private List<Subscription> ToNotify => toNotify ??= new List<Subscription>();
+    private List<Subscription> ToDisposeOf => toDisposeOf ??= new List<Subscription>();
 
     /// <summary>
     /// Registers the given disposable to dispose when the lifetime being
     /// managed by this manager ends
     /// </summary>
     /// <param name="obj">the object to dispose</param>
-    public void OnDisposed(IDisposable obj)
-    {
-        subscribers.Add(new Subscription()
-        {
-            Callback = () => obj.Dispose(),
-            Lifetime = this,
-        });
-    }
+    public void OnDisposed(IDisposable obj) => ToNotify.Add(SubscriptionPool.Rent(obj.Dispose, this));
+    
 
     /// <summary>
     /// Registers the given cleanup code to run when the lifetime being
     /// managed by this manager ends
     /// </summary>
     /// <param name="cleanupCode">the code to run</param>
-    public void OnDisposed(Action cleanupCode)
-    {
-        subscribers.Add(new Subscription()
-        {
-            Callback = cleanupCode,
-            Lifetime = this,
-        });
-    }
+    public void OnDisposed(Action cleanupCode) => ToNotify.Add(SubscriptionPool.Rent(cleanupCode, this));
+
+    public void OnDisposed(Subscription toDispose) => ToDisposeOf.Add(toDispose);
 }

@@ -13,7 +13,7 @@ public class Navigate : Movement
     public GameCollider effectiveDestination { get; set; }
     public GameCollider _LocalTarget { get; set; }
     public NavigationPath _CurrentPath { get; set; }
-    public Lifetime _ResultLifetime { get; private set; } = Game.Current.CreateChildLifetime();
+    public ILifetime _ResultLifetime { get; private set; } = Game.Current.CreateChildLifetime();
 
     private Func<GameCollider> destination;
     public NavigateOptions Options { get; private set; }

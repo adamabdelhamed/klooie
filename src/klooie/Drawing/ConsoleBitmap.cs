@@ -21,7 +21,6 @@ public sealed class ConsoleBitmap
     [ThreadStatic]
     public static Loc[] LineBuffer;
 
-    private bool wasFancy;
 
     // larger is faster, but may cause gaps
     private const float DrawPrecision = .5f;

@@ -1,11 +1,30 @@
-﻿namespace klooie.Gaming;
+﻿using klooie.Observability;
+
+namespace klooie.Gaming;
 
 public class GameCollider : ConsoleControl
 {   
     public Velocity Velocity { get; private set; }
     internal virtual bool AutoAddToColliderGroup => true;
     public virtual bool CanMoveTo(RectF bounds) => true;
-    public GameCollider(ColliderGroup? group = null) => Velocity = new Velocity(this, group ?? Game.Current?.MainColliderGroup ?? (AutoAddToColliderGroup == false ? null : throw new ArgumentException($"{nameof(group)} can only be null when Game.Current is not")));
+
+    protected ColliderGroup? group;
+    public GameCollider(ColliderGroup? group = null)
+    {
+        this.group = group;
+        ProtectedInit();
+    }
+
+    protected override void ProtectedInit()
+    {
+        base.ProtectedInit();
+        group = group ?? Game.Current?.MainColliderGroup ?? (AutoAddToColliderGroup == false ? null : throw new ArgumentException($"{nameof(group)} can only be null when Game.Current is not"));
+        Velocity = VelocityPool.Instance.Rent();
+        Velocity.Init(this, group);
+        this.OnDisposed(() => { VelocityPool.Instance.Return(Velocity); Velocity = null; });
+        group = null;
+    }
+
     public GameCollider(RectF bounds, ColliderGroup? group = null) : this(group) => this.Bounds = bounds;
     public GameCollider(float x, float y, float w, float h, ColliderGroup? group = null) : this(new RectF(x, y, w, h), group) { }
     public virtual bool CanCollideWith(GameCollider other) => this.IsVisible && ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
@@ -73,4 +92,11 @@ public sealed class ColliderBox : GameCollider
     internal override bool AutoAddToColliderGroup => false;
     public ColliderBox(RectF bounds) : base(bounds) { }
     public ColliderBox(float x, float y, float w, float h) : this(new RectF(x, y, w, h)) { }
+}
+
+public class GameColliderPool : Pool<GameCollider>
+{
+    protected static GameColliderPool _instance;
+    public static GameColliderPool Instance => _instance ??= new GameColliderPool();
+    protected override GameCollider Factory() => new GameCollider();
 }

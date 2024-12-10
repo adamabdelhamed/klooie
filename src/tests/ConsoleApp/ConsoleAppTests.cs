@@ -288,8 +288,8 @@ public class ConsoleAppTests
         {
             int addCounter = 0, removeCounter = 0;
 
-            app.ControlAdded.Subscribe((c) => { addCounter++; }, app);
-            app.ControlRemoved.Subscribe((c) => { removeCounter++; }, app);
+            app.LayoutRoot.DescendentAdded.Subscribe((c) => { addCounter++; }, app);
+            app.LayoutRoot.DescendentRemoved.Subscribe((c) => { removeCounter++; }, app);
             ConsolePanel panel = app.LayoutRoot.Add(new ConsolePanel());
             // direct child
             Assert.AreEqual(1, addCounter);

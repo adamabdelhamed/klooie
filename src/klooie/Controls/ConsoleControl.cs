@@ -267,10 +267,46 @@ public partial class ConsoleControl : Rectangular
             _bitmap = value;
         }
     }
+    private Action cachedRequestPaint, cachedResizeBitmapOnBoundsChanged, cachedHandleCanFocusChanged, cachedReturnEvents;
+    protected override void ProtectedInit()
+    {
+        base.ProtectedInit();
+        Parent = null;
+        hasBeenAddedToVisualTree = false;
+        CanFocus = true;
+        TabSkip = false;
+        this.Width = 1;
+        this.Height = 1;
+        Background = DefaultColors.BackgroundColor;
+        this.Foreground = DefaultColors.ForegroundColor;
+        this.IsVisible = true;
+        FocusColor = DefaultColors.FocusColor;
+        FocusContrastColor = DefaultColors.FocusContrastColor;
+        CompositionMode = CompositionMode.PaintOver;
+
+        cachedRequestPaint = cachedRequestPaint ?? RequestPaint;
+        cachedResizeBitmapOnBoundsChanged = cachedResizeBitmapOnBoundsChanged ?? ResizeBitmapOnBoundsChanged;
+        cachedHandleCanFocusChanged = cachedHandleCanFocusChanged ?? HandleCanFocusChanged;
+        cachedReturnEvents = cachedReturnEvents ?? ReturnEvents;
+
+        SubscribeToAnyPropertyChange(cachedRequestPaint, this);
+        BoundsChanged.Subscribe(cachedResizeBitmapOnBoundsChanged, this);
+        CanFocusChanged.Subscribe(cachedHandleCanFocusChanged, this);
+        OnDisposed(cachedReturnEvents);
+    }
+
+    private void HandleCanFocusChanged()
+    {
+        if (HasFocus && CanFocus == false && ShouldContinue) Application?.MoveFocus();
+    }
+
+    private void RequestPaint()
+    {
+        Application?.RequestPaint();
+    }
 
     private void ReturnEvents()
     {
-        //_focused, _unfocused, _addedToVisualTree, _beforeAddedToVisualTree, _removedFromVisualTree, _beforeRemovedFromVisualTree, _ready, _tagsChanged
         if (_focused != null)
         {
             EventPool.Return(_focused);
@@ -311,6 +347,15 @@ public partial class ConsoleControl : Rectangular
             EventPool.Return(_tagsChanged);
             _tagsChanged = null;
         }
+        UntetherFromParent();
+    }
+
+    private void UntetherFromParent()
+    {
+        if (Parent is ConsolePanel consolePanel)
+        {
+            consolePanel.Controls.Remove(this);
+        }
     }
 
     /// <summary>
@@ -346,23 +391,7 @@ public partial class ConsoleControl : Rectangular
     /// </summary>
     public ConsoleControl()
     {
-        CanFocus = true;
-        TabSkip = false;
-        this.Width = 1;
-        this.Height = 1;
-        Background = DefaultColors.BackgroundColor;
-        this.Foreground = DefaultColors.ForegroundColor;
-        this.IsVisible = true;
-        FocusColor = DefaultColors.FocusColor;
-        FocusContrastColor = DefaultColors.FocusContrastColor;
-        CompositionMode = CompositionMode.PaintOver;
-        SubscribeToAnyPropertyChange(() =>
-        {
-            Application?.RequestPaint();
-        }, this);
-        BoundsChanged.Subscribe(ResizeBitmapOnBoundsChanged, this);
-        CanFocusChanged.Subscribe(() => { if (HasFocus && CanFocus == false && ShouldContinue) Application?.MoveFocus(); }, this);
-        OnDisposed(ReturnEvents);
+        ProtectedInit();
     }
 
     /// <summary>
@@ -389,7 +418,7 @@ public partial class ConsoleControl : Rectangular
         this.Recorder = recorder;
         this.RecorderTimestampProvider = timestampFunc;
 
-        lifetime = lifetime ?? this.Manager;
+        lifetime = lifetime ?? this;
         lifetime.OnDisposed(() =>
         {
             Recorder.TryFinish();

@@ -29,7 +29,7 @@ public class Wander : Movement
 
     internal Angle? _LastGoodAngle { get; set; }
     internal Angle _OptimalAngle { get; set; }
-    internal Lifetime _IterationLifetime { get; set; }
+    internal ILifetime _IterationLifetime { get; set; }
     internal GameCollider[] _Obstacles { get; set; }
     internal WanderScore _BestScore { get; set; }
     internal GameCollider _CuriosityPoint { get; set; }

@@ -23,7 +23,7 @@ public static class ILifetimeEx
     /// </summary>
     /// <param name="lt">the parent</param>
     /// <returns>the new lifetime</returns>
-    public static Lifetime CreateChildLifetime(this ILifetime lt)
+    public static ILifetime CreateChildLifetime(this ILifetime lt)
     {
         var ret = new Lifetime();
         lt.OnDisposed(() =>
@@ -134,6 +134,14 @@ public class Lifetime : Disposable, ILifetime
     /// </summary>
     /// <param name="cleanupCode">an object to dispose when this lifetime ends</param>
     public void OnDisposed(IDisposable cleanupCode)
+    {
+        if (IsExpired == false)
+        {
+            _manager.OnDisposed(cleanupCode);
+        }
+    }
+
+    public void OnDisposed(Subscription cleanupCode)
     {
         if (IsExpired == false)
         {

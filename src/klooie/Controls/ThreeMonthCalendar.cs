@@ -54,7 +54,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
     public async Task<bool> SeekAsync(bool forward, float duration)
     {
         if (seekLt != null && seekLt.IsExpired == false) return false;
-        using (seekLt = this.CreateChildLifetime())
+        return await RecycleablePool<Recyclable>.Instance.Use<bool>(this.CreateChildRecyclable(), async (seekLt) =>
         {
             var thisMonth = new DateTime(Options.Year, Options.Month, 1);
             thisMonth = thisMonth.AddMonths(forward ? 1 : -1);
@@ -132,7 +132,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
                 center.Refresh();
             }
             return true;
-        }
+        });
     }
 
 
