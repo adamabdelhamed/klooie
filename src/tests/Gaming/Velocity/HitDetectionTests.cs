@@ -24,17 +24,25 @@ public class HitDetectionTests
     [TestMethod]
     public void HitDetection_Basic()
     {
-        var from = new ColliderBox(new RectF(0, 0, 1, 1));
-        var colliders = new ConsoleControl[]
+        using (var testLt = new Lifetime())
         {
-            new ColliderBox(new RectF(1.001f, 0, 1, 1))
-        };
-        var prediction = CollisionDetector.Predict(from, Angle.Right, colliders, 0, CastingMode.Precise);
-        Assert.AreEqual(false, prediction.CollisionPredicted);
+            var group = new ColliderGroup(testLt);
 
-        prediction = CollisionDetector.Predict(from, Angle.Right, colliders, .001f, CastingMode.Precise);
-        Assert.AreEqual(true, prediction.CollisionPredicted);
-        AssertCloseEnough(0.001f, prediction.LKGD);
+            var from = new ColliderBox(new RectF(0, 0, 1, 1), connectToMainColliderGroup: false);
+            from.ConnectToGroup(group);
+
+            var to = new ColliderBox(new RectF(1.001f, 0, 1, 1), connectToMainColliderGroup: false);
+            to.ConnectToGroup(group);
+
+            ConsoleControl[] colliders = [to];
+              
+            var prediction = CollisionDetector.Predict(from, Angle.Right, colliders, 0, CastingMode.Precise);
+            Assert.AreEqual(false, prediction.CollisionPredicted);
+
+            prediction = CollisionDetector.Predict(from, Angle.Right, colliders, .001f, CastingMode.Precise);
+            Assert.AreEqual(true, prediction.CollisionPredicted);
+            AssertCloseEnough(0.001f, prediction.LKGD);
+        }
     }
 
     [TestMethod]

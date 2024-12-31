@@ -4,7 +4,7 @@ public partial class TextCollider : GameCollider
 {
     public partial ConsoleString Content { get; set; }
 
-    public TextCollider(ConsoleString content, ColliderGroup group = null) : base(group)
+    public TextCollider(ConsoleString content, bool connectToMainColliderGroup = true) : base(connectToMainColliderGroup)
     {
         this.Content = content;
         ContentChanged.Sync(() => ResizeTo(Content.Length, 1), this);
@@ -15,6 +15,6 @@ public partial class TextCollider : GameCollider
 
 public class NoCollisionTextCollider : TextCollider
 {
-    public NoCollisionTextCollider(ConsoleString content, ColliderGroup group = null) : base(content, group) { }
+    public NoCollisionTextCollider(ConsoleString content, bool connectToMainColliderGroup = true) : base(content, connectToMainColliderGroup) { }
     public override bool CanCollideWith(GameCollider other) => false;
 }

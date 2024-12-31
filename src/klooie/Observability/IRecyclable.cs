@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 
 namespace klooie;
-public interface IRecyclable : ILifetimeManager
+public interface IRecyclable : ILifetimeManager, ILifetime
 {
     /// <summary>
     /// Initializes the object for use. Implementing classes should call this from their constructor. It will also
@@ -109,6 +109,7 @@ public abstract class RecycleablePool<T> where T : IRecyclable
 #if DEBUG
         Returned++;
 #endif
+        rented.TryDispose();
         _pool.Add(rented);
     }
 

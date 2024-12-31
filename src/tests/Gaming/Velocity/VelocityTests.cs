@@ -46,7 +46,8 @@ public class VelocityTests
         {
             var stopwatch = new TestStopwatch();
             var group = new ColliderGroup(testLt, stopwatch);
-            var c1 = new GameCollider(0, 0, 1, 1, group);
+            var c1 = new GameCollider(0, 0, 1, 1, connectToMainColliderGroup: false);
+            c1.ConnectToGroup(group);
             c1.Velocity.Speed = 0;
             c1.Velocity.Angle = 0;
             AssertCloseEnough(0, c1.Left);
@@ -74,7 +75,8 @@ public class VelocityTests
         {
             var stopwatch = new TestStopwatch();
             var group = new ColliderGroup(testLt, stopwatch);
-            var c1 = new GameCollider(0, 0, 1, 1, group);
+            var c1 = new GameCollider(0, 0, 1, 1, connectToMainColliderGroup: false);
+            c1.ConnectToGroup(group);
             c1.Velocity.Speed = 0;
             c1.Velocity.Angle = 0;
             AssertCloseEnough(0, c1.Left);
@@ -105,10 +107,14 @@ public class VelocityTests
             var stopwatch = new TestStopwatch();
             var group = new ColliderGroup(testLt, stopwatch);
 
-            var left = new GameCollider(group);
-            var right = new GameCollider(group);
-            var top = new GameCollider(group);
-            var bottom = new GameCollider(group);
+            var left = new GameCollider(connectToMainColliderGroup: false);
+            left.ConnectToGroup(group);
+            var right = new GameCollider(connectToMainColliderGroup: false);
+            right.ConnectToGroup(group);
+            var top = new GameCollider(connectToMainColliderGroup: false);
+            top.ConnectToGroup(group);
+            var bottom = new GameCollider(connectToMainColliderGroup: false);
+            bottom.ConnectToGroup(group);
 
             left.MoveTo(sceneBounds.TopLeft);
             left.ResizeTo(2, sceneBounds.Height);
@@ -125,7 +131,8 @@ public class VelocityTests
             var totalChecks = 0;
             for (var i = 0; i < 50; i++)
             {
-                var collider = new GameCollider(group);
+                var collider = new GameCollider(connectToMainColliderGroup: false);
+                collider.ConnectToGroup(group);
                 collider.MoveTo(r.Next((int)sceneBounds.Width / 2, (int)sceneBounds.Width - 5), r.Next((int)sceneBounds.Height / 2, (int)sceneBounds.Height - 5));
                 if (collider.NudgeFree() == false) Assert.Fail("Failed to nudge");
 

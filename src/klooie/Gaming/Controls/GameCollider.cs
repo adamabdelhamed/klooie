@@ -6,24 +6,35 @@ public class GameCollider : ConsoleControl
     internal virtual bool AutoAddToColliderGroup => true;
     public virtual bool CanMoveTo(RectF bounds) => true;
 
-    protected ColliderGroup? group;
-    public GameCollider(ColliderGroup? group = null)
+    public GameCollider(bool connectToMainColliderGroup = true)
     {
-        this.group = group;
+        if(connectToMainColliderGroup)
+        {
+            ConnectToGroup(Game.Current?.MainColliderGroup);
+        }
     }
 
     protected override void ProtectedInit()
     {
         base.ProtectedInit();
-        group = group ?? Game.Current?.MainColliderGroup ?? (AutoAddToColliderGroup == false ? null : throw new ArgumentException($"{nameof(group)} can only be null when Game.Current is not"));
-        Velocity = VelocityPool.Instance.Rent();
-        Velocity.Init(this, group);
-        this.OnDisposed(() => { VelocityPool.Instance.Return(Velocity); Velocity = null; });
-        group = null;
+  
+        this.OnDisposed(() => 
+        {
+            VelocityPool.Instance.Return(Velocity);
+            Velocity = null; 
+        });
     }
 
-    public GameCollider(RectF bounds, ColliderGroup? group = null) : this(group) => this.Bounds = bounds;
-    public GameCollider(float x, float y, float w, float h, ColliderGroup? group = null) : this(new RectF(x, y, w, h), group) { }
+    public void ConnectToGroup(ColliderGroup group)
+    {
+        if(group == null) throw new ArgumentNullException(nameof(group));
+        if (Velocity?.Group != null) throw new ArgumentException("This collider is already connected to a group");
+        Velocity = VelocityPool.Instance.Rent();
+        Velocity.Init(this, group);
+    }
+
+    public GameCollider(RectF bounds, bool connectToMainColliderGroup = true) : this(connectToMainColliderGroup) => this.Bounds = bounds;
+    public GameCollider(float x, float y, float w, float h, bool connectToMainColliderGroup = true) : this(new RectF(x, y, w, h), connectToMainColliderGroup) { }
     public virtual bool CanCollideWith(GameCollider other) => this.IsVisible && ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
     public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstacles(this);
 
@@ -87,8 +98,8 @@ public class GameCollider : ConsoleControl
 public sealed class ColliderBox : GameCollider
 {
     internal override bool AutoAddToColliderGroup => false;
-    public ColliderBox(RectF bounds) : base(bounds) { }
-    public ColliderBox(float x, float y, float w, float h) : this(new RectF(x, y, w, h)) { }
+    public ColliderBox(RectF bounds, bool connectToMainColliderGroup = true) : base(bounds, connectToMainColliderGroup) { }
+    public ColliderBox(float x, float y, float w, float h, bool connectToMainColliderGroup = true) : this(new RectF(x, y, w, h), connectToMainColliderGroup) { }
 }
 
 public class GameColliderPool : RecycleablePool<GameCollider>
