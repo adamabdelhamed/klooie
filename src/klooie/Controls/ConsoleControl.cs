@@ -387,7 +387,7 @@ public partial class ConsoleControl : Rectangular
     /// </summary>
     public ConsoleControl()
     {
-        ProtectedInit();
+        
     }
 
     /// <summary>

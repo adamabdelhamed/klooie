@@ -10,7 +10,6 @@ public class GameCollider : ConsoleControl
     public GameCollider(ColliderGroup? group = null)
     {
         this.group = group;
-        ProtectedInit();
     }
 
     protected override void ProtectedInit()

@@ -14,6 +14,15 @@ public class MovementTests
     public TestContext TestContext { get; set; }
 
     [TestMethod]
+    public void VelocityLifecycle() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 5, async (context) =>
+    {
+        Game.Current.GamePanel.Background = new RGB(20, 20, 20);
+        var cMover = Game.Current.GamePanel.Add(new GameCollider());
+        await Game.Current.Delay(250);
+        Game.Current.Stop();
+    });
+
+    [TestMethod]
     public void Movement_Basic() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI,120,5, async (context) =>
     {
         Game.Current.GamePanel.Background = new RGB(20, 20, 20);
