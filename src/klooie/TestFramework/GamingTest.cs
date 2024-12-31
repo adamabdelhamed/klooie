@@ -59,7 +59,7 @@ public static class GamingTest
         var testManager = new UITestManager(game, options.TestId, options.Mode);
         if (options.Test != null)
         {
-            game.Invoke(() => options.Test?.Invoke(testManager));
+            game.Invoke(async () => await options.Test?.Invoke(testManager));
         }
         else
         {

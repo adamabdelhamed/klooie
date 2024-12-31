@@ -5,7 +5,7 @@
 public partial class TextBox : ConsoleControl
 {
     private static readonly TimeSpan BlinkInterval = TimeSpan.FromMilliseconds(500);
-    private ConsoleApp.SetIntervalHandle blinkTimerHandle;
+    private ILifetime blinkTimerHandle;
     private bool isAllSelected;
     private bool isBlinking;
 
@@ -69,12 +69,17 @@ public partial class TextBox : ConsoleControl
     private void StartBlinking()
     {
         isBlinking = true;
-        blinkTimerHandle = ConsoleApp.Current.SetInterval(() =>
+        blinkTimerHandle?.TryDispose();
+        ConsoleApp.Current.Invoke(async () =>
         {
-            if (HasFocus == false) return;
-            isBlinking = !isBlinking;
-            ConsoleApp.Current.RequestPaint();
-        }, BlinkInterval);
+            blinkTimerHandle = this.CreateChildRecyclable();
+            while(blinkTimerHandle.ShouldContinue && HasFocus)
+            {
+                ConsoleApp.Current.RequestPaint();
+                await Task.Delay(BlinkInterval);
+                isBlinking = !isBlinking;
+            }
+        });
     }
 
     private void TextBox_Unfocused()
@@ -125,7 +130,7 @@ public partial class TextBox : ConsoleControl
         Editor.RegisterKeyPress(info, prototype);
         Value = Editor.CurrentValue;
         isBlinking = true;
-        ConsoleApp.Current.ChangeInterval(blinkTimerHandle, BlinkInterval);
+        StartBlinking();
     }
 
     /// <summary>

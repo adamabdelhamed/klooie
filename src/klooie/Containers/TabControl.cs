@@ -66,7 +66,7 @@ public partial class TabControl : ProtectedConsolePanel
         tabContainer = layout.Add(new ConsolePanel(), 0, 0);
         body = layout.Add(new ConsolePanel(), 0, 1);
         Options.Tabs.Changed.Sync(RefreshTabs, this);
-        ConsoleApp.Current.FocusChanged.Subscribe(c => RefreshFocus(), this);
+        ConsoleApp.Current.FocusChanged.Subscribe(RefreshFocus, this);
 
         BackgroundChanged.Sync(() =>
         {

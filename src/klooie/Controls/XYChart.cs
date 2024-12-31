@@ -302,8 +302,9 @@ public class XYChart : ConsolePanel
 
         Ready.SubscribeOnce(() =>
         {
-            ConsoleApp.Current.FocusChanged.Subscribe((fc) =>
+            ConsoleApp.Current.FocusChanged.Subscribe(() =>
             {
+                var fc = ConsoleApp.Current.FocusedControl;
                 if (options.Data.Count > 1 && fc is DataPointControl == false)
                 {
                     seriesTitleLabel.Text = ConsoleString.Empty;
@@ -333,8 +334,9 @@ public class XYChart : ConsolePanel
             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.End, HandleEndKey, focusLt);
         }, this);
 
-        ConsoleApp.Current.FocusChanged.Subscribe((fc) =>
+        ConsoleApp.Current.FocusChanged.Subscribe(() =>
          {
+             var fc = ConsoleApp.Current.FocusedControl;
              if (fc == null)
              {
                  focusLt?.Dispose();

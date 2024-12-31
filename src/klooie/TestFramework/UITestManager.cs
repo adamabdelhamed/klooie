@@ -77,7 +77,11 @@ public sealed class UITestManager
         }
         else if(mode == UITestMode.RealTimeFYI)
         {
-            app.LayoutRoot.EnableRecording(new ConsoleBitmapVideoWriter(s => File.WriteAllText(CurrentTestRecordingFilePath, s)));
+            app.Invoke(() =>
+            {
+                app.LayoutRoot.EnableRecording(new ConsoleBitmapVideoWriter(s => File.WriteAllText(CurrentTestRecordingFilePath, s)));
+            });
+            
         }
     }
 

@@ -94,58 +94,7 @@ public class ConsoleAppTests
         app.Run();
         Assert.IsTrue(detected);
     }
-
-    [TestMethod]
-    public void ConsoleApp_SetTimeout()
-    {
-        var app = new ConsoleApp();
-        var count = 0;
-        app.Invoke(() =>
-        {
-            app.SetTimeout(() => { count++; app.Stop(); }, TimeSpan.FromMilliseconds(50));
-        });
-        app.Run();
-        Assert.AreEqual(1, count);
-    }
-
-
-
-    [TestMethod]
-    public void ConsoleApp_SetInterval()
-    {
-        var app = new ConsoleApp();
-       
-        var count = 0;
-        app.Invoke(() =>
-        {
-            app.SetInterval(() => { count++; if (count == 5) { app.Stop(); } }, TimeSpan.FromMilliseconds(50));
-        });
-
-        app.Run();
-        Assert.AreEqual(5, count);
-    }
-
-    [TestMethod]
-    [Timeout(1000)]
-    public void ConsoleApp_SetIntervalCancelling()
-    {
-        var app = new ConsoleApp();
-
-        var count = 0;
-        IDisposable handle = null;
-        handle = app.SetInterval(async () =>
-        {
-            count++;
-            if (count == 5)
-            {
-                handle.Dispose();
-                await Task.Delay(20);
-                app.Stop();
-            }
-        }, TimeSpan.FromMilliseconds(5));
-        app.Run();
-        Assert.AreEqual(5, count);
-    }
+     
 
     [TestMethod]
     public void ConsoleApp_BasicFocus() => AppTest.RunHeadless(TestContext.TestId(),async (context) =>

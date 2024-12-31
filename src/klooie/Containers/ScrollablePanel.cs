@@ -144,7 +144,7 @@ public partial class ScrollablePanel : ProtectedConsolePanel
         }
     }
 
-    private void FocusChanged(ConsoleControl newlyFocused)
+    private void FocusChanged()
     {
         bool focusedControlIsWithinMe = VisitControlTree((control) =>
         {
