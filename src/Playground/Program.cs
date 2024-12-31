@@ -1,14 +1,17 @@
 ﻿using klooie;
-using PowerArgs;
 
 var app = new ConsoleApp();
  
 byte i = 0;
 app.Invoke(async () =>
 {
-    var panel = new ConsolePanel() { Background = RGB.Green, Width = 10, Height = 5 };
-    var c = panel.Add(new ConsoleControl() { Background = RGB.Red }).CenterBoth();
-    app.LayoutRoot.Add(panel).CenterBoth();
+    for(var i = 0; i < 10000; i++)
+    {
+        var control = ConsoleControlPool.Instance.Rent();
+        app.LayoutRoot.Add(control);
+        ConsoleControlPool.Instance.Return(control);
+    }
+    app.Stop();
 });
 
 

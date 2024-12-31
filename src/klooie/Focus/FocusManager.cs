@@ -12,7 +12,9 @@ internal partial class FocusManager : IObservableObject
     private Queue<KeyRequest> sendKeys = new Queue<KeyRequest>();
     private DateTime lastKeyPressTime = DateTime.MinValue;
     private ConsoleKey lastKey;
-    public Event<ConsoleKeyInfo> GlobalKeyPressed { get; private set; } = new Event<ConsoleKeyInfo>();
+
+    private Event<ConsoleKeyInfo> _globalKeyPressed;
+    public Event<ConsoleKeyInfo> GlobalKeyPressed    { get => _globalKeyPressed ?? (_globalKeyPressed = EventPool<ConsoleKeyInfo>.Rent()); }
     internal class FocusContext
     {
         public KeyboardInterceptionManager Interceptors { get; private set; } = new KeyboardInterceptionManager();
@@ -281,23 +283,6 @@ internal partial class FocusManager : IObservableObject
         return tcs.Task;
     }
 
-    public void Add(ConsoleControl c)
-    {
-        // This method used to always add the control to the top of the stack, but that was a bad idea
-        // because it meant that controls that were added below dialogs would be treated as if they
-        // were a part of the dialog, and would be able to get focus on tab.  What's worse was that when the dialog
-        // was closed, the controls would never be able to be focused again because they were being
-        // tracked by the dialog's focus context, which was now gone.  So now we add the control to the
-        // focus context that is appropriate for its FocusStackDepth, which may be on or below the top.
-
-
-        CheckNotAlreadyBeingTracked(c);
-        var effectiveDepth = FindEffectiveDepth(c);
-        if (effectiveDepth > focusStack.Count + 1) throw new NotSupportedException($"{nameof(c.FocusStackDepth)} can only exceed the current focus stack depth by 1");
-        c.FocusStackDepthInternal = effectiveDepth;
-        if (focusStack.Count < c.FocusStackDepth) Push(c);
-        focusStack[c.FocusStackDepth - 1].Controls.Add(c);
-    }
 
     private int FindEffectiveDepth(ConsoleControl c)
     {
@@ -320,6 +305,25 @@ internal partial class FocusManager : IObservableObject
                 if (focusStack[i].Controls[j] == c) throw new InvalidOperationException("Item already being tracked");
             }
         }
+    }
+
+
+    public void Add(ConsoleControl c)
+    {
+        // This method used to always add the control to the top of the stack, but that was a bad idea
+        // because it meant that controls that were added below dialogs would be treated as if they
+        // were a part of the dialog, and would be able to get focus on tab.  What's worse was that when the dialog
+        // was closed, the controls would never be able to be focused again because they were being
+        // tracked by the dialog's focus context, which was now gone.  So now we add the control to the
+        // focus context that is appropriate for its FocusStackDepth, which may be on or below the top.
+
+
+        CheckNotAlreadyBeingTracked(c);
+        var effectiveDepth = FindEffectiveDepth(c);
+        if (effectiveDepth > focusStack.Count + 1) throw new NotSupportedException($"{nameof(c.FocusStackDepth)} can only exceed the current focus stack depth by 1");
+        c.FocusStackDepthInternal = effectiveDepth;
+        if (focusStack.Count < c.FocusStackDepth) Push(c);
+        focusStack[c.FocusStackDepth - 1].Controls.Add(c);
     }
 
     public void Remove(ConsoleControl c)

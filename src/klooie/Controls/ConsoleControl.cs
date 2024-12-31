@@ -268,6 +268,7 @@ public partial class ConsoleControl : Rectangular
     {
         base.ProtectedInit();
         Parent = null;
+        IsBeingRemoved = false;
         hasBeenAddedToVisualTree = false;
         CanFocus = true;
         TabSkip = false;

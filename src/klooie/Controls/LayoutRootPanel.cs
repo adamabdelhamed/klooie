@@ -1,6 +1,6 @@
 ﻿namespace klooie;
 
-internal class LayoutRootPanel : ConsolePanel
+public class LayoutRootPanel : ConsolePanel
 {
     private int lastConsoleWidth, lastConsoleHeight;
     private List<TaskCompletionSource> paintRequests = new List<TaskCompletionSource>();
@@ -18,6 +18,12 @@ internal class LayoutRootPanel : ConsolePanel
     internal int TotalPaints => paintRateMeter != null ? paintRateMeter.TotalFrames : 0;
     internal bool PaintEnabled { get; set; } = true;
     internal bool ClearOnExit { get; set; } = true;
+
+
+    private Event<ConsoleControl> _descendentAdded, _descendentRemoved;
+
+    public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = EventPool<ConsoleControl>.Rent()); }
+    public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = EventPool<ConsoleControl>.Rent()); }
     public LayoutRootPanel()
     {
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;

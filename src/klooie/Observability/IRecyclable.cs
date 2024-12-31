@@ -78,7 +78,7 @@ public abstract class RecycleablePool<T> where T : IRecyclable
     public int AllocationsSaved => Rented - Created;
 
 #endif
-    private readonly HashSet<T> _pool = new HashSet<T>(GenericReferenceEqualityComparer<T>.Instance);
+    private readonly List<T> _pool = new List<T>();
 
     public abstract T Factory();
 
@@ -90,10 +90,10 @@ public abstract class RecycleablePool<T> where T : IRecyclable
 #endif
         if (_pool.Count > 0)
         {
-            var first = _pool.First();
-            _pool.Remove(first);
-            first.Initialize();
-            return first;
+            var last = _pool[_pool.Count - 1];
+            _pool.RemoveAt(_pool.Count - 1);
+            last.Initialize();
+            return last;
         }
 
 #if DEBUG
