@@ -425,11 +425,11 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
     public Task Load(Stream videoStream)
     {
         var tcs = new TaskCompletionSource();
-        if (Application == null)
+        if (ConsoleApp.Current == null)
         {
             throw new InvalidOperationException("Can't load until the control has been added to an application");
         }
-
+        var app = ConsoleApp.Current;
         Task.Factory.StartNew(() =>
         {
             try
@@ -439,7 +439,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
                 {
                     inMemoryVideo = inMemoryVideo ?? videoWithProgressInfo;
                     this.duration = videoWithProgressInfo.Duration;
-                    Application.Invoke(() =>
+                    app.Invoke(() =>
                     {
                         if (this.CurrentFrame == null)
                         {
@@ -453,9 +453,9 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
                             seekForwardFrameButton.CanFocus = true;
                             seekToEndButton.CanFocus = true;
                             State = PlayerState.Stopped;
-                            if (Application.FocusedControl == null)
+                            if (app.FocusedControl == null)
                             {
-                                Application.SetFocus(playButton);
+                                app.SetFocus(playButton);
                             }
                         }
 
@@ -476,7 +476,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
 #else
                     failedMessage = ex.Message;
 #endif
-                    Application.InvokeNextCycle(() =>
+                ConsoleApp.Current.InvokeNextCycle(() =>
                 {
                     State = PlayerState.Failed;
                 });

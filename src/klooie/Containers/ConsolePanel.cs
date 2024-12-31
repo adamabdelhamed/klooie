@@ -36,8 +36,7 @@ public class ConsolePanel : Container
         Controls.Removed.Subscribe(OnControlRemovedInternal, this);
         this.OnDisposed(DisposeChildren);
 
-        Controls.Added.Subscribe(ControlAddedToVisualTree, this);
-        Controls.Removed.Subscribe(ControlRemovedFromVisualTree, this);
+
         this.CanFocus = false;
     }
 
@@ -46,58 +45,6 @@ public class ConsolePanel : Container
         foreach (var child in Controls.ToArray())
         {
             child.TryDispose();
-        }
-    }
-
-    private void ControlAddedToVisualTree(ConsoleControl c)
-    {
-        c.Application = this.Application;
-        c.BeforeAddedToVisualTreeInternal();
-        if (c is ConsolePanel)
-        {
-            var childPanel = c as ConsolePanel;
-            childPanel.Controls.Sync(ControlAddedToVisualTree, ControlRemovedFromVisualTree, null, c);
-        }
-        else if (c is ProtectedConsolePanel)
-        {
-            var childPanel = c as ProtectedConsolePanel;
-            ControlAddedToVisualTree(childPanel.ProtectedPanelInternal);
-            childPanel.OnDisposed(() => ControlRemovedFromVisualTree(childPanel.ProtectedPanelInternal));
-        }
-
- 
-        c.AddedToVisualTreeInternal();
-
-        DescendentAdded.Fire(c);
-        Application.RequestPaint();
-    }
-
-    private void ControlRemovedFromVisualTree(ConsoleControl c)
-    {
-        c.IsBeingRemoved = true;
-        ControlRemovedFromVisualTreeRecursive(c);
-        Application?.RequestPaint();
-    }
-
-    private void ControlRemovedFromVisualTreeRecursive(ConsoleControl c)
-    {
-        c.BeforeRemovedFromVisualTreeInternal();
-        if (c is ConsolePanel)
-        {
-            foreach (var child in (c as ConsolePanel).Controls.ToArray())
-            {
-                child.IsBeingRemoved = true;
-            }
-        }
-
-
-
-        c.RemovedFromVisualTreeInternal();
-        c.Application = null;
-        DescendentRemoved.Fire(c);
-        if (c.IsExpired == false && c.IsExpiring == false)
-        {
-            c.Dispose();
         }
     }
 

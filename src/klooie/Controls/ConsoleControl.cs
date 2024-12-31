@@ -37,13 +37,14 @@ public partial class ConsoleControl : Rectangular
     private bool hasBeenAddedToVisualTree;
     private HashSet<string> tags;
 
-    internal int FocusStackDepthInternal { get; set; }
+    internal int? FocusStackDepthInternal { get; set; }
     public int FocusStackDepth 
     { 
-        get => FocusStackDepthInternal; 
+        get => FocusStackDepthInternal.HasValue ? FocusStackDepthInternal.Value : 1; 
         set 
         {
-            if (Application != null) throw new NotSupportedException($"You cannot modify {nameof(FocusStackDepth)} after a control has been added to the application");
+            // todo - find another way to do this
+            //if (FocusStackDepthInternal.HasValue) throw new NotSupportedException($"You cannot modify {nameof(FocusStackDepth)} after a control has been added to the application");
             FocusStackDepthInternal = value;
         }
     }
@@ -110,11 +111,6 @@ public partial class ConsoleControl : Rectangular
     /// An event that fires any time its tags changes
     /// </summary>
     public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = EventPool.Rent()); }
-
-    /// <summary>
-    /// Gets a reference to the application this control is a part of
-    /// </summary>
-    public ConsoleApp Application { get; internal set; }
 
     /// <summary>
     /// Gets a reference to this control's parent in the visual tree.  It will be null if this control is not in the visual tree 
@@ -297,12 +293,12 @@ public partial class ConsoleControl : Rectangular
 
     private void HandleCanFocusChanged()
     {
-        if (HasFocus && CanFocus == false && ShouldContinue) Application?.MoveFocus();
+        if (HasFocus && CanFocus == false && ShouldContinue) ConsoleApp.Current?.MoveFocus();
     }
 
     private void RequestPaint()
     {
-        Application?.RequestPaint();
+        ConsoleApp.Current?.RequestPaint();
     }
 
     private void ReturnEvents()
@@ -521,12 +517,12 @@ public partial class ConsoleControl : Rectangular
     /// Tries to give this control focus. If the focus is in the visual tree, and is in the current focus layer, 
     /// and has it's CanFocus property to true then focus should be granted.
     /// </summary>
-    public void Focus() => Application?.SetFocus(this);
+    public void Focus() => ConsoleApp.Current?.SetFocus(this);
 
     /// <summary>
     /// Tries to unfocus this control.
     /// </summary>
-    public void Unfocus() => Application?.MoveFocus(true);
+    public void Unfocus() => ConsoleApp.Current?.MoveFocus(true);
 
     public void SyncBackground(params ConsoleControl[] others)
         => others.ForEach(other => BackgroundChanged.Sync(() => other.Background = this.Background, other));
@@ -558,13 +554,13 @@ public partial class ConsoleControl : Rectangular
         }
 
         hasBeenAddedToVisualTree = true;
-        if (Application.IsRunning)
+        if (ConsoleApp.Current.IsRunning)
         {
             _ready?.Fire();
         }
         else if (_ready != null)
         {
-            Application.InvokeNextCycle(Ready.Fire);
+            ConsoleApp.Current.InvokeNextCycle(Ready.Fire);
         }
         _addedToVisualTree?.Fire();
     }

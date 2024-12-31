@@ -69,11 +69,11 @@ public partial class TextBox : ConsoleControl
     private void StartBlinking()
     {
         isBlinking = true;
-        blinkTimerHandle = Application.SetInterval(() =>
+        blinkTimerHandle = ConsoleApp.Current.SetInterval(() =>
         {
             if (HasFocus == false) return;
             isBlinking = !isBlinking;
-            Application.RequestPaint();
+            ConsoleApp.Current.RequestPaint();
         }, BlinkInterval);
     }
 
@@ -125,7 +125,7 @@ public partial class TextBox : ConsoleControl
         Editor.RegisterKeyPress(info, prototype);
         Value = Editor.CurrentValue;
         isBlinking = true;
-        Application.ChangeInterval(blinkTimerHandle, BlinkInterval);
+        ConsoleApp.Current.ChangeInterval(blinkTimerHandle, BlinkInterval);
     }
 
     /// <summary>

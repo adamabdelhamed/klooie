@@ -61,5 +61,8 @@ public partial class Label : ConsoleControl
         TextCleaner.NormalizeNewlinesTabsAndStyleV2(_text, HasFocus ? FocusContrastColor : Foreground, HasFocus ? FocusColor : Background) :
         TextCleaner.NormalizeNewlinesTabsAndStyle(_text, HasFocus ? FocusContrastColor : Foreground, HasFocus ? FocusColor : Background);
     public override string ToString() => $"Label: " + Text;
-    protected override void OnPaint(ConsoleBitmap context) => context.DrawString(_cleaned, 0, 0);
+    protected override void OnPaint(ConsoleBitmap context)
+    {
+        context.DrawString(_cleaned, 0, 0);
+    }
 }

@@ -24,7 +24,7 @@ public class MinimumSizeShield : ConsolePanel
 
     private void CheckSize()
     {
-        if (Application == null) return;
+        if (ShouldStop) return;
         if (Width < options.MinWidth || Height < options.MinHeight)
         {
             if (tooSmallLifetime == null)
@@ -33,8 +33,8 @@ public class MinimumSizeShield : ConsolePanel
                 IsVisible = true;
 
                 focusThief = Add(new ConsoleControl() { IsVisible = false, CanFocus = false, FocusStackDepth = this.FocusStackDepth + 1 });
-                Application.ClearFocus();
-                Application.PushKeyForLifetime(ConsoleKey.Escape, () => { }, this);
+                ConsoleApp.Current.ClearFocus();
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => { }, this);
                 options.OnMinimumSizeNotMet?.Invoke();
                 ConsoleApp.Current.Invoke(OnTooSmall);
             }

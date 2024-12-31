@@ -78,7 +78,7 @@ public partial class ScrollablePanel : ProtectedConsolePanel
 
     private void OnAddedToVisualTree()
     {
-        Application.FocusChanged.Subscribe(FocusChanged, this);
+        ConsoleApp.Current.FocusChanged.Subscribe(FocusChanged, this);
         HorizontalScrollUnitsChanged.Sync(UpdateScrollbars, this);
         VerticalScrollUnitsChanged.Sync(UpdateScrollbars, this);
         ScrollableContent.BoundsChanged.Subscribe(UpdateScrollbars, this);
@@ -149,15 +149,15 @@ public partial class ScrollablePanel : ProtectedConsolePanel
         bool focusedControlIsWithinMe = VisitControlTree((control) =>
         {
             if (IsExpired || IsExpiring || IsBeingRemoved) return false;
-            return control is Scrollbar == false && control == Application.FocusedControl;
+            return control is Scrollbar == false && control == ConsoleApp.Current.FocusedControl;
         });
 
         if (focusedControlIsWithinMe)
         {
-            var offset = Application.FocusedControl.CalculateRelativePosition(this);
+            var offset = ConsoleApp.Current.FocusedControl.CalculateRelativePosition(this);
 
             var visibleWindowBounds = new RectF(HorizontalScrollUnits, VerticalScrollUnits, Width, Height);
-            var focusedControlBounds = new RectF(offset.Left, offset.Top, Application.FocusedControl.Width, Application.FocusedControl.Height);
+            var focusedControlBounds = new RectF(offset.Left, offset.Top, ConsoleApp.Current.FocusedControl.Width, ConsoleApp.Current.FocusedControl.Height);
 
             if (focusedControlBounds.IsAbove(visibleWindowBounds))
             {

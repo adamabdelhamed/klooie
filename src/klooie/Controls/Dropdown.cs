@@ -101,7 +101,7 @@ public partial class Dropdown : ProtectedConsolePanel
             popup.Height = scrollPanel.Height + 2;
             popup.X = this.AbsoluteX;
             popup.Y = this.AbsoluteY + 1;
-            Application.LayoutRoot.Add(popup);
+            ConsoleApp.Current.LayoutRoot.Add(popup);
 
             var index = Options.IndexOf(Value);
 
@@ -126,13 +126,13 @@ public partial class Dropdown : ProtectedConsolePanel
             };
             syncSelectedIndex();
 
-            Application.PushKeyForLifetime(ConsoleKey.Enter, () =>
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, () =>
             {
                 Value = Options[index];
                 popup.Dispose();
             }, popup);
 
-            Application.PushKeyForLifetime(ConsoleKey.Escape, popup.Dispose, popup);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, popup.Dispose, popup);
 
             Action up = () =>
             {
@@ -164,14 +164,14 @@ public partial class Dropdown : ProtectedConsolePanel
 
             if (EnableWAndSKeysForUpDown)
             {
-                Application.PushKeyForLifetime(ConsoleKey.W, up, popup);
-                Application.PushKeyForLifetime(ConsoleKey.S, down, popup);
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.W, up, popup);
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.S, down, popup);
             }
 
-            Application.PushKeyForLifetime(ConsoleKey.UpArrow, up, popup);
-            Application.PushKeyForLifetime(ConsoleKey.DownArrow, down, popup);
-            Application.PushKeyForLifetime(ConsoleKey.Tab, ConsoleModifiers.Shift, up, popup);
-            Application.PushKeyForLifetime(ConsoleKey.Tab, down, popup);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.UpArrow, up, popup);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.DownArrow, down, popup);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Tab, ConsoleModifiers.Shift, up, popup);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Tab, down, popup);
 
             await popup.AsTask();
         }

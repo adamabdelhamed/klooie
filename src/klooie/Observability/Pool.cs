@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace klooie.Observability;
+namespace klooie;
 public abstract class Pool<T> where T : IRecyclable 
 {
     protected Pool() { }

@@ -34,14 +34,14 @@ public partial class Slider : ConsoleControl
             {
                 focusLt?.Dispose();
                 focusLt = new Lifetime();
-                Application.PushKeyForLifetime(ConsoleKey.RightArrow, SlideUp, focusLt);
-                Application.PushKeyForLifetime(ConsoleKey.LeftArrow, SlideDown, focusLt);
-                Application.PushKeyForLifetime(ConsoleKey.UpArrow, SlideUp, focusLt);
-                Application.PushKeyForLifetime(ConsoleKey.DownArrow, SlideDown, focusLt);
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, SlideUp, focusLt);
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, SlideDown, focusLt);
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.UpArrow, SlideUp, focusLt);
+                ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.DownArrow, SlideDown, focusLt);
                 if (EnableWAndSKeysForUpDown)
                 {
-                    Application.PushKeyForLifetime(ConsoleKey.D, SlideUp, focusLt);
-                    Application.PushKeyForLifetime(ConsoleKey.A, SlideDown, focusLt);
+                    ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.D, SlideUp, focusLt);
+                    ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.A, SlideDown, focusLt);
                 }
             }, this);
 

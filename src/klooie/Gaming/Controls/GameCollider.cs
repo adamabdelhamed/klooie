@@ -1,6 +1,4 @@
-﻿using klooie.Observability;
-
-namespace klooie.Gaming;
+﻿namespace klooie.Gaming;
 
 public class GameCollider : ConsoleControl
 {   

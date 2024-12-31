@@ -43,7 +43,7 @@ public partial class BitmapControl : ConsoleControl
         {
             this.Width = Bitmap.Width;
             this.Height = Bitmap.Height;
-            Application?.RequestPaint();
+            ConsoleApp.Current.RequestPaint();
         }
     }
 

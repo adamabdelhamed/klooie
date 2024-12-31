@@ -325,12 +325,12 @@ public class XYChart : ConsolePanel
                 (lastFocused ?? firstControl)?.Focus();
             }
             focusLt = new Lifetime();
-            Application.PushKeyForLifetime(ConsoleKey.UpArrow, HandleUpArrow, focusLt);
-            Application.PushKeyForLifetime(ConsoleKey.DownArrow, HandleDownArrow, focusLt);
-            Application.PushKeyForLifetime(ConsoleKey.LeftArrow, HandleLeftArrow, focusLt);
-            Application.PushKeyForLifetime(ConsoleKey.RightArrow, HandleRightArrow, focusLt);
-            Application.PushKeyForLifetime(ConsoleKey.Home, HandleHomeKey, focusLt);
-            Application.PushKeyForLifetime(ConsoleKey.End, HandleEndKey, focusLt);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.UpArrow, HandleUpArrow, focusLt);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.DownArrow, HandleDownArrow, focusLt);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, HandleLeftArrow, focusLt);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, HandleRightArrow, focusLt);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Home, HandleHomeKey, focusLt);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.End, HandleEndKey, focusLt);
         }, this);
 
         ConsoleApp.Current.FocusChanged.Subscribe((fc) =>
@@ -601,7 +601,7 @@ public class XYChart : ConsolePanel
     private DataPointControl lastFocused;
     private void HandleUpArrow()
     {
-        DataPointControl focusedPoint = Application.FocusedControl as DataPointControl ?? lastFocused;
+        DataPointControl focusedPoint = ConsoleApp.Current.FocusedControl as DataPointControl ?? lastFocused;
         if (focusedPoint == null || Controls.Contains(focusedPoint) == false) return;
 
         lastFocused = Controls
@@ -614,7 +614,7 @@ public class XYChart : ConsolePanel
 
     private void HandleDownArrow()
     {
-        DataPointControl focusedPoint = Application.FocusedControl as DataPointControl;
+        DataPointControl focusedPoint = ConsoleApp.Current.FocusedControl as DataPointControl;
         if (focusedPoint == null || Controls.Contains(focusedPoint) == false) return;
 
         lastFocused = Controls
@@ -627,7 +627,7 @@ public class XYChart : ConsolePanel
 
     private void HandleLeftArrow()
     {
-        DataPointControl focusedPoint = Application.FocusedControl as DataPointControl;
+        DataPointControl focusedPoint = ConsoleApp.Current.FocusedControl as DataPointControl;
         if (focusedPoint == null || Controls.Contains(focusedPoint) == false) return;
 
         lastFocused = Controls
@@ -640,7 +640,7 @@ public class XYChart : ConsolePanel
 
     private void HandleRightArrow()
     {
-        DataPointControl focusedPoint = Application.FocusedControl as DataPointControl;
+        DataPointControl focusedPoint = ConsoleApp.Current.FocusedControl as DataPointControl;
         if (focusedPoint == null || Controls.Contains(focusedPoint) == false) return;
 
         lastFocused = Controls

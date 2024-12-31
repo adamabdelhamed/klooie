@@ -50,6 +50,7 @@ public partial class FormTests
     [TestMethod]
     public void Forms_Basic() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
+        await Task.Delay(1000);
         var model = new SimpleFormModel();
         var options = FormGenerator.FromObject(model);
         var form = ConsoleApp.Current.LayoutRoot.Add(new Form(options)).Fill();

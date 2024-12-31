@@ -179,6 +179,8 @@ public static class Animator
                 var frameW = startW + (v * wDelta);
                 var frameH = startH + (v * hDelta);
                 var frameBounds = new RectF(frameX, frameY, frameW, frameH);
+
+        
                 options.Setter(control, frameBounds);
             }
         });

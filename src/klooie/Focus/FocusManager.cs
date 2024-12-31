@@ -214,9 +214,11 @@ public partial class ConsoleApp : EventLoop
                 cleared = true;
             }
 
+            var removedCount = 0;
             foreach (var context in focusStack)
             {
-                context.Controls.Remove(c);
+                var removed = context.Controls.Remove(c);
+                removedCount += removed ? 1 : 0;
             }
             if(focusStack.Last().Controls.None() && focusStack.Count > 1) Pop();
 

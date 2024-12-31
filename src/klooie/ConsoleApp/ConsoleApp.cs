@@ -153,6 +153,7 @@ public partial class ConsoleApp : EventLoop
     /// </summary>
     public ConsoleApp()
     {
+        _current = this;
         Name = GetType().Name;
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
@@ -161,11 +162,9 @@ public partial class ConsoleApp : EventLoop
         LayoutRoot = new LayoutRootPanel() { FocusStackDepth = 1 };
         LayoutRoot.ResizeTo(lastConsoleWidth, lastConsoleHeight);
         focus = new FocusManager();
-        LayoutRoot.Application = this;
         focus.StackDepthChanged.Subscribe(() => FocusStackDepthChanged.Fire(focus.StackDepth), this);
         focus.FocusedControlChanged.Subscribe(() => FocusChanged.Fire(focus.FocusedControl), this);
         focus.FocusedControlChanged.Subscribe(() => RequestPaintAsync(), this);
-        LoopStarted.SubscribeOnce(() => _current = this);
         EndOfCycle.Subscribe(DrainPaints, this);
         Invoke(Startup);
     }
@@ -188,7 +187,6 @@ public partial class ConsoleApp : EventLoop
 
     public override void Run()
     {
-        _current = this;
         try
         {
             base.Run();
@@ -528,4 +526,69 @@ internal class FrameRateMeter
         a.Second == b.Second;
 }
 
-public class LayoutRootPanel : ConsolePanel { }
+public class LayoutRootPanel : ConsolePanel
+{
+    public LayoutRootPanel()
+    {
+        // Subscribe once in the constructor
+        Controls.Added.Subscribe(ControlAddedToVisualTree, this);
+        Controls.Removed.Subscribe(ControlRemovedFromVisualTree, this);
+    }
+
+    private void ControlAddedToVisualTree(ConsoleControl c)
+    {
+        c.BeforeAddedToVisualTreeInternal();
+
+        if (c is ConsolePanel childPanel)
+        {
+            // Synchronize child controls without causing multiple subscriptions
+            childPanel.Controls.Sync(ControlAddedToVisualTree, ControlRemovedFromVisualTree, null, c);
+        }
+        else if (c is ProtectedConsolePanel protectedPanel)
+        {
+            // Handle protected panels
+            ControlAddedToVisualTree(protectedPanel.ProtectedPanelInternal);
+            protectedPanel.OnDisposed(() => ControlRemovedFromVisualTree(protectedPanel.ProtectedPanelInternal));
+        }
+        DescendentAdded.Fire(c);
+        c.AddedToVisualTreeInternal();
+   
+        ConsoleApp.Current.RequestPaint();
+    }
+
+    private void ControlRemovedFromVisualTree(ConsoleControl c)
+    {
+        if (c.IsBeingRemoved)
+            return; // Prevent re-entrancy
+
+        c.IsBeingRemoved = true;
+        ControlRemovedFromVisualTreeRecursive(c);
+        ConsoleApp.Current.RequestPaint();
+    }
+
+    private void ControlRemovedFromVisualTreeRecursive(ConsoleControl c)
+    {
+        c.BeforeRemovedFromVisualTreeInternal();
+
+        if (c is ConsolePanel panel)
+        {
+            // Iterate over a copy to prevent modification during iteration
+            foreach (var child in panel.Controls.ToArray())
+            {
+                ControlRemovedFromVisualTree(child);
+            }
+        }
+        else if (c is ProtectedConsolePanel protectedPanel)
+        {
+            ControlRemovedFromVisualTree(protectedPanel.ProtectedPanelInternal);
+        }
+
+        c.RemovedFromVisualTreeInternal();
+        DescendentRemoved.Fire(c);
+
+        if (c.ShouldContinue)
+        {
+            c.Dispose();
+        }
+    }
+}

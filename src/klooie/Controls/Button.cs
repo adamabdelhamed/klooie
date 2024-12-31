@@ -112,17 +112,17 @@ public partial class Button : ConsoleControl
     {
         if (shortcut == null) return;
         {
-            Application.PushKeyForLifetime(shortcut.Key, shortcut.Modifier, PressIfCanFocus, this);
+            ConsoleApp.Current.PushKeyForLifetime(shortcut.Key, shortcut.Modifier, PressIfCanFocus, this);
 
             if (Regex.IsMatch(shortcut.Key.ToString(), @"D\d"))
             {
                 var num = shortcut.Key.ToString().Last();
-                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "NumPad" + num), shortcut.Modifier, PressIfCanFocus, this);
+                ConsoleApp.Current.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "NumPad" + num), shortcut.Modifier, PressIfCanFocus, this);
             }
             else if (shortcut.Key.ToString().StartsWith("NumPad"))
             {
                 var num = shortcut.Key.ToString().Last();
-                Application.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), shortcut.Modifier, PressIfCanFocus, this);
+                ConsoleApp.Current.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), shortcut.Modifier, PressIfCanFocus, this);
             }
         }
     }

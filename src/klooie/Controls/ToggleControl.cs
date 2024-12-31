@@ -6,7 +6,6 @@
 public partial class ToggleControl : ProtectedConsolePanel
 {
     private Label valueLabel;
-    private Lifetime valueLifetime;
     /// <summary>
     /// Gets or sets the current On / Off value
     /// </summary>
@@ -15,12 +14,12 @@ public partial class ToggleControl : ProtectedConsolePanel
     /// <summary>
     /// The On label text
     /// </summary>
-    public string OnLabel { get; set; } = " On  ";
+    public partial string OnLabel { get; set; } 
 
     /// <summary>
     /// The Off label text
     /// </summary>
-    public string OffLabel { get; set; } = " Off ";
+    public partial string OffLabel { get; set; } 
 
     /// <summary>
     /// The On color
@@ -37,45 +36,33 @@ public partial class ToggleControl : ProtectedConsolePanel
     /// </summary>
     public ToggleControl()
     {
+        OnLabel = " On  ";
+        OffLabel = " Off ";
         CanFocus = true;
         Width = 10;
         Height = 1;
         valueLabel = ProtectedPanel.Add(new Label());
-        OnChanged.Sync(async () => await Update(125), this);
-        IsVisibleChanged.Sync(async () => await Update(0), this);
-        Focused.Subscribe(async () => await Update(0), this);
-        Unfocused.Subscribe(async () => await Update(0), this);
+        OnChanged.Sync(Update, this);
+        IsVisibleChanged.Sync(Update, this);
+        OnLabelChanged.Subscribe(Update, this);
+        OffLabelChanged.Subscribe(Update, this);
+        Focused.Subscribe(Update, this);
+        Unfocused.Subscribe(Update, this);
         KeyInputReceived.Subscribe(k => On = k.Key == ConsoleKey.Enter ? !On : On, this);
-        Ready.SubscribeOnce(async () => await Update(0));
+        Ready.SubscribeOnce(Update);
         OnColor = RGB.Magenta;
         OffColor = RGB.Gray;
         Foreground = RGB.Black;
         Background = RGB.DarkGray;
     }
 
-    private async Task Update(float duration)
+    private void Update()
     {
-        valueLifetime?.TryDispose();
-        valueLifetime = new Lifetime();
         var newLeft = On ? Width - valueLabel.Width : 0;
         var newLabelBg = HasFocus ? FocusColor : On ? OnColor : OffColor;
         var newFg = HasFocus ? FocusContrastColor : Foreground;
         valueLabel.Text = On ? OnLabel.ToConsoleString(newFg, newLabelBg) : OffLabel.ToConsoleString(newFg, newLabelBg);
-
-        if (Application == null)
-        {
-            valueLabel.X = newLeft;
-            ProtectedPanel.Background = Background;
-            return;
-        }
-
         var dest = new RectF(newLeft, valueLabel.Top, valueLabel.Bounds.Width, valueLabel.Bounds.Height);
-        await valueLabel.AnimateAsync(new ConsoleControlAnimationOptions()
-        {
-            IsCancelled = () => valueLifetime.IsExpired,
-            Duration = duration,
-            EasingFunction = EasingFunctions.EaseOutSoft,
-            Destination = () => dest,
-        });
+        valueLabel.Bounds = dest;
     }
 }
