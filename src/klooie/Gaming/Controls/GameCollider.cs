@@ -6,7 +6,10 @@ public class GameCollider : ConsoleControl
     internal virtual bool AutoAddToColliderGroup => true;
     public virtual bool CanMoveTo(RectF bounds) => true;
 
-    public GameCollider(bool connectToMainColliderGroup = true)
+
+    public GameCollider() : this(true){ }
+
+    public GameCollider(bool connectToMainColliderGroup)
     {
         if(connectToMainColliderGroup)
         {
