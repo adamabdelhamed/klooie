@@ -12,12 +12,12 @@ public class LabelTests
     [TestMethod]
     public void Label_Basic() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
-        var label = RecycleablePool<Label>.Instance.Rent();
+        var label = LabelPool.Instance.Rent();
         label.Text = "Hello World".ToGreen(bg: RGB.Orange);
         ConsoleApp.Current.LayoutRoot.Add(label).CenterBoth();
         await context.PaintAndRecordKeyFrameAsync();
         ConsoleApp.Current.Stop();
-        Assert.IsFalse(label.IsInUse);
+        Assert.IsFalse(label.ShouldContinue);
         Assert.IsTrue(label.ShouldStop);
     });
 

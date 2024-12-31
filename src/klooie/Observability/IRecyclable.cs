@@ -3,22 +3,26 @@
 namespace klooie;
 public interface IRecyclable : ILifetimeManager
 {
-    bool IsInUse { get; }
-    void Reset();
+    /// <summary>
+    /// Initializes the object for use. Implementing classes should call this from their constructor. It will also
+    /// be called by RecycleablePool when the object is recycled.
+    /// </summary>
     void Initialize();
 }
 
 public class Recyclable : IRecyclable, ILifetime
 {
-    private bool isResetting;
-    private bool isInUse = true;
+    private bool isInUse;
     private LifetimeManager? lifetimeManager;
-    public bool IsInUse => isInUse;
     public bool IsExpired => isInUse == false;
-    public bool IsExpiring => isResetting;
+    public bool IsExpiring => isInUse && lifetimeManager?.IsExpiring == true;
     public bool ShouldContinue => IsExpired == false && IsExpiring == false;
     public bool ShouldStop => !ShouldContinue;
 
+    public Recyclable()
+    {
+        Initialize();
+    }
 
     public bool TryDispose()
     {
@@ -30,13 +34,13 @@ public class Recyclable : IRecyclable, ILifetime
         return false;
     }
 
-    public void Dispose() => Return();
-
-
-    protected virtual void Return()
+    public void Dispose()
     {
-        RecycleablePool<Recyclable>.Instance.Return(this);
+        lifetimeManager?.Finish();
+        lifetimeManager = null;
+        isInUse = false;
     }
+
     protected virtual void ProtectedInit() { }
 
     public void OnDisposed(Action action)
@@ -63,25 +67,10 @@ public class Recyclable : IRecyclable, ILifetime
         ProtectedInit();
     }
 
-    public void Reset()
-    {
-        isResetting = true;
-        try
-        {
-            lifetimeManager?.Finish();
-        }
-        finally
-        {
-            isResetting = false;
-            isInUse = false;
-        }
-    }
+ 
 }
-public class RecycleablePool<T> where T : IRecyclable
+public abstract class RecycleablePool<T> where T : IRecyclable
 {
-    private static RecycleablePool<T> _instance;
-    public static RecycleablePool<T> Instance => _instance ??= new RecycleablePool<T>();
-
 #if DEBUG
     public int Created { get; private set; }
     public int Rented { get; private set; }
@@ -91,9 +80,9 @@ public class RecycleablePool<T> where T : IRecyclable
 #endif
     private readonly HashSet<T> _pool = new HashSet<T>(GenericReferenceEqualityComparer<T>.Instance);
 
-    public Func<T> Factory { get; set; } = () => Activator.CreateInstance<T>();
+    public abstract T Factory();
 
-    private RecycleablePool() { }
+    protected RecycleablePool() { }
     public T Rent()
     {
 #if DEBUG
@@ -112,7 +101,6 @@ public class RecycleablePool<T> where T : IRecyclable
 #endif
 
         var ret = Factory();
-        ret.Initialize();
         return ret;
     }
 
@@ -121,7 +109,6 @@ public class RecycleablePool<T> where T : IRecyclable
 #if DEBUG
         Returned++;
 #endif
-        rented.Reset();
         _pool.Add(rented);
     }
 
@@ -224,15 +211,22 @@ public static class IRecyclableEx
     /// <returns>the new lifetime</returns>
     public static Recyclable CreateChildRecyclable(this IRecyclable lt)
     {
-        var ret = RecycleablePool<Recyclable>.Instance.Rent();
+        var ret = DefaultRecyclablePool.Instance.Rent();
         lt.OnDisposed(() =>
         {
-            if (ret.IsExpired == false)
+            if (ret.ShouldContinue)
             {
-                RecycleablePool<Recyclable>.Instance.Return(ret);
+                DefaultRecyclablePool.Instance.Return(ret);
             }
         });
         return ret;
     }
 
+}
+
+public class DefaultRecyclablePool : RecycleablePool<Recyclable>
+{
+    private static DefaultRecyclablePool? _instance;
+    public static DefaultRecyclablePool Instance => _instance ??= new DefaultRecyclablePool();
+    public override Recyclable Factory() => new Recyclable();
 }

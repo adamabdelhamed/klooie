@@ -66,3 +66,10 @@ public partial class Label : ConsoleControl
         context.DrawString(_cleaned, 0, 0);
     }
 }
+
+public class LabelPool : RecycleablePool<Label>
+{
+    private static LabelPool? _instance;
+    public static LabelPool Instance => _instance ??= new LabelPool();
+    public override Label Factory() => new Label();
+}

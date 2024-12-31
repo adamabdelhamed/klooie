@@ -144,7 +144,7 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
     /// <param name="item">The item that was added</param>
     internal void FireAdded(T item)
     {
-        membershipLifetimes.Add(item, RecycleablePool<Recyclable>.Instance.Rent());
+        membershipLifetimes.Add(item, DefaultRecyclablePool.Instance.Rent());
         Added.Fire(item);
         _untypedAdded.Fire(item);
         Changed.Fire();
@@ -161,7 +161,8 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
         Changed.Fire();
         var itemLifetime = membershipLifetimes[item];
         membershipLifetimes.Remove(item);
-        RecycleablePool<Recyclable>.Instance.Return(itemLifetime);
+        itemLifetime.Dispose();
+        DefaultRecyclablePool.Instance.Return(itemLifetime);
     }
 
     internal void FireAssignedToIndex(T added, T removed)

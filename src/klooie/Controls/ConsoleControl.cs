@@ -669,3 +669,10 @@ public partial class ConsoleControl : Rectangular
         return tags;
     }
 }
+
+public class ConsoleControlPool : RecycleablePool<ConsoleControl>
+{
+    private static ConsoleControlPool? _instance;
+    public static ConsoleControlPool Instance => _instance ??= new ConsoleControlPool();
+    public override ConsoleControl Factory() => new ConsoleControl();
+}

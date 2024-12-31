@@ -257,6 +257,25 @@ public partial class ObservabilityTests
         Assert.AreEqual(2, numChildrenRemoved);
     }
 
+    [TestMethod]
+    public void TestObservableCollectionMembership()
+    {
+        var collection = new ObservableCollection<object>();
+        var obj = new object();
+        collection.Add(obj);
+        var lifetime = collection.GetMembershipLifetime(obj);
+        Assert.IsNotNull(lifetime);
+        Assert.IsTrue(lifetime.ShouldContinue);
+        Assert.IsFalse(lifetime.IsExpired);
+        Assert.IsFalse(lifetime.ShouldStop);
+        Assert.IsFalse(lifetime.IsExpiring);
+        collection.Remove(obj);
+        Assert.IsFalse(lifetime.ShouldContinue);
+        Assert.IsTrue(lifetime.IsExpired);
+        Assert.IsTrue(lifetime.ShouldStop);
+        Assert.IsFalse(lifetime.IsExpiring);
+    }
+
 
     [TestMethod]
     public void TestSubscribeOnce()

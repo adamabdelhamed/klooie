@@ -70,7 +70,7 @@ public partial class Rectangular :  Recyclable, IObservableObject
 
     public Rectangular()
     {
-        ProtectedInit();
+ 
     }
 
     private Action cachedSyncBoundsAction;

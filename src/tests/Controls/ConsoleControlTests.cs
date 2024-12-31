@@ -18,7 +18,7 @@ public class ConsoleControlTests
     [TestMethod]
     public void ConsoleControl_TagsLazy()
     {
-        RecycleablePool<ConsoleControl>.Instance.Use(c =>
+        ConsoleControlPool.Instance.Use(c =>
         {
             Assert.IsNull(GetTagsField(c));
             Assert.IsFalse(c.HasSimpleTag("foo"));
@@ -37,7 +37,7 @@ public class ConsoleControlTests
     [TestMethod]
     public void ConsoleControl_ValueTags()
     {
-        RecycleablePool<ConsoleControl>.Instance.Use(c =>
+        ConsoleControlPool.Instance.Use(c =>
         {
             Assert.IsFalse(c.HasValueTag("name"));
             c.AddValueTag("name", "Adam");

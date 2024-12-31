@@ -91,9 +91,9 @@ public sealed class ColliderBox : GameCollider
     public ColliderBox(float x, float y, float w, float h) : this(new RectF(x, y, w, h)) { }
 }
 
-public class GameColliderPool : Pool<GameCollider>
+public class GameColliderPool : RecycleablePool<GameCollider>
 {
-    protected static GameColliderPool _instance;
+    private static GameColliderPool? _instance;
     public static GameColliderPool Instance => _instance ??= new GameColliderPool();
-    protected override GameCollider Factory() => new GameCollider();
+    public override GameCollider Factory() => new GameCollider();
 }

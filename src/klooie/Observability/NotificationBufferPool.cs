@@ -76,7 +76,7 @@ internal sealed class NotificationBufferPool
 
             for (var i = 0; i < subscriberCount; i++)
             {
-                if (buffer[i].Lifetime.IsExpired == false)
+                if (buffer[i].Lifetime?.IsExpired == false)
                 {
                     buffer[i].Callback();
                 }
