@@ -189,6 +189,7 @@ public partial class ConsoleApp : EventLoop
     {
         try
         {
+            _current = this;
             base.Run();
         }
         finally
