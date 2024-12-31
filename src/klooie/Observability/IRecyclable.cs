@@ -37,6 +37,10 @@ public class Recyclable : IRecyclable, ILifetime
     public void Dispose()
     {
         lifetimeManager?.Finish();
+        if (lifetimeManager != null)
+        {
+            LifetimeManagerPool.Return(lifetimeManager);
+        }
         lifetimeManager = null;
         isInUse = false;
     }
@@ -45,19 +49,19 @@ public class Recyclable : IRecyclable, ILifetime
 
     public void OnDisposed(Action action)
     {
-        lifetimeManager = lifetimeManager ?? new LifetimeManager();
+        lifetimeManager = lifetimeManager ?? LifetimeManagerPool.Rent();
         lifetimeManager.OnDisposed(action);
     }
 
     public void OnDisposed(IDisposable obj)
     {
-        lifetimeManager = lifetimeManager ?? new LifetimeManager();
+        lifetimeManager = lifetimeManager ?? LifetimeManagerPool.Rent();
         lifetimeManager.OnDisposed(obj);
     }
 
     public void OnDisposed(Subscription obj)
     {
-        lifetimeManager = lifetimeManager ?? new LifetimeManager();
+        lifetimeManager = lifetimeManager ?? LifetimeManagerPool.Rent();
         lifetimeManager.OnDisposed(obj);
     }
 

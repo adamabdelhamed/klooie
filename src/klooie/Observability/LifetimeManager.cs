@@ -1,4 +1,6 @@
-﻿namespace klooie;
+﻿using System.Collections.Concurrent;
+
+namespace klooie;
 
 /// <summary>
 /// An interface that defined the contract for associating cleanup
@@ -67,8 +69,8 @@ public static class ILifetimeManagerEx
 /// </summary>
 internal sealed class LifetimeManager : ILifetimeManager
 {
-    private List<Subscription> toNotify;
-    private List<Subscription> toDisposeOf;
+    private List<Subscription>? toNotify;
+    private List<Subscription>? toDisposeOf;
 
     /// <summary>
     /// returns true if expired
@@ -79,23 +81,44 @@ internal sealed class LifetimeManager : ILifetimeManager
 
     public bool ShouldStop => !ShouldContinue;
 
+    private bool hasFinished;
+
+    public LifetimeManager()
+    {
+        Initialize();
+    }
+
+    internal void Initialize()
+    {
+        hasFinished = false;
+    }
+
     internal void Finish()
     {
-        if(toDisposeOf != null)
+        if (hasFinished) return;
+        hasFinished = true;
+        if (toDisposeOf != null)
         {
-            foreach (var sub in toDisposeOf) SubscriptionPool.Return(sub);
+            foreach (var sub in toDisposeOf)
+            {
+                SubscriptionPool.Return(sub);
+            }
             toDisposeOf.Clear();
+            SubscriptionListPool.Return(toDisposeOf);
+            toDisposeOf = null;
         }
         if(toNotify != null)
         {
             NotificationBufferPool.Notify(toNotify);
             foreach (var sub in toNotify) SubscriptionPool.Return(sub);
             toNotify.Clear();
+            SubscriptionListPool.Return(toNotify);
+            toNotify = null;
         }
     }
 
-    private List<Subscription> ToNotify => toNotify ??= new List<Subscription>();
-    private List<Subscription> ToDisposeOf => toDisposeOf ??= new List<Subscription>();
+    private List<Subscription> ToNotify => toNotify ??= SubscriptionListPool.Rent();
+    private List<Subscription> ToDisposeOf => toDisposeOf ??= SubscriptionListPool.Rent();
 
     /// <summary>
     /// Registers the given disposable to dispose when the lifetime being
@@ -113,4 +136,81 @@ internal sealed class LifetimeManager : ILifetimeManager
     public void OnDisposed(Action cleanupCode) => ToNotify.Add(SubscriptionPool.Rent(cleanupCode, this));
 
     public void OnDisposed(Subscription toDispose) => ToDisposeOf.Add(toDispose);
+}
+
+
+public static class SubscriptionListPool
+{
+#if DEBUG
+    public static int Created { get; private set; }
+    public static int Rented { get; private set; }
+    public static int Returned { get; private set; }
+    public static int AllocationsSaved => Rented - Created;
+
+#endif
+    private static readonly ConcurrentBag<List<Subscription>> _pool = new ConcurrentBag<List<Subscription>>();
+
+    internal static List<Subscription> Rent()
+    {
+#if DEBUG
+        Rented++;
+#endif
+        if (_pool.TryTake(out var list))
+        {
+            list.Clear();
+            return list;
+        }
+
+#if DEBUG
+        Created++;
+#endif
+
+        return new List<Subscription>();
+    }
+
+    internal static void Return(List<Subscription> subscriptions)
+    {
+#if DEBUG
+        Returned++;
+#endif
+        _pool.Add(subscriptions);
+    }
+}
+
+public static class LifetimeManagerPool
+{
+#if DEBUG
+    public static int Created { get; private set; }
+    public static int Rented { get; private set; }
+    public static int Returned { get; private set; }
+    public static int AllocationsSaved => Rented - Created;
+
+#endif
+    private static readonly ConcurrentBag<LifetimeManager> _pool = new ConcurrentBag<LifetimeManager>();
+
+    internal static LifetimeManager Rent()
+    {
+#if DEBUG
+        Rented++;
+#endif
+        if (_pool.TryTake(out var ltm))
+        {
+            ltm.Initialize();
+            return ltm;
+        }
+
+#if DEBUG
+        Created++;
+#endif
+
+        return new LifetimeManager();
+    }
+
+    internal static void Return(LifetimeManager ltm)
+    {
+#if DEBUG
+        Returned++;
+#endif
+        _pool.Add(ltm);
+    }
 }

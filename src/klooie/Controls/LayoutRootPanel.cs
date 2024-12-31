@@ -126,16 +126,15 @@ public class LayoutRootPanel : ConsolePanel
     {
         c.BeforeAddedToVisualTreeInternal();
 
-        if (c is ConsolePanel childPanel)
+        if (c is ConsolePanel consolePanel)
         {
             // Synchronize child controls without causing multiple subscriptions
-            childPanel.Controls.Sync(ControlAddedToVisualTree, ControlRemovedFromVisualTree, null, c);
+            consolePanel.Controls.Sync(ControlAddedToVisualTree, ControlRemovedFromVisualTree, null, c);
         }
         else if (c is ProtectedConsolePanel protectedPanel)
         {
             // Handle protected panels
             ControlAddedToVisualTree(protectedPanel.ProtectedPanelInternal);
-            protectedPanel.OnDisposed(() => ControlRemovedFromVisualTree(protectedPanel.ProtectedPanelInternal));
         }
         DescendentAdded.Fire(c);
         c.AddedToVisualTreeInternal();

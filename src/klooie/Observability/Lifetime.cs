@@ -101,7 +101,7 @@ public class Lifetime : Disposable, ILifetime
     /// <summary>
     /// Creates a new lifetime
     /// </summary>
-    public Lifetime() => _manager = new LifetimeManager();
+    public Lifetime() => _manager = LifetimeManagerPool.Rent();
 
     protected override void AfterDispose() => _manager.IsExpired = true;
 
@@ -211,6 +211,7 @@ public class Lifetime : Disposable, ILifetime
             try
             {
                 _manager.Finish();
+                LifetimeManagerPool.Return(_manager);
                 _manager.IsExpired = true;
                 _manager = null;
             }

@@ -101,4 +101,6 @@ public class Subscription
         Subscribers?.Remove(this);
         Subscribers = null;
     }
+
+    internal Subscription() { }
 }
