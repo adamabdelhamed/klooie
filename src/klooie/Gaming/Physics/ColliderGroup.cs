@@ -283,13 +283,56 @@ public sealed class ColliderGroup
     {
         public class Item
         {
-            public readonly GameCollider Collider;
-            public readonly Velocity Velocity;
+            public GameCollider Collider;
+            public Velocity Velocity;
 
             public Item(GameCollider c, Velocity v)
             {
                 Collider = c;
                 Velocity = v;
+            }
+        }
+
+        public static class ItemPool
+        {
+#if DEBUG
+    public static int Created { get; private set; }
+    public static int Rented { get; private set; }
+    public static int Returned { get; private set; }
+    public static int AllocationsSaved => Rented - Created;
+
+#endif
+            private static readonly List<Item> _pool = new List<Item>();
+
+            internal static Item Rent(GameCollider c, Velocity v)
+            {
+#if DEBUG
+        Rented++;
+#endif
+                if (_pool.Count > 0)
+                {
+                    var item = _pool[_pool.Count - 1];
+                    _pool.RemoveAt(_pool.Count - 1);
+                    item.Collider = c;
+                    item.Velocity = v;
+                    return item;
+                }
+
+#if DEBUG
+        Created++;
+#endif
+
+                return new Item(c, v);
+            }
+
+            internal static void Return(Item item)
+            {
+#if DEBUG
+        Returned++;
+#endif
+                item.Collider = null;
+                item.Velocity = null;
+                _pool.Add(item);
             }
         }
 
@@ -330,13 +373,13 @@ public sealed class ColliderGroup
             {
                 if (myArray[j] == null)
                 {
-                    myArray[j] = new Item(c, v);
+                    myArray[j] = ItemPool.Rent(c, v);
                     return (i, j);
                 }
             }
             var biggerArray = new Item[myArray.Length * 2];
             Array.Copy(Table[i], biggerArray, myArray.Length);
-            biggerArray[myArray.Length] = new Item(c, v);
+            biggerArray[myArray.Length] = ItemPool.Rent(c, v);
             Table[i] = biggerArray;
             return (i, myArray.Length);
         }
@@ -350,6 +393,7 @@ public sealed class ColliderGroup
                 if (ReferenceEquals(c, myArray[j]?.Collider))
                 {
                     v = myArray[j].Velocity;
+                    ItemPool.Return(myArray[j]);
                     myArray[j] = null;
                     for (var k = j; k < myArray.Length - 1; k++)
                     {

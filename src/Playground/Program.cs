@@ -1,14 +1,13 @@
-﻿using klooie;
-
-var app = new ConsoleApp();
+﻿using klooie.Gaming;
+var app = new Game();
  
 app.Invoke(async () =>
 {
    while(true)
     {
-        var control = ConsoleControlPool.Instance.Rent();
+        var control = GameColliderPool.Instance.Rent();
         app.LayoutRoot.Add(control);
-        ConsoleControlPool.Instance.Return(control);
+        GameColliderPool.Instance.Return(control);
     }
 });
 

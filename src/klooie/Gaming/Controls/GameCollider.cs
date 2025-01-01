@@ -22,6 +22,7 @@ public class GameCollider : ConsoleControl
         }
     }
 
+    private Action cachedReturnVelocity;
     protected override void ProtectedInit()
     {
         base.ProtectedInit();
@@ -31,11 +32,14 @@ public class GameCollider : ConsoleControl
             ConnectToGroup(Game.Current?.MainColliderGroup);
         }
 
-        this.OnDisposed(() => 
-        {
-            VelocityPool.Instance.Return(Velocity);
-            Velocity = null; 
-        });
+        cachedReturnVelocity = cachedReturnVelocity ?? ReturnVelocity;
+        this.OnDisposed(cachedReturnVelocity);
+    }
+
+    private void ReturnVelocity()
+    {
+        VelocityPool.Instance.Return(Velocity);
+        Velocity = null;
     }
 
     public void ConnectToGroup(ColliderGroup group)

@@ -14,7 +14,7 @@ public sealed class Velocity : Recyclable
     internal float lastEvalTime;
     internal Event _onAngleChanged, _onSpeedChanged, _beforeMove, _onVelocityEnforced, _beforeEvaluate;
     internal Event<Collision> _onCollision;
-
+    private Action cachedRemoveMyselfAction;
     public ColliderGroup Group { get; private set; }
     public Event OnAngleChanged { get => _onAngleChanged ?? (_onAngleChanged = new Event()); }
     public Event OnSpeedChanged { get => _onSpeedChanged ?? (_onSpeedChanged = new Event()); }
@@ -82,13 +82,16 @@ public sealed class Velocity : Recyclable
 
             this.Group = group;
             this.Collider = collider;
-            collider.OnDisposed(() =>
-            {
-                if (this.Group.Remove(Collider) == false)
-                {
-                    throw new InvalidOperationException($"Failed to remove myself from group after dispose: {collider.GetType().Name}-{collider.ColliderHashCode}");
-                }
-            });
+            cachedRemoveMyselfAction = cachedRemoveMyselfAction ?? RemoveMyselfFromGroup;
+            collider.OnDisposed(cachedRemoveMyselfAction);
+        }
+    }
+
+    private void RemoveMyselfFromGroup()
+    {
+        if (this.Group.Remove(Collider) == false)
+        {
+            throw new InvalidOperationException($"Failed to remove myself from group after dispose: {Collider.GetType().Name}-{Collider.ColliderHashCode}");
         }
     }
 
