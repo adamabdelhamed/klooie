@@ -37,7 +37,7 @@ public class LayoutRootPanel : ConsolePanel
         ConsoleApp.Current.EndOfCycle.Subscribe(cycleRateMeter.Increment, this);
         ConsoleApp.Current.EndOfCycle.Subscribe(DebounceResize, this);
         ConsoleApp.Current.EndOfCycle.Subscribe(DrainPaints, this);
-        this.OnDisposed(Cleanup);
+        OnDisposed(Cleanup);
     }
 
     private void Cleanup()
@@ -67,7 +67,7 @@ public class LayoutRootPanel : ConsolePanel
     {
         paintRequested = true;
     }
- 
+
     private void DrainPaints()
     {
         if (paintRequests.None() && paintRequested == false) return;
@@ -116,8 +116,8 @@ public class LayoutRootPanel : ConsolePanel
             return;
         }
 
-        this.Width = Bitmap.Console.BufferWidth;
-        this.Height = Bitmap.Console.WindowHeight - 1;
+        Width = Bitmap.Console.BufferWidth;
+        Height = Bitmap.Console.WindowHeight - 1;
         RequestPaint();
         OnWindowResized.Fire();
     }
