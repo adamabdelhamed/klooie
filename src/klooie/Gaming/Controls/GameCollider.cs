@@ -1,17 +1,22 @@
 ﻿namespace klooie.Gaming;
 
 public class GameCollider : ConsoleControl
-{   
+{
+    private bool connectToMainColliderGroup;
     public Velocity Velocity { get; private set; }
     internal virtual bool AutoAddToColliderGroup => true;
     public virtual bool CanMoveTo(RectF bounds) => true;
 
 
-    public GameCollider() : this(true){ }
+    public GameCollider() : this(true)
+    {
+    
+    }
 
     public GameCollider(bool connectToMainColliderGroup)
     {
-        if(connectToMainColliderGroup)
+        this.connectToMainColliderGroup = connectToMainColliderGroup;
+        if (connectToMainColliderGroup)
         {
             ConnectToGroup(Game.Current?.MainColliderGroup);
         }
@@ -20,7 +25,12 @@ public class GameCollider : ConsoleControl
     protected override void ProtectedInit()
     {
         base.ProtectedInit();
-  
+
+        if(Velocity == null && connectToMainColliderGroup)
+        {
+            ConnectToGroup(Game.Current?.MainColliderGroup);
+        }
+
         this.OnDisposed(() => 
         {
             VelocityPool.Instance.Return(Velocity);
