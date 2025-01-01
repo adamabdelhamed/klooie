@@ -19,26 +19,34 @@ public static class NudgeHelper
     private static LocF? GetNudgeLocation(this GameCollider el, RectF? desiredLoc = null, Angle optimalAngle = default, float maxSearch = 15f)
     {
         var desiredLocation = desiredLoc.HasValue ? desiredLoc.Value : el.Bounds;
-        var obstacles = el.GetObstacles();
-        if (obstacles.Where(o => o.Bounds.Touches(desiredLocation)).Any())
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        try
         {
-            foreach (var angle in Angle.Enumerate360Angles(optimalAngle))
+            el.GetObstacles(buffer);
+            if (buffer.ReadableBuffer.Where(o => o.Bounds.Touches(desiredLocation)).Any())
             {
-                for (var d = .1f; d < maxSearch; d += .1f)
+                foreach (var angle in Angle.Enumerate360Angles(optimalAngle))
                 {
-                    var testLoc = desiredLocation.RadialOffset(angle, d);
-                    var testArea = new RectF(testLoc.Left, testLoc.Top, desiredLocation.Width, desiredLocation.Height);
-                    if (obstacles.Where(o => o.Bounds.Touches(testArea)).None())
+                    for (var d = .1f; d < maxSearch; d += .1f)
                     {
-                        return testLoc.TopLeft;
+                        var testLoc = desiredLocation.RadialOffset(angle, d);
+                        var testArea = new RectF(testLoc.Left, testLoc.Top, desiredLocation.Width, desiredLocation.Height);
+                        if (buffer.ReadableBuffer.Where(o => o.Bounds.Touches(testArea)).None())
+                        {
+                            return testLoc.TopLeft;
+                        }
                     }
                 }
+                return null;
             }
-            return null;
+            else
+            {
+                return el.Bounds.TopLeft;
+            }
         }
-        else
+        finally
         {
-            return el.Bounds.TopLeft;
+            ObstacleBufferPool.Instance.Return(buffer);
         }
     }
 }

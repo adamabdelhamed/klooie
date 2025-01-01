@@ -52,8 +52,19 @@ public static class CollisionDetector
     [ThreadStatic]
     private static Edge[] rayBuffer;
 
-    public static bool HasLineOfSight(this Velocity from, ConsoleControl to) 
-        => HasLineOfSight(from.Collider, to, from.GetObstacles());
+    public static bool HasLineOfSight(this Velocity from, ConsoleControl to)
+    {
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        try
+        {
+            from.GetObstacles(buffer);
+            return HasLineOfSight(from.Collider, to, buffer.ReadableBuffer);
+        }
+        finally
+        {
+            ObstacleBufferPool.Instance.Return(buffer);
+        }
+    }
     public static bool HasLineOfSight(this ConsoleControl from, ConsoleControl to, IEnumerable<ConsoleControl> obstacles) 
         => GetLineOfSightObstruction(from, to, obstacles) == null;
     public static bool HasLineOfSight(this ConsoleControl from, RectF to, IEnumerable<ConsoleControl> obstacles) 

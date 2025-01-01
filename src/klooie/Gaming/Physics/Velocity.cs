@@ -95,7 +95,22 @@ public sealed class Velocity : Recyclable
         }
     }
 
-    public IEnumerable<GameCollider> GetObstacles(List<GameCollider> buffer = null) => Group.GetObstacles(Collider, buffer);
+    public void GetObstacles(ObstacleBuffer buffer) => Group.GetObstacles(Collider, buffer);
+
+    public IEnumerable<GameCollider> GetObstacles()
+    {
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        try
+        {
+            GetObstacles(buffer);
+            return buffer.ReadableBuffer.ToArray();
+        }
+        finally
+        {
+            ObstacleBufferPool.Instance.Return(buffer);
+        }
+    }
+
     public void Stop() => Speed = 0;
 }
 

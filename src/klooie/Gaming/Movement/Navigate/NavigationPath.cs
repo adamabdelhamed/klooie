@@ -32,32 +32,42 @@ public class NavigationPath : Lifetime
 
     public void PruneTail()
     {
-        for (var i = tail.Count - 1; i >= 0; i--)
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        try
         {
-            var curr = tail[i];
-            var d = options.Element.Bounds.CalculateDistanceTo(curr);
-            var weAreCloseEnoughThatWeAreWillingToDoAnExpensiveLineOfSightTest = d < 2;
-            if (weAreCloseEnoughThatWeAreWillingToDoAnExpensiveLineOfSightTest)
+            for (var i = tail.Count - 1; i >= 0; i--)
             {
-                var blockingObstacle = options.Element.GetLineOfSightObstruction(tail[i], options.Element.GetObstacles(), CastingMode.Precise);
-                if (blockingObstacle == null)
+                var curr = tail[i];
+                var d = options.Element.Bounds.CalculateDistanceTo(curr);
+                var weAreCloseEnoughThatWeAreWillingToDoAnExpensiveLineOfSightTest = d < 2;
+                if (weAreCloseEnoughThatWeAreWillingToDoAnExpensiveLineOfSightTest)
                 {
-                    for (var j = 0; j < i + 1; j++)
+                    buffer.WriteableBuffer.Clear();
+                    options.Element.GetObstacles(buffer);
+                    var blockingObstacle = options.Element.GetLineOfSightObstruction(tail[i], buffer.ReadableBuffer, CastingMode.Precise);
+                    if (blockingObstacle == null)
                     {
-                        if (tail.Count > 1)
+                        for (var j = 0; j < i + 1; j++)
                         {
-                            var x = tail[0].Left + (tail[0].Width - options.Element.Bounds.Width) / 2f;
-                            var y = tail[0].Top + (tail[0].Height - options.Element.Bounds.Height) / 2f;
-                            if(options.Element.TryMoveTo(x, y))
+                            if (tail.Count > 1)
                             {
-                                options.Velocity.Angle = tail[0].CalculateAngleTo(tail[1]);
+                                var x = tail[0].Left + (tail[0].Width - options.Element.Bounds.Width) / 2f;
+                                var y = tail[0].Top + (tail[0].Height - options.Element.Bounds.Height) / 2f;
+                                if (options.Element.TryMoveTo(x, y))
+                                {
+                                    options.Velocity.Angle = tail[0].CalculateAngleTo(tail[1]);
+                                }
+                                tail.RemoveAt(0);
                             }
-                            tail.RemoveAt(0);
                         }
+                        return;
                     }
-                    return;
                 }
             }
+        }
+        finally
+        {
+            ObstacleBufferPool.Instance.Return(buffer);
         }
     }
 

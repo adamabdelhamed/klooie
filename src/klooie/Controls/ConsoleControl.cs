@@ -349,6 +349,7 @@ public partial class ConsoleControl : Rectangular
 
     private void UntetherFromParent()
     {
+        if(IsBeingRemoved) throw new Exception("This control is already being removed");
         if (Parent is ConsolePanel consolePanel)
         {
             consolePanel.Controls.Remove(this);

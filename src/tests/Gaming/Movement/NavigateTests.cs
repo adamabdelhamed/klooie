@@ -199,18 +199,22 @@ public class NavigateTests
          {
              if (success) return;
              path.Add(cMover.Bounds);
-             var overlaps = cMover.GetOverlappingObstacles().ToArray();
-             if (overlaps.Any())
+             var buffer = ObstacleBufferPool.Instance.Rent();
+             cMover.GetOverlappingObstacles(buffer);
+ 
+             if (buffer.WriteableBuffer.Count > 0)
              {
-                 Assert.Fail($"{NowDisplay}: Overlap decected, cMoverBounds = {cMover.Bounds}, First overlapping object is a {overlaps.First().GetType().Name} at bounds {overlaps.First().Bounds}");
+                 Assert.Fail($"{NowDisplay}: Overlap decected, cMoverBounds = {cMover.Bounds}, First overlapping object is a {buffer.WriteableBuffer.First().GetType().Name} at bounds {buffer.WriteableBuffer.First().Bounds}");
              }
-
-             var touchingButNotOverlapping = cMover.GetObstacles()
+             buffer.WriteableBuffer.Clear();
+             cMover.GetObstacles(buffer);
+             var touchingButNotOverlapping = buffer.ReadableBuffer
              .Where(o => o.CalculateDistanceTo(cMover) == 0).ToArray();
              if(touchingButNotOverlapping.Any())
              {
                  Assert.Fail($"{NowDisplay}: Touching decected, cMoverBounds = {cMover.Bounds}, First overlapping object is a {touchingButNotOverlapping.First().GetType().Name} at bounds {touchingButNotOverlapping.First().Bounds}");
              }
+             ObstacleBufferPool.Instance.Return(buffer);
 
          }, cMover);
 

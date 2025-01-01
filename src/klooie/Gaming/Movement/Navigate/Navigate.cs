@@ -18,11 +18,25 @@ public class Navigate : Movement
     private Func<GameCollider> destination;
     public NavigateOptions Options { get; private set; }
 
-    public List<RectF> ObstaclesPadded => Velocity
-        .GetObstacles()
-            .Select(e => e.Bounds.Grow(.1f))
-            .ToList();
-
+    public List<RectF> ObstaclesPadded
+    {
+        get
+        {
+            var buffer = ObstacleBufferPool.Instance.Rent();
+            try
+            {
+                Velocity.GetObstacles(buffer);
+                var ret = buffer.ReadableBuffer
+                    .Select(e => e.Bounds.Grow(.1f))
+                    .ToList();
+                return ret;
+            }
+            finally
+            {
+                ObstacleBufferPool.Instance.Return(buffer);
+            }
+        }
+    }
     private Navigate(Velocity v, SpeedEval speed, Func<GameCollider> destination, NavigateOptions options) : base(v, speed)
     {
         AssertSupported();

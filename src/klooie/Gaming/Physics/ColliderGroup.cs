@@ -262,9 +262,8 @@ public sealed class ColliderGroup
     }
  
 
-    public IEnumerable<GameCollider> GetObstacles(GameCollider owner, List<GameCollider> list = null)
+    public void GetObstacles(GameCollider owner, ObstacleBuffer buffer)
     {
-        list = list ?? new List<GameCollider>(Count);
         var span = velocities.Table.AsSpan();
         for (var i = 0; i < span.Length; i++)
         {
@@ -273,10 +272,9 @@ public sealed class ColliderGroup
             {
                 var item = entry[j]?.Collider;
                 if (item == null || item == owner || owner.CanCollideWith(item) == false || item.CanCollideWith(owner) == false) continue;
-                list.Add(item);
+                buffer.WriteableBuffer.Add(item);
             }
         }
-        return list;
     }
 
     private class VelocityHashTable
@@ -430,5 +428,18 @@ public sealed class ColliderGroup
             v = null;
             return false;
         }
+    }
+}
+
+public class ObstacleBuffer : Recyclable
+{
+    private List<GameCollider> _buffer = new List<GameCollider>();
+    public IEnumerable<GameCollider> ReadableBuffer => _buffer;
+
+    public List<GameCollider> WriteableBuffer => _buffer;
+
+    protected override void ProtectedInit()
+    {
+        _buffer.Clear();
     }
 }

@@ -53,7 +53,21 @@ public class GameCollider : ConsoleControl
     public GameCollider(RectF bounds, bool connectToMainColliderGroup = true) : this(connectToMainColliderGroup) => this.Bounds = bounds;
     public GameCollider(float x, float y, float w, float h, bool connectToMainColliderGroup = true) : this(new RectF(x, y, w, h), connectToMainColliderGroup) { }
     public virtual bool CanCollideWith(GameCollider other) => this.IsVisible && ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
-    public IEnumerable<GameCollider> GetObstacles() => Velocity.Group.GetObstacles(this);
+    public void GetObstacles(ObstacleBuffer buffer) => Velocity.Group.GetObstacles(this, buffer);
+
+    public IEnumerable<GameCollider> GetObstacles()
+    {
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        try
+        {
+            GetObstacles(buffer);
+            return buffer.ReadableBuffer.ToArray();
+        }
+        finally
+        {
+            ObstacleBufferPool.Instance.Return(buffer);
+        }
+    }
 
     public bool TryMoveBy(float x, float y) => TryMoveTo(Left + x, Top + y);
 
@@ -75,13 +89,24 @@ public class GameCollider : ConsoleControl
         if (CanMoveTo(proposedBounds) == false) return false;
 
         bool causesOverlap = false;
-#if DEBUG
-        var overlaps = GetObstacles().Where(o => o.CalculateDistanceTo(proposedBounds) == 0).ToArray();
-        causesOverlap = overlaps.Any();
-#else
-        causesOverlap = GetObstacles().Any(o => o.CalculateDistanceTo(proposedBounds) == 0);
-#endif
-
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        try
+        {
+            GetObstacles(buffer);
+            for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
+            {
+                var other = buffer.WriteableBuffer[i];
+                if (other.CalculateDistanceTo(proposedBounds) == 0)
+                {
+                    causesOverlap = true;
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            ObstacleBufferPool.Instance.Return(buffer);
+        }
         if (causesOverlap == false)
         {
             this.MoveTo(x, y);
@@ -96,20 +121,27 @@ public class GameCollider : ConsoleControl
     public bool IsOverlappingAnyObstacles()
     {
         bool isOverlapped = false;
-#if DEBUG
-        var overlaps = GetOverlappingObstacles().ToArray();
-        isOverlapped = overlaps.Any();
-        if(isOverlapped)
-        {
-            // place for a breakpoint
-        }
-#else
-        isOverlapped = GetOverlappingObstacles().Any();
-#endif
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        GetOverlappingObstacles(buffer);
+        isOverlapped = buffer.WriteableBuffer.Count > 0;
+        ObstacleBufferPool.Instance.Return(buffer);
         return isOverlapped;
     }
 
-    public IEnumerable<GameCollider> GetOverlappingObstacles() => GetObstacles().Where(o => o.NumberOfPixelsThatOverlap(Bounds) > 0);
+    public void GetOverlappingObstacles(ObstacleBuffer buffer)
+    {
+        GetObstacles(buffer);
+        for(var i = 0; i < buffer.WriteableBuffer.Count; i++)
+        {
+            var other = buffer.WriteableBuffer[i];
+            if(other.NumberOfPixelsThatOverlap(Bounds) == 0)
+            {
+                buffer.WriteableBuffer.RemoveAt(i);
+                i--;
+            }
+
+        }
+    }
 }
 
 public sealed class ColliderBox : GameCollider

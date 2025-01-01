@@ -178,9 +178,12 @@ public class MovementTests
 
         cMover.BoundsChanged.Subscribe(() =>
         {
-            var overlaps = cMover.GetObstacles()
+            var buffer = ObstacleBufferPool.Instance.Rent();
+            cMover.GetObstacles(buffer);
+            var overlaps = buffer.ReadableBuffer
             .Where(o => o.OverlapPercentage(cMover) > 0).ToArray();
-            if(overlaps.Any())
+            ObstacleBufferPool.Instance.Return(buffer);
+            if (overlaps.Any())
             {
                 Assert.Fail("overlaps detected");
             }

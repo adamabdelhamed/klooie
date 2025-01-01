@@ -87,7 +87,16 @@ public class Wander : Movement
                 _IterationLifetime = Game.Current.CreateChildLifetime();
 
                 var elementBounds = Element.Bounds;
-                _Obstacles = Velocity.GetObstacles().Where(o => o.CalculateDistanceTo(elementBounds) <= Options.Visibility).ToArray();
+                var buffer = ObstacleBufferPool.Instance.Rent();
+                try
+                {
+                    Velocity.GetObstacles(buffer);
+                    _Obstacles = buffer.ReadableBuffer.Where(o => o.CalculateDistanceTo(elementBounds) <= Options.Visibility).ToArray();
+                }
+                finally
+                {
+                    ObstacleBufferPool.Instance.Return(buffer);
+                }
                 SetOptimalAngle();
 
                 var cpd = _CuriosityPoint == null ? -1f : _CuriosityPoint.CalculateNormalizedDistanceTo(Element.Bounds);
