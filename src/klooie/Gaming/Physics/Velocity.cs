@@ -96,9 +96,4 @@ public sealed class Velocity : Recyclable
     public void Stop() => Speed = 0;
 }
 
-public class VelocityPool : RecycleablePool<Velocity>
-{
-    private static VelocityPool? _instance;
-    public static VelocityPool Instance => _instance ??= new VelocityPool();
-    public override Velocity Factory() => new Velocity();
-}
+ 

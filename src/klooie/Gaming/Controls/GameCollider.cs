@@ -105,9 +105,4 @@ public sealed class ColliderBox : GameCollider
     public ColliderBox(float x, float y, float w, float h, bool connectToMainColliderGroup = true) : this(new RectF(x, y, w, h), connectToMainColliderGroup) { }
 }
 
-public class GameColliderPool : RecycleablePool<GameCollider>
-{
-    private static GameColliderPool? _instance;
-    public static GameColliderPool Instance => _instance ??= new GameColliderPool();
-    public override GameCollider Factory() => new GameCollider();
-}
+ 

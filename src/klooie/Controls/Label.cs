@@ -67,9 +67,4 @@ public partial class Label : ConsoleControl
     }
 }
 
-public class LabelPool : RecycleablePool<Label>
-{
-    private static LabelPool? _instance;
-    public static LabelPool Instance => _instance ??= new LabelPool();
-    public override Label Factory() => new Label();
-}
+ 
