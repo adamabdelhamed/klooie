@@ -96,7 +96,7 @@ public sealed class UITestManager
         }
         else
         {
-            await app.InvokeAsync(RecordKeyFrame);
+            app.Invoke(RecordKeyFrame);
         }
     }
 

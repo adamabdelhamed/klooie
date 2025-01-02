@@ -4,6 +4,7 @@ public class EventLoop : Lifetime
 {
     private class SynchronizedEventPool  
     {
+        private Lock lockObject = new Lock();
         private SynchronizedEvent[] pool;
         private int count;
         public SynchronizedEventPool()
@@ -13,7 +14,7 @@ public class EventLoop : Lifetime
 
         public SynchronizedEvent Get()
         {
-            lock (pool)
+            lock (lockObject)
             {
                 for (var i = 0; i < pool.Length; i++)
                 {
@@ -32,7 +33,7 @@ public class EventLoop : Lifetime
 
         public void Return(SynchronizedEvent done)
         {
-            lock (pool)
+            lock (lockObject)
             {
                 done.Clean();
                 for (var i = 0; i < pool.Length; i++)
@@ -108,12 +109,6 @@ public class EventLoop : Lifetime
         Throw,
         Stop,
         Swallow,
-    }
-
-    public class EventLoopExceptionArgs
-    {
-        public Exception Exception { get; set; }
-        public EventLoopExceptionHandling Handling { get; set; }
     }
 
     private class StopLoopException : Exception { }
@@ -192,7 +187,8 @@ public class EventLoop : Lifetime
         try
         {
             runTask.Wait();
-        }catch(Exception ex)
+        }
+        catch(Exception ex)
         {
             if (ex is AggregateException == false) throw;
             var cleaned = ex.Clean();
@@ -438,24 +434,15 @@ public class EventLoop : Lifetime
         }
     }
 
-    public Task InvokeAsync(Action a)
-    {
-        return InvokeAsync(() =>
-        {
-            a();
-            return Task.CompletedTask;
-        });
-    }
-
     public Task InvokeAsync(Func<Task> work)
     {
-        var tcs = new TaskCompletionSource<bool>();
+        var tcs = new TaskCompletionSource();
         Invoke(async () =>
         {
             try
             {
                 await work();
-                tcs.SetResult(true);
+                tcs.SetResult();
             }
             catch(Exception ex)
             {
