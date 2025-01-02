@@ -41,7 +41,7 @@ public partial class ScrollablePanel : ProtectedConsolePanel
         BackgroundChanged.Sync(()=> ScrollableContent.Background = Background, this);
         verticalScrollbar = ProtectedPanel.Add(new Scrollbar(Orientation.Vertical) { ZIndex = 10, Width = 1 }).DockToRight();
         horizontalScrollbar = ProtectedPanel.Add(new Scrollbar(Orientation.Horizontal) { ZIndex = 10, Height = 1 }).DockToBottom();
-        AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
+        Ready.Subscribe(OnAddedToVisualTree, this);
         HorizontalScrollUnitsChanged.Subscribe(() =>
         {
             if (HorizontalScrollUnits < 0) throw new Exception("HorizontalScrollUnits must be >= 0");
@@ -148,7 +148,7 @@ public partial class ScrollablePanel : ProtectedConsolePanel
     {
         bool focusedControlIsWithinMe = VisitControlTree((control) =>
         {
-            if (IsExpired || IsExpiring || IsBeingRemoved) return false;
+            if (IsExpired || IsExpiring) return false;
             return control is Scrollbar == false && control == ConsoleApp.Current.FocusedControl;
         });
 

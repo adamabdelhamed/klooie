@@ -90,7 +90,11 @@ internal sealed class LifetimeManager : ILifetimeManager
 
     internal void Initialize()
     {
+        IsExpired = false;
+        IsExpiring = false;
         hasFinished = false;
+        toNotify = null;
+        toDisposeOf = null;
     }
 
     internal void Finish()

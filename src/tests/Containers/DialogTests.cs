@@ -78,7 +78,7 @@ public class DialogTests
     {
         Dialog.Shown.SubscribeOnce(async () => await ConsoleApp.Current.SendKey(ConsoleKey.Enter));
         var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
-        Assert.IsTrue("no".Equals(choice.Id, StringComparison.OrdinalIgnoreCase));
+        Assert.IsTrue("no".Equals(choice.Id, StringComparison.OrdinalIgnoreCase), choice.Id);
         ConsoleApp.Current.Stop();
     });
 
@@ -88,7 +88,7 @@ public class DialogTests
     {
         Dialog.Shown.SubscribeOnce(async () => await ConsoleApp.Current.SendKey(ConsoleKey.Escape));
         var choice = await MessageDialog.Show(new ShowMessageOptions($"Yes or no?".ToGreen()) { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0 });
-        Assert.IsNull(choice);
+        Assert.IsTrue("no".Equals(choice.Id, StringComparison.OrdinalIgnoreCase));
         ConsoleApp.Current.Stop();
     });
 

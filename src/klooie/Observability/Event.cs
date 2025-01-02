@@ -34,6 +34,21 @@ public sealed class Event
     }
 
     /// <summary>
+    /// Subscribes to this event such that the given handler will be called when the event fires. Notifications will stop
+    /// when the lifetime associated with the given lifetime manager is disposed. This subscription will be notified before all other subscriptions.
+    /// </summary>
+    /// <param name="handler">the action to run when the event fires</param>
+    /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
+    public void SubscribeWithPriority(Action handler, ILifetimeManager lifetimeManager)
+    {
+        subscribers = subscribers ?? new List<Subscription>();
+        var subscription = SubscriptionPool.Rent(handler, lifetimeManager);
+        subscription.Subscribers = subscribers;
+        subscribers.Insert(0, subscription);
+        lifetimeManager.OnDisposed(subscription);
+    }
+
+    /// <summary>
     /// calls the callback now and subscribes to the event
     /// </summary>
     /// <param name="handler">the callback</param>
@@ -42,6 +57,17 @@ public sealed class Event
     {
         handler();
         Subscribe(handler, lifetimeManager);
+    }
+
+    /// <summary>
+    /// calls the callback now and subscribes to the event. This subscription will be notified before all other subscriptions.
+    /// </summary>
+    /// <param name="handler">the callback</param>
+    /// <param name="lifetimeManager">the lifetime of the subscription</param>
+    public void SyncWithPriority(Action handler, ILifetimeManager lifetimeManager)
+    {
+        handler();
+        SubscribeWithPriority(handler, lifetimeManager);
     }
 
     /// <summary>
@@ -112,6 +138,8 @@ public class Event<T>
     /// <param name="handler">the callback</param>
     /// <param name="lt">the lifetime</param>
     public void Subscribe(Action<T> handler, ILifetimeManager lt) => innerEvent.Subscribe(() => handler(args.Peek()), lt);
+
+    public void SubscribeWithPriority(Action<T> handler, ILifetimeManager lt) => innerEvent.SubscribeWithPriority(() => handler(args.Peek()), lt);
 
     /// <summary>
     /// Subscribes for one notification

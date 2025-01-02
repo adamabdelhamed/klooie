@@ -168,7 +168,7 @@ public class DialogChoice
     /// </summary>
     public static IEnumerable<DialogChoice> OKCancel => new DialogChoice[]
     {
-        new DialogChoice(){ DisplayText = "OK".ToConsoleString(), Id = "OK", Value = "OK", Shortcut = new KeyboardShortcut(ConsoleKey.Enter) },
+        new DialogChoice(){ DisplayText = "OK".ToConsoleString(), Id = "OK", Value = "OK", Shortcut = new KeyboardShortcut(ConsoleKey.Y) },
         new DialogChoice(){ DisplayText = "Cancel".ToConsoleString(), Id = "Cancel", Value = "Cancel", Shortcut = new KeyboardShortcut(ConsoleKey.Escape) },
     };
 
@@ -177,8 +177,8 @@ public class DialogChoice
     /// </summary>
     public static IEnumerable<DialogChoice> YesNo => new DialogChoice[]
     {
-        new DialogChoice(){ DisplayText = "Yes".ToConsoleString(), Id = "Yes", Value = "Yes", Shortcut = new KeyboardShortcut(ConsoleKey.Enter) },
-        new DialogChoice(){ DisplayText = "No".ToConsoleString(), Id = "No", Value = "No" },
+        new DialogChoice(){ DisplayText = "Yes".ToConsoleString(), Id = "Yes", Value = "Yes", Shortcut = new KeyboardShortcut(ConsoleKey.Y) },
+        new DialogChoice(){ DisplayText = "No".ToConsoleString(), Id = "No", Value = "No", Shortcut = new KeyboardShortcut(ConsoleKey.Escape)  },
     };
 
     /// <summary>
@@ -186,6 +186,6 @@ public class DialogChoice
     /// </summary>
     public static IEnumerable<DialogChoice> Close => new DialogChoice[]
     {
-        new DialogChoice(){ DisplayText = "Close".ToConsoleString(), Id = "Close", Value = "Close",Shortcut = new KeyboardShortcut(ConsoleKey.Enter) },
+        new DialogChoice(){ DisplayText = "Close".ToConsoleString(), Id = "Close", Value = "Close",Shortcut = new KeyboardShortcut(ConsoleKey.Escape ) },
     };
 }

@@ -314,6 +314,18 @@ public partial class ObservabilityTests
     }
 
     [TestMethod]
+    public void TestDisposal()
+    {
+        var lt = new Lifetime();
+        var fired = false;
+        lt.OnDisposed(() => fired = true);
+        Assert.IsFalse(fired);
+        lt.Dispose();
+        Assert.IsTrue(fired);
+    }
+
+
+    [TestMethod]
     public void ParallelEvents()
     {
 

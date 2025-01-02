@@ -32,9 +32,9 @@ public class ConsoleControlFilter : IConsoleControlFilter
 /// </summary>
 public partial class ConsoleControl : Rectangular
 {
-    private Event _focused, _unfocused, _addedToVisualTree, _beforeAddedToVisualTree, _removedFromVisualTree, _beforeRemovedFromVisualTree, _ready, _tagsChanged;
+    private Event _focused, _unfocused,   _ready, _tagsChanged;
     private Event<ConsoleKeyInfo> _keyInputReceived;
-    private bool hasBeenAddedToVisualTree;
+    public bool HasBeenAddedToVisualTree { get; private set; }
     private HashSet<string> tags;
 
     internal int? FocusStackDepthInternal { get; set; }
@@ -82,24 +82,12 @@ public partial class ConsoleControl : Rectangular
     public Event Unfocused { get => _unfocused ?? (_unfocused = EventPool.Rent()); }
 
     /// <summary>
-    /// An event that fires when this control is added to the visual tree of a ConsoleApp. 
+    /// An event that fires when this control is both added to an app and that app is running
     /// </summary>
-    public Event AddedToVisualTree { get => _addedToVisualTree ?? (_addedToVisualTree = EventPool.Rent()); }
+    public Event Ready { get => _ready ?? (_ready = EventPool.Rent()); }
 
-    /// <summary>
-    /// An event that fires just before this control is added to the visual tree of a ConsoleApp
-    /// </summary>
-    public Event BeforeAddedToVisualTree { get => _beforeAddedToVisualTree ?? (_beforeAddedToVisualTree = EventPool.Rent()); }
 
-    /// <summary>
-    /// An event that fires when this control is removed from the visual tree of a ConsoleApp.
-    /// </summary>
-    public Event RemovedFromVisualTree { get => _removedFromVisualTree ?? (_removedFromVisualTree = EventPool.Rent()); }
 
-    /// <summary>
-    /// An event that fires just before this control is removed from the visual tree of a ConsoleApp
-    /// </summary>
-    public Event BeforeRemovedFromVisualTree { get => _beforeRemovedFromVisualTree ?? (_beforeRemovedFromVisualTree = EventPool.Rent()); }
 
     /// <summary>
     /// An event that fires when a key is pressed while this control has focus and the control has decided not to process
@@ -116,7 +104,7 @@ public partial class ConsoleControl : Rectangular
     /// Gets a reference to this control's parent in the visual tree.  It will be null if this control is not in the visual tree 
     /// and also if this control is the root of the visual tree.
     /// </summary>
-    public partial Container Parent { get; set; }
+    public partial Container Parent { get; internal set; }
 
     /// <summary>
     /// Gets or sets the background color
@@ -182,16 +170,9 @@ public partial class ConsoleControl : Rectangular
     /// specified then the wallclock will be used
     /// </summary>
     public Func<TimeSpan> RecorderTimestampProvider { get; private set; }
+ 
 
-    /// <summary>
-    /// Set to true if the Control is in the process of being removed
-    /// </summary>
-    internal bool IsBeingRemoved { get; set; }
 
-    /// <summary>
-    /// An event that fires when this control is both added to an app and that app is running
-    /// </summary>
-    public Event Ready { get => _ready ?? (_ready = EventPool.Rent()); }
 
     /// <summary>
     /// Gets the x coordinate of this control relative to the application root
@@ -268,8 +249,7 @@ public partial class ConsoleControl : Rectangular
     {
         base.ProtectedInit();
         Parent = null;
-        IsBeingRemoved = false;
-        hasBeenAddedToVisualTree = false;
+        HasBeenAddedToVisualTree = false;
         CanFocus = true;
         TabSkip = false;
         this.Width = 1;
@@ -314,26 +294,6 @@ public partial class ConsoleControl : Rectangular
             EventPool.Return(_unfocused);
             _unfocused = null;
         }
-        if (_addedToVisualTree != null)
-        {
-            EventPool.Return(_addedToVisualTree);
-            _addedToVisualTree = null;
-        }
-        if (_beforeAddedToVisualTree != null)
-        {
-            EventPool.Return(_beforeAddedToVisualTree);
-            _beforeAddedToVisualTree = null;
-        }
-        if (_removedFromVisualTree != null)
-        {
-            EventPool.Return(_removedFromVisualTree);
-            _removedFromVisualTree = null;
-        }
-        if (_beforeRemovedFromVisualTree != null)
-        {
-            EventPool.Return(_beforeRemovedFromVisualTree);
-            _beforeRemovedFromVisualTree = null;
-        }
         if (_ready != null)
         {
             EventPool.Return(_ready);
@@ -343,16 +303,6 @@ public partial class ConsoleControl : Rectangular
         {
             EventPool.Return(_tagsChanged);
             _tagsChanged = null;
-        }
-        UntetherFromParent();
-    }
-
-    private void UntetherFromParent()
-    {
-        if(IsBeingRemoved) throw new Exception("This control is already being removed");
-        if (Parent is ConsolePanel consolePanel)
-        {
-            consolePanel.Controls.Remove(this);
         }
     }
 
@@ -550,37 +500,15 @@ public partial class ConsoleControl : Rectangular
 
     internal void AddedToVisualTreeInternal()
     {
-        if (hasBeenAddedToVisualTree)
+        if (HasBeenAddedToVisualTree)
         {
             throw new ObjectDisposedException("This control has already been added to a visual tree and cannot be reused.");
         }
 
-        hasBeenAddedToVisualTree = true;
-        if (ConsoleApp.Current.IsRunning)
-        {
-            _ready?.Fire();
-        }
-        else if (_ready != null)
-        {
-            ConsoleApp.Current.InvokeNextCycle(Ready.Fire);
-        }
-        _addedToVisualTree?.Fire();
+        HasBeenAddedToVisualTree = true;
+        _ready?.Fire();
     }
-
-    internal void BeforeAddedToVisualTreeInternal()
-    {
-        _beforeAddedToVisualTree?.Fire();
-    }
-
-    internal void BeforeRemovedFromVisualTreeInternal()
-    {
-        _beforeRemovedFromVisualTree?.Fire();
-    }
-
-    internal void RemovedFromVisualTreeInternal()
-    {
-        _removedFromVisualTree?.Fire();
-    }
+ 
 
     internal void Paint()
     {

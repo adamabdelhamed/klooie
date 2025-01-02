@@ -193,8 +193,8 @@ internal partial class FocusManager : IObservableObject
         focusStack = new List<FocusContext>();
         focusStack.Add(new FocusContext());
         StackDepth = 1;
-        ConsoleApp.Current.LayoutRoot.DescendentAdded.Subscribe(Add, ConsoleApp.Current);
-        ConsoleApp.Current.LayoutRoot.DescendentRemoved.Subscribe(Remove, ConsoleApp.Current);
+        ConsoleApp.Current.LayoutRoot.DescendentAdded.SubscribeWithPriority(Add, ConsoleApp.Current);
+        ConsoleApp.Current.LayoutRoot.DescendentRemoved.SubscribeWithPriority(Remove, ConsoleApp.Current);
         ConsoleApp.Current.EndOfCycle.Subscribe(Cycle, ConsoleApp.Current);
     }
 

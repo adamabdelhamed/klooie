@@ -208,9 +208,8 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
         {
             var highlightLifetime = new Lifetime();
             highlightLifetimes.Add(highlightLifetime);
-            if (cellDisplayControl is Label)
+            if (cellDisplayControl is Label label)
             {
-                var label = (cellDisplayControl as Label);
                 var originalText = label.Text;
                 label.Text = label.Text.ToBlack().ToDifferentBackground(HasFocus ? RGB.Cyan : RGB.DarkGray);
                 highlightLifetime.OnDisposed(() =>

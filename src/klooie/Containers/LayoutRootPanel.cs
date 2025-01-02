@@ -20,24 +20,26 @@ public class LayoutRootPanel : ConsolePanel
     internal bool ClearOnExit { get; set; } = true;
 
 
-    private Event<ConsoleControl> _descendentAdded, _descendentRemoved;
 
-    public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = EventPool<ConsoleControl>.Rent()); }
-    public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = EventPool<ConsoleControl>.Rent()); }
+
+
     public LayoutRootPanel()
     {
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
         cycleRateMeter = new FrameRateMeter();
-        // Subscribe once in the constructor
-        Controls.Added.Subscribe(ControlAddedToVisualTree, this);
-        Controls.Removed.Subscribe(ControlRemovedFromVisualTree, this);
-
+ 
         ResizeTo(lastConsoleWidth, lastConsoleHeight);
         ConsoleApp.Current.EndOfCycle.Subscribe(cycleRateMeter.Increment, this);
         ConsoleApp.Current.EndOfCycle.Subscribe(DebounceResize, this);
         ConsoleApp.Current.EndOfCycle.Subscribe(DrainPaints, this);
+        DescendentAdded.Subscribe(OnDescendentAdded, this);
         OnDisposed(Cleanup);
+    }
+
+    private void OnDescendentAdded(ConsoleControl control)
+    {
+        control.AddedToVisualTreeInternal();
     }
 
     private void Cleanup()
@@ -56,8 +58,8 @@ public class LayoutRootPanel : ConsolePanel
     /// </summary>
     internal Task RequestPaintAsync()
     {
-        if (ConsoleApp.Current.IsDrainingOrDrained) return Task.CompletedTask;
         ConsoleApp.AssertAppThread();
+        if (ConsoleApp.Current.IsDrainingOrDrained) return Task.CompletedTask;
         var d = new TaskCompletionSource();
         paintRequests.Add(d);
         return d.Task;
@@ -122,59 +124,5 @@ public class LayoutRootPanel : ConsolePanel
         OnWindowResized.Fire();
     }
 
-    private void ControlAddedToVisualTree(ConsoleControl c)
-    {
-        c.BeforeAddedToVisualTreeInternal();
-
-        if (c is ConsolePanel consolePanel)
-        {
-            // Synchronize child controls without causing multiple subscriptions
-            consolePanel.Controls.Sync(ControlAddedToVisualTree, ControlRemovedFromVisualTree, null, c);
-        }
-        else if (c is ProtectedConsolePanel protectedPanel)
-        {
-            // Handle protected panels
-            ControlAddedToVisualTree(protectedPanel.ProtectedPanelInternal);
-        }
-        DescendentAdded.Fire(c);
-        c.AddedToVisualTreeInternal();
-
-        ConsoleApp.Current.RequestPaint();
-    }
-
-    private void ControlRemovedFromVisualTree(ConsoleControl c)
-    {
-        if (c.IsBeingRemoved)
-            return; // Prevent re-entrancy
-
-        c.IsBeingRemoved = true;
-        ControlRemovedFromVisualTreeRecursive(c);
-        ConsoleApp.Current.RequestPaint();
-    }
-
-    private void ControlRemovedFromVisualTreeRecursive(ConsoleControl c)
-    {
-        c.BeforeRemovedFromVisualTreeInternal();
-
-        if (c is ConsolePanel panel)
-        {
-            // Iterate over a copy to prevent modification during iteration
-            foreach (var child in panel.Controls.ToArray())
-            {
-                ControlRemovedFromVisualTree(child);
-            }
-        }
-        else if (c is ProtectedConsolePanel protectedPanel)
-        {
-            ControlRemovedFromVisualTree(protectedPanel.ProtectedPanelInternal);
-        }
-
-        c.RemovedFromVisualTreeInternal();
-        DescendentRemoved.Fire(c);
-
-        if (c.ShouldContinue)
-        {
-            c.Dispose();
-        }
-    }
+ 
 }

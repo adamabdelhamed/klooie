@@ -62,7 +62,7 @@ public sealed class Form : ProtectedConsolePanel
     public Form(FormOptions options)
     {
         this.Options = options;
-        this.AddedToVisualTree.Subscribe(InitializeForm, this);
+        this.Ready.Subscribe(InitializeForm, this);
     }
 
     private void InitializeForm()

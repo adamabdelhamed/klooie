@@ -19,6 +19,10 @@ public enum CompositionMode
 }
 public abstract class Container : ConsoleControl
 {
+    private Event<ConsoleControl> _descendentAdded, _descendentRemoved;
+    public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = EventPool<ConsoleControl>.Rent()); }
+    public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = EventPool<ConsoleControl>.Rent()); }
+
     internal Container() { }
 
     /// <summary>

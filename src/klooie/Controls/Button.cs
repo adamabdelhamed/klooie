@@ -61,7 +61,7 @@ public partial class Button : ConsoleControl
         CanFocusChanged.Subscribe(UpdateText, this);
         this.Focused.Subscribe(UpdateText, this);
         this.Unfocused.Subscribe(UpdateText, this);
-        this.AddedToVisualTree.Subscribe(OnAddedToVisualTree, this);
+        this.Ready.Subscribe(OnReady, this);
         this.KeyInputReceived.Subscribe(OnKeyInputReceived, this);
     }
 
@@ -108,7 +108,7 @@ public partial class Button : ConsoleControl
         return ret;
     }
 
-    private void OnAddedToVisualTree()
+    private void OnReady()
     {
         if (shortcut == null) return;
         {

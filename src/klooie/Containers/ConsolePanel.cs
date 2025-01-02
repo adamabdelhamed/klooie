@@ -46,17 +46,67 @@ public class ConsolePanel : Container
 
     private void OnControlRemovedInternal(ConsoleControl c)
     {
+        NotifyDescendentRemoved(c);
         sortedControls.Remove(c);
         c.Parent = null;
+        c.TryDispose();
     }
     private Action _sortZDelegate;
-    private void OnControlAddedInternal(ConsoleControl c)
+    private void OnControlAddedInternal(ConsoleControl controlAddedDirectlyToThisConsolePanel)
     {
-        c.Parent = this;
-        sortedControls.Add(c);
+        controlAddedDirectlyToThisConsolePanel.Parent = this;
+        controlAddedDirectlyToThisConsolePanel.OnDisposed(() => Controls.Remove(controlAddedDirectlyToThisConsolePanel));
+        sortedControls.Add(controlAddedDirectlyToThisConsolePanel);
         SortZ();
         _sortZDelegate = _sortZDelegate ?? SortZ;
-        c.ZIndexChanged.Subscribe(_sortZDelegate, Controls.GetMembershipLifetime(c));
+        controlAddedDirectlyToThisConsolePanel.ZIndexChanged.Subscribe(_sortZDelegate, Controls.GetMembershipLifetime(controlAddedDirectlyToThisConsolePanel));
+
+        NotifyDescendentsAdded(controlAddedDirectlyToThisConsolePanel);
+    }
+
+    private void NotifyDescendentsAdded(ConsoleControl controlAddedDirectlyToThisConsolePanel)
+    {
+        var chain = new List<Container>();
+        Container curr = this;
+        while (curr != null)
+        {
+            chain.Add(curr);
+            curr = curr.Parent;
+        }
+        chain.Reverse(); // so we notify from the top down
+
+        foreach (var container in chain)
+        {
+            if (container.HasBeenAddedToVisualTree) continue;
+
+
+            if (controlAddedDirectlyToThisConsolePanel is Container cAsContainer)
+            {
+                foreach (var descendent in cAsContainer.Descendents)
+                {
+                    if (descendent.HasBeenAddedToVisualTree) continue;
+                    container.DescendentAdded.Fire(descendent);
+                }
+            }
+            container.DescendentAdded.Fire(controlAddedDirectlyToThisConsolePanel);
+        }
+    }
+
+    private void NotifyDescendentRemoved(ConsoleControl controlRemovedDirectlyFromThisConsolePanel)
+    {
+        Container container = this;
+        while (container != null)
+        {
+            container.DescendentRemoved.Fire(controlRemovedDirectlyFromThisConsolePanel);
+            if (controlRemovedDirectlyFromThisConsolePanel is Container cAsContainer)
+            {
+                foreach (var descendent in cAsContainer.Descendents)
+                {
+                    container.DescendentRemoved.Fire(descendent);
+                }
+            }
+            container = container.Parent;
+        }
     }
 
     /// <summary>

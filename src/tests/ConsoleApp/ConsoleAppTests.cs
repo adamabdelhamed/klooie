@@ -232,6 +232,7 @@ public class ConsoleAppTests
     [TestCategory(Categories.ConsoleApp)]
     public void ConsoleApp_LifecycleTestBasic()
     {
+        ConsoleProvider.Current = new KlooieTestConsole(); 
         ConsoleApp app = new ConsoleApp();
         app.Invoke(() =>
         {
@@ -271,6 +272,79 @@ public class ConsoleAppTests
             app.LayoutRoot.Controls.Clear();
             Assert.AreEqual(4, addCounter);
             Assert.AreEqual(4, removeCounter);
+            app.Stop();
+        });
+        app.Run();
+    }
+
+    [TestMethod]
+    public void ConsoleApp_ControlDisposed()
+    {
+        ConsoleProvider.Current = new KlooieTestConsole();
+        ConsoleApp app = new ConsoleApp();
+        app.Invoke(() =>
+        {
+            var addedEventFired = 0;
+            var removedEventFired = 0;
+            var descendentAddedEventFired = 0;
+            var descendentRemovedEventFired = 0;
+            var control = new ConsoleControl();
+
+            app.LayoutRoot.Controls.Removed.SubscribeOnce((c) =>
+            {
+                Assert.AreSame(c, control);
+                addedEventFired++;
+            });
+
+            app.LayoutRoot.DescendentAdded.SubscribeOnce((c) =>
+            {
+                Assert.AreSame(c, control);
+                descendentAddedEventFired++;
+            });
+      
+
+            app.LayoutRoot.Controls.Removed.SubscribeOnce((c) =>
+            {
+                Assert.AreSame(c, control);
+                removedEventFired++;
+            });
+
+            app.LayoutRoot.DescendentRemoved.SubscribeOnce((c) =>
+            {
+                Assert.AreSame(c, control);
+                descendentRemovedEventFired++;
+            });
+
+            Assert.IsFalse(app.LayoutRoot.Controls.Contains(control));
+            app.LayoutRoot.Add(control);
+            Assert.IsTrue(app.LayoutRoot.Controls.Contains(control));
+            control.Dispose();
+            Assert.IsFalse(app.LayoutRoot.Controls.Contains(control));
+            Assert.AreEqual(1, addedEventFired);
+            Assert.AreEqual(1, removedEventFired);
+            Assert.AreEqual(1, descendentAddedEventFired);
+            Assert.AreEqual(1, descendentRemovedEventFired);
+            app.Stop();
+        });
+        app.Run();
+    }
+
+    [TestMethod]
+    public void ConsoleApp_NestedControls()
+    {
+        ConsoleProvider.Current = new KlooieTestConsole();
+        ConsoleApp app = new ConsoleApp();
+        app.Invoke(async () =>
+        {
+            var panel = new ConsolePanel();
+            panel.Ready.SubscribeOnce(() =>
+            {
+                var button = panel.Add(new Button() { CanFocus = true });
+            });
+            app.LayoutRoot.Add(panel);
+            await Task.Yield();
+            await Task.Yield();
+            await Task.Yield();
             app.Stop();
         });
         app.Run();
