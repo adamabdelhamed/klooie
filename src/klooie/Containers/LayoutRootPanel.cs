@@ -1,48 +1,48 @@
 ﻿namespace klooie;
 
-public class LayoutRootPanel : ConsolePanel
+internal class LayoutRootPanel : ConsolePanel
 {
+    private Event _onWindowResized, _afterPaint;
     private int lastConsoleWidth, lastConsoleHeight;
-    private List<TaskCompletionSource> paintRequests = new List<TaskCompletionSource>();
-    private FrameRateMeter paintRateMeter = new FrameRateMeter();
+    private List<TaskCompletionSource> paintRequests;
+    private FrameRateMeter paintRateMeter;
     private bool paintRequested;
-    private ConsoleCharacter defaultPen = new ConsoleCharacter(' ', null, DefaultColors.BackgroundColor);
-
+    private ConsoleCharacter defaultPen;
     private FrameRateMeter cycleRateMeter;
 
-    internal Event OnWindowResized { get; private init; } = new Event();
-    internal Event AfterPaint { get; private set; } = new Event();
-    internal int TotalCycles => cycleRateMeter != null ? cycleRateMeter.TotalFrames : 0;
-    internal int CyclesPerSecond => cycleRateMeter != null ? cycleRateMeter.CurrentFPS : 0;
-    internal int FramesPerSecond => paintRateMeter != null ? paintRateMeter.CurrentFPS : 0;
-    internal int TotalPaints => paintRateMeter != null ? paintRateMeter.TotalFrames : 0;
+    internal Event OnWindowResized { get => _onWindowResized ?? (_onWindowResized = EventPool.Rent()); }
+    internal int TotalCycles => cycleRateMeter.TotalFrames;
+    internal int CyclesPerSecond => cycleRateMeter.CurrentFPS;
+    internal int FramesPerSecond => paintRateMeter.CurrentFPS;
+    internal int TotalPaints => paintRateMeter.TotalFrames;
     internal bool PaintEnabled { get; set; } = true;
     internal bool ClearOnExit { get; set; } = true;
 
-
-
-
-
-    public LayoutRootPanel()
+    internal LayoutRootPanel()
     {
+        ConsoleApp.AssertAppThread();
+        defaultPen = new ConsoleCharacter(' ', null, DefaultColors.BackgroundColor);
+        paintRequests = new List<TaskCompletionSource>();
+        paintRateMeter = new FrameRateMeter();
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
         cycleRateMeter = new FrameRateMeter();
- 
         ResizeTo(lastConsoleWidth, lastConsoleHeight);
-        ConsoleApp.Current.EndOfCycle.Subscribe(cycleRateMeter.Increment, this);
-        ConsoleApp.Current.EndOfCycle.Subscribe(DebounceResize, this);
-        ConsoleApp.Current.EndOfCycle.Subscribe(DrainPaints, this);
+        ConsoleApp.Current!.EndOfCycle.Subscribe(OnEndOfCycle, this);
         DescendentAdded.Subscribe(OnDescendentAdded, this);
-        OnDisposed(Cleanup);
+        OnDisposed(RestoreConsoleState);
     }
 
-    private void OnDescendentAdded(ConsoleControl control)
+    private void OnEndOfCycle()
     {
-        control.AddedToVisualTreeInternal();
+        cycleRateMeter.Increment();
+        DebounceResize();
+        DrainPaints();
     }
 
-    private void Cleanup()
+    private void OnDescendentAdded(ConsoleControl control) => control.AddedToVisualTreeInternal();
+    
+    private void RestoreConsoleState()
     {
         ConsoleProvider.Current.ForegroundColor = ConsoleString.DefaultForegroundColor;
         ConsoleProvider.Current.BackgroundColor = ConsoleString.DefaultBackgroundColor;
@@ -59,7 +59,7 @@ public class LayoutRootPanel : ConsolePanel
     internal Task RequestPaintAsync()
     {
         ConsoleApp.AssertAppThread();
-        if (ConsoleApp.Current.IsDrainingOrDrained) return Task.CompletedTask;
+        if (ConsoleApp.Current!.IsDrainingOrDrained) return Task.CompletedTask;
         var d = new TaskCompletionSource();
         paintRequests.Add(d);
         return d.Task;
@@ -83,7 +83,6 @@ public class LayoutRootPanel : ConsolePanel
             Bitmap.Paint();
         }
         paintRateMeter.Increment();
-        AfterPaint.Fire();
 
         if (paintRequests.None()) return;
 
@@ -123,6 +122,4 @@ public class LayoutRootPanel : ConsolePanel
         RequestPaint();
         OnWindowResized.Fire();
     }
-
- 
 }

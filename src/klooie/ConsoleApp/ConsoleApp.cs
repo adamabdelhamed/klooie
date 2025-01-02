@@ -115,12 +115,7 @@ public class ConsoleApp : EventLoop
     /// <summary>
     /// Gets the root panel that contains the controls being used by the app
     /// </summary>
-    public LayoutRootPanel LayoutRoot => layoutRoot;
-
-    /// <summary>
-    /// An event that fires just after painting the app
-    /// </summary>
-    public Event AfterPaint => layoutRoot.AfterPaint;
+    public ConsolePanel LayoutRoot => layoutRoot;
 
     /// <summary>
     /// Gets or sets the sound provider for this application. Note that klooie.Windows (a separate package)
