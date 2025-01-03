@@ -247,8 +247,8 @@ public partial class ConsoleControl : Rectangular
     private Action cachedRequestPaint, cachedResizeBitmapOnBoundsChanged, cachedHandleCanFocusChanged, cachedReturnEvents;
     protected override void ProtectedInit()
     {
+        if(Parent != null) throw new InvalidOperationException("Controls cannot be re-initialized while they are still in the visual tree.");
         base.ProtectedInit();
-        Parent = null;
         HasBeenAddedToVisualTree = false;
         CanFocus = true;
         TabSkip = false;
@@ -304,6 +304,12 @@ public partial class ConsoleControl : Rectangular
             EventPool.Return(_tagsChanged);
             _tagsChanged = null;
         }
+
+        // This is here because controls can either be removed using Dispose() or by calling Remove from a parent's Controls collection.
+        // In the case where Dispose() is called somebody needs to remove this control from its parent.
+        // We could do this from within ConsolePanel, but it would require a lambda with a capture, which causes an allocation.
+        // Doing it here looks a bit hacky, but that allocation is on a critical path.
+        (Parent as ConsolePanel)?.Controls.Remove(this);
     }
 
     /// <summary>
@@ -500,11 +506,6 @@ public partial class ConsoleControl : Rectangular
 
     internal void AddedToVisualTreeInternal()
     {
-        if (HasBeenAddedToVisualTree)
-        {
-            throw new ObjectDisposedException("This control has already been added to a visual tree and cannot be reused.");
-        }
-
         HasBeenAddedToVisualTree = true;
         _ready?.Fire();
     }

@@ -13,14 +13,9 @@ public class ProtectedConsolePanel : Container
     protected ConsolePanel ProtectedPanel { get; private set; }
 
     /// <summary>
-    /// internal so that ConsoleApp can poke in
-    /// </summary>
-    internal ConsolePanel ProtectedPanelInternal => ProtectedPanel;
-
-    /// <summary>
     /// Gets the children of this control
     /// </summary>
-    public override IEnumerable<ConsoleControl> Children => ProtectedPanel.Children;
+    public override IReadOnlyList<ConsoleControl> Children => ProtectedPanel.Children;
 
     /// <summary>
     /// Creates a new ConsolePanel
@@ -33,6 +28,12 @@ public class ProtectedConsolePanel : Container
         ProtectedPanel.Fill();
         this.BackgroundChanged.Sync(() => ProtectedPanel.Background = Background, this);
         this.ForegroundChanged.Sync(() => ProtectedPanel.Foreground = Foreground, this);
+    }
+
+    protected override void ProtectedInit()
+    {
+        base.ProtectedInit();
+        ProtectedPanel.Initialize();
     }
 
     protected override void OnPaint(ConsoleBitmap context) => Compose(ProtectedPanel);

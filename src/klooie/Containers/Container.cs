@@ -22,13 +22,13 @@ public abstract class Container : ConsoleControl
     private Event<ConsoleControl> _descendentAdded, _descendentRemoved;
     public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = EventPool<ConsoleControl>.Rent()); }
     public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = EventPool<ConsoleControl>.Rent()); }
-
+    public static SingleThreadObjectPool<List<ConsoleControl>> DescendentBufferPool { get; private set; } = new SingleThreadObjectPool<List<ConsoleControl>>();
     internal Container() { }
 
     /// <summary>
     /// Gets the children of this container
     /// </summary>
-    public abstract IEnumerable<ConsoleControl> Children { get; }
+    public abstract IReadOnlyList<ConsoleControl> Children { get; }
 
     /// <summary>
     /// Gets all descendents of this container
@@ -37,14 +37,31 @@ public abstract class Container : ConsoleControl
     {
         get
         {
-            List<ConsoleControl> descendends = new List<ConsoleControl>();
-            VisitControlTree((d) =>
+            var buffer = DescendentBufferPool.Rent();
+            try
             {
-                descendends.Add(d);
-                return false;
-            });
+                PopulateDescendentsWithZeroAllocations(buffer);
+                return new List<ConsoleControl>(buffer);
+            }
+            finally
+            {
+                DescendentBufferPool.Return(buffer);
+            }
+        }
+    }
 
-            return descendends.AsReadOnly();
+    public void PopulateDescendentsWithZeroAllocations(List<ConsoleControl> buffer, bool clear = true)
+    {
+        if(clear) buffer.Clear();
+        for (var i = 0; i < Children.Count; i++)
+        {
+            var child = Children[i];
+            buffer.Add(child);
+
+            if (child is Container container)
+            {
+                container.PopulateDescendentsWithZeroAllocations(buffer, false);
+            }
         }
     }
 

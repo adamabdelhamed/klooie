@@ -52,7 +52,7 @@ public class IndexAssignment<T> : IIndexAssignment
 /// An observable list implementation
 /// </summary>
 /// <typeparam name="T">the type of elements this collection will contain</typeparam>
-public sealed class ObservableCollection<T> : IList<T>, IObservableCollection
+public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, IReadOnlyList<T>
 {
     private List<T> wrapped;
     private Dictionary<T, Recyclable> membershipLifetimes;

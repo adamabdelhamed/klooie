@@ -46,7 +46,7 @@ internal class LayoutRootPanel : ConsolePanel
     {
         ConsoleProvider.Current.ForegroundColor = ConsoleString.DefaultForegroundColor;
         ConsoleProvider.Current.BackgroundColor = ConsoleString.DefaultBackgroundColor;
-        if (ClearOnExit)
+        if (ClearOnExit && PaintEnabled)
         {
             ConsoleProvider.Current.Clear();
         }

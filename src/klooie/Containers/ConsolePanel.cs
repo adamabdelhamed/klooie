@@ -1,4 +1,6 @@
-﻿namespace klooie;
+﻿using System.Buffers;
+
+namespace klooie;
 
 /// <summary>
 /// A console control that has nested control within its bounds
@@ -18,9 +20,9 @@ public class ConsolePanel : Container
     /// <summary>
     /// All nested controls, including those that are recursively nested within inner console panels
     /// </summary>
-    public override IEnumerable<ConsoleControl> Children => Controls;
+    public override IReadOnlyList<ConsoleControl> Children => Controls;
 
-
+ 
     /// <summary>
     /// Creates a new console panel
     /// </summary>
@@ -31,16 +33,27 @@ public class ConsolePanel : Container
         Controls.AssignedToIndex.Subscribe((assignment) => throw new NotSupportedException("Index assignment is not supported in Controls collection"), this);
         Controls.Removed.Subscribe(OnControlRemovedInternal, this);
         this.OnDisposed(DisposeChildren);
-
-
         this.CanFocus = false;
     }
 
     private void DisposeChildren()
     {
-        foreach (var child in Controls.ToArray())
+        var count = Controls.Count;
+        var buffer = ArrayPool<ConsoleControl>.Shared.Rent(count);
+        try
         {
-            child.TryDispose();
+            for (var i = 0; i < count; i++)
+            {
+                buffer[i] = Controls[i];
+            }
+            for (var i = 0; i < count; i++)
+            {
+                buffer[i].TryDispose();
+            }
+        }
+        finally
+        {
+            ArrayPool<ConsoleControl>.Shared.Return(buffer);
         }
     }
 
@@ -54,8 +67,11 @@ public class ConsolePanel : Container
     private Action _sortZDelegate;
     private void OnControlAddedInternal(ConsoleControl controlAddedDirectlyToThisConsolePanel)
     {
+        if(controlAddedDirectlyToThisConsolePanel.Parent != null || controlAddedDirectlyToThisConsolePanel.HasBeenAddedToVisualTree)
+        {
+            throw new InvalidOperationException("The control has already been added to a visual tree");
+        }
         controlAddedDirectlyToThisConsolePanel.Parent = this;
-        controlAddedDirectlyToThisConsolePanel.OnDisposed(() => Controls.Remove(controlAddedDirectlyToThisConsolePanel));
         sortedControls.Add(controlAddedDirectlyToThisConsolePanel);
         SortZ();
         _sortZDelegate = _sortZDelegate ?? SortZ;
@@ -66,29 +82,27 @@ public class ConsolePanel : Container
 
     private void NotifyDescendentsAdded(ConsoleControl controlAddedDirectlyToThisConsolePanel)
     {
-        var chain = new List<Container>();
-        Container curr = this;
-        while (curr != null)
+        Container container = this;
+        while (container != null)
         {
-            chain.Add(curr);
-            curr = curr.Parent;
+            NotifyDescendentsAddedRecursive(controlAddedDirectlyToThisConsolePanel, container);
+            container = container.Parent;
         }
-        chain.Reverse(); // so we notify from the top down
+    }
 
-        foreach (var container in chain)
+    private void NotifyDescendentsAddedRecursive(ConsoleControl added, Container toNotify)
+    {
+        if (added is Container cAsContainer)
         {
-            if (container.HasBeenAddedToVisualTree) continue;
-
-
-            if (controlAddedDirectlyToThisConsolePanel is Container cAsContainer)
+            for (var i = 0; i < cAsContainer.Children.Count; i++)
             {
-                foreach (var descendent in cAsContainer.Descendents)
-                {
-                    if (descendent.HasBeenAddedToVisualTree) continue;
-                    container.DescendentAdded.Fire(descendent);
-                }
+                NotifyDescendentsAddedRecursive(cAsContainer.Children[i], toNotify);
             }
-            container.DescendentAdded.Fire(controlAddedDirectlyToThisConsolePanel);
+        }
+
+        if (added.HasBeenAddedToVisualTree == false)
+        {
+            toNotify.DescendentAdded.Fire(added);
         }
     }
 
@@ -100,9 +114,19 @@ public class ConsolePanel : Container
             container.DescendentRemoved.Fire(controlRemovedDirectlyFromThisConsolePanel);
             if (controlRemovedDirectlyFromThisConsolePanel is Container cAsContainer)
             {
-                foreach (var descendent in cAsContainer.Descendents)
+                var buffer = DescendentBufferPool.Rent();
+                try
                 {
-                    container.DescendentRemoved.Fire(descendent);
+                    cAsContainer.PopulateDescendentsWithZeroAllocations(buffer);
+                    for (var i = 0; i < buffer.Count; i++)
+                    {
+                        var descendent = buffer[i];
+                        container.DescendentRemoved.Fire(descendent);
+                    }
+                }
+                finally
+                {
+                    DescendentBufferPool.Return(buffer);
                 }
             }
             container = container.Parent;

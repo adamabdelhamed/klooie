@@ -207,6 +207,7 @@ public class ConsoleAppTests
     [TestMethod]
     public void Console_AppEnsureCantReuseControls()
     {
+        ConsoleProvider.Current = new KlooieTestConsole();
         ConsoleApp app = new ConsoleApp();
         app.Invoke(() =>
         {
@@ -219,7 +220,7 @@ public class ConsoleAppTests
                 app.LayoutRoot.Add(button);
                 Assert.Fail("An exception should have been thrown");
             }
-            catch (ObjectDisposedException ex)
+            catch (InvalidOperationException ex)
             {
                 Console.WriteLine(ex.Message);
                 app.Stop();
@@ -227,6 +228,24 @@ public class ConsoleAppTests
         });
         app.Run();
     }
+
+    [TestMethod]
+    public void Console_AppEnsureCanReuseControlsWhenInitialized()
+    {
+        ConsoleProvider.Current = new KlooieTestConsole();
+        ConsoleApp app = new ConsoleApp();
+        app.Invoke(() =>
+        {
+            var panel = app.LayoutRoot.Add(new ConsolePanel());
+            var button = panel.Add(new Button());
+            panel.Controls.Remove(button);
+            button.Initialize();
+            app.LayoutRoot.Add(button);
+            app.Stop();
+        });
+        app.Run();
+    }
+
 
     [TestMethod]
     [TestCategory(Categories.ConsoleApp)]
