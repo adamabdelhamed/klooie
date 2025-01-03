@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 
 namespace klooie;
-public class SingleThreadObjectPool<T> where T : new()
+ public class SingleThreadObjectPool<T> where T : new()
 {
 #if DEBUG
     public static int EventsCreated { get; private set; }
@@ -10,7 +10,7 @@ public class SingleThreadObjectPool<T> where T : new()
     public static int AllocationsSaved => EventsRented - EventsCreated;
 
 #endif
-    private readonly List<T> _pool = new List<T>();
+    private readonly Stack<T> _pool = new Stack<T>();
 
     public T Rent()
     {
@@ -19,9 +19,7 @@ public class SingleThreadObjectPool<T> where T : new()
 #endif
         if (_pool.Count  > 0)
         {
-            var rented = _pool[_pool.Count - 1];
-            _pool.RemoveAt(0);
-            return rented;
+            return _pool.Pop();
         }
 
 #if DEBUG
@@ -36,7 +34,7 @@ public class SingleThreadObjectPool<T> where T : new()
 #if DEBUG
         EventsReturned++;
 #endif
-        _pool.Add(obj);
+        _pool.Push(obj);
     }
 }
 

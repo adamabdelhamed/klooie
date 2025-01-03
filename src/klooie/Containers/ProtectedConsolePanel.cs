@@ -33,7 +33,7 @@ public class ProtectedConsolePanel : Container
     protected override void ProtectedInit()
     {
         base.ProtectedInit();
-        ProtectedPanel.Initialize();
+        ProtectedPanel?.Initialize();
     }
 
     protected override void OnPaint(ConsoleBitmap context) => Compose(ProtectedPanel);
