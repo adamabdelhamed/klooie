@@ -38,32 +38,43 @@ internal static class ThemeEvaluator
 
     private static void EvaluateProperty(ConsoleControl c, PropertyInfo property, Style[] styles, ILifetimeManager lt, ThemeApplicationTracker tracker)
     {
-        var applicableStyles = styles
-            .Select(style => new { Style = style, Score = ScoreForSpecificity(style,c, property.Name) })
-            .Where(t => t.Score.HasValue)
-            .OrderBy(t => t.Score.Value);
+        Style mostSpecificStyle = null;
+        int? highestScore = null;
+        bool tagsNeedToBeMonitored = false;
 
-        var mostSpecificStyle = applicableStyles.LastOrDefault();
+        for (int i = 0; i < styles.Length; i++)
+        {
+            Style style = styles[i];
+            int? score = ScoreForSpecificity(style, c, property.Name);
+
+            if (score.HasValue)
+            {
+                if (!highestScore.HasValue || score.Value > highestScore.Value)
+                {
+                    highestScore = score;
+                    mostSpecificStyle = style;
+                }
+
+                if (RequiresMonitoring(style, c))
+                {
+                    tagsNeedToBeMonitored = true;
+                }
+            }
+        }
 
         if (mostSpecificStyle != null)
         {
-            var tagsNeedToBeMonitored = applicableStyles.Where(s => RequiresMonitoring(s.Style, c)).Any();
-
             if (tagsNeedToBeMonitored)
             {
-                tracker.MonitoredApplicationCounts[mostSpecificStyle.Style.Index]++;
+                tracker.MonitoredApplicationCounts[mostSpecificStyle.Index]++;
                 var evalLifetime = Lifetime.EarliestOf(lt);
                 MonitorTags(c, property, styles, lt, evalLifetime, tracker);
-                mostSpecificStyle.Style.ApplyPropertyValue(c, evalLifetime);
+                mostSpecificStyle.ApplyPropertyValue(c, evalLifetime);
             }
-            else if(mostSpecificStyle.Score > 0)
+            else if (highestScore > 0)
             {
-                tracker.RawApplicationCounts[mostSpecificStyle.Style.Index]++;
-                mostSpecificStyle.Style.ApplyPropertyValue(c, lt);
-            }
-            else
-            {
-
+                tracker.RawApplicationCounts[mostSpecificStyle.Index]++;
+                mostSpecificStyle.ApplyPropertyValue(c, lt);
             }
         }
     }
