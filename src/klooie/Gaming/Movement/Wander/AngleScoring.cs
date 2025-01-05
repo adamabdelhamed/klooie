@@ -1,181 +1,202 @@
 ﻿namespace klooie.Gaming;
 
-    public class ScoreComponent
+public class ScoreComponent
+{
+    public string Id { get; set; }
+    public float Value { get; set; }
+    public float Weight { get; set; } = -1;
+    public float WeightedScore => Value * (Weight * WeightBoostMultiplier);
+    public bool NeedsToBeNormalized { get; set; } = true;
+    public float WeightBoostMultiplier { get; set; } = 1f;
+    public ScoreComponent WeighIfNotSet(float weight)
     {
-        public string Id { get; set; }
-        public float Value { get; set; }
-        public float Weight { get; set; } = -1;
-        public float WeightedScore => Value * (Weight * WeightBoostMultiplier);
-        public bool NeedsToBeNormalized { get; set; } = true;
-        public float WeightBoostMultiplier { get; set; } = 1f;
-        public ScoreComponent WeighIfNotSet(float weight)
+        if (Weight == -1)
         {
-            if (Weight == -1)
-            {
-                this.Weight = weight;
-            }
-            return this;
+            this.Weight = weight;
         }
-
-        public override string ToString() => $"{Id} - {Value} X {Weight} = {WeightedScore}";
+        return this;
     }
 
-    public class WanderScore
+    public override string ToString() => $"{Id} - {Value} X {Weight} = {WeightedScore}";
+}
+
+public class WanderScore
+{
+    public Angle Angle { get; set; }
+    public List<ScoreComponent> Components { get; set; }
+
+    public float FinalScore
     {
-        public Angle Angle { get; set; }
-        public List<ScoreComponent> Components { get; set; }
-
-        public float FinalScore
+        get
         {
-            get
+            var sum = Components.Select(c => c.WeightedScore).Sum();
+            var weights = Components.Select(c => c.Weight).Sum();
+            return sum / weights;
+        }
+    }
+
+    public override string ToString() => $"Angle: {Angle}, Score: {FinalScore}";
+
+    private static IEnumerable<T> IterateThrough<T>(IEnumerable<IEnumerable<T>> items)
+    {
+        foreach (var enumerable in items)
+        {
+            foreach (var item in enumerable)
             {
-                var sum = Components.Select(c => c.WeightedScore).Sum();
-                var weights = Components.Select(c => c.Weight).Sum();
-                return sum / weights;
+                yield return item;
             }
         }
+    }
 
-        public override string ToString() => $"Angle: {Angle}, Score: {FinalScore}";
 
-        private static IEnumerable<T> IterateThrough<T>(IEnumerable<IEnumerable<T>> items)
+    private static Random rand = new Random();
+    public static Dictionary<Type, float> Mutate(Dictionary<Type, float> original)
+    {
+        var ret = new Dictionary<Type, float>();
+        foreach (var val in original) ret.Add(val.Key, val.Value);
+
+        var configs = ret.ToArray();
+        var toMutate = configs[rand.Next(0, configs.Length)];
+        var amount = rand.Next(1, 10) * .01f;
+        var direction = rand.NextDouble() <= .5 ? -1 : 1;
+        var newVal = toMutate.Value + (toMutate.Value * amount * direction);
+        ret[toMutate.Key] = newVal;
+        return ret;
+    }
+
+
+    private class WeightedLabelEqualityComparer : IEqualityComparer<WeightedLabel>
+    {
+        public static readonly WeightedLabelEqualityComparer Default = new WeightedLabelEqualityComparer();
+        public bool Equals(WeightedLabel x, WeightedLabel y) => x.Hash == y.Hash;
+        public int GetHashCode(WeightedLabel obj) => obj.Hash.GetHashCode();
+    }
+
+    private class WeightedLabel
+    {
+        public ConsoleString Label { get; set; }
+        public float Weight { get; set; }
+
+
+        public string Hash => (Label.StringValue + "-" + Weight);
+
+    }
+
+    private static ConsoleString Compress(float score)
+    {
+        score = (float)ConsoleMath.Round(score * 100);
+        if (score == 100) return "$".ToGreen();
+
+        var color = score > 70 ? RGB.Green :
+                    score > 40 ? RGB.Yellow
+                    : RGB.Red;
+
+        return ("" + score).Replace("0.", "0").ToConsoleString(color);
+    }
+
+    public static void NormalizeScores(List<WanderScore> scores)
+    {
+        var allComponents = new HashSet<string>();
+        foreach (var s in scores)
         {
-            foreach (var enumerable in items)
+            foreach (var c in s.Components)
             {
-                foreach (var item in enumerable)
+                if (c.NeedsToBeNormalized)
                 {
-                    yield return item;
+                    allComponents.Add(c.Id);
                 }
             }
         }
 
-
-        private static Random rand = new Random();
-        public static Dictionary<Type, float> Mutate(Dictionary<Type, float> original)
+        foreach (var c in allComponents)
         {
-            var ret = new Dictionary<Type, float>();
-            foreach (var val in original) ret.Add(val.Key, val.Value);
-
-            var configs = ret.ToArray();
-            var toMutate = configs[rand.Next(0, configs.Length)];
-            var amount = rand.Next(1, 10) * .01f;
-            var direction = rand.NextDouble() <= .5 ? -1 : 1;
-            var newVal = toMutate.Value + (toMutate.Value * amount * direction);
-            ret[toMutate.Key] = newVal;
-            return ret;
+            NormalizeScores(scores, c);
         }
+    }
 
-
-        private class WeightedLabelEqualityComparer : IEqualityComparer<WeightedLabel>
+    public static void NormalizeScores(List<WanderScore> scores, string component)
+    {
+        var min = float.MaxValue;
+        var max = float.MinValue;
+        for (int i = 0; i < scores.Count; i++)
         {
-            public static readonly WeightedLabelEqualityComparer Default = new WeightedLabelEqualityComparer();
-            public bool Equals(WeightedLabel x, WeightedLabel y) => x.Hash == y.Hash;
-            public int GetHashCode(WeightedLabel obj) => obj.Hash.GetHashCode();
-        }
-
-        private class WeightedLabel
-        {
-            public ConsoleString Label { get; set; }
-            public float Weight { get; set; }
-
-
-            public string Hash => (Label.StringValue + "-" + Weight);
-
-        }
-
-        private static ConsoleString Compress(float score)
-        {
-            score = (float)ConsoleMath.Round(score * 100);
-            if (score == 100) return "$".ToGreen();
-
-            var color = score > 70 ? RGB.Green :
-                        score > 40 ? RGB.Yellow
-                        : RGB.Red;
-
-            return ("" + score).Replace("0.", "0").ToConsoleString(color);
-        }
-
-        public static void NormalizeScores(List<WanderScore> scores)
-        {
-            var allComponents = new HashSet<string>();
-            foreach (var s in scores)
+            WanderScore? score = scores[i];
+            ScoreComponent? cs = null;
+            for (int j = 0; j < score.Components.Count; j++)
             {
-                foreach (var c in s.Components)
+                ScoreComponent? c = score.Components[j];
+                if (c.Id == component)
                 {
-                    if (c.NeedsToBeNormalized)
-                    {
-                        allComponents.Add(c.Id);
-                    }
+                    cs = c;
+                    break;
                 }
             }
 
-            foreach (var c in allComponents)
-            {
-                NormalizeScores(scores, c);
-            }
+            if (cs == null) continue;
+
+            min = Math.Min(cs.Value, min);
+            max = Math.Max(cs.Value, max);
         }
 
-        public static void NormalizeScores(List<WanderScore> scores, string component)
+        var range = max - min;
+        if (range == 0) return;
+
+        for (int i = 0; i < scores.Count; i++)
         {
-            var min = float.MaxValue;
-            var max = float.MinValue;
-            foreach (var score in scores)
+            WanderScore? score = scores[i];
+            ScoreComponent? cs = null;
+            for (int j = 0; j < score.Components.Count; j++)
             {
-                var cs = score.Components.Where(c => c.Id == component).SingleOrDefault();
-                if (cs == null) continue;
-
-                min = Math.Min(cs.Value, min);
-                max = Math.Max(cs.Value, max);
+                ScoreComponent? c = score.Components[j];
+                if (c.Id == component)
+                {
+                    cs = c;
+                    break;
+                }
             }
+            if (cs == null) continue;
 
-            var range = max - min;
-            if (range == 0) return;
-
-            foreach (var score in scores)
-            {
-                var cs = score.Components.Where(c => c.Id == component).SingleOrDefault();
-                if (cs == null) continue;
-
-                var deltaFromMin = cs.Value - min;
-                var percentage = deltaFromMin / range;
-                cs.Value = percentage;
-            }
+            var deltaFromMin = cs.Value - min;
+            var percentage = deltaFromMin / range;
+            cs.Value = percentage;
         }
+    }
 
-        public static ConsoleString MakeTable(List<WanderScore> scores)
+    public static ConsoleString MakeTable(List<WanderScore> scores)
+    {
+        //   Filter(scores);
+        ConsoleTableBuilder builder = new ConsoleTableBuilder();
+        var props = IterateThrough(scores
+                .Select(s => s.Components))
+                .OrderByDescending(c => c.Weight)
+                .Select(c => new WeightedLabel() { Weight = c.Weight, Label = c.Id.ToYellow() })
+                .Distinct(WeightedLabelEqualityComparer.Default)
+                .ToList();
+        var cols = new ConsoleString[]
         {
-            //   Filter(scores);
-            ConsoleTableBuilder builder = new ConsoleTableBuilder();
-            var props = IterateThrough(scores
-                    .Select(s => s.Components))
-                    .OrderByDescending(c => c.Weight)
-                    .Select(c => new WeightedLabel() { Weight = c.Weight, Label = c.Id.ToYellow() })
-                    .Distinct(WeightedLabelEqualityComparer.Default)
-                    .ToList();
-            var cols = new ConsoleString[]
-            {
                     "Ang".ToYellow(),
                     "F".ToYellow(),
-            }
-                .Union(
-                    props
-                    .Take(4)
-                    .Select(l => l.Label.Length <= 3 ? l.Label : l.Label.Substring(0, 3)))
-                .ToList();
-
-            var rows = scores.Select(s =>
-            {
-                var ret = new List<ConsoleString>();
-                ret.Add((ConsoleMath.Round(s.Angle.Value) + "").ToWhite());
-                ret.Add((ConsoleMath.Round(100 * s.FinalScore) + "").ToWhite());
-                foreach (var prop in props)
-                {
-                    var cVal = s.Components.Where(c => c.Id == prop.Label.StringValue).FirstOrDefault();
-                    ret.Add(Compress(cVal.Value) + $",{(cVal.Weight * cVal.WeightBoostMultiplier + "").Replace("0.", ".")}".ToWhite());
-                }
-                return ret;
-            }).ToList();
-
-            return builder.FormatAsTable(cols, rows);
         }
+            .Union(
+                props
+                .Take(4)
+                .Select(l => l.Label.Length <= 3 ? l.Label : l.Label.Substring(0, 3)))
+            .ToList();
+
+        var rows = scores.Select(s =>
+        {
+            var ret = new List<ConsoleString>();
+            ret.Add((ConsoleMath.Round(s.Angle.Value) + "").ToWhite());
+            ret.Add((ConsoleMath.Round(100 * s.FinalScore) + "").ToWhite());
+            foreach (var prop in props)
+            {
+                var cVal = s.Components.Where(c => c.Id == prop.Label.StringValue).FirstOrDefault();
+                ret.Add(Compress(cVal.Value) + $",{(cVal.Weight * cVal.WeightBoostMultiplier + "").Replace("0.", ".")}".ToWhite());
+            }
+            return ret;
+        }).ToList();
+
+        return builder.FormatAsTable(cols, rows);
     }
+}
 

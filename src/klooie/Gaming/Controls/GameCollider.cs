@@ -55,7 +55,7 @@ public class GameCollider : ConsoleControl
     public virtual bool CanCollideWith(GameCollider other) => this.IsVisible && ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
     public void GetObstacles(ObstacleBuffer buffer) => Velocity.Group.GetObstacles(this, buffer);
 
-    public IEnumerable<GameCollider> GetObstacles()
+    public GameCollider[] GetObstacles()
     {
         var buffer = ObstacleBufferPool.Instance.Rent();
         try

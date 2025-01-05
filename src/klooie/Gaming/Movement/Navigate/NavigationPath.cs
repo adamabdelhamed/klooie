@@ -44,7 +44,7 @@ public class NavigationPath : Lifetime
                 {
                     buffer.WriteableBuffer.Clear();
                     options.Element.GetObstacles(buffer);
-                    var blockingObstacle = options.Element.GetLineOfSightObstruction(tail[i], buffer.ReadableBuffer, CastingMode.Precise);
+                    var blockingObstacle = options.Element.GetLineOfSightObstruction(tail[i], buffer.WriteableBuffer, CastingMode.Precise);
                     if (blockingObstacle == null)
                     {
                         for (var j = 0; j < i + 1; j++)
