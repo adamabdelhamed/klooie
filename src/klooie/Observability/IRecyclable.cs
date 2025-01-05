@@ -82,7 +82,7 @@ public abstract class RecycleablePool<T> where T : IRecyclable
     public int AllocationsSaved => Rented - Created;
 
 #endif
-    private readonly List<T> _pool = new List<T>();
+    private readonly Stack<T> _pool = new Stack<T>();
 
     public abstract T Factory();
 
@@ -94,18 +94,16 @@ public abstract class RecycleablePool<T> where T : IRecyclable
 #endif
         if (_pool.Count > 0)
         {
-            var last = _pool[_pool.Count - 1];
-            _pool.RemoveAt(_pool.Count - 1);
-            last.Initialize();
-            return last;
+            var ret = _pool.Pop();
+            ret.Initialize();
+            return ret;
         }
 
 #if DEBUG
         Created++;
 #endif
 
-        var ret = Factory();
-        return ret;
+        return Factory();
     }
 
     public void Return(T rented)
@@ -114,7 +112,7 @@ public abstract class RecycleablePool<T> where T : IRecyclable
         Returned++;
 #endif
         rented.TryDispose();
-        _pool.Add(rented);
+        _pool.Push(rented);
     }
 
     public void Use(Action<T> action)

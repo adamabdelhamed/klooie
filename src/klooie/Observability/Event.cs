@@ -299,7 +299,7 @@ public static class SubscriptionPool
 #if DEBUG
         Returned++;
 #endif
-        subscription.Dispose();
+        subscription.Reset();
         _pool.Add(subscription);
     }
 }

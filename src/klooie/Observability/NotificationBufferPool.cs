@@ -94,7 +94,10 @@ public class Subscription
     public Action Callback { get; set; }
     public ILifetimeManager Lifetime { get; set; }
     public List<Subscription> Subscribers { get; set; }
-    internal void Dispose()
+ 
+ 
+
+    internal void Reset()
     {
         Callback = null;
         Lifetime = null;
