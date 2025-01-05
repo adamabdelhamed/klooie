@@ -33,7 +33,7 @@ public partial class Dropdown : ProtectedConsolePanel
         Width = 15;
         valueLabel = ProtectedPanel.Add(new Label());
 
-        SubscribeToAnyPropertyChange(SyncValueLabel, this);
+        SubscribeToAnyPropertyChange(this, SyncValueLabel, this);
         SyncValueLabel();
         Focused.Subscribe(SyncValueLabel, this);
         Unfocused.Subscribe(SyncValueLabel, this);
@@ -51,6 +51,11 @@ public partial class Dropdown : ProtectedConsolePanel
         }, this);
     }
 
+    private void SyncValueLabel(object me)
+    {
+        var _this =  me as Dropdown;
+        _this.SyncValueLabel();
+    }
     private void SyncValueLabel()
     {
         var text = Value.DisplayText.StringValue;

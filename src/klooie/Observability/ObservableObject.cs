@@ -5,7 +5,7 @@
 /// </summary>
 public interface IObservableObject
 {
-    void SubscribeToAnyPropertyChange(Action handler, ILifetimeManager lifetimeManager);
+    void SubscribeToAnyPropertyChange(object obj, Action<object> handler, ILifetimeManager lifetimeManager);
     void SubscribeOld(string propertyName, Action handler, ILifetimeManager lifetimeManager);
     void SyncOld(string propertyName, Action handler, ILifetimeManager lifetimeManager);
 }

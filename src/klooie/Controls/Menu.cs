@@ -58,7 +58,7 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         GuardAgainstInvalidSelectedIndexSetter();
         AddMenuItems();
         SetupEventHandlers();
-        SubscribeToAnyPropertyChange(RefreshLabels, this);
+        SubscribeToAnyPropertyChange(this, RefreshLabels, this);
     }
 
     private void AddMenuItems()
@@ -109,6 +109,12 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         var ret = (formatter(item).StringValue).ToConsoleString(HasFocus ? Background : Foreground, HasFocus ? FocusColor : Background);
         return ret;
     }
+    private static void RefreshLabels(object me)
+    {
+        var _this = (Menu<T>)me;
+        _this.RefreshLabels();
+    }
+
     private void RefreshLabels()
     {
         foreach (var label in ProtectedPanel.Descendents.WhereAs<Label>().Where(l => l.Tag is T))

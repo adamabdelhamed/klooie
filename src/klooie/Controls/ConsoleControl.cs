@@ -244,7 +244,6 @@ public partial class ConsoleControl : Rectangular
             _bitmap = value;
         }
     }
-    private Action cachedRequestPaint, cachedResizeBitmapOnBoundsChanged, cachedHandleCanFocusChanged, cachedReturnEvents;
     protected override void ProtectedInit()
     {
         if(Parent != null) throw new InvalidOperationException("Controls cannot be re-initialized while they are still in the visual tree.");
@@ -260,56 +259,53 @@ public partial class ConsoleControl : Rectangular
         FocusColor = DefaultColors.FocusColor;
         FocusContrastColor = DefaultColors.FocusContrastColor;
         CompositionMode = CompositionMode.PaintOver;
-
-        cachedRequestPaint = cachedRequestPaint ?? RequestPaint;
-        cachedResizeBitmapOnBoundsChanged = cachedResizeBitmapOnBoundsChanged ?? ResizeBitmapOnBoundsChanged;
-        cachedHandleCanFocusChanged = cachedHandleCanFocusChanged ?? HandleCanFocusChanged;
-        cachedReturnEvents = cachedReturnEvents ?? ReturnEvents;
-
-        SubscribeToAnyPropertyChange(cachedRequestPaint, this);
-        BoundsChanged.Subscribe(cachedResizeBitmapOnBoundsChanged, this);
-        CanFocusChanged.Subscribe(cachedHandleCanFocusChanged, this);
-        OnDisposed(cachedReturnEvents);
+        
+        SubscribeToAnyPropertyChange(this, RequestPaint, this);
+        BoundsChanged.Subscribe(this, ResizeBitmapOnBoundsChanged, this);
+        CanFocusChanged.Subscribe(this, HandleCanFocusChanged, this);
+        OnDisposed(this, ReturnEvents);
     }
 
-    private void HandleCanFocusChanged()
+    private static void HandleCanFocusChanged(object me)
     {
-        if (HasFocus && CanFocus == false && ShouldContinue) ConsoleApp.Current?.MoveFocus();
+        var _this = me as ConsoleControl;
+        if (_this.HasFocus && _this.CanFocus == false && _this.ShouldContinue) ConsoleApp.Current?.MoveFocus();
     }
 
-    private void RequestPaint()
+    private static void RequestPaint(object me)
     {
         ConsoleApp.Current?.RequestPaint();
     }
 
-    private void ReturnEvents()
+    private static void ReturnEvents(object me)
     {
-        if (_focused != null)
+        var _this = me as ConsoleControl;
+        if (_this._focused != null)
         {
-            EventPool.Return(_focused);
-            _focused = null;
+            EventPool.Return(_this._focused);
+            _this._focused = null;
         }
-        if (_unfocused != null)
+        if (_this._unfocused != null)
         {
-            EventPool.Return(_unfocused);
-            _unfocused = null;
+            EventPool.Return(_this._unfocused);
+            _this._unfocused = null;
         }
-        if (_ready != null)
+        if (_this._ready != null)
         {
-            EventPool.Return(_ready);
-            _ready = null;
+            EventPool.Return(_this._ready);
+            _this._ready = null;
         }
-        if (_tagsChanged != null)
+        if (_this._tagsChanged != null)
         {
-            EventPool.Return(_tagsChanged);
-            _tagsChanged = null;
+            EventPool.Return(_this._tagsChanged);
+            _this._tagsChanged = null;
         }
 
         // This is here because controls can either be removed using Dispose() or by calling Remove from a parent's Controls collection.
         // In the case where Dispose() is called somebody needs to remove this control from its parent.
         // We could do this from within ConsolePanel, but it would require a lambda with a capture, which causes an allocation.
         // Doing it here looks a bit hacky, but that allocation is on a critical path.
-        (Parent as ConsolePanel)?.Controls.Remove(this);
+        (_this.Parent as ConsolePanel)?.Controls.Remove(_this);
     }
 
     /// <summary>
@@ -569,16 +565,17 @@ public partial class ConsoleControl : Rectangular
         return new Loc(x, y);
     }
 
-    private void ResizeBitmapOnBoundsChanged()
+    private static void ResizeBitmapOnBoundsChanged(object me)
     {
-        if (ShouldContinue == false || Width <= 0 || Height <= 0) return;
-        if (Bitmap == null)
+        var _this = me as ConsoleControl;
+        if (_this.ShouldContinue == false || _this.Width <= 0 || _this.Height <= 0) return;
+        if (_this.Bitmap == null)
         {
-            Bitmap = new ConsoleBitmap(Width, Height);
+            _this.Bitmap = new ConsoleBitmap(_this.Width, _this.Height);
         }
         else
         {
-            Bitmap.Resize(Width, Height);
+            _this.Bitmap.Resize(_this.Width, _this.Height);
         }
     }
 

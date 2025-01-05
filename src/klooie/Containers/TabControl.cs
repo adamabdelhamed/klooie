@@ -74,7 +74,13 @@ public partial class TabControl : ProtectedConsolePanel
             tabContainer.Background = this.Background;
             if(tabStack != null) tabStack.Background = this.Background;
         }, this);
-        SubscribeToAnyPropertyChange(RefreshFocus, this);
+        SubscribeToAnyPropertyChange(this, RefreshFocus, this);
+    }
+
+    private static void RefreshFocus(object me)
+    {
+        var _this = (TabControl)me;
+        _this.RefreshFocus();
     }
 
     private void RefreshFocus()

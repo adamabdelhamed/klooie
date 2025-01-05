@@ -69,12 +69,13 @@ namespace klooie
                 indent += standardIndent;
             }
 
+            string typeParameters = null;
             // Open nested classes
             foreach (var currentClassSymbol in classHierarchy)
             {
                 var baseType = currentClassSymbol.BaseType?.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat) ?? string.Empty;
                 var interfaces = currentClassSymbol.Interfaces.Select(i => i.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
-                var typeParameters = currentClassSymbol.TypeParameters.Any()
+                typeParameters = currentClassSymbol.TypeParameters.Any()
                     ? $"<{string.Join(", ", currentClassSymbol.TypeParameters.Select(tp => tp.Name))}>"
                     : string.Empty;
                 var constraints = currentClassSymbol.TypeParameters
@@ -167,24 +168,24 @@ namespace klooie
 
             if (baseIsObservable)
             {
-                sb.AppendLine(Indent(indent) + "public override void SubscribeToAnyPropertyChange(Action handler, ILifetimeManager lifetimeManager)");
+                sb.AppendLine(Indent(indent) + "public override void SubscribeToAnyPropertyChange(object scope, Action<object> handler, ILifetimeManager lifetimeManager)");
             }
             else
             {
-                sb.AppendLine(Indent(indent) + "public virtual void SubscribeToAnyPropertyChange(Action handler, ILifetimeManager lifetimeManager)");
+                sb.AppendLine(Indent(indent) + "public virtual void SubscribeToAnyPropertyChange(object scope, Action<object> handler, ILifetimeManager lifetimeManager)");
             }
             sb.AppendLine(Indent(indent) + "{");
             indent += standardIndent;
 
             if (baseIsObservable)
             {
-                sb.AppendLine($"{Indent(indent)}base.SubscribeToAnyPropertyChange(handler, lifetimeManager);");
+                sb.AppendLine($"{Indent(indent)}base.SubscribeToAnyPropertyChange(scope, handler, lifetimeManager);");
             }
 
             foreach (var property in classSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.IsPartial() && p.IsAutoProperty()))
             {
                 var propertyName = property.Name;
-                sb.AppendLine($"{Indent(indent)}{propertyName}Changed.Subscribe(handler, lifetimeManager);");
+                sb.AppendLine($"{Indent(indent)}{propertyName}Changed.Subscribe(scope, handler, lifetimeManager);");
             }
 
             indent -= standardIndent;
@@ -221,17 +222,18 @@ namespace klooie
             sb.AppendLine(Indent(indent) + "private static bool EqualsSafe<T>(T a, T b) => EqualityComparer<T>.Default.Equals(a, b);");
 
             var isLifetimeManager = classSymbol.AllInterfaces.Any(i => i.Name == "ILifetimeManager");
-            sb.AppendLine(Indent(indent) + $"private void _ReturnEventsToPool()");
+            sb.AppendLine(Indent(indent) + $"private static void _ReturnEventsToPool(object me)");
             sb.AppendLine(Indent(indent) + "{");
             indent += standardIndent;
+            sb.AppendLine($"{Indent(indent)}var _this = ({classSymbol.Name}{typeParameters})me;");
             foreach (var property in classSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.IsPartial() && p.IsAutoProperty()))
             {
                 var propertyName = property.Name;
-                sb.AppendLine($"{Indent(indent)}if(_{propertyName}Changed != null) {{EventPool.Return(_{propertyName}Changed);_{propertyName}Changed = null;}}");
+                sb.AppendLine($"{Indent(indent)}if(_this._{propertyName}Changed != null) {{EventPool.Return(_this._{propertyName}Changed);_this._{propertyName}Changed = null;}}");
             }
             if(isLifetimeManager)
             {
-                sb.AppendLine(Indent(indent) + $"disposeRegistered = false;");
+                sb.AppendLine(Indent(indent) + $"_this.disposeRegistered = false;");
             }
             indent -= standardIndent;
             sb.AppendLine(Indent(indent) + "}");
@@ -241,7 +243,6 @@ namespace klooie
 
             if (isLifetimeManager)
             {
-                sb.AppendLine(Indent(indent) + $"private System.Action _returnEventsToPoolDelegate;");
                 sb.AppendLine(Indent(indent) + $"private bool disposeRegistered = false;");
             }
             sb.AppendLine(Indent(indent) + $"private Event Rent()");
@@ -252,8 +253,7 @@ namespace klooie
                 sb.AppendLine($"{Indent(indent)}if (disposeRegistered == false)");
                 sb.AppendLine(Indent(indent) + "{");
                 indent += standardIndent;
-                sb.AppendLine($"{Indent(indent)}_returnEventsToPoolDelegate = _returnEventsToPoolDelegate ?? _ReturnEventsToPool;");
-                sb.AppendLine($"{Indent(indent)}this.OnDisposed(_returnEventsToPoolDelegate);");
+                sb.AppendLine($"{Indent(indent)}this.OnDisposed(this, _ReturnEventsToPool);");
                     sb.AppendLine($"{Indent(indent)}disposeRegistered = true;");
                 indent -= standardIndent;
                 sb.AppendLine(Indent(indent) + "}");

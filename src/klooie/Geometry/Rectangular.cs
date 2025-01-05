@@ -73,13 +73,11 @@ public partial class Rectangular :  Recyclable, IObservableObject
  
     }
 
-    private Action cachedSyncBoundsAction;
     protected override void ProtectedInit()
     {
         base.ProtectedInit();
         ColliderHashCode = -1;
-        cachedSyncBoundsAction = cachedSyncBoundsAction ?? (() => SyncBounds(Bounds));
-        BoundsChanged.Subscribe(cachedSyncBoundsAction, this);
+        BoundsChanged.Subscribe(this, SyncBoundsFromExistingBounds, this);
     }
 
     public void MoveTo(LocF loc, int? z = null) => MoveTo(loc.Left, loc.Top, z);
@@ -140,6 +138,20 @@ public partial class Rectangular :  Recyclable, IObservableObject
         w = newW;
         h = newH;
         Bounds = newBounds;
+    }
+
+    private static void SyncBoundsFromExistingBounds(object me)
+    {
+        var self = (Rectangular)me;
+        var newBounds = self.Bounds;
+        var newX = ConsoleMath.Round(newBounds.Left);
+        var newY = ConsoleMath.Round(newBounds.Top);
+        var newW = ConsoleMath.Round(newBounds.Width);
+        var newH = ConsoleMath.Round(newBounds.Height);
+        self.x = newX;
+        self.y = newY;
+        self.w = newW;
+        self.h = newH;
     }
 
     public float NumberOfPixelsThatOverlap(RectF other) => this.Bounds.NumberOfPixelsThatOverlap(other);

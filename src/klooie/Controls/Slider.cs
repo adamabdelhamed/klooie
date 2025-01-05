@@ -22,13 +22,7 @@ public partial class Slider : ConsoleControl
 
         this.Ready.SubscribeOnce(() =>
         {
-            SubscribeToAnyPropertyChange(() =>
-            {
-                if (Min > Max) throw new InvalidOperationException("Max must be >= Min");
-                if (Value > Max) throw new InvalidOperationException("Value must be <= Max");
-                if (Value < Min) throw new InvalidOperationException("Value must be >= Min");
-
-            }, this);
+            SubscribeToAnyPropertyChange(this, OnAnyPropertyChanged, this);
 
             this.Focused.Subscribe(() =>
             {
@@ -47,6 +41,17 @@ public partial class Slider : ConsoleControl
 
             this.Unfocused.Subscribe(() => focusLt?.Dispose(), this);
         });
+    }
+    private static void OnAnyPropertyChanged(object me)
+    {
+        var _this = (Slider)me;
+        _this.OnAnyPropertyChanged();
+    }
+    private void OnAnyPropertyChanged()
+    {
+        if (Min > Max) throw new InvalidOperationException("Max must be >= Min");
+        if (Value > Max) throw new InvalidOperationException("Value must be <= Max");
+        if (Value < Min) throw new InvalidOperationException("Value must be >= Min");
     }
 
     private void SlideUp()

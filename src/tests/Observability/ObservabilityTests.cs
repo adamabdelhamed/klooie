@@ -94,7 +94,7 @@ public partial class ObservabilityTests
 
         using (var lifetime = new Lifetime())
         {
-            observable.SubscribeToAnyPropertyChange(() => { numChanged++; }, lifetime);
+            observable.SubscribeToAnyPropertyChange(this, (o) => { numChanged++; }, lifetime);
 
             Assert.AreEqual(0, numChanged);
             observable.Name = "Foo";
