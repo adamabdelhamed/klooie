@@ -170,11 +170,18 @@ public class EventLoop : Lifetime
     private TaskCompletionSource<bool> runDeferred;
     private bool stopRequested;
     private CustomSyncContext syncContext;
+    public InnerLoopAPIs InnerLoopAPIs { get; private init; }
     public bool IsDrainingOrDrained { get; private set; }
 
 
     private bool runMode;
     private Task runTask;
+
+     public EventLoop()
+    {
+        InnerLoopAPIs = new InnerLoopAPIs(this);
+    }
+
     /// <summary>
     /// Runs the event loop using the current thread
     /// </summary>
