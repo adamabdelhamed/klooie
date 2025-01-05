@@ -14,7 +14,7 @@ public class SourceGeneratorBasedObservabilityTests
     [TestMethod]
     public void TestGeneratedCode()
     {
-        var observable = new SomeObservable();
+        var observable = new SGObservable();
 
         int nameChangedCount = 0;
         ILifetimeManager propValLt;
@@ -36,7 +36,7 @@ public class SourceGeneratorBasedObservabilityTests
     }
 }
 
-public partial class SomeObservable : IObservableObject
+public partial class SGObservable : IObservableObject
 {
     public partial string Name { get; set; }
 }

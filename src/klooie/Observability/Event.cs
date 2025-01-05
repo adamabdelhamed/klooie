@@ -12,7 +12,7 @@ public sealed class Event
     /// returns true if there is at least one subscriber
     /// </summary>
     public bool HasSubscriptions => subscribers?.Any() == true;
-         
+
     /// <summary>
     /// Fires the event. All subscribers will be notified
     /// </summary>
@@ -26,23 +26,52 @@ public sealed class Event
     /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
     public void Subscribe(Action handler, ILifetimeManager lifetimeManager)
     {
-        subscribers = subscribers ?? new List<Subscription>();
+        subscribers ??= new List<Subscription>();
         var subscription = SubscriptionPool.Rent(handler, lifetimeManager);
         subscription.Subscribers = subscribers;
         subscribers.Add(subscription);
         lifetimeManager.OnDisposed(subscription);
     }
 
+    // NEW OR MODIFIED CODE: Overload that accepts a scope object
     /// <summary>
-    /// Subscribes to this event such that the given handler will be called when the event fires. Notifications will stop
-    /// when the lifetime associated with the given lifetime manager is disposed. This subscription will be notified before all other subscriptions.
+    /// Subscribes to this event such that the given handler will be called (with a provided scope) when the event fires.
+    /// </summary>
+    /// <typeparam name="TScope">The type of the scope object</typeparam>
+    /// <param name="scope">A scope object that the handler can use as its state</param>
+    /// <param name="handler">A callback that accepts the scope object</param>
+    /// <param name="lifetimeManager">The lifetime manager</param>
+    public void Subscribe<TScope>(TScope scope, Action<object> handler, ILifetimeManager lifetimeManager)
+    {
+        subscribers ??= new List<Subscription>();
+        var subscription = SubscriptionPool.Rent(scope, handler, lifetimeManager);
+        subscription.Subscribers = subscribers;
+        subscribers.Add(subscription);
+        lifetimeManager.OnDisposed(subscription);
+    }
+
+    /// <summary>
+    /// Subscribes to this event such that the given handler will be called when the event fires. 
+    /// This subscription will be notified before all other subscriptions.
     /// </summary>
     /// <param name="handler">the action to run when the event fires</param>
-    /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
+    /// <param name="lifetimeManager">the lifetime manager</param>
     public void SubscribeWithPriority(Action handler, ILifetimeManager lifetimeManager)
     {
-        subscribers = subscribers ?? new List<Subscription>();
+        subscribers ??= new List<Subscription>();
         var subscription = SubscriptionPool.Rent(handler, lifetimeManager);
+        subscription.Subscribers = subscribers;
+        subscribers.Insert(0, subscription);
+        lifetimeManager.OnDisposed(subscription);
+    }
+
+    /// <summary>
+    /// Subscribes to this event with a scope object and callback, notified before other subscriptions.
+    /// </summary>
+    public void SubscribeWithPriority<TScope>(TScope scope, Action<object> handler, ILifetimeManager lifetimeManager)
+    {
+        subscribers ??= new List<Subscription>();
+        var subscription = SubscriptionPool.Rent(scope, handler, lifetimeManager);
         subscription.Subscribers = subscribers;
         subscribers.Insert(0, subscription);
         lifetimeManager.OnDisposed(subscription);
@@ -60,7 +89,17 @@ public sealed class Event
     }
 
     /// <summary>
-    /// calls the callback now and subscribes to the event. This subscription will be notified before all other subscriptions.
+    /// Calls the callback now and subscribes to the event with a scope object.
+    /// </summary>
+    public void Sync<TScope>(TScope scope, Action<object> handler, ILifetimeManager lifetimeManager)
+    {
+        handler(scope);
+        Subscribe(scope, handler, lifetimeManager);
+    }
+
+    /// <summary>
+    /// calls the callback now and subscribes to the event. 
+    /// This subscription will be notified before all other subscriptions.
     /// </summary>
     /// <param name="handler">the callback</param>
     /// <param name="lifetimeManager">the lifetime of the subscription</param>
@@ -68,6 +107,17 @@ public sealed class Event
     {
         handler();
         SubscribeWithPriority(handler, lifetimeManager);
+    }
+
+    // NEW OR MODIFIED CODE: Overload that accepts a scope object (sync with priority)
+    /// <summary>
+    /// Calls the callback now and subscribes to the event with a scope object, 
+    /// notified before all other subscriptions.
+    /// </summary>
+    public void SyncWithPriority<TScope>(TScope scope, Action<object> handler, ILifetimeManager lifetimeManager)
+    {
+        handler(scope);
+        SubscribeWithPriority(scope, handler, lifetimeManager);
     }
 
     /// <summary>
@@ -93,6 +143,25 @@ public sealed class Event
         Subscribe(wrappedAction, lt);
     }
 
+    // NEW OR MODIFIED CODE: Overload that accepts a scope object for one notification
+    public void SubscribeOnce<TScope>(TScope scope, Action<object> handler)
+    {
+        Action wrappedAction = null;
+        var lt = new Lifetime();
+        wrappedAction = () =>
+        {
+            try
+            {
+                handler(scope);
+            }
+            finally
+            {
+                lt.Dispose();
+            }
+        };
+
+        Subscribe(wrappedAction, lt);
+    }
 
     /// <summary>
     /// Creates a lifetime that will end the next time this
@@ -113,7 +182,7 @@ public sealed class Event
     public Task CreateNextFireTask()
     {
         var tcs = new TaskCompletionSource();
-        this.SubscribeOnce(()=> tcs.SetResult());
+        this.SubscribeOnce(tcs,(tcsObj) => (tcsObj as TaskCompletionSource).SetResult());
         return tcs.Task;
     }
 
@@ -133,24 +202,77 @@ public class Event<T>
     private Stack<T> args = new Stack<T>(); // because notifications can be re-entrant
 
     /// <summary>
-    /// Subscribes for the given lifetime
+    /// Subscribes for the given lifetime.
     /// </summary>
     /// <param name="handler">the callback</param>
     /// <param name="lt">the lifetime</param>
-    public void Subscribe(Action<T> handler, ILifetimeManager lt) => innerEvent.Subscribe(() => handler(args.Peek()), lt);
+    public void Subscribe(Action<T> handler, ILifetimeManager lt)
+        => innerEvent.Subscribe(() => handler(args.Peek()), lt);
 
-    public void SubscribeWithPriority(Action<T> handler, ILifetimeManager lt) => innerEvent.SubscribeWithPriority(() => handler(args.Peek()), lt);
+    // -----------------------------------------------
+    /// <summary>
+    /// Subscribes for the given lifetime, passing both a scope and the event argument.
+    /// This avoids capturing local variables if you use a static method.
+    /// </summary>
+    public void Subscribe<TScope>(TScope scope, Action<object, T> handler, ILifetimeManager lt)
+        => innerEvent.Subscribe(scope, s => handler(s, args.Peek()), lt);
+
 
     /// <summary>
-    /// Subscribes for one notification
+    /// Subscribes with priority for the given lifetime.
     /// </summary>
     /// <param name="handler">the callback</param>
-    public void SubscribeOnce(Action<T> handler) => innerEvent.SubscribeOnce(() => handler(args.Peek()));
+    /// <param name="lt">the lifetime</param>
+    public void SubscribeWithPriority(Action<T> handler, ILifetimeManager lt)
+        => innerEvent.SubscribeWithPriority(() => handler(args.Peek()), lt);
+
+    // -----------------------------------------------
+    //  NEW: Overload that accepts a scope object
+    // -----------------------------------------------
+    /// <summary>
+    /// Subscribes with priority for the given lifetime, passing both a scope and the event argument.
+    /// </summary>
+    public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope, T> handler, ILifetimeManager lt)
+        => innerEvent.SubscribeWithPriority(scope, s => handler((TScope)s!, args.Peek()), lt);
 
     /// <summary>
-    /// Fires the event and passes the given args to subscribers
+    /// Subscribes once for the given callback.
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="handler">the callback</param>
+    public void SubscribeOnce(Action<T> handler)
+        => innerEvent.SubscribeOnce(() => handler(args.Peek()));
+
+    // -----------------------------------------------
+    //  NEW: Overload that accepts a scope object
+    // -----------------------------------------------
+    /// <summary>
+    /// Subscribes once with the given scope and callback, then unsubscribes immediately.
+    /// </summary>
+    public void SubscribeOnce<TScope>(TScope scope, Action<TScope, T> handler)
+    {
+        var lt = new Lifetime();
+        // Wrap the callback so we can dispose once it's called
+        Action wrappedAction = null;
+        wrappedAction = () =>
+        {
+            try
+            {
+                handler(scope, args.Peek());
+            }
+            finally
+            {
+                lt.Dispose();
+            }
+        };
+
+        // Now subscribe our wrapped callback
+        innerEvent.Subscribe(wrappedAction, lt);
+    }
+
+    /// <summary>
+    /// Fires the event and passes the given args to subscribers.
+    /// </summary>
+    /// <param name="args">The event argument</param>
     public void Fire(T args)
     {
         this.args.Push(args);
@@ -168,7 +290,8 @@ public class Event<T>
     /// Creates a lifetime that will end the next time this event fires
     /// </summary>
     /// <returns>a lifetime that will end the next time this event fires</returns>
-    public Lifetime CreateNextFireLifetime() => innerEvent.CreateNextFireLifetime();
+    public Lifetime CreateNextFireLifetime()
+        => innerEvent.CreateNextFireLifetime();
 
     /// <summary>
     /// Creates a task that completes the next time this event fires
@@ -177,7 +300,7 @@ public class Event<T>
     public Task<T> CreateNextFireTask()
     {
         var tcs = new TaskCompletionSource<T>();
-        this.SubscribeOnce(args => tcs.SetResult(args));
+        this.SubscribeOnce(arg => tcs.SetResult(arg));
         return tcs.Task;
     }
 
@@ -194,8 +317,8 @@ public static class EventPool
     public static int EventsRented { get; private set; }
     public static int EventsReturned { get; private set; }
     public static int AllocationsSaved => EventsRented - EventsCreated;
-
 #endif
+
     private static readonly ConcurrentBag<Event> _pool = new ConcurrentBag<Event>();
 
     public static Event Rent()
@@ -271,7 +394,6 @@ public static class SubscriptionPool
     public static int Rented { get; private set; }
     public static int Returned { get; private set; }
     public static int AllocationsSaved => Rented - Created;
-
 #endif
     private static readonly ConcurrentBag<Subscription> _pool = new ConcurrentBag<Subscription>();
 
@@ -280,18 +402,50 @@ public static class SubscriptionPool
 #if DEBUG
         Rented++;
 #endif
-        if (_pool.TryTake(out var evt))
+        if (_pool.TryTake(out var sub))
         {
-            evt.Callback = callback;
-            evt.Lifetime = lifetime;
-            return evt;
+            sub.Callback = callback;
+            sub.Lifetime = lifetime;
+            // Clear any scoped usage from previous user
+            sub.ScopedCallback = null;
+            sub.Scope = null;
+            return sub;
         }
 
 #if DEBUG
         Created++;
 #endif
+        return new Subscription()
+        {
+            Callback = callback,
+            Lifetime = lifetime
+        };
+    }
 
-        return new Subscription() { Callback = callback, Lifetime = lifetime };
+    internal static Subscription Rent<TScope>(TScope scope, Action<object> callback, ILifetimeManager lifetime)
+    {
+#if DEBUG
+    Rented++;
+#endif
+        if (_pool.TryTake(out var sub))
+        {
+            sub.Scope = scope;
+            sub.ScopedCallback = callback; // Store the delegate directly
+            sub.Lifetime = lifetime;
+            sub.Callback = null; // Standard callback is not used in this case
+            return sub;
+        }
+
+#if DEBUG
+    Created++;
+#endif
+        return new Subscription
+        {
+            Scope = scope,
+            ScopedCallback = callback, // Store the delegate directly
+            Lifetime = lifetime,
+            Callback = null
+        };
     }
 
     internal static void Return(Subscription subscription)

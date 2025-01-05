@@ -66,19 +66,31 @@ internal sealed class NotificationBufferPool
         var subscriberCount = subscribers.Count;
         // buffer used to allow concurrent modification to subscribers during notification
         // buffer also reduces memory allocations insead of doign a ToArray() on the list
-        var buffer = Instance.Get(subscriberCount); 
+        var buffer = Instance.Get(subscriberCount);
+
         try
         {
+            // copy the current subscribers into the buffer
             for (var i = 0; i < subscriberCount; i++)
             {
                 buffer[i] = subscribers[i];
             }
 
+            // now notify
             for (var i = 0; i < subscriberCount; i++)
             {
-                if (buffer[i].Lifetime?.IsExpired == false)
+                var sub = buffer[i];
+                if (sub.Lifetime?.IsExpired == false)
                 {
-                    buffer[i].Callback();
+                    // NEW OR MODIFIED CODE: if we have a ScopedCallback, call it; otherwise use Callback
+                    if (sub.ScopedCallback != null)
+                    {
+                        sub.ScopedCallback(sub.Scope);
+                    }
+                    else
+                    {
+                        sub.Callback?.Invoke();
+                    }
                 }
             }
         }
@@ -91,15 +103,21 @@ internal sealed class NotificationBufferPool
 
 public class Subscription
 {
-    public Action Callback { get; set; }
-    public ILifetimeManager Lifetime { get; set; }
-    public List<Subscription> Subscribers { get; set; }
- 
- 
+    // Standard callback (no scope)
+    public Action? Callback { get; set; }
+
+    // Scoped callback with a strongly-typed scope
+    internal object? Scope { get; set; }
+    internal Action<object>? ScopedCallback { get; set; }
+
+    public ILifetimeManager? Lifetime { get; set; }
+    public List<Subscription>? Subscribers { get; set; }
 
     internal void Reset()
     {
         Callback = null;
+        ScopedCallback = null;
+        Scope = null;
         Lifetime = null;
         Subscribers?.Remove(this);
         Subscribers = null;
