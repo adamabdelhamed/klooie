@@ -15,13 +15,14 @@ public partial class PixelControl : ConsoleControl
     public PixelControl()
     {
         ResizeTo(1, 1);
-        BoundsChanged.Subscribe(EnsureNoResize, this);
+        BoundsChanged.Subscribe(this, EnsureNoResize, this);
         Value = new ConsoleCharacter(' ', Foreground, Background);
     }
 
-    private void EnsureNoResize()
+    private static void EnsureNoResize(object pix)
     {
-        if (Width != 1 || Height != 1) throw new InvalidOperationException(nameof(PixelControl) + " must be 1 X 1");
+        var me = (PixelControl)pix;
+        if (me.Width != 1 || me.Height != 1) throw new InvalidOperationException(nameof(PixelControl) + " must be 1 X 1");
     }
 
     protected override void OnPaint(ConsoleBitmap context) => context.Pixels[0][0] = Value;

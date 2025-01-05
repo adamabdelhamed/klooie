@@ -129,6 +129,14 @@ public class Lifetime : Disposable, ILifetime
         }
     }
 
+    public void OnDisposed(object scope, Action<object> cleanupCode)
+    {
+        if (IsExpired == false)
+        {
+            _manager.OnDisposed(scope,cleanupCode);
+        }
+    }
+
     /// <summary>
     /// Registers a disposable to be disposed when this lifetime ends
     /// </summary>

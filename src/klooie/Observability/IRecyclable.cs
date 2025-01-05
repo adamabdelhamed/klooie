@@ -53,6 +53,12 @@ public class Recyclable : IRecyclable, ILifetime
         lifetimeManager.OnDisposed(action);
     }
 
+    public void OnDisposed(object scope, Action<object> action)
+    {
+        lifetimeManager = lifetimeManager ?? LifetimeManagerPool.Rent();
+        lifetimeManager.OnDisposed(scope, action);
+    }
+
     public void OnDisposed(IDisposable obj)
     {
         lifetimeManager = lifetimeManager ?? LifetimeManagerPool.Rent();

@@ -16,6 +16,8 @@ public interface ILifetimeManager
     /// <returns>a Task that resolves after the cleanup code runs</returns>
     void OnDisposed(Action cleanupCode);
 
+    void OnDisposed(object scope, Action<object> cleanupCode);
+
     /// <summary>
     /// Registers the given disposable to dispose when the lifetime being
     /// managed by this manager ends
@@ -138,6 +140,15 @@ internal sealed class LifetimeManager : ILifetimeManager
     /// </summary>
     /// <param name="cleanupCode">the code to run</param>
     public void OnDisposed(Action cleanupCode) => ToNotify.Add(SubscriptionPool.Rent(cleanupCode, this));
+
+    /// <summary>
+    /// Registers the given cleanup code to run when the lifetime being 
+    /// managed by this manager ends. The cleanup code will be passed the
+    /// scope object that was passed to the OnDisposed method.
+    /// </summary>
+    /// <param name="scope">your state used to avoid capturing a local</param>
+    /// <param name="cleanupCode">the code to run</param>
+    public void OnDisposed(object scope, Action<object> cleanupCode) => ToNotify.Add(SubscriptionPool.Rent(scope, cleanupCode, this));
 
     public void OnDisposed(Subscription toDispose) => ToDisposeOf.Add(toDispose);
 }
