@@ -39,7 +39,7 @@ public partial class Label : ConsoleControl
         TextChanged.Sync(OnTextChanged, this);
         ForegroundChanged.Subscribe(NormalizeNewlinesTabsAndStyleText, this);
         BackgroundChanged.Subscribe(NormalizeNewlinesTabsAndStyleText, this);
-        BoundsChanged.Subscribe(NormalizeNewlinesTabsAndStyleText, this);
+        //BoundsChanged.Subscribe(NormalizeNewlinesTabsAndStyleText, this);
         Focused.Subscribe(FocusChanged, this);
         Unfocused.Subscribe(FocusChanged, this);
     }
