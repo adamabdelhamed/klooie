@@ -395,15 +395,16 @@ public static class SubscriptionPool
     public static int Returned { get; private set; }
     public static int AllocationsSaved => Rented - Created;
 #endif
-    private static readonly ConcurrentBag<Subscription> _pool = new ConcurrentBag<Subscription>();
+    private static readonly Stack<Subscription> _pool = new Stack<Subscription>();
 
     internal static Subscription Rent(Action callback, ILifetimeManager lifetime)
     {
 #if DEBUG
         Rented++;
 #endif
-        if (_pool.TryTake(out var sub))
+        if (_pool.Count > 0)
         {
+            var sub = _pool.Pop();
             sub.Callback = callback;
             sub.Lifetime = lifetime;
             // Clear any scoped usage from previous user
@@ -427,8 +428,9 @@ public static class SubscriptionPool
 #if DEBUG
     Rented++;
 #endif
-        if (_pool.TryTake(out var sub))
+        if (_pool.Count > 0)
         {
+            var sub = _pool.Pop();
             sub.Scope = scope;
             sub.ScopedCallback = callback; // Store the delegate directly
             sub.Lifetime = lifetime;
@@ -454,6 +456,6 @@ public static class SubscriptionPool
         Returned++;
 #endif
         subscription.Reset();
-        _pool.Add(subscription);
+        _pool.Push(subscription);
     }
 }
