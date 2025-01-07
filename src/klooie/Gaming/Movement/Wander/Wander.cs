@@ -1,4 +1,6 @@
-﻿namespace klooie.Gaming;
+﻿using System.Buffers;
+
+namespace klooie.Gaming;
 
 public class WanderOptions
 {
@@ -179,17 +181,34 @@ public class Wander : Movement
 
     private bool HasStraightPath(RectF cp)
     {
-        var cpBox = new ColliderBox(cp);
-        var a = Element.Bounds.Center.CalculateAngleTo(cp.Center);
-        var colliders = _Obstacles.Union(new GameCollider[] { cpBox }).ToArray();
-        var visibility = Element.Bounds.CalculateDistanceTo(cp) * 2f;
-        var prediction = CollisionDetector.Predict(Element, a, colliders, visibility, CastingMode.Rough);
+        var cpBox = ColliderBoxPool.Instance.Rent();
+        cpBox.Bounds = cp;
+        try
+        {
+            var a = Element.Bounds.Center.CalculateAngleTo(cp.Center);
+            var colliders = ArrayPool<GameCollider>.Shared.Rent(_Obstacles.Length + 1);
+            try
+            {
+                Array.Copy(_Obstacles, colliders, _Obstacles.Length);
+                colliders[_Obstacles.Length] = cpBox;
+                var visibility = Element.Bounds.CalculateDistanceTo(cp) * 2f;
+                var prediction = CollisionDetector.Predict(Element, a, colliders, visibility, CastingMode.Rough, bufferLen: _Obstacles.Length + 1);
 
-        var perfect = prediction.ColliderHit == cpBox;
-        if (perfect) return true;
-        var closeEnough = new RectF(prediction.LKGX, prediction.LKGY, Element.Bounds.Width, Element.Bounds.Height).CalculateDistanceTo(cp) <= Options.CloseEnough;
+                var perfect = prediction.ColliderHit == cpBox;
+                if (perfect) return true;
+                var closeEnough = new RectF(prediction.LKGX, prediction.LKGY, Element.Bounds.Width, Element.Bounds.Height).CalculateDistanceTo(cp) <= Options.CloseEnough;
+                return closeEnough;
+            }
+            finally
+            {
+                ArrayPool<GameCollider>.Shared.Return(colliders);
+            }
 
-        return closeEnough;
+        }
+        finally
+        {
+            ColliderBoxPool.Instance.Return(cpBox);
+        }
 
     }
 

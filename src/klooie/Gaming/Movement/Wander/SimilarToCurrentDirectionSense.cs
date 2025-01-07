@@ -46,18 +46,46 @@ public class SimilarToCurrentDirectionSense : IWanderSense
 
     private bool IsFlipFlopping(Wander wander, Angle proposedAngle)
     {
-        var distinctPreviousAngles = previousAngles.Distinct();
+        // Fixed-size structure to track up to two distinct angles
+        Angle? firstAngle = null;
+        Angle? secondAngle = null;
 
-        if (distinctPreviousAngles.Count() == 1 && distinctPreviousAngles.First().Opposite() == proposedAngle)
+        for (int i = 0; i < previousAngles.Count; i++)
         {
-            return true;
+            var angle = previousAngles[i];
+
+            if (firstAngle == null)
+            {
+                firstAngle = angle;
+            }
+            else if (firstAngle != angle)
+            {
+                if (secondAngle == null)
+                {
+                    secondAngle = angle;
+                }
+                else if (secondAngle != angle)
+                {
+                    // More than two distinct angles found
+                    return false;
+                }
+            }
         }
 
-        if (distinctPreviousAngles.Count() != 2) return false;
+        // Handle case where there is only one distinct angle
+        if (secondAngle == null)
+        {
+            return firstAngle?.Opposite() == proposedAngle;
+        }
 
-        if (distinctPreviousAngles.First().Opposite() != distinctPreviousAngles.Last()) return false;
+        // Ensure the two distinct angles are opposites
+        if (firstAngle?.Opposite() != secondAngle)
+        {
+            return false;
+        }
 
-        if (distinctPreviousAngles.Contains(proposedAngle) && proposedAngle != wander._LastGoodAngle)
+        // Check if the proposed angle is in the set and isn't the last good angle
+        if ((firstAngle == proposedAngle || secondAngle == proposedAngle) && proposedAngle != wander._LastGoodAngle)
         {
             return true;
         }

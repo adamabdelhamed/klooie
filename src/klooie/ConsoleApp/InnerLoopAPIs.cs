@@ -16,35 +16,72 @@ public sealed class InnerLoopAPIs
     private EventLoop parent;
     private ForLoopLifetime forLifetime;
     private DoLoopLifetime doLifetime;
-    public InnerLoopAPIs(EventLoop parent)
+    private long? pausedTime;
+
+    public bool IsPaused => pausedTime.HasValue;
+
+    internal InnerLoopAPIs(EventLoop parent)
     {
         this.parent = parent;
+
     }
 
-    public void Delay(double delayMs, object scope, Action<object>? then = null) => For(1, delayMs, scope, (i, _) => { }, then);
+    internal void Pause()
+    {
+        pausedTime = Stopwatch.GetTimestamp();
+    }
+
+    internal void Resume()
+    {
+        if (pausedTime == null) return;
+        var timePaused = Stopwatch.GetTimestamp() - pausedTime.Value;
+        
+        if (forLifetime != null)
+        {
+            for (int i = 0; i < forLifetime.forLoopStates.Count; i++)
+            {
+                forLifetime.forLoopStates[i].lastIterationTime += timePaused;
+            }
+        }
+        
+        if (doLifetime != null)
+        {
+            for (int i = 0; i < doLifetime.doLoopStates.Count; i++)
+            {
+                doLifetime.doLoopStates[i].lastIterationTime += timePaused;
+            }
+        }
+        pausedTime = null;
+    }
+
+    public void Delay(double delayMs, object scope, Action<object>? then = null) => For(1, delayMs, scope,null, then);
     
 
-    public void Delay(double delayMs, Action? then = null) => For(1, delayMs, (int i) =>{ }, then);
+    public void Delay(double delayMs, Action? then = null) => For(1, delayMs, null, then);
 
     public void Do(double delayMs, object scope, Func<object, DoReturnType> action, Action<object>? then = null)
     {
         var loopState = DoLoopStatePool.Instance.Rent();
-        loopState.action = action;
+        loopState.actionO = action;
+        loopState.action = null;
         loopState.lastIterationTime = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
         loopState.state = scope;
-        loopState.then = then;
+        loopState.then = null;
+        loopState.thenO = then;
         EnsureDoImplIsRunning(loopState);
     }
 
     public void Do(double delayMs, Func<DoReturnType> action, Action? then = null)
     {
         var loopState = DoLoopStatePool.Instance.Rent();
-        loopState.action = (_) => action();
+        loopState.action = action;
+        loopState.actionO = null;
         loopState.lastIterationTime = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
         loopState.state = null;
-        loopState.then = (_) => then?.Invoke();
+        loopState.then = then;
+        loopState.thenO = null;
         EnsureDoImplIsRunning(loopState);
     }
 
@@ -62,9 +99,11 @@ public sealed class InnerLoopAPIs
         loopState.lastIterationTime = 0;
         loopState.i = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
-        loopState.action = action;
+        loopState.actionO = action;
+        loopState.action = null;
         loopState.state = scope;
-        loopState.then = then;
+        loopState.then = null;
+        loopState.thenO = then;
         EnsureForImplIsRunning(loopState);
     }
 
@@ -80,9 +119,11 @@ public sealed class InnerLoopAPIs
         loopState.lastIterationTime = 0;
         loopState.i = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
-        loopState.action = (i, _) => action(i);
+        loopState.action = action;
+        loopState.actionO = null;
         loopState.state = null;
-        loopState.then = (_) => then?.Invoke();
+        loopState.then = then;
+        loopState.thenO = null;
         EnsureForImplIsRunning(loopState);
     }
 
@@ -110,8 +151,9 @@ public sealed class InnerLoopAPIs
         parent.EndOfCycle.Subscribe(doLifetime, DoImpl, doLifetime);
     }
 
-    private static void DoImpl(object loopStates)
+    private void DoImpl(object loopStates)
     {
+        if (pausedTime.HasValue) return;
         var doLifetime = (DoLoopLifetime)loopStates;
         var doLoopStates = doLifetime.doLoopStates;
         for (int i = 0; i < doLoopStates.Count; i++)
@@ -121,12 +163,16 @@ public sealed class InnerLoopAPIs
             var isTimeToIterate = Stopwatch.GetTimestamp() - loopState.lastIterationTime >= loopState.delay;
             if (!isTimeToIterate) continue;
 
-            var result = loopState.action(loopState.state);
+            var result = loopState.action?.Invoke();
+            result = result.HasValue ? result.Value : loopState.actionO?.Invoke(loopState.state);
+            if(result.HasValue == false) throw new Exception("Do loop must return a value");
+
             loopState.lastIterationTime = Stopwatch.GetTimestamp();
 
             if (result == DoReturnType.Break)
             {
-                loopState.then?.Invoke(loopState.state);
+                loopState.thenO?.Invoke(loopState.state);
+                loopState.then?.Invoke();
                 DoLoopStatePool.Instance.Return(loopState);
                 doLoopStates.RemoveAt(i);
                 i--;
@@ -140,8 +186,9 @@ public sealed class InnerLoopAPIs
     }
 
 
-    private static void ForImpl(object loopStates)
+    private void ForImpl(object loopStates)
     {
+        if (pausedTime.HasValue) return;
         var forLifetime = (ForLoopLifetime)loopStates;
         var forLoopStates = forLifetime.forLoopStates;
         for (int iu = 0; iu < forLoopStates.Count; iu++)
@@ -155,7 +202,8 @@ public sealed class InnerLoopAPIs
             if (loopState.i < loopState.length)
             {
                 // Execute the action for the current iteration
-                loopState.action(loopState.i, loopState.state);
+                loopState?.actionO?.Invoke(loopState.i, loopState.state);
+                loopState?.action?.Invoke(loopState.i);
                 loopState.lastIterationTime = Stopwatch.GetTimestamp();
                 loopState.i++;
 
@@ -166,7 +214,8 @@ public sealed class InnerLoopAPIs
             // Check if the loop has completed
             if (loopState.i == loopState.length)
             {
-                loopState.then?.Invoke(loopState.state);
+                loopState.thenO?.Invoke(loopState.state);
+                loopState.then?.Invoke();
 
                 // Clean up and remove the loop state
                 ForLoopStatePool.Instance.Return(loopState);
@@ -189,17 +238,21 @@ public class ForLoopState : Recyclable
     public int i;
     public int length;
     public object state;
-    public Action<int, object> action;
-    public Action<object> then;
+    public Action<int, object>? actionO;
+    public Action<int>? action;
+    public Action<object> thenO;
+    public Action then;
 }
 
 public class DoLoopState : Recyclable
 {
     public long lastIterationTime;
     public double delay;
-    public object state;
-    public Func<object, DoReturnType> action;
-    public Action<object> then;
+    public object? state;
+    public Func<object, DoReturnType> actionO;
+    public Func<DoReturnType>? action;
+    public Action<object>? thenO;
+    public Action? then;
 }
 
 public enum DoReturnType

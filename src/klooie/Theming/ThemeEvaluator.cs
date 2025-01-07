@@ -23,18 +23,42 @@ internal static class ThemeEvaluator
 
     private static void EvaulateAllControls(ConsolePanel root, ILifetimeManager applyLifetime, Style[] styles, ThemeApplicationTracker tracker)
     {
-        foreach (var control in GetAllControls())
+        ConsoleControl control = ConsoleApp.Current.LayoutRoot;
+        if (ShouldEvaluate(control, root))
         {
-            if (ShouldEvaluate(control,root) == false) continue;
-          
             EvaluateControl(control, applyLifetime, styles, tracker);
+        }
+
+        var buffer = Container.DescendentBufferPool.Rent();
+        try
+        {
+            ConsoleApp.Current.LayoutRoot.PopulateDescendentsWithZeroAllocations(buffer);
+
+            for (var i = 0; i < buffer.Count; i++)
+            {
+                control = buffer[i];
+                if (ShouldEvaluate(control, root) == false) continue;
+                EvaluateControl(control, applyLifetime, styles, tracker);
+            }
+        }
+        finally
+        {
+            Container.DescendentBufferPool.Return(buffer);
         }
     }
 
-    private static void EvaluateControl(ConsoleControl c, ILifetimeManager lt, Style[] styles, ThemeApplicationTracker tracker) => c.GetType()
-        .GetProperties()
-        .Where(p => p.GetGetMethod() != null && p.GetSetMethod() != null)
-        .ForEach(p => EvaluateProperty(c, p, styles, lt, tracker));
+    private static void EvaluateControl(ConsoleControl c, ILifetimeManager lt, Style[] styles, ThemeApplicationTracker tracker)
+    {
+        var props = c.GetType().GetProperties();
+        for(int i = 0; i < props.Length; i++)
+        {
+            var p = props[i];
+            if(p.GetGetMethod() != null && p.GetSetMethod() != null)
+            {
+                EvaluateProperty(c, p, styles, lt, tracker);
+            }
+        }
+    }
 
     private static void EvaluateProperty(ConsoleControl c, PropertyInfo property, Style[] styles, ILifetimeManager lt, ThemeApplicationTracker tracker)
     {
@@ -166,15 +190,6 @@ internal static class ThemeEvaluator
         return false;
     }
 
-    private static IEnumerable<ConsoleControl> GetAllControls()
-    {
-        yield return ConsoleApp.Current.LayoutRoot;
-        foreach (var d in ConsoleApp.Current.LayoutRoot.Descendents)
-        {
-            yield return d;
-        }
-    }
-
     private static int? TypeChainDelta(ConsoleControl c, Type styleType)
     {
         var currentType = c.GetType();
@@ -228,10 +243,13 @@ internal static class ThemeEvaluator
         var currentParent = c.Parent;
         while (currentParent != null && currentParent != root.Parent)
         {
-            if(currentParent.GetType().Attrs<ThemeIgnoreAttribute>().Where(attr => Is(c,attr.ToIgnore)).Any())
+            var attrs = currentParent.GetType().Attrs<ThemeIgnoreAttribute>();
+
+            for ( var i = 0; i < attrs.Count; i++)
             {
-                return true;
+                if (Is(c, attrs[i].ToIgnore)) return true;
             }
+
             currentParent = currentParent.Parent;
         }
         return false;

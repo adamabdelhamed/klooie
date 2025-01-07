@@ -186,16 +186,14 @@ public static class Animator
         });
     }
 
-    private static async Task AnimateAsyncInternal(FloatAnimationOptions options)
+    private static Task AnimateAsyncInternal(FloatAnimationOptions options)
     {
-        if (options.IsCancelled != null && options.IsCancelled())
-        {
-            return;
-        }
+        if (options.IsCancelled != null && options.IsCancelled()) return Task.CompletedTask;
         var animationTime = TimeSpan.FromMilliseconds(options.Duration);
         if (animationTime == TimeSpan.Zero)
         {
             options.Setter(options.To);
+            return Task.CompletedTask;
         }
 
         var numberOfFrames = (float)(ConsoleMath.Round(animationTime.TotalSeconds * options.TargetFramesPerSecond));
@@ -208,35 +206,77 @@ public static class Animator
 
         var delta = options.To - initialValue;
 
-        var workSw = Stopwatch.StartNew();
-        for (float i = 1; i <= numberOfFrames; i++)
+        var tcs = new TaskCompletionSource();
+        var frame = AnimationFrameStatePool.Instance.Rent();
+        frame.Options = options;
+        frame.NumberOfFrames = numberOfFrames;
+        frame.TimeBetweenFrames = timeBetweenFrames;
+        frame.InitialValue = initialValue;
+        frame.Delta = delta;
+        frame.StartTime = Stopwatch.GetTimestamp();
+        frame.I = -1;
+        frame.OnDisposed(tcs, StaticSetResult);
+        ProcessAnimationFrame(frame); 
+        return tcs.Task;
+    }
+
+    private static void StaticSetResult(object obj) => ((TaskCompletionSource)obj).SetResult();
+    
+
+    private static void ProcessAnimationFrame(object stateObj)
+    {
+        var state = (AnimationFrameState)stateObj;
+        if (state.I == state.NumberOfFrames - 1)
         {
-            var percentageDone = i / numberOfFrames;
-            if (options.EasingFunction != null)
-            {
-                percentageDone = options.EasingFunction(percentageDone);
-            }
-
-            var scheduledTimeAfterThisFrame = TimeSpan.FromMilliseconds(timeBetweenFrames.TotalMilliseconds * i);
-            var newValue = initialValue + (delta * percentageDone);
-            options.Setter(newValue);
-            ConsoleApp.Current?.RequestPaint();
-
-            var delayTime = options.DelayProvider is WallClockDelayProvider ? TimeSpan.FromMilliseconds(Math.Max(0, scheduledTimeAfterThisFrame.TotalMilliseconds - workSw.Elapsed.TotalMilliseconds)) : timeBetweenFrames;
-
-            if (options.IsCancelled != null && options.IsCancelled())
-            {
-                return;
-            }
-            if (delayTime == TimeSpan.Zero)
-            {
-                await options.YieldAsync();
-            }
-            else
-            {
-                await options.DelayAsync(delayTime);
-            }
+            AnimationFrameStatePool.Instance.Return(state);
+            return;
         }
+        state.I++;
+        var percentageDone = state.I / state.NumberOfFrames;
+        if (state.Options.EasingFunction != null)
+        {
+            percentageDone = state.Options.EasingFunction(percentageDone);
+        }
+
+        var scheduledTimeAfterThisFrame = TimeSpan.FromMilliseconds(state.TimeBetweenFrames.TotalMilliseconds * state.I);
+        var newValue = state.InitialValue+ (state.Delta* percentageDone);
+        state.Options.Setter(newValue);
+        ConsoleApp.Current?.RequestPaint();
+
+        var delayTime = state.Options.DelayProvider is WallClockDelayProvider ? TimeSpan.FromMilliseconds(Math.Max(0, scheduledTimeAfterThisFrame.TotalMilliseconds - Stopwatch.GetElapsedTime(state.StartTime).TotalMilliseconds)) : state.TimeBetweenFrames;
+
+        if (state.Options.IsCancelled != null && state.Options.IsCancelled())
+        {
+            AnimationFrameStatePool.Instance.Return(state);
+            return;
+        }
+
+
+        ConsoleApp.Current.InnerLoopAPIs.Delay(ConsoleMath.Round(delayTime.TotalMilliseconds),state, ProcessAnimationFrame);
+    }
+}
+
+public class AnimationFrameState : Recyclable
+{
+    // FloatAnimationOptions options, float numberOfFrames, TimeSpan timeBetweenFrames, float initialValue, float delta, long startTime, float i
+    public FloatAnimationOptions Options { get; set; }
+    public float NumberOfFrames { get; set; }
+    public TimeSpan TimeBetweenFrames { get; set; }
+    public float InitialValue { get; set; }
+    public float Delta { get; set; }
+    public long StartTime { get; set; }
+    public float I { get; set; }
+
+    protected override void ProtectedInit()
+    {
+        base.ProtectedInit();
+        Options = null;
+        NumberOfFrames = 0;
+        TimeBetweenFrames = TimeSpan.Zero;
+        InitialValue = 0;
+        Delta = 0;
+        StartTime = 0;
+        I = 0;
     }
 }
 

@@ -147,6 +147,10 @@ public sealed class ColliderBox : GameCollider
 {
     internal override bool AutoAddToColliderGroup => false;
     public ColliderBox(RectF bounds, bool connectToMainColliderGroup = true) : base(bounds, connectToMainColliderGroup) { }
+    public ColliderBox()
+    {
+
+    }
     public ColliderBox(float x, float y, float w, float h, bool connectToMainColliderGroup = true) : this(new RectF(x, y, w, h), connectToMainColliderGroup) { }
 }
 
