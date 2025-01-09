@@ -15,9 +15,10 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     private const int ChannelCount = 2;
     private readonly IWavePlayer outputDevice;
     private readonly MixingSampleProvider mixer;
-    private Dictionary<string, byte[]> cachedSounds;
     private List<Lifetime> currentSoundLifetimes;
+    private HashSet<string> soundIds;
     private Dictionary<ISampleProvider, LoopInfo> runningLoops;
+    private SamplePool samplePool;
 
     /// <summary>
     /// Sets the volume to apply to any sounds played moving forward
@@ -36,7 +37,6 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     {
         try
         {
-            cachedSounds = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
             currentSoundLifetimes = new List<Lifetime>();
             runningLoops = new Dictionary<ISampleProvider, LoopInfo>();
             var sw = Stopwatch.StartNew();
@@ -45,7 +45,9 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             outputDevice = new WaveOutEvent();
             outputDevice.Init(mixer);
             outputDevice.Play();
-            cachedSounds = LoadSounds();
+            var sounds = LoadSounds();
+            soundIds = new HashSet<string>(sounds.Keys, StringComparer.OrdinalIgnoreCase);
+            samplePool = new SamplePool(LoadSounds());
             sw.Stop();
             LogSoundLoaded(sw.ElapsedMilliseconds);
         }
@@ -66,10 +68,10 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         try
         {
             var overrideSound = ReplaceSoundHook(soundId);
-            var toPlay = cachedSounds.ContainsKey(overrideSound) ? overrideSound : soundId;
-            if (cachedSounds.TryGetValue(toPlay, out byte[] bytes))
+            var toPlay = soundIds.Contains(overrideSound) ? overrideSound : soundId;
+            if (soundIds.Contains(toPlay))
             {
-                var sample = CreateNewSample(bytes);
+                var sample = CreateNewSample(toPlay);
 
                 if (NewPlaySoundVolume != 1)
                 {
@@ -99,7 +101,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     {
         try
         {
-            if (cachedSounds.TryGetValue(soundId, out byte[] bytes))
+            if (soundIds.Contains(soundId))
             {
                 var overrideLifetime = new Lifetime();
                 lock (currentSoundLifetimes)
@@ -107,7 +109,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
                     currentSoundLifetimes.Add(overrideLifetime);
                 }
 
-                var rawSample = CreateNewSample(bytes);
+                var rawSample = CreateNewSample(soundId);
 
                 if (NewPlaySoundVolume != 1)
                 {
@@ -115,7 +117,10 @@ public abstract class AudioPlaybackEngine : ISoundProvider
                 }
                 var sample = AddMixerInput(new LifetimeAwareSampleProvider(rawSample, lt));
                 runningLoops.Add(sample, new LoopInfo() { Lifetime = lt, Sound = soundId });
-                lt.OnDisposed(() => runningLoops.Remove(sample));
+                lt.OnDisposed(sample, (sampleObj) =>
+                {
+                    runningLoops.Remove((ISampleProvider)sampleObj);
+                });
             }
         }
         catch (Exception)
@@ -191,10 +196,11 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         }
     }
 
-    private ISampleProvider CreateNewSample(byte[] bytes) => new Mp3FileReader(new MemoryStream(bytes)).ToSampleProvider();
+    private ISampleProvider CreateNewSample(string soundId) => samplePool.Rent(soundId);
 
     private void Mixer_MixerInputEnded(object sender, SampleProviderEventArgs e)
     {
+        samplePool.Return(e.SampleProvider);
         if (runningLoops.TryGetValue(e.SampleProvider, out LoopInfo info))
         {
             Loop(info.Sound, info.Lifetime);
@@ -207,7 +213,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     /// of the sound effects and the values are the bytes of MP3 files.
     /// </summary>
     /// <returns></returns>
-    protected abstract Dictionary<string, byte[]> LoadSounds();
+    protected abstract Dictionary<string, Func<Stream>> LoadSounds();
 
     /// <summary>
     /// By defaults this class does not throw when sounds fail to load.
@@ -227,25 +233,108 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     {
 
     }
+
+    private sealed class SamplePool
+    {
+        private sealed class SoundContext
+        {
+            public required Func<Stream> StreamFactory { get; init; }
+            public required Stack<ISampleProvider> Pool { get; init; }
+            public required Dictionary<ISampleProvider, Stream> BoundStreams { get; init; }
+        }
+
+        private Dictionary<string, SoundContext> soundContext;
+
+        // Map from sample provider back to its soundId
+        private Dictionary<ISampleProvider, string> soundIdLookup;
+
+        public SamplePool(Dictionary<string, Func<Stream>> rawSoundData)
+        {
+            // Create a single memory copy of all sounds
+            soundContext = new Dictionary<string, SoundContext>(StringComparer.OrdinalIgnoreCase);
+            soundIdLookup = new Dictionary<ISampleProvider, string>();
+
+            foreach (var kvp in rawSoundData)
+            {
+                soundContext[kvp.Key] = new SoundContext()
+                {
+                    StreamFactory = kvp.Value,
+                    Pool = new Stack<ISampleProvider>(),
+                    BoundStreams = new Dictionary<ISampleProvider, Stream>()
+                };
+            }
+        }
+
+        public ISampleProvider Rent(string soundId)
+        {
+            var context = soundContext[soundId];
+            return TryReuse(soundId, context, out var cached) ? cached : CreateFreshSample(soundId, context);
+        }
+
+        public void Return(ISampleProvider sample)
+        {
+            sample = UnwrapSampleProvider(sample);
+            var soundId = soundIdLookup[sample];
+            soundIdLookup.Remove(sample);
+            var context = soundContext[soundId];
+            context.BoundStreams[sample].Position = 0;
+            context.Pool.Push(sample);
+        }
+
+        private bool TryReuse(string soundId, SoundContext context, out ISampleProvider cached)
+        {
+            if (context.Pool.Count == 0)
+            {
+                cached = null;
+                return false;
+            }
+
+            cached = context.Pool.Pop();
+            soundIdLookup[cached] = soundId;
+            return true;
+        }
+
+        private ISampleProvider CreateFreshSample(string soundId, SoundContext context)
+        {
+            var freshCopy = context.StreamFactory();
+            var waveReader = new WaveFileReader(freshCopy);
+            var freshSample = waveReader.ToSampleProvider();
+            context.BoundStreams[freshSample] = freshCopy;
+            soundIdLookup[freshSample] = soundId;
+            return freshSample;
+        }
+
+        private ISampleProvider UnwrapSampleProvider(ISampleProvider sample)
+        {
+            while (!soundIdLookup.ContainsKey(sample))
+            {
+                sample = sample is LifetimeAwareSampleProvider lifetimeAware ? lifetimeAware.InnerSample :
+                         sample is VolumeSampleProvider volumeProvider ? volumeProvider.InnerSample :
+                         throw new InvalidOperationException("Sample provider type not recognized in Return()");
+            }
+
+            return sample;
+        }
+    }
 }
 
 internal sealed class LifetimeAwareSampleProvider : ISampleProvider
 {
-    private ISampleProvider inner;
+    internal ISampleProvider InnerSample;
     private ILifetimeManager lt;
     public LifetimeAwareSampleProvider(ISampleProvider inner, ILifetimeManager lt)
     {
-        this.inner = inner;
+        this.InnerSample = inner;
         this.lt = lt;
     }
 
-    public WaveFormat WaveFormat => inner.WaveFormat;
-    public int Read(float[] buffer, int offset, int count) => lt != null && lt.IsExpired ? 0 : inner.Read(buffer, offset, count);
+    public WaveFormat WaveFormat => InnerSample.WaveFormat;
+    public int Read(float[] buffer, int offset, int count) => lt != null && lt.IsExpired ? 0 : InnerSample.Read(buffer, offset, count);
 }
 
 internal sealed class VolumeSampleProvider : ISampleProvider
 {
-    private readonly ISampleProvider source;
+    internal ISampleProvider InnerSample;
 
     /// <summary>
     /// Initializes a new instance of VolumeSampleProvider
@@ -253,14 +342,14 @@ internal sealed class VolumeSampleProvider : ISampleProvider
     /// <param name="source">Source Sample Provider</param>
     public VolumeSampleProvider(ISampleProvider source)
     {
-        this.source = source;
+        this.InnerSample = source;
         Volume = 1.0f;
     }
 
     /// <summary>
     /// WaveFormat
     /// </summary>
-    public WaveFormat WaveFormat => source.WaveFormat;
+    public WaveFormat WaveFormat => InnerSample.WaveFormat;
 
     /// <summary>
     /// Reads samples from this sample provider
@@ -271,7 +360,7 @@ internal sealed class VolumeSampleProvider : ISampleProvider
     /// <returns>Number of samples read</returns>
     public int Read(float[] buffer, int offset, int sampleCount)
     {
-        int samplesRead = source.Read(buffer, offset, sampleCount);
+        int samplesRead = InnerSample.Read(buffer, offset, sampleCount);
         if (Volume != 1f)
         {
             for (int n = 0; n < sampleCount; n++)

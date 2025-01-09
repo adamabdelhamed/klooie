@@ -9,7 +9,7 @@ public class MySoundEngine : AudioPlaybackEngine
     // called SoundEffects. That is what is being referenced below. By using a resource
     // file all our MP3 sound effects get bundled with the application and can be referred
     // to in a strongly typed way as seen in the sample. 
-    protected override Dictionary<string, byte[]> LoadSounds() => 
+    protected override Dictionary<string, Func<Stream>> LoadSounds() => 
         ResourceFileSoundLoader.LoadSounds<SoundEffects>();
 }
 
