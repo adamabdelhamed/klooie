@@ -29,8 +29,14 @@ public class WanderScore
     {
         get
         {
-            var sum = Components.Select(c => c.WeightedScore).Sum();
-            var weights = Components.Select(c => c.Weight).Sum();
+            var sum = 0f;
+            var weights = 0f;
+            for (int i = 0; i < Components.Count; i++)
+            {
+                sum += Components[i].WeightedScore;
+                weights += Components[i].Weight;
+            }
+
             return sum / weights;
         }
     }
