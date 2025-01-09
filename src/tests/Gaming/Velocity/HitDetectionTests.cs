@@ -28,10 +28,10 @@ public class HitDetectionTests
         {
             var group = new ColliderGroup(testLt);
 
-            var from = new ColliderBox(new RectF(0, 0, 1, 1), connectToMainColliderGroup: false);
+            var from = new GameCollider(new RectF(0, 0, 1, 1), false);
             from.ConnectToGroup(group);
 
-            var to = new ColliderBox(new RectF(1.001f, 0, 1, 1), connectToMainColliderGroup: false);
+            var to = new GameCollider(new RectF(1.001f, 0, 1, 1), false);
             to.ConnectToGroup(group);
 
             ConsoleControl[] colliders = [to];

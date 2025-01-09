@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace klooie.tests;
 
 [TestClass]
-[TestCategory(Categories.ConsoleApp)]
+[TestCategory(Categories.Slow)]
 public class ToggleControlTests
 {
     public TestContext TestContext { get; set; }

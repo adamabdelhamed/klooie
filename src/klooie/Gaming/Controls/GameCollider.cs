@@ -143,15 +143,16 @@ public class GameCollider : ConsoleControl
     }
 }
 
-public sealed class ColliderBox : GameCollider
+public sealed class ColliderBox : Recyclable, ICollidable
 {
-    internal override bool AutoAddToColliderGroup => false;
-    public ColliderBox(RectF bounds, bool connectToMainColliderGroup = true) : base(bounds, connectToMainColliderGroup) { }
-    public ColliderBox()
-    {
+    public RectF Bounds { get; set; }  
 
-    }
-    public ColliderBox(float x, float y, float w, float h, bool connectToMainColliderGroup = true) : this(new RectF(x, y, w, h), connectToMainColliderGroup) { }
+
+    public ColliderBox(RectF bounds) => this.Bounds = bounds;
+    public ColliderBox() { }
+    public ColliderBox(float x, float y, float w, float h) : this(new RectF(x, y, w, h)) { }
+
+    public bool CanCollideWith(ICollidable other) => true;
 }
 
  

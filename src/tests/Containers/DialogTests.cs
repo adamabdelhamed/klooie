@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace klooie.tests;
 
 [TestClass]
-[TestCategory(Categories.ConsoleApp)]
+[TestCategory(Categories.Slow)]
 public class DialogTests
 {
     public TestContext TestContext { get; set; }

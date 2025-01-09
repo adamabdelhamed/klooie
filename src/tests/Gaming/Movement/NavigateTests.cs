@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace klooie.tests;
 
 [TestClass]
-[TestCategory(Categories.Gaming)]
+[TestCategory(Categories.Slow)]
 public class NavigateTests
 {
     public TestContext TestContext { get; set; }
@@ -288,7 +288,7 @@ public class NavigateTests
             Velocity.Speed = Speed();
             while(ShouldContinue)
             {
-                await YieldAsync();
+                await Task.Yield();
             }
         }
     }

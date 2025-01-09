@@ -11,5 +11,6 @@
         public const string Code = "Gaming.Code";
         public const string Observability = "Observability";
         public const string MemoryManagement = "Memory Management";
+        public const string Slow = "Slow";
     }
 }

@@ -1,10 +1,10 @@
 ﻿namespace klooie;
 
-public partial class Rectangular :  Recyclable, IObservableObject
+public partial class Rectangular :  Recyclable, IObservableObject, ICollidable
 {
     private int x, y, w, h;
  
-
+    public bool CanCollideWith(ICollidable other) => true;
     public partial int ZIndex { get; set; }
 
     internal int ColliderHashCode { get; set; } = -1;
@@ -204,4 +204,10 @@ public static class RectangularEx
 
     public static Angle CalculateAngleTo(this RectF rect, ConsoleControl collider) =>
         rect.CalculateAngleTo(collider.Left, collider.Top, collider.Bounds.Width, collider.Bounds.Height);
+}
+
+public interface ICollidable : ILifetimeManager
+{
+    RectF Bounds { get; }
+    bool CanCollideWith(ICollidable other);
 }

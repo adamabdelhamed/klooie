@@ -4,18 +4,18 @@ public class NavigateOptions
     public float CloseEnough { get; set; } = Mover.DefaultCloseEnough;
     public bool TryForceDestination { get; set; } = true;
     public bool Show { get; set; }
-    public Func<Task> OnDelay { get; set; }
+    public Action OnDelay { get; set; }
     public Action OnSuccess { get; set; }
 }
 
 public class Navigate : Movement
 {
-    public GameCollider effectiveDestination { get; set; }
-    public GameCollider _LocalTarget { get; set; }
+    public ICollidable effectiveDestination { get; set; }
+    public ICollidable _LocalTarget { get; set; }
     public NavigationPath _CurrentPath { get; set; }
     public ILifetime _ResultLifetime { get; private set; } = Game.Current.CreateChildLifetime();
 
-    private Func<GameCollider> destination;
+    private Func<ICollidable> destination;
     public NavigateOptions Options { get; private set; }
 
     public List<RectF> ObstaclesPadded
@@ -37,14 +37,14 @@ public class Navigate : Movement
             }
         }
     }
-    private Navigate(Velocity v, SpeedEval speed, Func<GameCollider> destination, NavigateOptions options) : base(v, speed)
+    private Navigate(Velocity v, SpeedEval speed, Func<ICollidable> destination, NavigateOptions options) : base(v, speed)
     {
         AssertSupported();
         this.Options = options ?? new NavigateOptions();
         this.destination = destination;
     }
 
-    public static Movement Create(Velocity v, SpeedEval speed, Func<GameCollider> destination, NavigateOptions options = null) => new Navigate(v, speed, destination, options);
+    public static Movement Create(Velocity v, SpeedEval speed, Func<ICollidable> destination, NavigateOptions options = null) => new Navigate(v, speed, destination, options);
 
     protected override async Task Move()
     {
@@ -53,7 +53,7 @@ public class Navigate : Movement
 
         await Mover.InvokeOrTimeout(this, Wander.Create(Velocity, Speed, new WanderOptions()
         {
-            OnDelay = () => Delay(),
+            OnDelay = () => OnDelay(),
             CuriousityPoint = () => _LocalTarget,
         }), EarliestOf(_ResultLifetime, this));
 
@@ -79,13 +79,10 @@ public class Navigate : Movement
 
     private float Now => ConsoleMath.Round(Game.Current.MainColliderGroup.Now.TotalSeconds, 1);
 
-    private async Task Delay()
+    private void OnDelay()
     {
-        await EnsurePathUpdated();
-        if (Options.OnDelay != null)
-        {
-            await Options.OnDelay();
-        }
+        EnsurePathUpdated();
+        Options.OnDelay?.Invoke();
 
         if (_ResultLifetime.IsExpired)
         {
@@ -109,7 +106,7 @@ public class Navigate : Movement
         }
     }
 
-    private async Task EnsurePathUpdated()
+    private void EnsurePathUpdated()
     {
         var dest = destination();
         if (dest == null) return;
@@ -121,7 +118,7 @@ public class Navigate : Movement
             AssertSupported();
             var from = Element.Bounds;
             var to = effectiveDestination;
-            var path = await FindPathAdjusted(from, to.Bounds, ObstaclesPadded);
+            var path = FindPathAdjusted(from, to.Bounds, ObstaclesPadded);
             var r = path == null ? null : path.Select(l =>new RectF(l.Left, l.Top, 1, 1)).ToList();
 
             _CurrentPath?.Dispose();
@@ -140,7 +137,7 @@ public class Navigate : Movement
         }
     }
 
-    public static async Task<List<LocF>> FindPathAdjusted(RectF from, RectF to, IEnumerable<RectF> obstacles)
+    public static List<LocF> FindPathAdjusted(RectF from, RectF to, IEnumerable<RectF> obstacles)
     {
         var sceneW = (int)Game.Current.GameBounds.Width;
         var sceneH = (int)Game.Current.GameBounds.Height;
@@ -184,7 +181,7 @@ public class Navigate : Movement
         {
             if (Options.TryForceDestination)
             {
-                Velocity.Collider.TryMoveTo(effectiveDestination.Left, effectiveDestination.Top);
+                Velocity.Collider.TryMoveTo(effectiveDestination.Bounds.Left, effectiveDestination.Bounds.Top);
                 Velocity.Stop();
             }
             ret = true;

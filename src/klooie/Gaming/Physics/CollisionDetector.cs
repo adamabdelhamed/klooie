@@ -5,8 +5,8 @@ public struct Collision
 {
     public float MovingObjectSpeed { get; set; }
     public Angle Angle { get; set; }
-    public ConsoleControl MovingObject { get; set; }
-    public ConsoleControl ColliderHit { get; set; }
+    public ICollidable MovingObject { get; set; }
+    public ICollidable ColliderHit { get; set; }
     public CollisionPrediction Prediction { get; set; }
     public override string ToString() => $"{Prediction.LKGX},{Prediction.LKGY} - {ColliderHit?.GetType().Name}";
 }
@@ -15,7 +15,7 @@ public sealed class CollisionPrediction
 {
     public bool CollisionPredicted { get; set; }
     public RectF ObstacleHitBounds { get; set; }
-    public ConsoleControl ColliderHit { get; set; }
+    public ICollidable ColliderHit { get; set; }
     public float LKGX { get; set; }
     public float LKGY { get; set; }
     public float LKGD { get; set; }
@@ -88,19 +88,44 @@ public static class CollisionDetector
        
 
  
-    public static ConsoleControl? GetLineOfSightObstruction<T>(this RectF from, ConsoleControl to, IList<T> obstacles, CastingMode castingMode = CastingMode.Rough) where T : ConsoleControl
+    public static ICollidable? GetLineOfSightObstruction<T>(this RectF from, ConsoleControl to, IList<T> obstacles, CastingMode castingMode = CastingMode.Rough) where T : ConsoleControl
         => GetLineOfSightObstruction(new ColliderBox(from), to, obstacles, castingMode);
 
-    public static ConsoleControl? GetLineOfSightObstruction<T>(this ConsoleControl from, RectF to, IList<T> obstacles, CastingMode castingMode = CastingMode.Rough) where T : ConsoleControl
-        => GetLineOfSightObstruction(from, new ColliderBox(to), obstacles, castingMode);
+    public static ICollidable? GetLineOfSightObstruction<T>(this ConsoleControl from, RectF to, IList<T> obstacles, CastingMode castingMode = CastingMode.Rough) where T : ConsoleControl
+    {
+        var toCollider = ColliderBoxPool.Instance.Rent();
+        toCollider.Bounds = to;
+        try
+        {
+            return GetLineOfSightObstruction(from, toCollider, obstacles, castingMode);
+        }
+        finally
+        {
+            ColliderBoxPool.Instance.Return(toCollider);
+        }
+    }
 
-    public static ConsoleControl? GetLineOfSightObstruction<T>(this RectF from, RectF to, IList<T> obstacles, CastingMode castingMode = CastingMode.Rough) where T : ConsoleControl
-        => GetLineOfSightObstruction(new ColliderBox(from), new ColliderBox(to), obstacles, castingMode);
+    public static ICollidable? GetLineOfSightObstruction<T>(this RectF from, RectF to, IList<T> obstacles, CastingMode castingMode = CastingMode.Rough) where T : ConsoleControl
+    {
+        var fromCollider = ColliderBoxPool.Instance.Rent();
+       fromCollider.Bounds = from;
+        var toCollider = ColliderBoxPool.Instance.Rent();
+        toCollider.Bounds = to;
+        try
+        {
+            return GetLineOfSightObstruction<T>(fromCollider, toCollider, obstacles, castingMode);
+        }
+        finally
+        {
+            ColliderBoxPool.Instance.Return(fromCollider);
+            ColliderBoxPool.Instance.Return(toCollider);
+        }
+    }
 
     public static CollisionPrediction Predict(
-        ConsoleControl from,
+        ICollidable from,
         Angle angle,
-        ConsoleControl[] colliders,
+        ICollidable[] colliders,
         float visibility,
         CastingMode castingMode,
         CollisionPrediction toReuse = null,
@@ -118,9 +143,9 @@ public static class CollisionDetector
     }
 
     public static CollisionPrediction Predict(
-        ConsoleControl from,
+        ICollidable from,
         Angle angle,
-        ConsoleControl[] colliders,
+        ICollidable[] colliders,
         float visibility,
         CastingMode castingMode,
         int bufferLen,
@@ -130,9 +155,9 @@ public static class CollisionDetector
         => Predict(from, CreateObstaclesFromColliders(colliders, bufferLen), angle, colliders, visibility, castingMode, bufferLen, toReuse, edgesHitOutput);
 
 
-    public static ConsoleControl? GetLineOfSightObstruction<T>(
-        this ConsoleControl from,
-        ConsoleControl to,
+    public static ICollidable? GetLineOfSightObstruction<T>(
+        this ICollidable from,
+        ICollidable to,
         IList<T> obstacleControls,
         CastingMode castingMode = CastingMode.Rough
     ) where T : ConsoleControl
@@ -141,7 +166,7 @@ public static class CollisionDetector
         // Instead of Union(new[] {to}), we do a simpler combination
         //var colliders = CombineObstaclesWithTo(obstacleControls, to);
 
-        var colliders = ArrayPool<ConsoleControl>.Shared.Rent(obstacleControls.Count + 1);
+        var colliders = ArrayPool<ICollidable>.Shared.Rent(obstacleControls.Count + 1);
         try
         {
             for (var i = 0; i < obstacleControls.Count; i++)
@@ -161,15 +186,15 @@ public static class CollisionDetector
         }
         finally
         {
-            ArrayPool<ConsoleControl>.Shared.Return(colliders);
+            ArrayPool<ICollidable>.Shared.Return(colliders);
         }
     }
 
     public static CollisionPrediction Predict(
-        ConsoleControl from,
+        ICollidable from,
         RectF[] obstacles,
         Angle angle,
-        ConsoleControl[] colliders,
+        ICollidable[] colliders,
         float visibility,
         CastingMode mode,
         int bufferLen,
@@ -429,7 +454,7 @@ public static class CollisionDetector
     }
 
     // Reuse the same RectF[] instead of allocating a new one every time
-    private static RectF[] CreateObstaclesFromColliders(ConsoleControl[] colliders, int len)
+    private static RectF[] CreateObstaclesFromColliders(ICollidable[] colliders, int len)
     {
         // If we haven't allocated or if we need more space, make a new buffer
         if (colliderBoundsBuffer == null || colliderBoundsBuffer.Length < len)
@@ -445,3 +470,4 @@ public static class CollisionDetector
         return colliderBoundsBuffer;
     }
 }
+

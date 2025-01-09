@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace klooie.tests;
 
 [TestClass]
-[TestCategory(Categories.ConsoleApp)]
+[TestCategory(Categories.Slow)]
 public class MinimumSizeShieldTests
 {
     public TestContext TestContext { get; set; }

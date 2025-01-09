@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace klooie.tests
 {
     [TestClass]
-    [TestCategory(Categories.MemoryManagement)]
+    [TestCategory(Categories.Slow)]
     public class AllocationTests
     {
         public TestContext TestContext { get; set; }

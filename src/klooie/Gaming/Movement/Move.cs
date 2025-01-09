@@ -111,9 +111,9 @@ public abstract class Movement : Lifetime
         try
         {
             this.parent = parent;
-            await AssertAlive();
+            AssertAlive();
             await Move();
-            await AssertAlive();
+            AssertAlive();
         }
         finally
         {
@@ -121,15 +121,14 @@ public abstract class Movement : Lifetime
         }
     }
 
-    public async Task AssertAlive()
+    public void AssertAlive()
     {
         if (IsExpired)
         {
             throw new ShortCircuitException();
         }
 
-        await OnAlive();
-
+       
         if (IsExpired)
         {
             throw new ShortCircuitException();
@@ -137,48 +136,26 @@ public abstract class Movement : Lifetime
 
         if (parent != null)
         {
-            await parent.AssertAlive();
+            parent.AssertAlive();
         }
     }
 
-    protected virtual Task OnAlive() => Task.CompletedTask;
+  
 
-
-    private async Task PreDelay()
-    {
-        await AssertAlive();
-    }
-
-    private async Task PostDelay()
-    {
-        await AssertAlive();
-    }
 
     protected async Task Delay(double ms)
     {
-        await PreDelay();
         await Game.Current.Delay(ms);
-        await PostDelay();
     }
 
     protected async Task Delay(TimeSpan timeout)
     {
-        await PreDelay();
         await Game.Current.Delay(timeout);
-        await PostDelay();
     }
 
     protected async Task DelayFuzzyAsync(float ms, float maxDeltaPercentage = 0.1f)
     {
-        await PreDelay();
         await Game.Current.DelayFuzzy(ms, maxDeltaPercentage);
-        await PostDelay();
     }
 
-    protected async Task YieldAsync()
-    {
-        await PreDelay();
-        await Task.Yield();
-        await PostDelay();
-    }
 }

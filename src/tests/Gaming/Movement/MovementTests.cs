@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace klooie.tests;
 
 [TestClass]
-[TestCategory(Categories.Gaming)]
+[TestCategory(Categories.Slow)]
 public class MovementTests
 {
     public TestContext TestContext { get; set; }
@@ -146,7 +146,7 @@ public class MovementTests
         }
     });
  
-    private async Task WanderTest(float speed, float duration, bool camera, Func<GameCollider> factory, bool extraTight)
+    public static async Task WanderTest(float speed, float duration, bool camera, Func<GameCollider> factory, bool extraTight)
     {
         Console.WriteLine("Speed: " + speed);
 
@@ -278,7 +278,7 @@ public class MovementTests
             Velocity.Speed = Speed();
             while(ShouldContinue)
             {
-                await YieldAsync();
+                await Task.Yield();
             }
         }
     }

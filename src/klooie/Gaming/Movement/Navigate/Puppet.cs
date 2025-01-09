@@ -35,7 +35,7 @@ public class Puppet : Movement
         {
             var obstacles = buffer.ReadableBuffer.Where(o => o.Bounds != destination).Select(e => e.Bounds.Grow(.1f)).ToList();
             var from = Element.Bounds;
-            var path = await Navigate.FindPathAdjusted(from, destination, obstacles);
+            var path = Navigate.FindPathAdjusted(from, destination, obstacles);
             if (path == null) throw new Exception("No path");
             var speed = Speed();
             var last = Velocity.Group.Now;

@@ -5,7 +5,7 @@ using PowerArgs;
 namespace klooie.tests;
 
 [TestClass]
-[TestCategory(Categories.Gaming)]
+[TestCategory(Categories.Slow)]
 public class CameraTests
 {
     public TestContext TestContext { get; set; }

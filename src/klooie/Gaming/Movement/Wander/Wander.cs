@@ -6,11 +6,11 @@ public class WanderOptions
 {
     public float AnglePrecision { get; set; } = 45;
     public float Visibility { get; set; } = 8;
-    public Func<GameCollider> CuriousityPoint { get; set; }
+    public Func<ICollidable> CuriousityPoint { get; set; }
     public float CloseEnough { get; set; } = Mover.DefaultCloseEnough;
     public TimeSpan ReactionTime { get; set; } = TimeSpan.FromSeconds(.2);
 
-    public Func<Task> OnDelay { get; set; }
+    public Action OnDelay { get; set; }
 
     public static Dictionary<Type, float> DefaultWeights = new Dictionary<Type, float>()
     {
@@ -34,7 +34,7 @@ public class Wander : Movement
     internal ILifetime _IterationLifetime { get; set; }
     internal GameCollider[] _Obstacles { get; set; }
     internal WanderScore _BestScore { get; set; }
-    internal GameCollider _CuriosityPoint { get; set; }
+    internal ICollidable _CuriosityPoint { get; set; }
 
     internal IWanderSense _VisibilitySense { get; set; }
     internal IWanderSense _CloserToTargetSense { get; set; }
@@ -43,6 +43,9 @@ public class Wander : Movement
     public bool IsStuck { get; private set; }
 
     public TimeSpan? LastStuckTime { get; private set; }
+
+    private TaskCompletionSource moveTask;
+
     private Wander(Velocity v, SpeedEval speed, WanderOptions options) : base(v, speed)
     {
         this.Options = options ?? new WanderOptions();
@@ -50,8 +53,9 @@ public class Wander : Movement
 
     public static Movement Create(Velocity v, SpeedEval speed, WanderOptions options = null) => new Wander(v, speed, options);
 
-    protected override async Task Move()
+    protected override Task Move()
     {
+        moveTask = new TaskCompletionSource();
         _VisibilitySense = new VisibilitySense();
         _CloserToTargetSense = new CloserToTargetSense();
         _SimilarToCurrentDirectionSense = new SimilarToCurrentDirectionSense();
@@ -77,74 +81,115 @@ public class Wander : Movement
             }
         };
 
+        MoveLoopBody();
+        return moveTask.Task;
+    }
 
+    private void FinalizeMove()
+    {
+        if (Velocity.Collider.IsExpired == false)
+        {
+            Velocity.Stop();
+        }
+
+        if (_IterationLifetime != null && _IterationLifetime.IsExpired == false)
+        {
+            _IterationLifetime.Dispose();
+        }
+        moveTask.SetResult();
+    }
+    private RectF elementBounds;
+    private Angle lkg;
+    private void MoveLoopBody()
+    {
         try
         {
-            while (this.IsExpired == false)
+            if (this.ShouldStop)
             {
-                _BestScore = null;
-                _CuriosityPoint = Options.CuriousityPoint?.Invoke();
-                Velocity.Stop();
-                _IterationLifetime?.Dispose();
-                _IterationLifetime = Game.Current.CreateChildLifetime();
-
-                var elementBounds = Element.Bounds;
-                var buffer = ObstacleBufferPool.Instance.Rent();
-                try
-                {
-                    Velocity.GetObstacles(buffer);
-                    _Obstacles = buffer.ReadableBuffer.Where(o => o.CalculateDistanceTo(elementBounds) <= Options.Visibility).ToArray();
-                }
-                finally
-                {
-                    ObstacleBufferPool.Instance.Return(buffer);
-                }
-                SetOptimalAngle();
-
-                var cpd = _CuriosityPoint == null ? -1f : _CuriosityPoint.CalculateNormalizedDistanceTo(Element.Bounds);
-                Angle lkg;
-                if (_CuriosityPoint != null && cpd <= Options.CloseEnough)
-                {
-                    var a = Element.Bounds.Center.CalculateAngleTo(_CuriosityPoint.Center());
-                    Element.TryMoveTo(_CuriosityPoint.Left, _CuriosityPoint.Top);
-                    lkg = a;
-                    await YieldForVelocityAndDelay();
-                }
-                else if (_CuriosityPoint != null && HasStraightPath(_CuriosityPoint.Bounds))
-                {
-                    Velocity.Angle = Element.Bounds.CalculateAngleTo(_CuriosityPoint.Bounds);
-                    Velocity.Speed = Speed();
-                    lkg = Velocity.Angle;
-                    await YieldForVelocityAndDelay();
-                }
-                else
-                {
-                    var stuckTime = IsStuck ? Velocity.Group.Now - LastStuckTime.Value : TimeSpan.Zero; ;
-                    var scores = GetMovementAngleCandidates().Select(a => ScoreThisOption(a, stuckTime)).ToList();
-                    WanderScore.NormalizeScores(scores);
-                    scores = scores.OrderByDescending(s => s.FinalScore).ToList();
-                    _BestScore = scores.First();
-                    Velocity.Angle = _BestScore.Angle;
-                    Velocity.Speed = Speed();
-                    lkg = _BestScore.Angle;
-                    await YieldForVelocityAndDelay();
-                }
-                HandleBeingStuck(elementBounds);
-                _LastGoodAngle = lkg;
+                FinalizeMove();
+                return;
             }
+
+            _BestScore = null;
+            _CuriosityPoint = Options.CuriousityPoint?.Invoke();
+            Velocity.Stop();
+            _IterationLifetime?.Dispose();
+            _IterationLifetime = Game.Current.CreateChildLifetime();
+
+            elementBounds = Element.Bounds;
+            var buffer = ObstacleBufferPool.Instance.Rent();
+            try
+            {
+                Velocity.GetObstacles(buffer);
+
+                var count = 0;
+                for(int i = 0; i < buffer.WriteableBuffer.Count; i++)
+                {
+                    var other = buffer.WriteableBuffer[i];
+                    if (other.CalculateDistanceTo(elementBounds) <= Options.Visibility)
+                    {
+                        count++;
+                    }
+                }
+                _Obstacles = new GameCollider[count];
+
+                count = 0;
+                for (int i = 0; i < buffer.WriteableBuffer.Count; i++)
+                {
+                    var other = buffer.WriteableBuffer[i];
+                    if (other.CalculateDistanceTo(elementBounds) <= Options.Visibility)
+                    {
+                        _Obstacles[count++] = other;
+                    }
+                }
+            }
+            finally
+            {
+                ObstacleBufferPool.Instance.Return(buffer);
+            }
+            SetOptimalAngle();
+
+            var cpd = _CuriosityPoint == null ? -1f : _CuriosityPoint.Bounds.CalculateNormalizedDistanceTo(Element.Bounds);
+            if (_CuriosityPoint != null && cpd <= Options.CloseEnough)
+            {
+                var a = Element.Bounds.Center.CalculateAngleTo(_CuriosityPoint.Bounds.Center);
+                Element.TryMoveTo(_CuriosityPoint.Bounds.Left, _CuriosityPoint.Bounds.Top);
+                lkg = a;
+            }
+            else if (_CuriosityPoint != null && HasStraightPath(_CuriosityPoint.Bounds))
+            {
+                Velocity.Angle = Element.Bounds.CalculateAngleTo(_CuriosityPoint.Bounds);
+                Velocity.Speed = Speed();
+                lkg = Velocity.Angle;
+            }
+            else
+            {
+                var stuckTime = IsStuck ? Velocity.Group.Now - LastStuckTime.Value : TimeSpan.Zero; ;
+                var scores = GetMovementAngleCandidates().Select(a => ScoreThisOption(a, stuckTime)).ToList();
+                WanderScore.NormalizeScores(scores);
+                scores = scores.OrderByDescending(s => s.FinalScore).ToList();
+                _BestScore = scores.First();
+                Velocity.Angle = _BestScore.Angle;
+                Velocity.Speed = Speed();
+                lkg = _BestScore.Angle;
+            }
+            YieldForVelocityAndDelay(this, StaticFinishBody);
+            HandleBeingStuck(elementBounds);
+            _LastGoodAngle = lkg;
         }
-        finally
+        catch(Exception ex)
         {
-            if (Velocity.Collider.IsExpired == false)
-            {
-                Velocity.Stop();
-            }
-
-            if (_IterationLifetime != null && _IterationLifetime.IsExpired == false)
-            {
-                _IterationLifetime.Dispose();
-            }
+            moveTask.SetException(ex);
+            return;
         }
+    }
+
+    private static void StaticFinishBody(object staticFinishBody)
+    {
+        var _this = (Wander)staticFinishBody;
+        _this.HandleBeingStuck(_this.elementBounds);
+        _this._LastGoodAngle = _this.lkg;
+        _this.MoveLoopBody();
     }
 
     private void HandleBeingStuck(RectF previousLoction)
@@ -162,22 +207,46 @@ public class Wander : Movement
             LastStuckTime = null;
         }
     }
-    
-    private async Task YieldForVelocityAndDelay()
-    {
-        await YieldAsync();
-        await AssertAlive();
 
-        if (Options.OnDelay != null)
-        {
-            await Options.OnDelay();
-            await AssertAlive();
-        }
-        var delay = Velocity.EvalFrequencySeconds * 1025;
-         await Game.Current.Delay(delay);
-        await AssertAlive();
+    private Action<object> then;
+    private object thenState;
+    private void YieldForVelocityAndDelay(object thenState, Action<object> then)
+    {
+        this.then = then;
+        this.thenState = thenState;
+        ConsoleApp.Current.InvokeNextCycle(YieldPartTwo, this);
     }
 
+    private static void YieldPartTwo(object? state)
+    {
+        var _this = (Wander)state;
+        try
+        {
+            _this.AssertAlive();
+            _this.Options.OnDelay?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _this.moveTask.SetException(ex);
+            return;
+        }
+        var delay = _this.Velocity.EvalFrequencySeconds * 1025;
+        ConsoleApp.Current.InnerLoopAPIs.Delay(delay, _this, YieldPartThree);
+    }
+
+    private static void YieldPartThree(object? state)
+    {
+        var _this = (Wander)state;
+        try
+        {
+            _this.AssertAlive();
+            _this.then?.Invoke(_this.thenState);
+        }catch(Exception ex)
+        {
+            _this.moveTask.SetException(ex);
+            return;
+        }
+    }
 
     private bool HasStraightPath(RectF cp)
     {
@@ -186,7 +255,7 @@ public class Wander : Movement
         try
         {
             var a = Element.Bounds.Center.CalculateAngleTo(cp.Center);
-            var colliders = ArrayPool<GameCollider>.Shared.Rent(_Obstacles.Length + 1);
+            var colliders = ArrayPool<ICollidable>.Shared.Rent(_Obstacles.Length + 1);
             try
             {
                 Array.Copy(_Obstacles, colliders, _Obstacles.Length);
@@ -201,7 +270,7 @@ public class Wander : Movement
             }
             finally
             {
-                ArrayPool<GameCollider>.Shared.Return(colliders);
+                ArrayPool<ICollidable>.Shared.Return(colliders);
             }
 
         }
@@ -244,7 +313,7 @@ public class Wander : Movement
     public void SetOptimalAngle()
     {
         var optimalAngle = _LastGoodAngle.HasValue ? _LastGoodAngle.Value : 0;
-        if (_CuriosityPoint != null && _CuriosityPoint.Touches(Element.Bounds) == false)
+        if (_CuriosityPoint != null && _CuriosityPoint.Bounds.Touches(Element.Bounds) == false)
         {
             optimalAngle = Element.Bounds.CalculateAngleTo(_CuriosityPoint.Bounds);
         }

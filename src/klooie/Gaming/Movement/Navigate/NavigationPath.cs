@@ -27,7 +27,7 @@ public class NavigationPath : Lifetime
 #endif
     }
 
-    public GameCollider FindLocalTarget() => tail.Count > 0 ? new ColliderBox(tail[0]) : null;
+    public ICollidable FindLocalTarget() => tail.Count > 0 ? new ColliderBox(tail[0]) : null;
 
 
     public void PruneTail()

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace klooie.tests;
 
 [TestClass]
-[TestCategory(Categories.ConsoleApp)]
+[TestCategory(Categories.Slow)]
 public partial class FormTests
 {
     public TestContext TestContext { get; set; }
