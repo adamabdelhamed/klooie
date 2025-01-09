@@ -130,7 +130,6 @@ public sealed class ColliderGroup
                 item.Velocity._beforeEvaluate?.Fire();
                 if (velocity.Speed <= 0)
                 {
-                    velocity._onVelocityEnforced?.Fire();
                     continue;
                 }
 
@@ -139,7 +138,6 @@ public sealed class ColliderGroup
                 // the appropriate time to wait between evaluations, based on the object's speed
                 if (now < velocity.MinEvalSeconds)
                 {
-                    velocity._onVelocityEnforced?.Fire();
                     continue;
                 }
                 var initialDt = ((float)now - velocity.lastEvalTime) * SpeedRatio * velocity.SpeedRatio;
