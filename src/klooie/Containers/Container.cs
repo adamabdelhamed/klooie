@@ -83,8 +83,9 @@ public abstract class Container : ConsoleControl
         bool shortCircuit = false;
         root = root ?? this;
 
-        foreach (var child in root.Children)
+        for (int i = 0; i < root.Children.Count; i++)
         {
+            ConsoleControl? child = root.Children[i];
             shortCircuit = visitAction(child);
             if (shortCircuit) return true;
 
@@ -103,10 +104,14 @@ public abstract class Container : ConsoleControl
         if (control.IsVisible == false) return;
         control.Paint();
 
-        foreach (var filter in control.Filters)
+        if (control._filters != null)
         {
-            filter.Control = control;
-            filter.Filter(control.Bitmap);
+            for (int i = 0; i < control.Filters.Count; i++)
+            {
+                var filter = control.Filters[i];
+                filter.Control = control;
+                filter.Filter(control.Bitmap);
+            }
         }
 
         if (control.CompositionMode == CompositionMode.PaintOver)

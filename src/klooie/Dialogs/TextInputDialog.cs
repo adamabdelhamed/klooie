@@ -32,7 +32,7 @@ public sealed class ShowTextInputOptions : ShowMessageOptions
     public override ConsoleControl ContentFactory(ConsolePanel contentContainer)
     {
         ConsolePanel content = new ConsolePanel();
-        content.ParentChanged.SubscribeOnce(() => content.Fill());
+        content.Ready.SubscribeOnce(() => content.Fill());
 
         Label messageLabel = content.Add(new Label() { Text = Message, X = 2, Y = 1 });
         var TextBox = TextBoxFactory?.Invoke() ?? new TextBox() { Foreground = RGB.Black, Background = RGB.White };

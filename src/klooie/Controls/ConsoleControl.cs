@@ -59,12 +59,14 @@ public partial class ConsoleControl : Rectangular
     /// Used to stabilize the z-index sorting for painting
     /// </summary>
     internal int ParentIndex { get; set; }
-    public List<IConsoleControlFilter> Filters { get; private set; } = new List<IConsoleControlFilter>();
+
+    internal List<IConsoleControlFilter> _filters;
+    public List<IConsoleControlFilter> Filters { get => _filters ?? (_filters = new List<IConsoleControlFilter>()); } 
 
     /// <summary>
     /// Controls how controls are painted when multiple controls overlap
     /// </summary>
-    public partial CompositionMode CompositionMode { get; set; }
+    public CompositionMode CompositionMode { get; set; }
 
     /// <summary>
     /// Gets or sets the id of the control
@@ -104,7 +106,7 @@ public partial class ConsoleControl : Rectangular
     /// Gets a reference to this control's parent in the visual tree.  It will be null if this control is not in the visual tree 
     /// and also if this control is the root of the visual tree.
     /// </summary>
-    public partial Container Parent { get; internal set; }
+    public Container Parent { get; internal set; }
 
     /// <summary>
     /// Gets or sets the background color
@@ -143,7 +145,7 @@ public partial class ConsoleControl : Rectangular
     /// Gets or sets whether or not this control can accept focus via the tab key. By default this is set to false. This
     /// is useful if you to control how focus is managed for larger collections.
     /// </summary>
-    public partial bool TabSkip { get; set; }
+    public bool TabSkip { get; set; }
 
     /// <summary>
     /// Gets whether or not this control currently has focus
@@ -260,11 +262,21 @@ public partial class ConsoleControl : Rectangular
         FocusContrastColor = DefaultColors.FocusContrastColor;
         CompositionMode = CompositionMode.PaintOver;
         
-        SubscribeToAnyPropertyChange(this, RequestPaint, this);
+        SubscribeToAnyPropertyChange(this, OnAnyPropertyChangedPrivate, this);
         BoundsChanged.Subscribe(this, ResizeBitmapOnBoundsChanged, this);
         CanFocusChanged.Subscribe(this, HandleCanFocusChanged, this);
         OnDisposed(this, ReturnEvents);
     }
+
+    private static void OnAnyPropertyChangedPrivate(object me)
+    {
+        var _this = me as ConsoleControl;
+        ConsoleApp.Current?.RequestPaint();
+        _this.OnAnyPropertyChanged();
+    }
+     
+
+    protected virtual void OnAnyPropertyChanged() { }
 
     private static void HandleCanFocusChanged(object me)
     {
@@ -272,10 +284,7 @@ public partial class ConsoleControl : Rectangular
         if (_this.HasFocus && _this.CanFocus == false && _this.ShouldContinue) ConsoleApp.Current?.MoveFocus();
     }
 
-    private static void RequestPaint(object me)
-    {
-        ConsoleApp.Current?.RequestPaint();
-    }
+  
 
     private static void ReturnEvents(object me)
     {
