@@ -69,7 +69,7 @@ public static class ILifetimeManagerEx
 /// <summary>
 /// An implementation of ILifetimeManager
 /// </summary>
-internal sealed class LifetimeManager : ILifetimeManager
+public sealed class LifetimeManager : ILifetimeManager
 {
     private List<Subscription>? toNotify;
     private List<Subscription>? toDisposeOf;
@@ -99,7 +99,7 @@ internal sealed class LifetimeManager : ILifetimeManager
         toDisposeOf = null;
     }
 
-    internal void Finish()
+    public void Finish()
     {
         if (hasFinished) return;
         hasFinished = true;
@@ -203,7 +203,7 @@ public static class LifetimeManagerPool
 #endif
     private static readonly ConcurrentBag<LifetimeManager> _pool = new ConcurrentBag<LifetimeManager>();
 
-    internal static LifetimeManager Rent()
+    public static LifetimeManager Rent()
     {
 #if DEBUG
         Rented++;
@@ -221,7 +221,7 @@ public static class LifetimeManagerPool
         return new LifetimeManager();
     }
 
-    internal static void Return(LifetimeManager ltm)
+    public static void Return(LifetimeManager ltm)
     {
 #if DEBUG
         Returned++;
