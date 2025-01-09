@@ -80,7 +80,8 @@ public class EventLoop : Lifetime
 
     private class SynchronizedEvent
     {
-        public Func<Task> AsyncWork { get;  set; }
+        public object WorkState { get; set; }
+        public Func<object,Task> AsyncWork { get;  set; }
         public SendOrPostCallback Callback { get; set; }
         public object CallbackState { get; set; }
         public Task Task { get; private set; }
@@ -95,11 +96,13 @@ public class EventLoop : Lifetime
             AsyncWork = null;
             Callback = null;
             Task = null;
+            WorkState = null;
+            CallbackState = null;
         }
 
         public void Run()
         {
-            Task = AsyncWork?.Invoke();
+            Task = AsyncWork?.Invoke(WorkState);
             Callback?.Invoke(CallbackState);
         }
     }
@@ -426,7 +429,7 @@ public class EventLoop : Lifetime
         Invoke(work);
     });
 
-    internal void InvokeNextCycle(SendOrPostCallback callback, object state)
+    public void InvokeNextCycle(SendOrPostCallback callback, object state)
     {
         if (IsRunning == false && IsDrainingOrDrained)
         {
@@ -460,7 +463,33 @@ public class EventLoop : Lifetime
         return tcs.Task;
     }
 
-    public void Invoke(Func<Task> work)
+    /*
+     * TODO: This Delay implementation uses more memory than Task.Delay so I've commented it out.
+     * However, it might be more precise than Task.Delay. Future testing should be done.
+    public Task Delay(int ms)
+    {
+        var tcs = new TaskCompletionSource();
+        InnerLoopAPIs.Delay(ms, tcs, StaticSetResult);
+        return tcs.Task;
+    }
+    private static void StaticSetResult(object obj) => ((TaskCompletionSource)obj).SetResult();
+    */
+
+    public void Invoke(Func<Task> work) => Invoke(work, StaticFuncTaskWork);
+    
+
+    private static Task StaticFuncTaskWork(object arg) => (arg as Func<Task>)();
+    
+    public void Invoke(object o, Action a) => Invoke(o, StaticActionTaskWork);
+    
+
+    private static Task StaticActionTaskWork(object arg)
+    {
+        (arg as Action)();
+        return Task.CompletedTask;
+    }
+
+    public void Invoke(object workState, Func<object,Task> work)
     {
         if (IsRunning == false && IsDrainingOrDrained)
         {
@@ -470,6 +499,7 @@ public class EventLoop : Lifetime
         if (Thread.CurrentThread == Thread)
         {
             var workItem = pool.Get();
+            workItem.WorkState = workState;
             workItem.AsyncWork = work;
             workItem.Run();
             if (workItem.IsFinished == false)
@@ -503,6 +533,7 @@ public class EventLoop : Lifetime
             lock (workQueue)
             {
                 var workItem = pool.Get();
+                workItem.WorkState = workState; 
                 workItem.AsyncWork = work;
                 workQueue.Add(workItem);
             }
