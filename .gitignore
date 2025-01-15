@@ -36,5 +36,6 @@ DoxygenOutput*/
 .vs/*
 src/.vs/*
 FYI/*
+CollisionDetectionOutput/*
 TestOutputGifs/*
 .vs

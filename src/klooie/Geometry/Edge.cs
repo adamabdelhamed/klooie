@@ -27,6 +27,21 @@ public readonly struct Edge
         Y2 = y2;
     }
 
+    public float CalculateDistanceTo(float x, float y)
+    {
+        // Project the point (x, y) onto the edge and calculate the perpendicular distance
+        float dx = X2 - X1;
+        float dy = Y2 - Y1;
+
+        float t = ((x - X1) * dx + (y - Y1) * dy) / (dx * dx + dy * dy);
+        t = Math.Clamp(t, 0, 1); // Clamp to edge segment
+
+        float closestX = X1 + t * dx;
+        float closestY = Y1 + t * dy;
+
+        return LocF.CalculateDistanceTo(x, y, closestX, closestY);
+    }
+
     public bool Contains(LocF point)
     {
         if (point == From || point == To) return true;

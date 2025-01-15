@@ -19,7 +19,7 @@ public sealed class UITestManager
     private string testId;
     public double SecondsBetweenKeyframes { get; set; } = 1;
 
-    private string GitRootPath
+    public static string GitRootPath
     {
         get
         {

@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+﻿using System.Collections;
 
 namespace klooie.Gaming;
 public struct Collision
@@ -11,7 +11,7 @@ public struct Collision
     public override string ToString() => $"{Prediction.LKGX},{Prediction.LKGY} - {ColliderHit?.GetType().Name}";
 }
 
-public sealed class CollisionPrediction
+public sealed class CollisionPrediction : Recyclable
 {
     public bool CollisionPredicted { get; set; }
     public RectF ObstacleHitBounds { get; set; }
@@ -26,13 +26,13 @@ public sealed class CollisionPrediction
 
     public LocF Intersection => new LocF(IntersectionX, IntersectionY);
 
-    internal CollisionPrediction Clear()
+
+    protected override void ProtectedInit()
     {
         ColliderHit = null;
         ObstacleHitBounds = default;
         Edge = default;
         CollisionPredicted = false;
-        return this;
     }
 }
 
@@ -45,165 +45,39 @@ public enum CastingMode
 
 public static class CollisionDetector
 {
-    public const float VerySmallNumber = .00001f;
+    public const float VerySmallNumber = 1e-5f;
 
-    // We keep one buffer per thread to avoid repeated allocations.
-    // Note: This is not thread-safe if multiple threads call these methods simultaneously.
-    [ThreadStatic]
     private static Edge[] rayBuffer = null;
+    private static Edge[] singleObstacleEdgeBuffer = new Edge[4];
+    public static bool HasLineOfSight<T>(this ICollidable from, ICollidable to, IList<T> obstacles) where T : ICollidable => GetLineOfSightObstruction(from, to, obstacles) == null;
 
-    // Similarly, reuse a RectF[] for obstacle bounds so we don't keep allocating in CreateObstaclesFromColliders.
-    [ThreadStatic]
-    private static RectF[] colliderBoundsBuffer = null;
-
-    /// <summary>
-    /// Checks line of sight from 'from' to 'to' using the obstacles from 'from.GetObstacles(buffer)'.
-    /// </summary>
-    public static bool HasLineOfSight(this Velocity from, ConsoleControl to)
-    {
-        var buffer = ObstacleBufferPool.Instance.Rent();
-        try
-        {
-            from.GetObstacles(buffer);
-            return HasLineOfSight(from.Collider, to, buffer.WriteableBuffer);
-        }
-        finally
-        {
-            ObstacleBufferPool.Instance.Return(buffer);
-        }
-    }
-
-    public static bool HasLineOfSight<T>(this ConsoleControl from, ConsoleControl to, IList<T> obstacles) where T : ConsoleControl
-        => GetLineOfSightObstruction(from, to, obstacles) == null;
-
-    public static bool HasLineOfSight<T>(this ConsoleControl from, RectF to, IList<T> obstacles) where T : ConsoleControl
-        => GetLineOfSightObstruction(from, to, obstacles) == null;
-
-    public static bool HasLineOfSight<T>(this RectF from, ConsoleControl to, IList<T> obstacles) where T : ConsoleControl
-        => GetLineOfSightObstruction(from, to, obstacles) == null;
-
-    public static bool HasLineOfSight<T>(this RectF from, RectF to, IList<T> obstacles) where T : ConsoleControl
-        => GetLineOfSightObstruction(from, to, obstacles) == null;
-
-       
-
- 
-    public static ICollidable? GetLineOfSightObstruction<T>(this RectF from, ConsoleControl to, IList<T> obstacles, CastingMode castingMode = CastingMode.Rough) where T : ConsoleControl
-        => GetLineOfSightObstruction(new ColliderBox(from), to, obstacles, castingMode);
-
-    public static ICollidable? GetLineOfSightObstruction<T>(this ConsoleControl from, RectF to, IList<T> obstacles, CastingMode castingMode = CastingMode.Rough) where T : ConsoleControl
-    {
-        var toCollider = ColliderBoxPool.Instance.Rent();
-        toCollider.Bounds = to;
-        try
-        {
-            return GetLineOfSightObstruction(from, toCollider, obstacles, castingMode);
-        }
-        finally
-        {
-            ColliderBoxPool.Instance.Return(toCollider);
-        }
-    }
-
-    public static ICollidable? GetLineOfSightObstruction<T>(this RectF from, RectF to, IList<T> obstacles, CastingMode castingMode = CastingMode.Rough) where T : ConsoleControl
-    {
-        var fromCollider = ColliderBoxPool.Instance.Rent();
-       fromCollider.Bounds = from;
-        var toCollider = ColliderBoxPool.Instance.Rent();
-        toCollider.Bounds = to;
-        try
-        {
-            return GetLineOfSightObstruction<T>(fromCollider, toCollider, obstacles, castingMode);
-        }
-        finally
-        {
-            ColliderBoxPool.Instance.Return(fromCollider);
-            ColliderBoxPool.Instance.Return(toCollider);
-        }
-    }
-
-    public static CollisionPrediction Predict(
-        ICollidable from,
-        Angle angle,
-        ICollidable[] colliders,
-        float visibility,
-        CastingMode castingMode,
-        CollisionPrediction toReuse = null,
-        List<Edge> edgesHitOutput = null
-    )
-    {
-        int bufferLen = 0;
-        for(var i = 0; i < colliders.Length; i++)
-        {
-            if (colliders[i] == null) break;
-            bufferLen++;
-        }
-
-        return Predict(from, angle, colliders, visibility, castingMode, bufferLen, toReuse, edgesHitOutput);
-    }
-
-    public static CollisionPrediction Predict(
-        ICollidable from,
-        Angle angle,
-        ICollidable[] colliders,
-        float visibility,
-        CastingMode castingMode,
-        int bufferLen,
-        CollisionPrediction toReuse = null,
-        List<Edge> edgesHitOutput = null
-    )
-        => Predict(from, CreateObstaclesFromColliders(colliders, bufferLen), angle, colliders, visibility, castingMode, bufferLen, toReuse, edgesHitOutput);
-
-
-    public static ICollidable? GetLineOfSightObstruction<T>(
-        this ICollidable from,
-        ICollidable to,
-        IList<T> obstacleControls,
-        CastingMode castingMode = CastingMode.Rough
-    ) where T : ConsoleControl
+    public static ICollidable? GetLineOfSightObstruction<T>( this ICollidable from, ICollidable to, IList<T> obstacleControls, CastingMode castingMode = CastingMode.Rough) where T : ICollidable
     {
         var massBounds = from.Bounds;
-        // Instead of Union(new[] {to}), we do a simpler combination
-        //var colliders = CombineObstaclesWithTo(obstacleControls, to);
-
-        var colliders = ArrayPool<ICollidable>.Shared.Rent(obstacleControls.Count + 1);
+        var colliders = ArrayPlusOnePool<T>.Instance.Rent();
+        var prediction = CollisionPredictionPool.Instance.Rent();
+        colliders.Bind(obstacleControls, to);
         try
         {
-            for (var i = 0; i < obstacleControls.Count; i++)
-            {
-                colliders[i] = obstacleControls[i];
-            }
-            colliders[obstacleControls.Count - 1] = to;
-
-
             var angle = massBounds.CalculateAngleTo(to.Bounds);
             var distance = massBounds.CalculateDistanceTo(to.Bounds);
             var visibility = 3 * distance;
-            var prediction = Predict(from, angle, colliders, visibility, castingMode);
+            Predict(from, angle, colliders, visibility, castingMode, colliders.Count, prediction);
             return prediction.CollisionPredicted == false ? null
                 : prediction.ColliderHit == to ? null
                 : prediction.ColliderHit;
         }
         finally
         {
-            ArrayPool<ICollidable>.Shared.Return(colliders);
+            ArrayPlusOnePool<T>.Instance.Return(colliders);
+            CollisionPredictionPool.Instance.Return(prediction);
         }
     }
-
-    public static CollisionPrediction Predict(
-        ICollidable from,
-        RectF[] obstacles,
-        Angle angle,
-        ICollidable[] colliders,
-        float visibility,
-        CastingMode mode,
-        int bufferLen,
-        CollisionPrediction toReuse,
-        List<Edge> edgesHitOutput = null
-    )
+ 
+    public static CollisionPrediction Predict<T>(ICollidable from,Angle angle,IList<T> colliders, float visibility,CastingMode mode,int bufferLen,CollisionPrediction prediction,List<Edge> edgesHitOutput = null) where T : ICollidable
     {
         var movingObject = from.Bounds;
-        var prediction = toReuse?.Clear() ?? new CollisionPrediction();
+        prediction.Initialize();
         prediction.LKGX = movingObject.Left;
         prediction.LKGY = movingObject.Top;
         prediction.Visibility = visibility;
@@ -223,51 +97,33 @@ public static class CollisionDetector
         Edge closestEdge = default;
         float closestIntersectionX = 0;
         float closestIntersectionY = 0;
-        var len = bufferLen;
-
-        for (var i = 0; i < len; i++)
+   
+        for (var i = 0; i < bufferLen; i++)
         {
-            ref var obstacle = ref obstacles[i];
+            var collider = colliders[i];
+            ref var obstacle = ref collider;
 
-            // skip if the same collider
-            if (from == colliders[i]) continue;
-            if (colliders[i].ShouldStop) continue;
+            if (obstacle is ILifetimeManager ltm && ltm.ShouldStop) continue;
+            if (ReferenceEquals(from,collider) || !from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
+            if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obstacle.Bounds) > visibility + VerySmallNumber) continue;
 
-            if (from is GameCollider && colliders[i] is GameCollider)
+            singleObstacleEdgeBuffer[0] = obstacle.Bounds.TopEdge;
+            singleObstacleEdgeBuffer[1] = obstacle.Bounds.BottomEdge;
+            singleObstacleEdgeBuffer[2] = obstacle.Bounds.LeftEdge;
+            singleObstacleEdgeBuffer[3] = obstacle.Bounds.RightEdge;
+
+            CustomSorter.Sort(movingObject, singleObstacleEdgeBuffer);
+           
+            for(var j = 0; j < singleObstacleEdgeBuffer.Length; j++)
             {
-                var cc = (GameCollider)from;
-                var ci = (GameCollider)colliders[i];
-                if (!cc.CanCollideWith(ci) || !ci.CanCollideWith(cc)) continue;
+                var edge = singleObstacleEdgeBuffer[j];
+                ProcessEdge(i, edge, rayCount, edgesHitOutput, visibility, ref closestIntersectionDistance, ref closestIntersectingObstacleIndex, ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
             }
-
-            if (visibility < float.MaxValue &&
-                RectF.CalculateDistanceTo(movingObject, obstacle) > visibility + VerySmallNumber)
-                continue;
-
-            ProcessEdge(
-                i, obstacle.TopEdge, rayCount, edgesHitOutput, visibility,
-                ref closestIntersectionDistance, ref closestIntersectingObstacleIndex,
-                ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
-
-            ProcessEdge(
-                i, obstacle.BottomEdge, rayCount, edgesHitOutput, visibility,
-                ref closestIntersectionDistance, ref closestIntersectingObstacleIndex,
-                ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
-
-            ProcessEdge(
-                i, obstacle.LeftEdge, rayCount, edgesHitOutput, visibility,
-                ref closestIntersectionDistance, ref closestIntersectingObstacleIndex,
-                ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
-
-            ProcessEdge(
-                i, obstacle.RightEdge, rayCount, edgesHitOutput, visibility,
-                ref closestIntersectionDistance, ref closestIntersectingObstacleIndex,
-                ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
         }
 
         if (closestIntersectingObstacleIndex >= 0)
         {
-            prediction.ObstacleHitBounds = obstacles[closestIntersectingObstacleIndex];
+            prediction.ObstacleHitBounds = colliders[closestIntersectingObstacleIndex].Bounds;
             prediction.ColliderHit = colliders == null ? null : colliders[closestIntersectingObstacleIndex];
             prediction.LKGD = closestIntersectionDistance;
             prediction.LKGX = closestIntersectionX;
@@ -283,13 +139,7 @@ public static class CollisionDetector
 
     private static int CreateRays(Angle angle, float visibility, CastingMode mode, RectF movingObject)
     {
-        // Ensure our shared (thread-local) buffer is allocated once.
-        if (rayBuffer == null)
-        {
-            // Enough for "Precise" mode with a bit of headroom
-            rayBuffer = new Edge[20000];
-        }
-
+        rayBuffer = rayBuffer ?? new Edge[20000];
         var rayCount = 0;
 
         if (mode == CastingMode.Precise)
@@ -368,9 +218,9 @@ public static class CollisionDetector
                 edgesHitOutput?.Add(ray);
                 var d = LocF.CalculateDistanceTo(ray.X1, ray.Y1, ix, iy) - VerySmallNumber;
 
-                if (d < closestIntersectionDistance && d <= visibility)
+                if (d > VerySmallNumber && d < closestIntersectionDistance && d <= visibility)
                 {
-                    closestIntersectionDistance = d;
+                    closestIntersectionDistance = d - VerySmallNumber;
                     closestIntersectingObstacleIndex = i;
                     closestEdge = edge;
                     closestIntersectionX = ix;
@@ -380,7 +230,6 @@ public static class CollisionDetector
         }
     }
 
-    // Updated intersection point method from GPT-4 (already fairly optimized)
     public static bool TryFindIntersectionPoint(in Edge ray, in Edge stationaryEdge, out float x, out float y)
     {
         var x1 = ray.X1;
@@ -436,12 +285,7 @@ public static class CollisionDetector
         x = x1 + t * (x2 - x1);
         y = y1 + t * (y2 - y1);
 
-        // Helper for "between" checks with a small epsilon
-        bool between(float a, float b, float c, float eps = 1e-5f)
-            => (a - eps <= b && b <= c + eps) || (c - eps <= b && b <= a + eps);
-
-        if (between(x1, x, x2) && between(y1, y, y2) &&
-            between(x3, x, x4) && between(y3, y, y4))
+        if (Between(x1, x, x2) && Between(y1, y, y2) && Between(x3, x, x4) && Between(y3, y, y4))
         {
             return true;
         }
@@ -453,21 +297,137 @@ public static class CollisionDetector
         }
     }
 
-    // Reuse the same RectF[] instead of allocating a new one every time
-    private static RectF[] CreateObstaclesFromColliders(ICollidable[] colliders, int len)
+    private static bool Between(float a, float b, float c, float eps = 1e-5f) => (a - eps <= b && b <= c + eps) || (c - eps <= b && b <= a + eps);
+
+}
+
+public class ArrayPlusOnePool<T> : RecycleablePool<ArrayPlusOne<T>> where T : ICollidable
+{
+    private static ArrayPlusOnePool<T> instance;
+    public static ArrayPlusOnePool<T> Instance => instance ??= new ArrayPlusOnePool<T>();
+
+    public override ArrayPlusOne<T> Factory() => new ArrayPlusOne<T>();
+}
+
+public class ArrayPlusOne<T> : Recyclable, IList<ICollidable> where T : ICollidable
+{
+    public int Length => hasExtra ? Array.Count + 1 : Array.Count;
+    public int Count => Length;
+    public bool IsReadOnly => true;
+
+
+    private bool hasExtra;
+    private IList<T> Array;
+    private ICollidable ExtraElement;
+
+    // indexer for get
+    public ICollidable this[int index]
     {
-        // If we haven't allocated or if we need more space, make a new buffer
-        if (colliderBoundsBuffer == null || colliderBoundsBuffer.Length < len)
+        get
         {
-            colliderBoundsBuffer = new RectF[len];
+            if (index == Array.Count)
+            {
+                return ExtraElement;
+            }
+            return Array[index];
         }
-
-        for (int i = 0; i < len; i++)
+        set
         {
-            colliderBoundsBuffer[i] = colliders[i].Bounds;
+            throw new NotSupportedException();
         }
+    }
 
-        return colliderBoundsBuffer;
+    protected override void ProtectedInit()
+    {
+        base.ProtectedInit();
+        Array = null;
+        ExtraElement = default;
+        hasExtra = false;
+    }
+
+    public void Bind(IList<T> array)
+    {
+        Array = array;
+        hasExtra = false;
+    }
+
+    public void Bind(IList<T> array, ICollidable extraElement)
+    {
+        Array = array;
+        ExtraElement = extraElement;
+        hasExtra = true;
+    }
+
+    public int IndexOf(ICollidable item)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Insert(int index, ICollidable item)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void RemoveAt(int index)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Add(ICollidable item)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Clear()
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool Contains(ICollidable item)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void CopyTo(ICollidable[] array, int arrayIndex)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool Remove(ICollidable item)
+    {
+        throw new NotImplementedException();
+    }
+
+    public IEnumerator<ICollidable> GetEnumerator()
+    {
+        throw new NotImplementedException();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        throw new NotImplementedException();
     }
 }
 
+public static class CustomSorter
+{
+    private static float centerX;
+    private static float centerY;
+
+    public static void Sort(RectF movingObjectBounds, Edge[] obstacleEdgeBuffer)
+    {
+        // Set static variables to avoid capturing or passing them
+        centerX = movingObjectBounds.Center.Left;
+        centerY = movingObjectBounds.Center.Top;
+
+        // Use a static comparison method
+        Array.Sort(obstacleEdgeBuffer, CompareEdges);
+    }
+
+    private static int CompareEdges(Edge edge1, Edge edge2)
+    {
+        var distance1 = edge1.CalculateDistanceTo(centerX, centerY);
+        var distance2 = edge2.CalculateDistanceTo(centerX, centerY);
+        return distance1.CompareTo(distance2);
+    }
+}

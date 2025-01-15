@@ -95,7 +95,7 @@ public class GameCollider : ConsoleControl
             for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
             {
                 var other = buffer.WriteableBuffer[i];
-                if (other.CalculateDistanceTo(proposedBounds) == 0)
+                if (other.CalculateDistanceTo(proposedBounds) < CollisionDetector.VerySmallNumber)
                 {
                     causesOverlap = true;
                     break;

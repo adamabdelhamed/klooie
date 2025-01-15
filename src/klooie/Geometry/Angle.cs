@@ -66,6 +66,11 @@ public readonly struct Angle
         }
     }
 
+    public static Angle FromRadians(float radians) => radians * (180 / MathF.PI);
+
+    public float ToRadians() => Value * (MathF.PI / 180f);
+    
+
     /// <summary>
     /// prints the value in degrees
     /// </summary>

@@ -8,15 +8,10 @@ using PowerArgs;
 public class Program
 {
     static int count = 0;
-    public static async Task Main(string[] args)
+    public static void Main(string[] args)
     {
- 
-       var game = new Game();
-        game.Invoke(async () =>
-        {
-            await WanderTest(20, 500000, false, null, false);
-        });
-        game.Run();
+        Thread.Sleep(3000);
+        new PhysicsSample().Run();
     }
 
     public static async Task WanderTest(float speed, float duration, bool camera, Func<GameCollider> factory, bool extraTight)
@@ -172,6 +167,90 @@ public class Program
     }
 }
 
+public class PhysicsSample : Game
+{
+
+    private Random random = new Random();
+    protected override async Task Startup()
+    {
+        await base.Startup();
+
+        AddWalls();
+        for (var i = 0; i < 1000; i++)
+        {
+            AddRandomWhiteSquare();
+        }
+
+        Invoke(async()=>
+        {
+            var c = GamePanel.Controls.WhereAs<GameCollider>().Skip(10).First();
+            c.Filters.Add(new BackgroundColorFilter(RGB.Red));
+            while (true)
+            {
+                await Delay(100);
+                c.Velocity.SpeedRatio = Math.Min(3, c.Velocity.SpeedRatio + .1f);
+            }
+        });
+    }
+
+    private void AddWalls()
+    {
+        var leftWall = GamePanel.Add(new GameCollider() { Background = RGB.Orange, Bounds = new RectF(GamePanel.Left, GamePanel.Top, 2, Height) });
+        var rightWall = GamePanel.Add(new GameCollider() { Background = RGB.Orange, Bounds = new RectF(GamePanel.Right() - 2, GamePanel.Top, 2, Height) });
+        var topWall = GamePanel.Add(new GameCollider() { Background = RGB.Orange, Bounds = new RectF(GamePanel.Left, GamePanel.Top, Width, 1) });
+        var bottomWall = GamePanel.Add(new GameCollider() { Background = RGB.Orange, Bounds = new RectF(GamePanel.Left, GamePanel.Bottom() - 1, Width, 1) });
+    }
+
+    private void AddRandomWhiteSquare()
+    {
+        var randomLocation = FindRandomEmptyLocation(2, 1);
+        if (randomLocation.HasValue)
+        {
+            var whiteSquare = GamePanel.Add(new GameCollider()
+            {
+                Background = RGB.White,
+                Bounds = new RectF(randomLocation.Value.Left, randomLocation.Value.Top, 2, 1)
+            });
+            whiteSquare.Velocity.Speed = 30f;
+            whiteSquare.Velocity.Angle = random.Next(0, 360);
+            whiteSquare.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
+            //new MotionTracker(whiteSquare.Velocity);
+        }
+    }
+
+
+ 
+
+    private LocF? FindRandomEmptyLocation(float w, float h)
+    {
+        var obstacles = GamePanel.Controls.ToList();
+        var randomLocInArea = new LocF(random.Next((int)GameBounds.Left + 1, (int)GameBounds.Right - ((int)w + 1)),
+            random.Next((int)GameBounds.Top + 1, (int)GameBounds.Bottom - ((int)h + 1)));
+        foreach (var startingPoint in new LocF[] { randomLocInArea, GameBounds.Center })
+        {
+            foreach (var spacing in new float[] { 8, 3, 1, .5f })
+            {
+                foreach (var angle in Angle.Enumerate360Angles(0))
+                {
+                    for (var d = 1f; d < GameBounds.Hypotenous; d += spacing)
+                    {
+                        var testLoc = startingPoint.RadialOffset(angle, d).Offset(-w / 2f, -h / 2f);
+                        var testArea = new RectF(testLoc.Left, testLoc.Top, w, h);
+                        if (Game.Current.GameBounds.Contains(testArea) == false) continue;
+                        if (obstacles.Where(o => o.Bounds.CalculateNormalizedDistanceTo(testArea) < spacing).None())
+                        {
+                            return testArea.TopLeft;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+}
+
+ 
+
 public class TestEngine : AudioPlaybackEngine
 {
     protected override Dictionary<string, Func<Stream>> LoadSounds() => ResourceFileSoundLoader.LoadSounds<Sounds>();
@@ -243,5 +322,35 @@ public class PoolBenchmark
     {
         o = concurrentPool.Rent();
         concurrentPool.Return(o);
+    }
+}
+
+public class MotionTracker
+{
+    private RectF lastKnownBounds;
+    private int sameBoundsCount;
+    private Velocity v;
+    public MotionTracker(Velocity v)
+    {
+        this.v = v;
+        lastKnownBounds = v.Collider.Bounds;
+        Game.Current.Invoke(async () =>
+        {
+            while(v.ShouldContinue)
+            {
+                Track();
+                await Game.Current.Delay(100);
+            }
+        });
+    }
+
+    private void Track()
+    {
+        sameBoundsCount = v.Collider.Bounds.Equals(lastKnownBounds) ? sameBoundsCount + 1 : 0;
+        lastKnownBounds = v.Collider.Bounds;
+
+       
+        v.Collider.Background = sameBoundsCount > 1 ? RGB.Red : RGB.White;
+        v.Collider.Tag = sameBoundsCount > 1 ? "Stuck" : null;
     }
 }

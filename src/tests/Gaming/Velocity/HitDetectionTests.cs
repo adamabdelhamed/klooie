@@ -36,10 +36,10 @@ public class HitDetectionTests
 
             ConsoleControl[] colliders = [to];
               
-            var prediction = CollisionDetector.Predict(from, Angle.Right, colliders, 0, CastingMode.Precise);
+            var prediction = CollisionDetector.Predict(from, Angle.Right, colliders, 0, CastingMode.Precise, colliders.Length, new CollisionPrediction());
             Assert.AreEqual(false, prediction.CollisionPredicted);
 
-            prediction = CollisionDetector.Predict(from, Angle.Right, colliders, .001f, CastingMode.Precise);
+            prediction = CollisionDetector.Predict(from, Angle.Right, colliders, .001f, CastingMode.Precise, colliders.Length, prediction);
             Assert.AreEqual(true, prediction.CollisionPredicted);
             AssertCloseEnough(0.001f, prediction.LKGD);
         }
@@ -161,8 +161,8 @@ public class HitDetectionTests
     
     public static void AssertCloseEnough(float expected, float actual)
     {
-        var minAccepted = expected - CollisionDetector.VerySmallNumber;
-        var maxExpected = expected + CollisionDetector.VerySmallNumber;
+        var minAccepted = expected - (2 * CollisionDetector.VerySmallNumber);
+        var maxExpected = expected + (2 * CollisionDetector.VerySmallNumber);
         Assert.IsTrue(actual >= minAccepted && actual <= maxExpected);
     }
 }

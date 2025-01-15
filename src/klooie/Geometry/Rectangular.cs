@@ -206,7 +206,7 @@ public static class RectangularEx
         rect.CalculateAngleTo(collider.Left, collider.Top, collider.Bounds.Width, collider.Bounds.Height);
 }
 
-public interface ICollidable : ILifetimeManager
+public interface ICollidable
 {
     RectF Bounds { get; }
     bool CanCollideWith(ICollidable other);

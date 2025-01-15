@@ -4,9 +4,9 @@ public sealed class Velocity : Recyclable
 {
     public enum CollisionBehaviorMode
     {
+        DoNothing,
         Bounce,
-        Stop,
-        DoNothing
+        Stop
     }
 
     internal Angle angle;

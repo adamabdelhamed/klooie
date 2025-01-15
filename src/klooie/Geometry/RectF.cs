@@ -2,7 +2,7 @@
 
 namespace klooie;
 [ArgReviverType]
-public readonly struct RectF : IEquatable<RectF>
+public readonly struct RectF : IEquatable<RectF>, ICollidable
 {
     public readonly float Left;
     public readonly float Top;
@@ -26,6 +26,9 @@ public readonly struct RectF : IEquatable<RectF>
     public Edge BottomEdge => new Edge(Left, Bottom, Right, Bottom);
 
     public float Hypotenous => (float)Math.Sqrt(Width * Width + Height * Height);
+
+    public RectF Bounds => this;
+    public bool CanCollideWith(ICollidable other) => true;
 
     public RectF(float x, float y, float w, float h)
     {

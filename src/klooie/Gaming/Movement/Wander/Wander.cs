@@ -256,12 +256,13 @@ public class Wander : Movement
         {
             var a = Element.Bounds.Center.CalculateAngleTo(cp.Center);
             var colliders = ArrayPool<ICollidable>.Shared.Rent(_Obstacles.Length + 1);
+            var prediction = CollisionPredictionPool.Instance.Rent();
             try
             {
                 Array.Copy(_Obstacles, colliders, _Obstacles.Length);
                 colliders[_Obstacles.Length] = cpBox;
                 var visibility = Element.Bounds.CalculateDistanceTo(cp) * 2f;
-                var prediction = CollisionDetector.Predict(Element, a, colliders, visibility, CastingMode.Rough, bufferLen: _Obstacles.Length + 1);
+                CollisionDetector.Predict(Element, a, colliders, visibility, CastingMode.Rough, bufferLen: _Obstacles.Length + 1, prediction);
 
                 var perfect = prediction.ColliderHit == cpBox;
                 if (perfect) return true;
@@ -271,6 +272,7 @@ public class Wander : Movement
             finally
             {
                 ArrayPool<ICollidable>.Shared.Return(colliders);
+                CollisionPredictionPool.Instance.Return(prediction);
             }
 
         }
