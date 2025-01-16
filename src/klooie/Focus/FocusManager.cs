@@ -32,10 +32,10 @@ internal partial class FocusManager : IObservableObject
     {
         private class HandlerContext
         {
-            internal Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> NakedHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>>();
-            internal Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> AltHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>>();
-            internal Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> ShiftHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>>();
-            internal Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> ControlHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>>();
+            internal Dictionary<ConsoleKey, Stack<KeyboardAction>> NakedHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<KeyboardAction>>();
+            internal Dictionary<ConsoleKey, Stack<KeyboardAction>> AltHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<KeyboardAction>>();
+            internal Dictionary<ConsoleKey, Stack<KeyboardAction>> ShiftHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<KeyboardAction>>();
+            internal Dictionary<ConsoleKey, Stack<KeyboardAction>> ControlHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<KeyboardAction>>();
         }
 
         private Stack<HandlerContext> handlerStack;
@@ -45,38 +45,39 @@ internal partial class FocusManager : IObservableObject
             handlerStack = new Stack<HandlerContext>();
             handlerStack.Push(new HandlerContext());
         }
-
         internal bool TryIntercept(ConsoleKeyInfo keyInfo)
         {
             bool alt = keyInfo.Modifiers.HasFlag(ConsoleModifiers.Alt);
             bool control = keyInfo.Modifiers.HasFlag(ConsoleModifiers.Control);
             bool shift = keyInfo.Modifiers.HasFlag(ConsoleModifiers.Shift);
-            bool noModifier = alt == false && shift == false && control == false;
+            bool noModifier = !alt && !shift && !control;
 
             int handlerCount = 0;
             try
             {
-                if (noModifier && handlerStack.Peek().NakedHandlers.ContainsKey(keyInfo.Key))
+                var ctx = handlerStack.Peek();
+
+                if (noModifier && ctx.NakedHandlers.ContainsKey(keyInfo.Key))
                 {
-                    handlerStack.Peek().NakedHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    ctx.NakedHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
                     handlerCount++;
                 }
 
-                if (alt && handlerStack.Peek().AltHandlers.ContainsKey(keyInfo.Key))
+                if (alt && ctx.AltHandlers.ContainsKey(keyInfo.Key))
                 {
-                    handlerStack.Peek().AltHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    ctx.AltHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
                     handlerCount++;
                 }
 
-                if (shift && handlerStack.Peek().ShiftHandlers.ContainsKey(keyInfo.Key))
+                if (shift && ctx.ShiftHandlers.ContainsKey(keyInfo.Key))
                 {
-                    handlerStack.Peek().ShiftHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    ctx.ShiftHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
                     handlerCount++;
                 }
 
-                if (control && handlerStack.Peek().ControlHandlers.ContainsKey(keyInfo.Key))
+                if (control && ctx.ControlHandlers.ContainsKey(keyInfo.Key))
                 {
-                    handlerStack.Peek().ControlHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    ctx.ControlHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
                     handlerCount++;
                 }
 
@@ -88,36 +89,65 @@ internal partial class FocusManager : IObservableObject
             }
         }
 
-
-        internal ILifetime PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler)
+        private Dictionary<ConsoleKey, Stack<KeyboardAction>> GetDictionaryForModifier(ConsoleModifiers? modifier)
         {
-            Dictionary<ConsoleKey, Stack<Action<ConsoleKeyInfo>>> target;
+            var ctx = handlerStack.Peek();
+            if (!modifier.HasValue) return ctx.NakedHandlers;
+            else if (modifier.Value.HasFlag(ConsoleModifiers.Alt)) return ctx.AltHandlers;
+            else if (modifier.Value.HasFlag(ConsoleModifiers.Shift)) return ctx.ShiftHandlers;
+            else if (modifier.Value.HasFlag(ConsoleModifiers.Control)) return ctx.ControlHandlers;
 
-            if (modifier.HasValue == false) target = handlerStack.Peek().NakedHandlers;
-            else if (modifier.Value.HasFlag(ConsoleModifiers.Alt)) target = handlerStack.Peek().AltHandlers;
-            else if (modifier.Value.HasFlag(ConsoleModifiers.Shift)) target = handlerStack.Peek().ShiftHandlers;
-            else if (modifier.Value.HasFlag(ConsoleModifiers.Control)) target = handlerStack.Peek().ControlHandlers;
-            else throw new ArgumentException("Unsupported modifier: " + modifier.Value);
+            throw new ArgumentException($"Unsupported modifier: {modifier.Value}");
+        }
 
-            Stack<Action<ConsoleKeyInfo>> targetStack;
-            if (target.TryGetValue(key, out targetStack) == false)
+        private ILifetime PushHandler(Dictionary<ConsoleKey, Stack<KeyboardAction>> dictionary, ConsoleKey key, KeyboardAction handlerAction)
+        {
+            if (!dictionary.TryGetValue(key, out var targetStack))
             {
-                targetStack = new Stack<Action<ConsoleKeyInfo>>();
-                target.Add(key, targetStack);
+                targetStack = new Stack<KeyboardAction>();
+                dictionary.Add(key, targetStack);
             }
 
-            targetStack.Push(handler);
-            var lt = new Lifetime();
+            targetStack.Push(handlerAction);
+
+            var lt = DefaultRecyclablePool.Instance.Rent();
             lt.OnDisposed(() =>
             {
+                DefaultRecyclablePool.Instance.Return(lt);
+                KeyboardActionPool.Instance.Return(handlerAction);
                 targetStack.Pop();
                 if (targetStack.Count == 0)
                 {
-                    target.Remove(key);
+                    dictionary.Remove(key);
                 }
             });
 
             return lt;
+        }
+
+        internal ILifetime PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler)
+        {
+            var target = GetDictionaryForModifier(modifier);
+            var handlerAction = KeyboardActionPool.Instance.Rent();
+            handlerAction.Callback = handler;
+    
+
+            return PushHandler(target, key, handlerAction);
+        }
+
+        internal ILifetime PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, object scope, Action<object, ConsoleKeyInfo> handler)
+        {
+            var target = GetDictionaryForModifier(modifier);
+            var handlerAction = KeyboardActionPool.Instance.Rent();
+            handlerAction.Scope = scope;
+            handlerAction.ScopedCallback = handler;
+
+            return PushHandler(target, key, handlerAction);
+        }
+
+        public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, object scope, Action<object, ConsoleKeyInfo> handler, ILifetimeManager manager)
+        {
+            manager.OnDisposed(PushUnmanaged(key, modifier, scope, handler));
         }
 
         /// <summary>
@@ -535,5 +565,33 @@ internal partial class FocusManager : IObservableObject
     {
         public ConsoleKeyInfo Info { get; set; }
         public TaskCompletionSource<bool> TaskSource { get; set; }
+    }
+}
+
+public class KeyboardAction : Recyclable
+{
+    public Action<ConsoleKeyInfo>? Callback { get; set; }
+    public object? Scope { get; set; }
+    public Action<object, ConsoleKeyInfo>? ScopedCallback { get; set; }
+
+    protected override void ProtectedInit()
+    {
+        Callback = null;
+        ScopedCallback = null;
+        Scope = null;
+    }
+
+    public void Invoke(ConsoleKeyInfo keyInfo)
+    {
+        if (ScopedCallback != null)
+        {
+            // We have a scope-based callback
+            ScopedCallback(Scope, keyInfo);
+        }
+        else
+        {
+            // Fallback to the original approach
+            Callback?.Invoke(keyInfo);
+        }
     }
 }

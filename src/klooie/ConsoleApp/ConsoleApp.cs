@@ -175,6 +175,11 @@ public class ConsoleApp : EventLoop
     public void PushKeyForLifetime(ConsoleKey k, Action a, ILifetimeManager lt) => focus.GlobalKeyHandlers.PushForLifetime(k, null, a, lt);
     public void PushKeyForLifetime(ConsoleKey k, ConsoleModifiers modifier, Action a, ILifetimeManager lt, int stackIndex) => focus.Stack[stackIndex].Interceptors.PushForLifetime(k, modifier, a, lt);
     public void PushKeyForLifetime(ConsoleKey k, Action a, ILifetimeManager lt, int stackIndex) => focus.Stack[stackIndex].Interceptors.PushForLifetime(k, null, a, lt);
+
+
+    public void PushKeyForLifetime(ConsoleKey k, ConsoleModifiers? modifier, object scope, Action<object,ConsoleKeyInfo> a, ILifetimeManager lt) => focus.GlobalKeyHandlers.PushForLifetime(k, modifier, scope, a, lt);
+
+
     public Task SendKey(ConsoleKeyInfo key) => focus.SendKey(key);
     public Task SendKey(ConsoleKey key, bool shift = false, bool alt = false, bool control = false) => SendKey(key.KeyInfo(shift, alt, control));
 }
