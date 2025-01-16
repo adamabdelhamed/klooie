@@ -136,7 +136,7 @@ public sealed class ColliderGroup
         {
             MoveColliderWithoutCollision(collider, expectedTravelDistance);
         }
-        collider.Velocity._onVelocityEnforced?.Fire();
+        collider.Velocity?._onVelocityEnforced?.Fire();
     }
 
     private bool TryDetectCollision(GameCollider collider, float expectedTravelDistance)
@@ -217,6 +217,7 @@ public sealed class ColliderGroup
         }
         if (collider.ShouldStop) return;
         collider.Velocity._onCollision?.Fire(collider.Velocity.LastCollision);
+        if (collider.ShouldStop) return;
         OnCollision.Fire(collider.Velocity.LastCollision);
         if (collider.ShouldStop) return;
         if (collider.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
@@ -366,6 +367,7 @@ public sealed class ColliderGroup
 
     private bool IsReadyToMove(GameCollider collider)
     {
+        if(collider.ShouldStop) return false;
         var velocity = collider.Velocity;
         velocity._beforeEvaluate?.Fire();
         var isReadyToMove = !(velocity.ShouldStop || velocity.Speed == 0 || now < velocity.MinEvalSeconds);

@@ -100,11 +100,10 @@ public static class CollisionDetector
    
         for (var i = 0; i < bufferLen; i++)
         {
-            var collider = colliders[i];
-            ref var obstacle = ref collider;
+            ICollidable obstacle = colliders[i];
 
             if (obstacle is ILifetimeManager ltm && ltm.ShouldStop) continue;
-            if (ReferenceEquals(from,collider) || !from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
+            if (ReferenceEquals(from, obstacle) || !from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
             if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obstacle.Bounds) > visibility + VerySmallNumber) continue;
 
             singleObstacleEdgeBuffer[0] = obstacle.Bounds.TopEdge;
