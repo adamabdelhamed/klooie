@@ -82,9 +82,9 @@ public sealed class Velocity : Recyclable
 
             this.Group = group;
             this.Collider = collider;
-            cachedRemoveMyselfAction = cachedRemoveMyselfAction ?? RemoveMyselfFromGroup;
-            collider.OnDisposed(cachedRemoveMyselfAction);
         }
+        cachedRemoveMyselfAction = cachedRemoveMyselfAction ?? RemoveMyselfFromGroup;
+        collider.OnDisposed(cachedRemoveMyselfAction);
     }
 
     private void RemoveMyselfFromGroup()
