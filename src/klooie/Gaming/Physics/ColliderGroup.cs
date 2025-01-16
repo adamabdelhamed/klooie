@@ -67,7 +67,7 @@ public sealed class ColliderGroup
         v.lastEvalTime = (float)lastExecuteTime.TotalSeconds;
         var ret = velocities.Add(c, v);
         Count++;
-        //_added?.Fire((v, c));
+        _added?.Fire((v, c));
         return ret;
     }
 
@@ -75,7 +75,7 @@ public sealed class ColliderGroup
     {
         if (velocities.Remove(c, out Velocity v))
         {
-            //_removed?.Fire((v, c));
+            _removed?.Fire((v, c));
             Count--;
             return true;
         }
@@ -178,7 +178,6 @@ public sealed class ColliderGroup
         });
 #endif
 
-        collider.Background = RGB.White;
         collider.MoveTo(newLocation.Left, newLocation.Top);
     }
 
@@ -216,10 +215,10 @@ public sealed class ColliderGroup
                 ColliderHit = collider,
             });
         }
-
+        if (collider.ShouldStop) return;
         collider.Velocity._onCollision?.Fire(collider.Velocity.LastCollision);
         OnCollision.Fire(collider.Velocity.LastCollision);
-
+        if (collider.ShouldStop) return;
         if (collider.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
         {
             BounceMe(collider, otherBounds, hitPrediction.ColliderHit, expectedTravelDistance, encroachment);
