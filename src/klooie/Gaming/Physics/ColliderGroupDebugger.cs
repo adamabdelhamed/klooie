@@ -18,9 +18,12 @@ public static class ColliderGroupDebugger
         if (VelocityEventOccurred != null) return false;
         lt.OnDisposed(() => VelocityEventOccurred = null);
         VelocityEventOccurred = new Event<VelocityEvent>();
-        OutputDir = outputDir;
-        if (Directory.Exists(OutputDir) == false) Directory.CreateDirectory(OutputDir);
-        VelocityEventOccurred.Subscribe(HandleEvent, lt);
+        if (outputDir != null)
+        {
+            OutputDir = outputDir;
+            if (Directory.Exists(OutputDir) == false) Directory.CreateDirectory(OutputDir);
+            VelocityEventOccurred.Subscribe(HandleEvent, lt);
+        }
         return true;
     }
 
