@@ -69,7 +69,7 @@ public static class ILifetimeManagerEx
 /// <summary>
 /// An implementation of ILifetimeManager
 /// </summary>
-public sealed class LifetimeManager : ILifetimeManager
+public class LifetimeManager : ILifetimeManager
 {
     private List<Subscription>? toNotify;
     private List<Subscription>? toDisposeOf;
