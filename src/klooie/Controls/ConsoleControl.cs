@@ -60,8 +60,8 @@ public partial class ConsoleControl : Rectangular
     /// </summary>
     internal int ParentIndex { get; set; }
 
-    internal List<IConsoleControlFilter> _filters;
-    public List<IConsoleControlFilter> Filters { get => _filters ?? (_filters = new List<IConsoleControlFilter>()); } 
+    internal ObservableCollection<IConsoleControlFilter> _filters;
+    public ObservableCollection<IConsoleControlFilter> Filters { get => _filters ?? (_filters = new ObservableCollection<IConsoleControlFilter>()); } 
 
     /// <summary>
     /// Controls how controls are painted when multiple controls overlap
@@ -263,6 +263,7 @@ public partial class ConsoleControl : Rectangular
         CompositionMode = CompositionMode.PaintOver;
         
         SubscribeToAnyPropertyChange(this, OnAnyPropertyChangedPrivate, this);
+        Filters.Changed.Subscribe(this, OnAnyPropertyChangedPrivate, this);
         BoundsChanged.Subscribe(this, ResizeBitmapOnBoundsChanged, this);
         CanFocusChanged.Subscribe(this, HandleCanFocusChanged, this);
         OnDisposed(this, ReturnEvents);
