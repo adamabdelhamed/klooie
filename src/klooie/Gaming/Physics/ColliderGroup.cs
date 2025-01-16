@@ -151,7 +151,7 @@ public sealed class ColliderGroup
         var colliderBoundsBeforeMovement = collider.Bounds;
         var newLocation = collider.Bounds.RadialOffset(collider.Velocity.Angle, expectedTravelDistance, false);
 
-        if (WouldCauseTouching(collider, numColliders, newLocation, out GameCollider preventer))
+        if (WouldCauseTouching(collider, newLocation, out GameCollider preventer))
         {
 #if DEBUG
             ColliderGroupDebugger.VelocityEventOccurred?.Fire(new FailedMove()
@@ -183,7 +183,7 @@ public sealed class ColliderGroup
 
     private void ProcessCollision(GameCollider collider, float expectedTravelDistance)
     {
-        var encroachment = GetCloseToColliderWeAreCollidingWith(numColliders, collider.Velocity);
+        var encroachment = GetCloseToColliderWeAreCollidingWith(collider.Velocity);
 
         collider.Velocity.LastCollision = new Collision()
         {
@@ -247,10 +247,10 @@ public sealed class ColliderGroup
 #endif
 
         var adjustedBounds = vOther.Collider.Bounds.RadialOffset(vOther.Angle, expectedTravelDistance, false);
-        if (TryMoveIfWouldNotCauseTouching(vOther, numColliders, adjustedBounds, RGB.Red) == false)
+        if (TryMoveIfWouldNotCauseTouching(vOther, adjustedBounds, RGB.Red) == false)
         {
             adjustedBounds = vOther.Collider.Bounds.RadialOffset(vOther.Angle, CollisionDetector.VerySmallNumber, false);
-            if (TryMoveIfWouldNotCauseTouching(vOther, numColliders, adjustedBounds, RGB.DarkRed) == false)
+            if (TryMoveIfWouldNotCauseTouching(vOther, adjustedBounds, RGB.DarkRed) == false)
             {
                 var otherAngleChange = vOther.Collider.CalculateAngleTo(me).Opposite();
 #if DEBUG
@@ -264,7 +264,7 @@ public sealed class ColliderGroup
 #endif
                 vOther.Angle = FindFreeAngle(vOther.Collider, otherAngleChange);
                 adjustedBounds = vOther.Collider.Bounds.RadialOffset(vOther.Angle, CollisionDetector.VerySmallNumber, false);
-                TryMoveIfWouldNotCauseTouching(vOther, numColliders, adjustedBounds, RGB.Orange.Darker);
+                TryMoveIfWouldNotCauseTouching(vOther, adjustedBounds, RGB.Orange.Darker);
             }
         }
     }
@@ -275,10 +275,10 @@ public sealed class ColliderGroup
         collider.Velocity.Angle = newAngleDegrees;
 
         var adjustedBounds = collider.Velocity.Collider.Bounds.RadialOffset(collider.Velocity.Angle, encroachment == 0 ? expectedTravelDistance : encroachment * 2, false);
-        if (TryMoveIfWouldNotCauseTouching(collider.Velocity, numColliders, adjustedBounds, RGB.Orange) == false)
+        if (TryMoveIfWouldNotCauseTouching(collider.Velocity, adjustedBounds, RGB.Orange) == false)
         {
             adjustedBounds = collider.Velocity.Collider.Bounds.RadialOffset(collider.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
-            if (TryMoveIfWouldNotCauseTouching(collider.Velocity, numColliders, adjustedBounds, RGB.Orange.Darker) == false)
+            if (TryMoveIfWouldNotCauseTouching(collider.Velocity, adjustedBounds, RGB.Orange.Darker) == false)
             {
                 var saveMeAngle = collider.Center().CalculateAngleTo(hitPrediction.Intersection).Opposite();
 
@@ -308,7 +308,7 @@ public sealed class ColliderGroup
                     collider2.Velocity.Angle = otherAngle;
                 }
                 adjustedBounds = collider.Velocity.Collider.Bounds.RadialOffset(collider.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
-                TryMoveIfWouldNotCauseTouching(collider.Velocity, numColliders, adjustedBounds, RGB.Orange.Darker);
+                TryMoveIfWouldNotCauseTouching(collider.Velocity, adjustedBounds, RGB.Orange.Darker);
             }
         }
     }
@@ -381,16 +381,16 @@ public sealed class ColliderGroup
     }
     
 
-    private float GetCloseToColliderWeAreCollidingWith(int numColliders, Velocity velocity)
+    private float GetCloseToColliderWeAreCollidingWith(Velocity velocity)
     {
         var proposedBounds = velocity.Collider.Bounds.RadialOffset(velocity.Angle, hitPrediction.LKGD, false);
-        var encroachment = TryMoveIfWouldNotCauseTouching(velocity, numColliders, proposedBounds, RGB.Green) ? hitPrediction.LKGD : 0;
+        var encroachment = TryMoveIfWouldNotCauseTouching(velocity, proposedBounds, RGB.Green) ? hitPrediction.LKGD : 0;
         return encroachment;
     }
 
-    private bool TryMoveIfWouldNotCauseTouching(Velocity item, int numColliders, RectF proposedBounds, RGB color)
+    private bool TryMoveIfWouldNotCauseTouching(Velocity item, RectF proposedBounds, RGB color)
     {
-        if (WouldCauseTouching(item.Collider, numColliders, proposedBounds, out GameCollider preventer) == false)
+        if (WouldCauseTouching(item.Collider, proposedBounds, out GameCollider preventer) == false)
         {
 #if DEBUG
             ColliderGroupDebugger.VelocityEventOccurred?.Fire(new SuccessfulMove()
@@ -420,12 +420,12 @@ public sealed class ColliderGroup
         return false;
     }
 
-    private bool WouldCauseTouching(ICollidable item, int bufferLength, RectF proposed, out GameCollider preventer)
+    private bool WouldCauseTouching(ICollidable item, RectF proposed, out GameCollider preventer)
     {
-        for (var i = 0; i < bufferLength; i++)
+        for (var i = 0; i < numColliders; i++)
         {
             var obstacle = colliderBuffer[i];
-            if (obstacle == item) continue;
+            if (obstacle == item || obstacle.ShouldStop || obstacle.CanCollideWith(item) == false || item.CanCollideWith(obstacle) == false) continue;
             var distance = colliderBuffer[i].Bounds.CalculateDistanceTo(proposed);
             if (Math.Abs(distance) == 0)
             {
