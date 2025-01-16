@@ -4,7 +4,7 @@ public partial class Rectangular :  Recyclable, IObservableObject, ICollidable
 {
     private int x, y, w, h;
  
-    public bool CanCollideWith(ICollidable other) => true;
+    public virtual bool CanCollideWith(ICollidable other) => true;
     public partial int ZIndex { get; set; }
 
     internal int ColliderHashCode { get; set; } = -1;

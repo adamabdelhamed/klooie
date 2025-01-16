@@ -16,5 +16,5 @@ public partial class TextCollider : GameCollider
 public class NoCollisionTextCollider : TextCollider
 {
     public NoCollisionTextCollider(ConsoleString content, bool connectToMainColliderGroup = true) : base(content, connectToMainColliderGroup) { }
-    public override bool CanCollideWith(GameCollider other) => false;
+    public override bool CanCollideWith(ICollidable other) => false;
 }

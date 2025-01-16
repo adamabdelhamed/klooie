@@ -51,7 +51,14 @@ public class GameCollider : ConsoleControl
 
     public GameCollider(RectF bounds, bool connectToMainColliderGroup = true) : this(connectToMainColliderGroup) => this.Bounds = bounds;
     public GameCollider(float x, float y, float w, float h, bool connectToMainColliderGroup = true) : this(new RectF(x, y, w, h), connectToMainColliderGroup) { }
-    public virtual bool CanCollideWith(GameCollider other) => this.IsVisible && ReferenceEquals(this, other) == false && other.Velocity.Group == this.Velocity.Group;
+    public override bool CanCollideWith(ICollidable other)
+    {
+        if(base.CanCollideWith(other) == false) return false;
+        if(IsVisible == false || ReferenceEquals(this, other)) return false;
+        if(other is GameCollider otherCollider && otherCollider.Velocity.Group != this.Velocity.Group) return false;
+
+        return true;
+    }
     public void GetObstacles(ObstacleBuffer buffer) => Velocity.Group.GetObstacles(this, buffer);
 
     public GameCollider[] GetObstacles()
