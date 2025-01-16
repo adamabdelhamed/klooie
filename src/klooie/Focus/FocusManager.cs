@@ -92,7 +92,7 @@ internal partial class FocusManager : IObservableObject
         private Dictionary<ConsoleKey, Stack<KeyboardAction>> GetDictionaryForModifier(ConsoleModifiers? modifier)
         {
             var ctx = handlerStack.Peek();
-            if (!modifier.HasValue) return ctx.NakedHandlers;
+            if (!modifier.HasValue || modifier == ConsoleModifiers.None) return ctx.NakedHandlers;
             else if (modifier.Value.HasFlag(ConsoleModifiers.Alt)) return ctx.AltHandlers;
             else if (modifier.Value.HasFlag(ConsoleModifiers.Shift)) return ctx.ShiftHandlers;
             else if (modifier.Value.HasFlag(ConsoleModifiers.Control)) return ctx.ControlHandlers;
