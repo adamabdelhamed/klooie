@@ -157,16 +157,18 @@ public class ConsolePanel : Container
     /// <param name="context">the drawing surface</param>
     protected override void OnPaint(ConsoleBitmap context)
     {
-        foreach (var control in sortedControls)
+        for (int i = 0; i < sortedControls.Count; i++)
         {
+            ConsoleControl? control = sortedControls[i];
             if (control.Width > 0 && control.Height > 0 && control.IsVisible && IsInView(control))
             {
                 Compose(control);
             }
         }
 
-        foreach (var filter in Filters)
+        for (int i = 0; i < Filters.Count; i++)
         {
+            IConsoleControlFilter? filter = Filters[i];
             filter.Control = this;
             filter.Filter(Bitmap);
         }
