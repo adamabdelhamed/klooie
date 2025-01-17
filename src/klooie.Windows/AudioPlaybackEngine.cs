@@ -63,8 +63,9 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     /// Plays the given sound
     /// </summary>
     /// <param name="soundId">the id of the sound</param>
-    public void Play(string soundId, ILifetimeManager maxDuration = null)
+    public void Play(string? soundId, ILifetimeManager? maxDuration = null)
     {
+        if (soundId == null) return;
         try
         {
             var overrideSound = ReplaceSoundHook(soundId);
@@ -97,8 +98,10 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     /// </summary>
     /// <param name="soundId">the sound to loop</param>
     /// <param name="lt">the loop duration</param>
-    public void Loop(string soundId, ILifetimeManager lt)
+    public void Loop(string? soundId, ILifetimeManager? lt = null)
     {
+        if (soundId == null) return;
+        lt = lt ?? Lifetime.Forever;
         try
         {
             if (soundIds.Contains(soundId))
