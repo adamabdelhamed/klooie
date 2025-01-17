@@ -62,10 +62,19 @@ internal sealed class NotificationBufferPool
 
     public static void Notify(List<Subscription>? subscribers)
     {
-        if (subscribers == null) return;
+        if (subscribers == null || subscribers.Count == 0) return;
         var subscriberCount = subscribers.Count;
+
+        // Perf optimization for the very common 1 subscriber case since there's no need to copy the list,
+        // rent a buffer, or bother with a loop and lifetime checks.
+        if (subscriberCount == 1)
+        {
+            Notify(subscribers[0]);
+            return;
+        }
+
         // buffer used to allow concurrent modification to subscribers during notification
-        // buffer also reduces memory allocations insead of doign a ToArray() on the list
+        // buffer also reduces memory allocations insead of doing a ToArray() on the list
         var buffer = Instance.Get(subscriberCount);
 
         try
@@ -82,21 +91,26 @@ internal sealed class NotificationBufferPool
                 var sub = buffer[i];
                 if (sub.Lifetime?.IsExpired == false)
                 {
-                    // NEW OR MODIFIED CODE: if we have a ScopedCallback, call it; otherwise use Callback
-                    if (sub.ScopedCallback != null)
-                    {
-                        sub.ScopedCallback(sub.Scope);
-                    }
-                    else
-                    {
-                        sub.Callback?.Invoke();
-                    }
+                    Notify(sub);
                 }
             }
         }
         finally
         {
             Instance.Return(buffer);
+        }
+    }
+
+    private static void Notify(Subscription sub)
+    {
+        // NEW OR MODIFIED CODE: if we have a ScopedCallback, call it; otherwise use Callback
+        if (sub.ScopedCallback != null)
+        {
+            sub.ScopedCallback(sub.Scope);
+        }
+        else
+        {
+            sub.Callback?.Invoke();
         }
     }
 }
@@ -107,11 +121,11 @@ public class Subscription
     public Action? Callback { get; set; }
 
     // Scoped callback with a strongly-typed scope
-    internal object? Scope { get; set; }
-    internal Action<object>? ScopedCallback { get; set; }
+    internal object? Scope;
+    internal Action<object>? ScopedCallback;
 
-    public ILifetimeManager? Lifetime { get; set; }
-    public List<Subscription>? Subscribers { get; set; }
+    public ILifetimeManager? Lifetime;
+    public List<Subscription>? Subscribers;
 
     internal void Reset()
     {
