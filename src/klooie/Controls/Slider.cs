@@ -26,7 +26,7 @@ public partial class Slider : ConsoleControl
 
             this.Focused.Subscribe(() =>
             {
-                focusLt?.Dispose();
+                focusLt?.TryDispose();
                 focusLt = DefaultRecyclablePool.Instance.Rent();
                 ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, SlideUp, focusLt);
                 ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, SlideDown, focusLt);
@@ -39,7 +39,7 @@ public partial class Slider : ConsoleControl
                 }
             }, this);
 
-            this.Unfocused.Subscribe(() => focusLt?.Dispose(), this);
+            this.Unfocused.Subscribe(() => focusLt?.TryDispose(), this);
         });
     }
     private static void OnAnyPropertyChanged(object me)
