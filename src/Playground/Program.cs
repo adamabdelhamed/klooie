@@ -232,14 +232,14 @@ public class PhysicsSample : Game
         await base.Startup();
 
         AddWalls();
-        for (var i = 0; i < 2; i++)
+        for (var i = 0; i < 50; i++)
         {
             AddRandomWhiteSquare();
         }
 
-        Invoke(async()=>
+        Invoke(async () =>
         {
-            var c = GamePanel.Controls.WhereAs<GameCollider>().Skip(1).First();
+            var c = GamePanel.Controls.WhereAs<GameCollider>().Skip(10).First();
             c.Filters.Add(new BackgroundColorFilter(RGB.Red));
             while (true)
             {
@@ -270,7 +270,6 @@ public class PhysicsSample : Game
             whiteSquare.Velocity.Speed = 30f;
             whiteSquare.Velocity.Angle = random.Next(0, 360);
             whiteSquare.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
-            //new MotionTracker(whiteSquare.Velocity);
         }
     }
 

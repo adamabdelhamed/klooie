@@ -12,6 +12,11 @@ public class Collision : Recyclable
 
     protected override void OnInit()
     {
+        Reset();
+    }
+
+    public void Reset()
+    {
         MovingObjectSpeed = 0;
         Angle = default;
         MovingObject = null;
@@ -37,6 +42,11 @@ public sealed class CollisionPrediction : Recyclable
 
 
     protected override void OnInit()
+    {
+        Reset();
+    }
+
+    public void Reset()
     {
         ColliderHit = null;
         ObstacleHitBounds = default;
@@ -86,6 +96,7 @@ public static class CollisionDetector
     public static CollisionPrediction Predict<T>(ICollidable from,Angle angle,IList<T> colliders, float visibility,CastingMode mode,int bufferLen,CollisionPrediction prediction,List<Edge> edgesHitOutput = null) where T : ICollidable
     {
         var movingObject = from.Bounds;
+        prediction.Reset();
         prediction.LKGX = movingObject.Left;
         prediction.LKGY = movingObject.Top;
         prediction.Visibility = visibility;

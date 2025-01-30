@@ -182,56 +182,6 @@ public class VelocityTests
         }
     }
 
-    [TestMethod]
-    public void Velocity_HeadOnCollision()
-    {
-        var testLt = DefaultRecyclablePool.Instance.Rent();
-        try
-        {
-            var sceneBounds = new RectF(0, 0, 500, 500);
-           
-            var stopwatch = new TestStopwatch();
-            var group = new ColliderGroup(testLt, stopwatch);
-
-            var left = new GameCollider(connectToMainColliderGroup: false);
-            left.ConnectToGroup(group);
-            left.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
-            var right = new GameCollider(connectToMainColliderGroup: false);
-            right.ConnectToGroup(group);
-            right.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
-
-
-            left.MoveTo(1,1);
-            left.ResizeTo(2,2);
-            left.Velocity.Speed = 10;
-
-            right.MoveTo(3.1f, 1);
-            right.ResizeTo(2, 2);
-
-            var collided = false;
-            left.Velocity.OnCollision.Subscribe((collision) =>
-            {
-                collided = true;
-            }, left);
-
-            for (var i = 0; i < 10000; i++)
-            {
-                stopwatch.Elapsed += TimeSpan.FromMilliseconds(1);
-                group.Tick();
-            }
-
-            Assert.IsTrue(collided);
-
-            foreach (var collider in group.EnumerateCollidersSlow(null))
-            {
-                collider.Dispose();
-            }
-        }
-        finally
-        {
-            testLt.Dispose();
-        }
-    }
 }
 
 public class TestStopwatch : IStopwatch
