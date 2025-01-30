@@ -75,7 +75,7 @@ public sealed partial class Camera : ConsolePanel
     /// <param name="ease">the easing function to use</param>
     /// <param name="lt">a lifetime that can be used to cancel the animation</param>
     /// <returns>an async task that completes when the animation is finished or cancelled</returns>
-    public Task AnimateBy(float dx, float dy, float duration = 1000, EasingFunction ease = null, ILifetimeManager lt = null) =>
+    public Task AnimateBy(float dx, float dy, float duration = 1000, EasingFunction ease = null, ILifetime lt = null) =>
         AnimateTo(CameraLocation.Offset(dx, dy), duration, ease, lt);
 
     /// <summary>
@@ -87,7 +87,7 @@ public sealed partial class Camera : ConsolePanel
     /// <param name="lt">a lifetime that can be used to cancel the animation</param>
     /// <param name="delayProvider">the delay provider to use</param>
     /// <returns>an async task that completes when the animation is finished or cancelled</returns>
-    public Task PointAnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetimeManager lt = null, IDelayProvider delayProvider = null)
+    public Task PointAnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, IDelayProvider delayProvider = null)
     {
         return AnimateTo(dest.Offset(-Width / 2f, -Height / 2f), duration, ease, lt, delayProvider);
     }
@@ -101,7 +101,7 @@ public sealed partial class Camera : ConsolePanel
     /// <param name="lt">a lifetime that can be used to cancel the animation</param>
     /// <param name="delayProvider">the delay provider to use</param>
     /// <returns>an async task that completes when the animation is finished or cancelled</returns>
-    public Task AnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetimeManager lt = null, IDelayProvider delayProvider = null)
+    public Task AnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, IDelayProvider delayProvider = null)
     {
         ease = ease ?? EasingFunctions.EaseInOut;
         var startX = cameraLocation.Left;
@@ -134,14 +134,14 @@ public sealed partial class Camera : ConsolePanel
     /// <param name="lt">The lifetime of the keyboard registration, defaults to the lifetime of the camera</param>
     /// <param name="wasd">if true, then the WASD keys will be registered for panning</param>
     /// <param name="arrows">if true, then the arrow keys will be registered for panning</param>
-    public void EnableKeyboardPanning(ILifetimeManager lt = null, bool wasd = true, bool arrows = true)
+    public void EnableKeyboardPanning(ILifetime lt = null, bool wasd = true, bool arrows = true)
     {
         lt = lt ?? this;
-        Lifetime panLt = null;
+        Recyclable panLt = null;
         void animate(float dx, float dy)
         {
             panLt?.Dispose();
-            panLt = new Lifetime();
+            panLt = DefaultRecyclablePool.Instance.Rent();
             AnimateBy(dx, dy, lt: panLt);
         }
 

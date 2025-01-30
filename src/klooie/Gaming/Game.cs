@@ -31,7 +31,7 @@ public class Game : ConsoleApp, IDelayProvider
     /// <summary>
     /// an event that fires when the game is paused
     /// </summary>
-    public Event<ILifetimeManager> Paused => pauseManager.OnPaused;
+    public Event<ILifetime> Paused => pauseManager.OnPaused;
 
     /// <summary>
     /// returns true if the game is currently paused
@@ -91,7 +91,7 @@ public class Game : ConsoleApp, IDelayProvider
     /// <param name="expressionText">the subscription expression</param>
     /// <param name="handler">the handler to call when a matching event is published</param>
     /// <param name="lt">the duration of the subscription</param>
-    public void Subscribe(string expressionText, Action<GameEvent> handler, ILifetimeManager lt) =>
+    public void Subscribe(string expressionText, Action<GameEvent> handler, ILifetime lt) =>
         eventBroadcaster.Subscribe(expressionText, handler, lt);
 
     /// <summary>
@@ -162,7 +162,7 @@ public class SpecialReverseDictionary
     private Dictionary<string, (object Value, Event Changed)> dict = new Dictionary<string, (object Value, Event Changed)>();
 
 
-    public void Subscribe(string key, Action handler, ILifetimeManager lifetime)
+    public void Subscribe(string key, Action handler, ILifetime lifetime)
     {
         if (dict.ContainsKey(key) == false)
         {
@@ -172,7 +172,7 @@ public class SpecialReverseDictionary
         dict[key].Changed.Subscribe(handler, lifetime);
     }
 
-    public void Sync(string key, Action handler, ILifetimeManager lifetime)
+    public void Sync(string key, Action handler, ILifetime lifetime)
     {
         Subscribe(key, handler, lifetime);
         handler();

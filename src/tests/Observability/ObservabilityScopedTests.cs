@@ -6,7 +6,7 @@ namespace klooie.tests
     [TestCategory(Categories.Observability)]
     public partial class ObservabilityScopedTests
     {
-        public partial class SomeObservable2 : Lifetime, IObservableObject
+        public partial class SomeObservable2 : Recyclable, IObservableObject
         {
             public Event SomeEvent { get; } = new Event();
             public Event<string> SomeEventWithAString { get; } = new Event<string>();
@@ -30,7 +30,7 @@ namespace klooie.tests
         }
 
         // Static handler (no captures). For Event<T>.
-        private static void OnStringEventFired(object scope, string str)
+        private static void OnStringEventFired(object scope, object str)
         {
             ((MyScope)scope).FiredCount++;
         }
@@ -44,8 +44,9 @@ namespace klooie.tests
             var observable = new SomeObservable2();
             var scope = new MyScope();
 
-            using (var lifetime = new Lifetime())
-            {
+            var lifetime = DefaultRecyclablePool.Instance.Rent();
+            try
+            { 
                 // Use the scope-based Subscribe overload
                 observable.SomeEvent.Subscribe(scope, OnEventFired, lifetime);
 
@@ -56,7 +57,10 @@ namespace klooie.tests
                 observable.SomeEvent.Fire();
                 Assert.AreEqual(2, scope.FiredCount);
             }
-
+            finally
+            {
+                lifetime.Dispose();
+            }
             // After lifetime is disposed, no more firing
             observable.SomeEvent.Fire();
             Assert.AreEqual(2, scope.FiredCount);
@@ -92,7 +96,8 @@ namespace klooie.tests
             var observable = new SomeObservable2();
             var scope = new MyScope();
 
-            using (var lifetime = new Lifetime())
+            var lifetime = DefaultRecyclablePool.Instance.Rent();
+            try
             {
                 // Just like normal, but we'll call the priority-based method
                 observable.SomeEvent.SubscribeWithPriority(scope, OnEventFired, lifetime);
@@ -101,7 +106,10 @@ namespace klooie.tests
                 observable.SomeEvent.Fire();
                 Assert.AreEqual(1, scope.FiredCount);
             }
-
+            finally
+            {
+                lifetime.Dispose();
+            }
             // After disposing
             observable.SomeEvent.Fire();
             Assert.AreEqual(1, scope.FiredCount);
@@ -117,7 +125,9 @@ namespace klooie.tests
             var observable = new SomeObservable2();
             var scope = new MyScope();
 
-            using (var lifetime = new Lifetime())
+
+            var lifetime = DefaultRecyclablePool.Instance.Rent();
+            try
             {
                 observable.SomeEventWithAString.Subscribe(scope, OnStringEventFired, lifetime);
 
@@ -130,7 +140,10 @@ namespace klooie.tests
                 observable.SomeEventWithAString.Fire("world");
                 Assert.AreEqual(2, scope.FiredCount);
             }
-
+            finally
+            {
+                lifetime.Dispose();
+            }
             // Once lifetime is disposed, no more increments
             observable.SomeEventWithAString.Fire("ignored");
             Assert.AreEqual(2, scope.FiredCount);

@@ -8,7 +8,7 @@ namespace klooie.tests;
 public class LayoutTests
 {
     [TestInitialize]
-    public void Setup() => UITestManager.SetConsoleSize(80, 50);
+    public void Setup() => TestContextHelper.GlobalSetup();
 
     public TestContext TestContext { get; set; }
 

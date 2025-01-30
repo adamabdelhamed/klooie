@@ -15,10 +15,16 @@ public class ConsoleControlTests
     private static HashSet<string>? GetTagsField(ConsoleControl c) =>
          c?.GetType()?.GetField("tags", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(c) as HashSet<string>;
 
+
+    [TestInitialize]
+    public void Initialize() => TestContextHelper.GlobalSetup();
+    
+
     [TestMethod]
     public void ConsoleControl_TagsLazy()
     {
-        ConsoleControlPool.Instance.Use(c =>
+        var c = ConsoleControlPool.Instance.Rent();
+        try
         {
             Assert.IsNull(GetTagsField(c));
             Assert.IsFalse(c.HasSimpleTag("foo"));
@@ -31,13 +37,18 @@ public class ConsoleControlTests
             Assert.IsFalse(c.HasValueTag("foo"));
             Assert.IsTrue(c.RemoveTag("foo"));
             Assert.IsFalse(c.HasSimpleTag("foo"));
-        });
+        }
+        finally
+        {
+            c.Dispose();
+        }
     }
 
     [TestMethod]
     public void ConsoleControl_ValueTags()
     {
-        ConsoleControlPool.Instance.Use(c =>
+        var c = ConsoleControlPool.Instance.Rent();
+        try
         {
             Assert.IsFalse(c.HasValueTag("name"));
             c.AddValueTag("name", "Adam");
@@ -45,7 +56,11 @@ public class ConsoleControlTests
             Assert.IsFalse(c.HasSimpleTag("name"));
             Assert.IsTrue(c.TryGetTagValue("name", out string value));
             Assert.AreEqual("Adam", value);
-        });
+        }
+        finally
+        {
+            c.Dispose();
+        }
     }
 
     [TestMethod]

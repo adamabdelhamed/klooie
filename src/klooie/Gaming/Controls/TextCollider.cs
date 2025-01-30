@@ -11,17 +11,25 @@ public partial class TextCollider : GameCollider
         this.Content = content;
     }
 
-    protected override void ProtectedInit()
+    protected override void OnInit()
     {
-        base.ProtectedInit();
+        base.OnInit();
         ContentChanged.Sync(() => ResizeTo(Content?.Length ?? 0, 1), this);
     }
 
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);
 }
 
-public class NoCollisionTextCollider : TextCollider
+public partial class CharCollider : GameCollider
 {
-    public NoCollisionTextCollider(ConsoleString content, bool connectToMainColliderGroup = true) : base(content, connectToMainColliderGroup) { }
-    public override bool CanCollideWith(ICollidable other) => false;
+    public partial ConsoleCharacter Content { get; set; }
+
+    public CharCollider() : base(false) { }
+
+    public CharCollider(ConsoleCharacter content, bool connectToMainColliderGroup = true) : base(connectToMainColliderGroup)
+    {
+        this.Content = content;
+    }
+
+    protected override void OnPaint(ConsoleBitmap context) => context.DrawPoint(Content, 0, 0);
 }

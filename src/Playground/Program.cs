@@ -1,4 +1,6 @@
 ﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+using CLIborg;
 using klooie;
 using klooie.Gaming;
 using NAudio.Wave;
@@ -10,8 +12,62 @@ public class Program
     static int count = 0;
     public static void Main(string[] args)
     {
-        Thread.Sleep(3000);
         new PhysicsSample().Run();
+        // GameEx();
+    }
+
+    private static ColliderGroup splatterGroup;
+    public static void GameEx()
+    {
+        var poolManager = new PoolManager();
+        poolManager.Pools.Add(EventPool.Instance.Fill(10_000));
+        poolManager.Pools.Add(SubscriptionPool.Instance.Fill(10_000));
+        poolManager.Pools.Add(EventPool<Collision>.Instance.Fill(10_000));
+        poolManager.Pools.Add(EventPool<ConsoleKeyInfo>.Instance.Fill(100));
+        poolManager.Pools.Add(DefaultRecyclablePool.Instance.Fill(10_000));
+        poolManager.Pools.Add(ObservableCollectionPool<IConsoleControlFilter>.Instance.Fill(100));
+        poolManager.Pools.Add(ObservableCollectionPool<ConsoleControl>.Instance.Fill(100));
+
+        var game = new Game();
+        game.Invoke(async () =>
+        {
+            splatterGroup = new ColliderGroup(game, null);
+            EnableShellEjection(game);
+
+            var player = game.GamePanel.Add(new GameCollider() { Background = RGB.Green });
+            player.MoveTo(game.GameBounds.Center.GetRounded());
+
+            var targeting = TargetingPool.Instance.Rent();
+            targeting.Bind(new TargetingOptions() { Source = player, HighlightTargets = true, Delay = 50 });
+
+            var pistol = PistolPool.Instance.Rent();
+            pistol.AmmoAmount = 1000;
+            pistol.Bind(targeting);
+           
+
+            var trigger = TriggerPool.Instance.Rent();
+            trigger.Bind(pistol, ConsoleKey.Spacebar.KeyInfo(), ConsoleKey.Spacebar.KeyInfo(shift: true));
+
+
+            var movement = TopDownHumanMovementInputPool.Instance.Rent();
+            movement.Bind(player);
+            var enemy = game.GamePanel.Add(new GameCollider() { Background = RGB.Red, Bounds = new RectF(0,0,.8f,.8f) });
+            enemy.MoveTo(game.GameBounds.Center.GetRounded().Offset(20.1f, .1f));
+        });
+
+        game.Run();
+    }
+
+    public static void EnableShellEjection(ILifetime? lt = null)
+    {
+        lt = lt ?? Game.Current ?? throw new Exception();
+        Weapon.OnFire.Subscribe(TryEjectShell, lt);
+    }
+
+    private static void TryEjectShell(Weapon w)
+    {
+        if (w is Pistol p == false) return;
+        Splatter.TryEjectShell(p.Source.Bounds.Center, p.LastFireAngle.Opposite(), splatterGroup);
     }
 
     public static async Task WanderTest(float speed, float duration, bool camera, Func<GameCollider> factory, bool extraTight)
@@ -57,7 +113,7 @@ public class Program
             cMover.GetObstacles(buffer);
             var overlaps = buffer.ReadableBuffer
             .Where(o => o.OverlapPercentage(cMover) > 0).ToArray();
-            ObstacleBufferPool.Instance.Return(buffer);
+            buffer.Dispose();
             if (overlaps.Any())
             {
                 throw new Exception("overlaps detected");
@@ -150,12 +206,12 @@ public class Program
     {
         for (var i = 0; i < 1_000_000; i++)
         {
-            var ev = EventPool.Rent();
+            var ev = EventPool.Instance.Rent();
             var r = DefaultRecyclablePool.Instance.Rent();
             ev.Subscribe(StaticDispose, r);
             ev.Fire();
-            DefaultRecyclablePool.Instance.Return(r);
-            EventPool.Return(ev);
+            r.Dispose();
+            ev.Dispose();
         }
     }
 
@@ -176,14 +232,14 @@ public class PhysicsSample : Game
         await base.Startup();
 
         AddWalls();
-        for (var i = 0; i < 1000; i++)
+        for (var i = 0; i < 2; i++)
         {
             AddRandomWhiteSquare();
         }
 
         Invoke(async()=>
         {
-            var c = GamePanel.Controls.WhereAs<GameCollider>().Skip(10).First();
+            var c = GamePanel.Controls.WhereAs<GameCollider>().Skip(1).First();
             c.Filters.Add(new BackgroundColorFilter(RGB.Red));
             while (true)
             {
@@ -263,7 +319,11 @@ public class SpinState
     public TimeSpan SpinTime { get; set; }
 }
 
-    [MemoryDiagnoser]
+ 
+
+ 
+
+[MemoryDiagnoser]
 public class DescendentsBenchmark
 {
     ConsolePanel container;

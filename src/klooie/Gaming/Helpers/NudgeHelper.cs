@@ -46,7 +46,7 @@ public static class NudgeHelper
         }
         finally
         {
-            ObstacleBufferPool.Instance.Return(buffer);
+            buffer.Dispose();
         }
     }
 }

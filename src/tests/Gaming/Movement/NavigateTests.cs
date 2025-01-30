@@ -214,7 +214,7 @@ public class NavigateTests
              {
                  Assert.Fail($"{NowDisplay}: Touching decected, cMoverBounds = {cMover.Bounds}, First overlapping object is a {touchingButNotOverlapping.First().GetType().Name} at bounds {touchingButNotOverlapping.First().Bounds}");
              }
-             ObstacleBufferPool.Instance.Return(buffer);
+             buffer.Dispose();
 
          }, cMover);
 

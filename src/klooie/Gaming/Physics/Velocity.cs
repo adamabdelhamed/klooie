@@ -16,13 +16,12 @@ public sealed class Velocity : Recyclable
     internal Event<Collision> _onCollision;
     private Action cachedRemoveMyselfAction;
     public ColliderGroup Group { get; private set; }
-    public Event OnAngleChanged { get => _onAngleChanged ?? (_onAngleChanged = new Event()); }
-    public Event OnSpeedChanged { get => _onSpeedChanged ?? (_onSpeedChanged = new Event()); }
-    public Event BeforeEvaluate { get => _beforeEvaluate ?? (_beforeEvaluate = new Event()); }
-    public Event BeforeMove { get => _beforeMove ?? (_beforeMove = new Event()); }
-    public Event OnVelocityEnforced { get => _onVelocityEnforced ?? (_onVelocityEnforced = new Event()); }
-    public Event<Collision> OnCollision { get => _onCollision ?? (_onCollision = new Event<Collision>()); }
-    public Collision LastCollision { get; internal set; }
+    public Event OnAngleChanged { get => _onAngleChanged ?? (_onAngleChanged = EventPool.Instance.Rent()); }
+    public Event OnSpeedChanged { get => _onSpeedChanged ?? (_onSpeedChanged = EventPool.Instance.Rent()); }
+    public Event BeforeEvaluate { get => _beforeEvaluate ?? (_beforeEvaluate = EventPool.Instance.Rent()); }
+    public Event BeforeMove { get => _beforeMove ?? (_beforeMove = EventPool.Instance.Rent()); }
+    public Event OnVelocityEnforced { get => _onVelocityEnforced ?? (_onVelocityEnforced = EventPool.Instance.Rent()); }
+    public Event<Collision> OnCollision { get => _onCollision ?? (_onCollision = EventPool<Collision>.Instance.Rent()); }
     public CollisionBehaviorMode CollisionBehavior { get; set; } = CollisionBehaviorMode.Stop;
     public CollisionPrediction NextCollision { get; internal set; }
     public GameCollider Collider { get; private set; }
@@ -70,7 +69,23 @@ public sealed class Velocity : Recyclable
     }
 
     public Velocity() { }
- 
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        _onAngleChanged?.Dispose();
+        _onAngleChanged = null;
+        _onSpeedChanged?.Dispose();
+        _onSpeedChanged = null;
+        _beforeEvaluate?.Dispose();
+        _beforeEvaluate = null;
+        _beforeMove?.Dispose();
+        _beforeMove = null;
+        _onVelocityEnforced?.Dispose();
+        _onVelocityEnforced = null;
+        _onCollision?.Dispose();
+        _onCollision = null;
+    }
 
     internal void Init(GameCollider collider, ColliderGroup group)
     {
@@ -78,7 +93,7 @@ public sealed class Velocity : Recyclable
         this.Collider = collider;
         if (collider.AutoAddToColliderGroup)
         {
-            group.Add(collider, this);
+            group.Add(collider);
 
             this.Group = group;
             this.Collider = collider;
@@ -107,7 +122,7 @@ public sealed class Velocity : Recyclable
         }
         finally
         {
-            ObstacleBufferPool.Instance.Return(buffer);
+            buffer.Dispose();
         }
     }
 

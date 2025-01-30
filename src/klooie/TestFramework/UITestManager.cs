@@ -42,16 +42,7 @@ public sealed class UITestManager
     private string CurrentTestRecordingLKGFilePath => Path.Combine(CurrentTestLKGPath, "Recording.cv");
   
     private UITestMode mode;
-
-    public static void SetConsoleSize(int w, int h)
-    {
-        ConsoleProvider.Current = new KlooieTestConsole()
-        {
-            BufferWidth = w,
-            WindowWidth = w,
-            WindowHeight = h + 1
-        };
-    }
+ 
 
     public UITestManager(ConsoleApp app, string testId, UITestMode mode)
     {

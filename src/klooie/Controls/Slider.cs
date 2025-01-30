@@ -18,7 +18,7 @@ public partial class Slider : ConsoleControl
         Width = 10;
         Height = 1;
         Increment = 1;
-        ILifetime focusLt = null;
+        Recyclable focusLt = null;
 
         this.Ready.SubscribeOnce(() =>
         {
@@ -27,7 +27,7 @@ public partial class Slider : ConsoleControl
             this.Focused.Subscribe(() =>
             {
                 focusLt?.Dispose();
-                focusLt = new Lifetime();
+                focusLt = DefaultRecyclablePool.Instance.Rent();
                 ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, SlideUp, focusLt);
                 ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, SlideDown, focusLt);
                 ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.UpArrow, SlideUp, focusLt);

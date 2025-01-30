@@ -22,22 +22,22 @@ public sealed class ColliderGroup
 
     private GameCollider[] colliderBuffer;
     private CollisionPrediction hitPrediction;
-    private ILifetimeManager lt;
+    private ILifetime lt;
     private TimeSpan lastExecuteTime;
     private float now;
     private int numColliders;
     
-    private Event<(Velocity Velocity, GameCollider Collider)> _added;
-    public Event<(Velocity Velocity, GameCollider Collider)> Added { get => _added ?? (_added = new Event<(Velocity Velocity, GameCollider Collider)>()); }
+    private Event<GameCollider> _added;
+    public Event<GameCollider> Added { get => _added ?? (_added = new Event<GameCollider>()); }
 
-    private Event<(Velocity Velocity, GameCollider Collider)> _removed;
-    public Event<(Velocity Velocity, GameCollider Collider)> Removed { get => _removed ?? (_removed = new Event<(Velocity Velocity, GameCollider Collider)>()); }
+    private Event<GameCollider> _removed;
+    public Event<GameCollider> Removed { get => _removed ?? (_removed = new Event<GameCollider>()); }
     
     public float SpeedRatio { get; set; } = 1;
 
     internal PauseManager? PauseManager { get; set; }
 
-    public ColliderGroup(ILifetimeManager lt, IStopwatch stopwatch = null)
+    public ColliderGroup(ILifetime lt, IStopwatch stopwatch = null)
     {
         this.lt = lt;
         hitPrediction = new CollisionPrediction();
@@ -50,7 +50,7 @@ public sealed class ColliderGroup
 
     public bool TryLookupVelocity(GameCollider c, out Velocity v) => velocities.TryGetValue(c, out v);
 
-    internal (int RowIndex, int ColIndex) Add(GameCollider c, Velocity v)
+    internal (int RowIndex, int ColIndex) Add(GameCollider c)
     {
         if (c.ColliderHashCode >= 0)
         {
@@ -64,10 +64,10 @@ public sealed class ColliderGroup
             Array.Copy(tmp, colliderBuffer, tmp.Length);
 
         }
-        v.lastEvalTime = (float)lastExecuteTime.TotalSeconds;
-        var ret = velocities.Add(c, v);
+        c.Velocity.lastEvalTime = (float)lastExecuteTime.TotalSeconds;
+        var ret = velocities.Add(c, c.Velocity);
         Count++;
-        _added?.Fire((v, c));
+        _added?.Fire(c);
         return ret;
     }
 
@@ -75,7 +75,7 @@ public sealed class ColliderGroup
     {
         if (velocities.Remove(c, out Velocity v))
         {
-            _removed?.Fire((v, c));
+            _removed?.Fire(c);
             Count--;
             return true;
         }
@@ -185,14 +185,6 @@ public sealed class ColliderGroup
     {
         var encroachment = GetCloseToColliderWeAreCollidingWith(collider.Velocity);
 
-        collider.Velocity.LastCollision = new Collision()
-        {
-            MovingObjectSpeed = collider.Velocity.speed,
-            Angle = collider.Velocity.Angle,
-            MovingObject = collider,
-            ColliderHit = hitPrediction.ColliderHit,
-            Prediction = hitPrediction,
-        };
 
         var otherBounds = hitPrediction.ColliderHit.Bounds;
         if (hitPrediction.ColliderHit is GameCollider otherGameCollider)
@@ -207,18 +199,38 @@ public sealed class ColliderGroup
                 vOther.Stop();
             }
 
-            vOther._onCollision?.Fire(new Collision()
+            var otherCollision = CollisionPool.Instance.Rent();
+            try
             {
-                MovingObjectSpeed = collider.Velocity.speed,
-                Angle = collider.Velocity.Angle.Opposite(),
-                MovingObject = hitPrediction.ColliderHit,
-                ColliderHit = collider,
-            });
+                otherCollision.MovingObjectSpeed = collider.Velocity.speed;
+                otherCollision.Angle = collider.Velocity.Angle.Opposite();
+                otherCollision.MovingObject = hitPrediction.ColliderHit;
+                otherCollision.ColliderHit = collider;
+                vOther._onCollision?.Fire(otherCollision);
+            }
+            finally
+            {
+                otherCollision.Dispose();
+            }
         }
         if (collider.ShouldStop) return;
-        collider.Velocity._onCollision?.Fire(collider.Velocity.LastCollision);
-        if (collider.ShouldStop) return;
-        OnCollision.Fire(collider.Velocity.LastCollision);
+
+        var collision = CollisionPool.Instance.Rent();
+        try
+        {
+            collision.MovingObjectSpeed = collider.Velocity.speed;
+            collision.Angle = collider.Velocity.Angle;
+            collision.MovingObject = collider;
+            collision.ColliderHit = hitPrediction.ColliderHit;
+            collision.Prediction = hitPrediction;
+            collider.Velocity._onCollision?.Fire(collision);
+            if (collider.ShouldStop) return;
+            OnCollision.Fire(collision);
+        }
+        finally
+        {
+            collision.Dispose();
+        }
         if (collider.ShouldStop) return;
         if (collider.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
         {
@@ -483,7 +495,7 @@ public sealed class ColliderGroup
             for (var j = 0; j < entry.Length; j++)
             {
                 var item = entry[j]?.Collider;
-                if (item == null || item == owner || owner.CanCollideWith(item) == false || item.CanCollideWith(owner) == false) continue;
+                if (item == null || item == owner || item.ShouldStop || owner.ShouldStop || owner.CanCollideWith(item) == false || item.CanCollideWith(owner) == false) continue;
                 buffer.WriteableBuffer.Add(item);
             }
         }
@@ -650,7 +662,7 @@ public class ObstacleBuffer : Recyclable
 
     public List<GameCollider> WriteableBuffer => _buffer;
 
-    protected override void ProtectedInit()
+    protected override void OnInit()
     {
         _buffer.Clear();
     }

@@ -1,5 +1,5 @@
 ﻿namespace klooie.Gaming;
-public class NavigationPath : Lifetime
+public class NavigationPath : Recyclable
 {
 #if DEBUG
     private ObservableCollection<RectF> tail;
@@ -67,7 +67,7 @@ public class NavigationPath : Lifetime
         }
         finally
         {
-            ObstacleBufferPool.Instance.Return(buffer);
+            buffer.Dispose();
         }
     }
 

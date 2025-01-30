@@ -23,12 +23,12 @@ public class SoundSample : ConsoleApp
         Sound.Play(nameof(SoundEffects.SoundEffectSample));
         await Task.Delay(2500);
 
-        using(var soundLifetime = this.CreateChildLifetime())
-        {
-            // plays the sound in a loop until this using block exits
-            Sound.Loop(nameof(SoundEffects.Beep), soundLifetime);
-            await Task.Delay(5000);
-        }
+        var soundLifetime = this.CreateChildRecyclable();
+        
+        // plays the sound in a loop until this using block exits
+        Sound.Loop(nameof(SoundEffects.Beep), soundLifetime);
+        await Task.Delay(5000);
+        soundLifetime.Dispose();
 
         // loops the sound for the lifetime of the app
         Sound.Loop(nameof(SoundEffects.SoundEffectSample), this);

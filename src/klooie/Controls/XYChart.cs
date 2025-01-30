@@ -318,14 +318,14 @@ public class XYChart : ConsolePanel
         seriesTitleLabel = Add(new Label() { ZIndex = TitleZIndex, Text = defaultSeriesTitle }).CenterHorizontally().DockToTop(padding: 3);
 
         this.CanFocus = true;
-        Lifetime focusLt = null;
+        Recyclable focusLt = null;
         this.Focused.Subscribe(() =>
         {
             if ((lastFocused ?? firstControl)?.CanFocus == true)
             {
                 (lastFocused ?? firstControl)?.Focus();
             }
-            focusLt = new Lifetime();
+            focusLt = DefaultRecyclablePool.Instance.Rent();
             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.UpArrow, HandleUpArrow, focusLt);
             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.DownArrow, HandleDownArrow, focusLt);
             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, HandleLeftArrow, focusLt);

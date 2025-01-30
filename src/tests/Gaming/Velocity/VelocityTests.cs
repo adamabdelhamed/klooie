@@ -13,15 +13,7 @@ public class VelocityTests
     public TestContext TestContext { get; set; }
 
     [TestInitialize]
-    public void Setup()
-    {
-        ConsoleProvider.Current = new KlooieTestConsole()
-        {
-            BufferWidth = 80,
-            WindowWidth = 80,
-            WindowHeight = 51
-        };
-    }
+    public void Setup() => TestContextHelper.GlobalSetup();
 
     [TestMethod]
     public void Velocity_MinEvalTime() => GamingTest.Run(new GamingTestOptions()
@@ -42,8 +34,9 @@ public class VelocityTests
     [TestMethod]
     public void Velocity_BasicHorizontal()
     {
-        using (var testLt = new Lifetime())
-        {
+        var testLt = DefaultRecyclablePool.Instance.Rent();
+        try
+        { 
             var stopwatch = new TestStopwatch();
             var group = new ColliderGroup(testLt, stopwatch);
             var c1 = new GameCollider(0, 0, 1, 1, connectToMainColliderGroup: false);
@@ -66,12 +59,17 @@ public class VelocityTests
             AssertCloseEnough(1, c1.Left);
             AssertCloseEnough(0, c1.Top);
         }
+        finally
+        {
+            testLt.Dispose();
+        }
     }
 
     [TestMethod]
     public void Velocity_BasicVertical()
     {
-        using (var testLt = new Lifetime())
+        var testLt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
             var stopwatch = new TestStopwatch();
             var group = new ColliderGroup(testLt, stopwatch);
@@ -95,12 +93,17 @@ public class VelocityTests
             AssertCloseEnough(0, c1.Left);
             AssertCloseEnough(.5f, c1.Top);
         }
+        finally
+        {
+            testLt.Dispose();
+        }
     }
 
     [TestMethod]
     public void Velocity_Colliders()
     {
-        using (var testLt = new Lifetime())
+        var testLt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
             var sceneBounds = new RectF(0, 0, 500, 500);
             var r = new Random(420);
@@ -172,6 +175,61 @@ public class VelocityTests
             {
                 collider.Dispose();
             }
+        }
+        finally
+        {
+            testLt.Dispose();
+        }
+    }
+
+    [TestMethod]
+    public void Velocity_HeadOnCollision()
+    {
+        var testLt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            var sceneBounds = new RectF(0, 0, 500, 500);
+           
+            var stopwatch = new TestStopwatch();
+            var group = new ColliderGroup(testLt, stopwatch);
+
+            var left = new GameCollider(connectToMainColliderGroup: false);
+            left.ConnectToGroup(group);
+            left.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
+            var right = new GameCollider(connectToMainColliderGroup: false);
+            right.ConnectToGroup(group);
+            right.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
+
+
+            left.MoveTo(1,1);
+            left.ResizeTo(2,2);
+            left.Velocity.Speed = 10;
+
+            right.MoveTo(3.1f, 1);
+            right.ResizeTo(2, 2);
+
+            var collided = false;
+            left.Velocity.OnCollision.Subscribe((collision) =>
+            {
+                collided = true;
+            }, left);
+
+            for (var i = 0; i < 10000; i++)
+            {
+                stopwatch.Elapsed += TimeSpan.FromMilliseconds(1);
+                group.Tick();
+            }
+
+            Assert.IsTrue(collided);
+
+            foreach (var collider in group.EnumerateCollidersSlow(null))
+            {
+                collider.Dispose();
+            }
+        }
+        finally
+        {
+            testLt.Dispose();
         }
     }
 }

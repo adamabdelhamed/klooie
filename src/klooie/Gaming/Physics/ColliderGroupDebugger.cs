@@ -12,7 +12,7 @@ public static class ColliderGroupDebugger
 
     private static ColliderGroup group;
 
-    public static bool TryInit(ColliderGroup group, string outputDir, ILifetimeManager lt)
+    public static bool TryInit(ColliderGroup group, string outputDir, ILifetime lt)
     {
         ColliderGroupDebugger.group = group;
         if (VelocityEventOccurred != null) return false;

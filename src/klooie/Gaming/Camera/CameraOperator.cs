@@ -8,10 +8,10 @@ public sealed class CameraOperationShortCircuitException : Exception { }
 /// <summary>
 /// A utility for operating a camera
 /// </summary>
-public sealed class CameraOperator : Lifetime
+public sealed class CameraOperator : Recyclable
 {
     private int currentPri = int.MaxValue;
-    private ILifetime moveLt;
+    private Recyclable moveLt;
 
     /// <summary>
     /// Creates a camera operator
@@ -43,7 +43,7 @@ public sealed class CameraOperator : Lifetime
         {
             moveLt?.TryDispose();
             currentPri = newPri;
-            moveLt = this.CreateChildLifetime();
+            moveLt = this.CreateChildRecyclable();
             detector.MovementLifetime = moveLt;
             try
             {

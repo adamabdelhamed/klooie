@@ -10,7 +10,7 @@ internal sealed class EventBroadcaster
 {
     private Dictionary<string, Event<GameEvent>> events = new Dictionary<string, Event<GameEvent>>();
 
-    public void Subscribe(string expressionText, Action<GameEvent> handler, ILifetimeManager lt)
+    public void Subscribe(string expressionText, Action<GameEvent> handler, ILifetime lt)
     {
         var expression = BooleanExpressionParser.Parse(expressionText);
         foreach(var variable in expression.VariableNames)
@@ -26,7 +26,7 @@ internal sealed class EventBroadcaster
 
     public void SubscribeOnce(string expressionText, Action<GameEvent> handler)
     {
-        var lt = new Lifetime();
+        var lt = DefaultRecyclablePool.Instance.Rent();
         Subscribe(expressionText, ev =>
         {
             handler(ev);

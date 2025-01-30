@@ -11,6 +11,9 @@ public class ConsoleAppTests
 {
     public TestContext TestContext { get; set; }
 
+    [TestInitialize]
+    public void Initialize() => TestContextHelper.GlobalSetup();
+
     [TestMethod]
     public void ConsoleApp_PaintsPanel()
     {
@@ -207,7 +210,6 @@ public class ConsoleAppTests
     [TestMethod]
     public void Console_AppEnsureCantReuseControls()
     {
-        ConsoleProvider.Current = new KlooieTestConsole();
         ConsoleApp app = new ConsoleApp();
         app.Invoke(() =>
         {
@@ -232,14 +234,14 @@ public class ConsoleAppTests
     [TestMethod]
     public void Console_AppEnsureCanReuseControlsWhenInitialized()
     {
-        ConsoleProvider.Current = new KlooieTestConsole();
         ConsoleApp app = new ConsoleApp();
         app.Invoke(() =>
         {
             var panel = app.LayoutRoot.Add(new ConsolePanel());
-            var button = panel.Add(new Button());
+            var button = panel.Add(ButtonPool.Instance.Rent());
             panel.Controls.Remove(button);
-            button.Initialize();
+            var button2 = ButtonPool.Instance.Rent();
+            Assert.AreSame(button, button2);
             app.LayoutRoot.Add(button);
             app.Stop();
         });
@@ -251,7 +253,6 @@ public class ConsoleAppTests
     [TestCategory(Categories.ConsoleApp)]
     public void ConsoleApp_LifecycleTestBasic()
     {
-        ConsoleProvider.Current = new KlooieTestConsole(); 
         ConsoleApp app = new ConsoleApp();
         app.Invoke(() =>
         {
@@ -299,7 +300,6 @@ public class ConsoleAppTests
     [TestMethod]
     public void ConsoleApp_ControlDisposed()
     {
-        ConsoleProvider.Current = new KlooieTestConsole();
         ConsoleApp app = new ConsoleApp();
         app.Invoke(() =>
         {
@@ -351,7 +351,6 @@ public class ConsoleAppTests
     [TestMethod]
     public void ConsoleApp_NestedControls()
     {
-        ConsoleProvider.Current = new KlooieTestConsole();
         ConsoleApp app = new ConsoleApp();
         app.Invoke(async () =>
         {

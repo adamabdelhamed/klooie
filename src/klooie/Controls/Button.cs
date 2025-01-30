@@ -51,9 +51,13 @@ public partial class Button : ConsoleControl
     /// Creates a new button control
     /// <param name="shortcut">An optional keyboard shortcut that can be used to press the button</param>
     /// </summary>
-    public Button(KeyboardShortcut? shortcut = null)
+    public Button(KeyboardShortcut shortcut) : this()
     {
         this.shortcut = shortcut;
+    }
+
+    public Button()
+    {
         Height = 1;
         TextChanged.Subscribe(UpdateText, this);
         ForegroundChanged.Subscribe(UpdateText, this);
@@ -110,20 +114,21 @@ public partial class Button : ConsoleControl
 
     private void OnReady()
     {
-        if (shortcut == null) return;
-        {
-            ConsoleApp.Current.PushKeyForLifetime(shortcut.Key, shortcut.Modifier, PressIfCanFocus, this);
+        UpdateText();
 
-            if (Regex.IsMatch(shortcut.Key.ToString(), @"D\d"))
-            {
-                var num = shortcut.Key.ToString().Last();
-                ConsoleApp.Current.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "NumPad" + num), shortcut.Modifier, PressIfCanFocus, this);
-            }
-            else if (shortcut.Key.ToString().StartsWith("NumPad"))
-            {
-                var num = shortcut.Key.ToString().Last();
-                ConsoleApp.Current.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), shortcut.Modifier, PressIfCanFocus, this);
-            }
+        if (shortcut == null) return;
+
+        ConsoleApp.Current.PushKeyForLifetime(shortcut.Key, shortcut.Modifier, PressIfCanFocus, this);
+
+        if (Regex.IsMatch(shortcut.Key.ToString(), @"D\d"))
+        {
+            var num = shortcut.Key.ToString().Last();
+            ConsoleApp.Current.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "NumPad" + num), shortcut.Modifier, PressIfCanFocus, this);
+        }
+        else if (shortcut.Key.ToString().StartsWith("NumPad"))
+        {
+            var num = shortcut.Key.ToString().Last();
+            ConsoleApp.Current.PushKeyForLifetime((ConsoleKey)Enum.Parse(typeof(ConsoleKey), "D" + num), shortcut.Modifier, PressIfCanFocus, this);
         }
     }
 

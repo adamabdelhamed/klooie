@@ -194,6 +194,10 @@ public sealed class ConsoleBitmapVideoWriter
 
     private string CalculateDurationString()
     {
+        if(lastFrame == null)
+        {
+            return "0\n";
+        }
         var recordingTicks = lastFrame.Timestamp.Ticks;
         var ticksString = recordingTicks.ToString() + "\n";
 

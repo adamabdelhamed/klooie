@@ -14,7 +14,7 @@ internal partial class FocusManager : IObservableObject
     private ConsoleKey lastKey;
 
     private Event<ConsoleKeyInfo> _globalKeyPressed;
-    public Event<ConsoleKeyInfo> GlobalKeyPressed    { get => _globalKeyPressed ?? (_globalKeyPressed = EventPool<ConsoleKeyInfo>.Rent()); }
+    public Event<ConsoleKeyInfo> GlobalKeyPressed    { get => _globalKeyPressed ?? (_globalKeyPressed = EventPool<ConsoleKeyInfo>.Instance.Rent()); }
     internal class FocusContext
     {
         public KeyboardInterceptionManager Interceptors { get; private set; } = new KeyboardInterceptionManager();
@@ -100,7 +100,7 @@ internal partial class FocusManager : IObservableObject
             throw new ArgumentException($"Unsupported modifier: {modifier.Value}");
         }
 
-        private ILifetime PushHandler(Dictionary<ConsoleKey, Stack<KeyboardAction>> dictionary, ConsoleKey key, KeyboardAction handlerAction)
+        private Recyclable PushHandler(Dictionary<ConsoleKey, Stack<KeyboardAction>> dictionary, ConsoleKey key, KeyboardAction handlerAction)
         {
             if (!dictionary.TryGetValue(key, out var targetStack))
             {
@@ -113,8 +113,7 @@ internal partial class FocusManager : IObservableObject
             var lt = DefaultRecyclablePool.Instance.Rent();
             lt.OnDisposed(() =>
             {
-                DefaultRecyclablePool.Instance.Return(lt);
-                KeyboardActionPool.Instance.Return(handlerAction);
+                handlerAction.Dispose();
                 targetStack.Pop();
                 if (targetStack.Count == 0)
                 {
@@ -125,7 +124,7 @@ internal partial class FocusManager : IObservableObject
             return lt;
         }
 
-        internal ILifetime PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler)
+        internal Recyclable PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler)
         {
             var target = GetDictionaryForModifier(modifier);
             var handlerAction = KeyboardActionPool.Instance.Rent();
@@ -135,7 +134,7 @@ internal partial class FocusManager : IObservableObject
             return PushHandler(target, key, handlerAction);
         }
 
-        internal ILifetime PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, object scope, Action<object, ConsoleKeyInfo> handler)
+        internal Recyclable PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, object scope, Action<object, ConsoleKeyInfo> handler)
         {
             var target = GetDictionaryForModifier(modifier);
             var handlerAction = KeyboardActionPool.Instance.Rent();
@@ -145,7 +144,7 @@ internal partial class FocusManager : IObservableObject
             return PushHandler(target, key, handlerAction);
         }
 
-        public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, object scope, Action<object, ConsoleKeyInfo> handler, ILifetimeManager manager)
+        public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, object scope, Action<object, ConsoleKeyInfo> handler, ILifetime manager)
         {
             manager.OnDisposed(PushUnmanaged(key, modifier, scope, handler));
         }
@@ -157,7 +156,7 @@ internal partial class FocusManager : IObservableObject
         /// <param name="modifier">the modifier, or null if you want to handle the unmodified keypress</param>
         /// <param name="handler">the code to run when the key input is intercepted</param>
         /// <param name="manager">the lifetime of the handlers registration</param>
-        public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler, ILifetimeManager manager)
+        public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler, ILifetime manager)
         {
             manager.OnDisposed(PushUnmanaged(key, modifier, handler));
         }
@@ -169,7 +168,7 @@ internal partial class FocusManager : IObservableObject
         /// <param name="modifier">the modifier, or null if you want to handle the unmodified keypress</param>
         /// <param name="handler">the code to run when the key input is intercepted</param>
         /// <returns>A subscription that you should dispose when you no longer want this interception to happen</returns>
-        public ILifetime PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action handler)
+        public Recyclable PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action handler)
         {
             return PushUnmanaged(key, modifier, (k) => { handler(); });
         }
@@ -181,7 +180,7 @@ internal partial class FocusManager : IObservableObject
         /// <param name="modifier">the modifier, or null if you want to handle the unmodified keypress</param>
         /// <param name="handler">the code to run when the key input is intercepted</param>
         /// <param name="manager">the lifetime of the handlers registration</param>
-        public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, Action handler, ILifetimeManager manager)
+        public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, Action handler, ILifetime manager)
         {
             PushForLifetime(key, modifier, (k) => { handler(); }, manager);
         }
@@ -251,7 +250,7 @@ internal partial class FocusManager : IObservableObject
                 {
                     lastKeyPressTime = DateTime.UtcNow;
                     lastKey = info.Key;
-                    ConsoleApp.Current.InvokeNextCycle(() => HandleKeyInput(info));
+                    HandleKeyInput(info);
                 }
             }
         }
@@ -259,11 +258,10 @@ internal partial class FocusManager : IObservableObject
         if (sendKeys.Count > 0)
         {
             var request = sendKeys.Dequeue();
-            ConsoleApp.Current.InvokeNextCycle(() =>
-            {
-                HandleKeyInput(request.Info);
-                request.TaskSource.SetResult(true);
-            });
+            
+            HandleKeyInput(request.Info);
+            request.TaskSource.SetResult(true);
+            
         }
     }
 
@@ -574,7 +572,7 @@ public class KeyboardAction : Recyclable
     public object? Scope { get; set; }
     public Action<object, ConsoleKeyInfo>? ScopedCallback { get; set; }
 
-    protected override void ProtectedInit()
+    protected override void OnInit()
     {
         Callback = null;
         ScopedCallback = null;

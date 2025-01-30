@@ -22,18 +22,22 @@ public class ConsolePanel : Container
     /// </summary>
     public override IReadOnlyList<ConsoleControl> Children => Controls;
 
- 
-    /// <summary>
-    /// Creates a new console panel
-    /// </summary>
-    public ConsolePanel()
+
+    protected override void OnInit()
     {
-        Controls = new ObservableCollection<ConsoleControl>();
+        base.OnInit();
+        Controls = ObservableCollectionPool<ConsoleControl>.Instance.Rent();
         Controls.Added.Subscribe(OnControlAddedInternal, this);
-        Controls.AssignedToIndex.Subscribe((assignment) => throw new NotSupportedException("Index assignment is not supported in Controls collection"), this);
         Controls.Removed.Subscribe(OnControlRemovedInternal, this);
         this.OnDisposed(DisposeChildren);
         this.CanFocus = false;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Controls.Dispose();
+        Controls = null;
     }
 
     private void DisposeChildren()

@@ -23,7 +23,7 @@ public class CommonAnimationOptions
     /// <summary>
     /// When specified, the animation will loop until this lifetime completes
     /// </summary>
-    public ILifetimeManager Loop { get; set; }
+    public ILifetime Loop { get; set; }
 
     /// <summary>
     /// If auto reverse is enabled, this is the pause, in milliseconds, after the forward animation

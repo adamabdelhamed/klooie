@@ -19,13 +19,13 @@ public abstract class Theme
     /// <param name="root">the panel to theme, defaults to the app's layout root</param>
     /// <param name="lt">how long should this theme be applied, defaults to the current root's lifetime</param>
 
-    public virtual void Apply(ConsolePanel root = null, ILifetimeManager lt = null)
+    public virtual void Apply(ConsolePanel root = null, ILifetime lt = null)
     {
         tracker = ThemeEvaluator.Apply(Styles, root, lt);
         (lt ?? root)?.OnDisposed(() => tracker = null);
     }
-    public virtual Task Apply(BuiltInEpicThemeTransitionKind kind, ConsolePanel root = null, ILifetimeManager lt = null) => Apply(new BuiltInEpicThemeTransition(kind), root, lt);
-    public virtual Task Apply(EpicThemeTransition effect, ConsolePanel root = null, ILifetimeManager lt = null) => effect.Apply(this, root, lt);
+    public virtual Task Apply(BuiltInEpicThemeTransitionKind kind, ConsolePanel root = null, ILifetime lt = null) => Apply(new BuiltInEpicThemeTransition(kind), root, lt);
+    public virtual Task Apply(EpicThemeTransition effect, ConsolePanel root = null, ILifetime lt = null) => effect.Apply(this, root, lt);
 
     /// <summary>
     /// Gets all styles that have never been applied

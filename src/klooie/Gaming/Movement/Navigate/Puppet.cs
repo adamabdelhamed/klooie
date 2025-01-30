@@ -91,7 +91,7 @@ public class Puppet : Movement
             }
         }finally
         {
-            ObstacleBufferPool.Instance.Return(buffer);
+            buffer.Dispose();
         }
     }
 }

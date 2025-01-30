@@ -10,6 +10,10 @@ public class ContainerTests
 {
     public TestContext TestContext { get; set; }
 
+
+    [TestInitialize]
+    public void Initialize() => TestContextHelper.GlobalSetup();
+
     [TestMethod]
     public void Container_CompositionPaintOver()
     {

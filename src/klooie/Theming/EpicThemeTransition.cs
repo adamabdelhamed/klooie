@@ -6,7 +6,7 @@ public abstract class EpicThemeTransition
     public ConsoleBitmap Mask { get; set; }
     protected abstract Task Execute();
 
-    public async Task Apply(Theme theme, ConsolePanel root, ILifetimeManager lt = null)
+    public async Task Apply(Theme theme, ConsolePanel root, ILifetime lt = null)
     {
         root = root ?? ConsoleApp.Current.LayoutRoot;
         var bitmapOfOldTheme = root.Bitmap.Clone();

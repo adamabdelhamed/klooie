@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 
 namespace klooie.Gaming;
-public struct Collision
+public class Collision : Recyclable
 {
     public float MovingObjectSpeed { get; set; }
     public Angle Angle { get; set; }
@@ -9,6 +9,15 @@ public struct Collision
     public ICollidable ColliderHit { get; set; }
     public CollisionPrediction Prediction { get; set; }
     public override string ToString() => $"{Prediction.LKGX},{Prediction.LKGY} - {ColliderHit?.GetType().Name}";
+
+    protected override void OnInit()
+    {
+        MovingObjectSpeed = 0;
+        Angle = default;
+        MovingObject = null;
+        ColliderHit = null;
+        Prediction = null;
+    }
 }
 
 public sealed class CollisionPrediction : Recyclable
@@ -27,7 +36,7 @@ public sealed class CollisionPrediction : Recyclable
     public LocF Intersection => new LocF(IntersectionX, IntersectionY);
 
 
-    protected override void ProtectedInit()
+    protected override void OnInit()
     {
         ColliderHit = null;
         ObstacleHitBounds = default;
@@ -69,15 +78,14 @@ public static class CollisionDetector
         }
         finally
         {
-            ArrayPlusOnePool<T>.Instance.Return(colliders);
-            CollisionPredictionPool.Instance.Return(prediction);
+            colliders.Dispose();
+            prediction.Dispose();
         }
     }
  
     public static CollisionPrediction Predict<T>(ICollidable from,Angle angle,IList<T> colliders, float visibility,CastingMode mode,int bufferLen,CollisionPrediction prediction,List<Edge> edgesHitOutput = null) where T : ICollidable
     {
         var movingObject = from.Bounds;
-        prediction.Initialize();
         prediction.LKGX = movingObject.Left;
         prediction.LKGY = movingObject.Top;
         prediction.Visibility = visibility;
@@ -102,7 +110,7 @@ public static class CollisionDetector
         {
             ICollidable obstacle = colliders[i];
 
-            if (obstacle is ILifetimeManager ltm && ltm.ShouldStop) continue;
+            if (obstacle is ILifetime ltm && ltm.ShouldStop) continue;
             if (ReferenceEquals(from, obstacle) || !from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
             if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obstacle.Bounds) > visibility + VerySmallNumber) continue;
 
@@ -336,9 +344,9 @@ public class ArrayPlusOne<T> : Recyclable, IList<ICollidable> where T : ICollida
         }
     }
 
-    protected override void ProtectedInit()
+    protected override void OnInit()
     {
-        base.ProtectedInit();
+        base.OnInit();
         Array = null;
         ExtraElement = default;
         hasExtra = false;

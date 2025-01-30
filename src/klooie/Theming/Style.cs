@@ -74,7 +74,7 @@ public sealed class Style
         return ret;
     }
 
-    internal void ApplyPropertyValue(ConsoleControl c, ILifetimeManager lt)
+    internal void ApplyPropertyValue(ConsoleControl c, ILifetime lt)
     {
         var prop = c.GetType().GetProperty(PropertyName);
         if (prop == null) throw new ArgumentException($"Failed to apply style to missing property {PropertyName} on type {c.GetType().FullName}");
@@ -85,8 +85,7 @@ public sealed class Style
             if (c.ShouldContinue == false) return;
             prop?.SetValue(c, unstyledValue);
         });
-
-        c.SubscribeOld(PropertyName, () =>
+        c.SubscribeToAnyPropertyChange(null,(_) =>
         {
             if (lt.ShouldContinue == false) return;
             prop.SetValue(c, Value);

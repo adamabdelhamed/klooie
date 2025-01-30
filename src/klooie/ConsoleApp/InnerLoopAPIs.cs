@@ -173,13 +173,13 @@ public sealed class InnerLoopAPIs
             {
                 loopState.thenO?.Invoke(loopState.state);
                 loopState.then?.Invoke();
-                DoLoopStatePool.Instance.Return(loopState);
+                loopState.Dispose();
                 doLoopStates.RemoveAt(i);
                 i--;
 
                 if (doLoopStates.Count == 0)
                 {
-                    DoLoopLifetimePool.Instance.Return(doLifetime);
+                    doLifetime.Dispose();
                 }
             }
         }
@@ -218,13 +218,13 @@ public sealed class InnerLoopAPIs
                 loopState.then?.Invoke();
 
                 // Clean up and remove the loop state
-                ForLoopStatePool.Instance.Return(loopState);
+                loopState.Dispose();
                 forLoopStates.RemoveAt(iu);
                 iu--; // Adjust index after removal
 
                 if (forLoopStates.Count == 0)
                 {
-                    ForLoopLifetimePool.Instance.Return(forLifetime);
+                    forLifetime.Dispose();
                 }
             }
         }

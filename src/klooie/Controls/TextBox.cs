@@ -5,7 +5,7 @@
 public partial class TextBox : ConsoleControl
 {
     private static readonly TimeSpan BlinkInterval = TimeSpan.FromMilliseconds(500);
-    private ILifetime blinkTimerHandle;
+    private Recyclable blinkTimerHandle;
     private bool isAllSelected;
     private bool isBlinking;
 

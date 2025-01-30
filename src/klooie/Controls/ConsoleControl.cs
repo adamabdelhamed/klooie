@@ -61,7 +61,7 @@ public partial class ConsoleControl : Rectangular
     internal int ParentIndex { get; set; }
 
     internal ObservableCollection<IConsoleControlFilter> _filters;
-    public ObservableCollection<IConsoleControlFilter> Filters { get => _filters ?? (_filters = new ObservableCollection<IConsoleControlFilter>()); } 
+    public ObservableCollection<IConsoleControlFilter> Filters { get => _filters ?? (_filters = ObservableCollectionPool<IConsoleControlFilter>.Instance.Rent()); } 
 
     /// <summary>
     /// Controls how controls are painted when multiple controls overlap
@@ -76,17 +76,17 @@ public partial class ConsoleControl : Rectangular
     /// <summary>
     /// An event that fires after this control gets focus
     /// </summary>
-    public Event Focused { get => _focused ?? (_focused = EventPool.Rent()); }
+    public Event Focused { get => _focused ?? (_focused = EventPool.Instance.Rent()); }
 
     /// <summary>
     /// An event that fires after this control loses focus
     /// </summary>
-    public Event Unfocused { get => _unfocused ?? (_unfocused = EventPool.Rent()); }
+    public Event Unfocused { get => _unfocused ?? (_unfocused = EventPool.Instance.Rent()); }
 
     /// <summary>
     /// An event that fires when this control is both added to an app and that app is running
     /// </summary>
-    public Event Ready { get => _ready ?? (_ready = EventPool.Rent()); }
+    public Event Ready { get => _ready ?? (_ready = EventPool.Instance.Rent()); }
 
 
 
@@ -100,7 +100,7 @@ public partial class ConsoleControl : Rectangular
     /// <summary>
     /// An event that fires any time its tags changes
     /// </summary>
-    public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = EventPool.Rent()); }
+    public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = EventPool.Instance.Rent()); }
 
     /// <summary>
     /// Gets a reference to this control's parent in the visual tree.  It will be null if this control is not in the visual tree 
@@ -246,10 +246,10 @@ public partial class ConsoleControl : Rectangular
             _bitmap = value;
         }
     }
-    protected override void ProtectedInit()
+    protected override void OnInit()
     {
         if(Parent != null) throw new InvalidOperationException("Controls cannot be re-initialized while they are still in the visual tree.");
-        base.ProtectedInit();
+        base.OnInit();
         HasBeenAddedToVisualTree = false;
         CanFocus = true;
         TabSkip = false;
@@ -292,24 +292,27 @@ public partial class ConsoleControl : Rectangular
         var _this = me as ConsoleControl;
         if (_this._focused != null)
         {
-            EventPool.Return(_this._focused);
+            _this._focused.Dispose();
             _this._focused = null;
         }
         if (_this._unfocused != null)
         {
-            EventPool.Return(_this._unfocused);
+            _this._unfocused.Dispose();
             _this._unfocused = null;
         }
         if (_this._ready != null)
         {
-            EventPool.Return(_this._ready);
+            _this._ready.Dispose();
             _this._ready = null;
         }
         if (_this._tagsChanged != null)
         {
-            EventPool.Return(_this._tagsChanged);
+            _this._tagsChanged.Dispose();
             _this._tagsChanged = null;
         }
+
+        _this._filters?.Dispose();
+        _this._filters = null;
 
         // This is here because controls can either be removed using Dispose() or by calling Remove from a parent's Controls collection.
         // In the case where Dispose() is called somebody needs to remove this control from its parent.
@@ -360,7 +363,7 @@ public partial class ConsoleControl : Rectangular
     /// <param name="recorder">the writer to use</param>
     /// <param name="timestampFunc">an optional callback that will be called to determine the timestamp for each frame. If not specified the wall clock will be used.</param>
     /// <param name="lifetime">A lifetime that determines how long recording will last. Defaults to the lifetime of the control.</param>
-    public void EnableRecording(ConsoleBitmapVideoWriter recorder, Func<TimeSpan> timestampFunc = null, ILifetimeManager lifetime = null)
+    public void EnableRecording(ConsoleBitmapVideoWriter recorder, Func<TimeSpan> timestampFunc = null, ILifetime lifetime = null)
     {
         if (Recorder != null)
         {

@@ -9,7 +9,7 @@ public class Mover
     public static async Task Invoke(Movement parent, Movement process) => await process.InvokeInternal(parent);
     public static async Task<T> InvokeGet<T>(Movement parent, Movement<T> process) { await Invoke(parent, process); return process.Result; }
     public static async Task<T> InvokeGetWithShortCircuit<T>(Movement<T> process) { await InvokeWithShortCircuit(process); return process.Result; }
-    public static async Task<T> InvokeGetOrTimeout<T>(Movement parent, Movement<T> process, ILifetimeManager timeout) { await InvokeOrTimeout(parent, process, timeout); return process.Result; }
+    public static async Task<T> InvokeGetOrTimeout<T>(Movement parent, Movement<T> process, ILifetime timeout) { await InvokeOrTimeout(parent, process, timeout); return process.Result; }
     public static async Task<T> InvokeGetOrTimeout<T>(Movement parent, Movement<T> process, float timeout) { await InvokeOrTimeout(parent, process, timeout); return process.Result; }
 
     public static async Task InvokeWithShortCircuit(Movement process)
@@ -26,10 +26,10 @@ public class Mover
 
     public static Task<bool> InvokeOrTimeout(Movement parent, Movement process, float timeout)
     {
-        return InvokeOrTimeout(parent, process, Lifetime.EarliestOf(parent, process, Game.Current.Delay(timeout).ToLifetime()));
+        return InvokeOrTimeout(parent, process, Recyclable.EarliestOf(parent, process, Game.Current.Delay(timeout).ToLifetime()));
     }
 
-    public static async Task<bool> InvokeOrTimeout(Movement parent, Movement process, ILifetimeManager maxLifetime)
+    public static async Task<bool> InvokeOrTimeout(Movement parent, Movement process, ILifetime maxLifetime)
     {
         try
         {
@@ -50,7 +50,7 @@ public class Mover
         }
     }
 
-    public static async Task<bool> InvokeOrTimeout(Movement process, ILifetimeManager maxLifetime)
+    public static async Task<bool> InvokeOrTimeout(Movement process, ILifetime maxLifetime)
     {
         try
         {
@@ -74,7 +74,7 @@ public abstract class Movement<T> : Movement
     public abstract T Result { get; protected set; }
 }
 
-public abstract class Movement : Lifetime
+public abstract class Movement : Recyclable
 {
     protected float NowDisplay => ConsoleMath.Round(Velocity.Group.Now.TotalSeconds, 2);
     public Velocity Velocity { get; private set; }

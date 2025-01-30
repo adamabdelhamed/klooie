@@ -10,15 +10,7 @@ public class TextColliderTests
     public TestContext TestContext { get; set; }
 
     [TestInitialize]
-    public void Setup()
-    {
-        ConsoleProvider.Current = new KlooieTestConsole()
-        {
-            BufferWidth = 80,
-            WindowWidth = 80,
-            WindowHeight = 51
-        };
-    }
+    public void Setup() => TestContextHelper.GlobalSetup();
 
     [TestMethod]
     public void TextCollider_Display() => GamingTest.Run(new GamingTestOptions()

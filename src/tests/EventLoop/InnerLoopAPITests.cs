@@ -12,6 +12,10 @@ namespace klooie.tests;
 [TestCategory(Categories.MemoryManagement)]
 public class InnerLoopAPITests
 {
+
+    [TestInitialize]
+    public void Initialize() => TestContextHelper.GlobalSetup();
+
     [TestMethod]
     public void InnerLoopAPIs_PauseResume()
     {
@@ -24,7 +28,6 @@ public class InnerLoopAPITests
         var pauseDelay = ConsoleMath.Round(totalTestMilliseconds / 4);
         var resumeDelay = ConsoleMath.Round(totalTestMilliseconds / 2);
 
-        ConsoleProvider.Current = new KlooieTestConsole();
         var loop = new Game();
         var times = new List<long>();
 

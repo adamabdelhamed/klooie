@@ -228,7 +228,7 @@ public static class Animator
         var state = (AnimationFrameState)stateObj;
         if (state.I == state.NumberOfFrames - 1)
         {
-            AnimationFrameStatePool.Instance.Return(state);
+            state.Dispose();
             return;
         }
         state.I++;
@@ -247,7 +247,7 @@ public static class Animator
 
         if (state.Options.IsCancelled != null && state.Options.IsCancelled())
         {
-            AnimationFrameStatePool.Instance.Return(state);
+            state.Dispose();
             return;
         }
 
@@ -267,9 +267,9 @@ public class AnimationFrameState : Recyclable
     public long StartTime { get; set; }
     public float I { get; set; }
 
-    protected override void ProtectedInit()
+    protected override void OnInit()
     {
-        base.ProtectedInit();
+        base.OnInit();
         Options = null;
         NumberOfFrames = 0;
         TimeBetweenFrames = TimeSpan.Zero;

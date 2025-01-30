@@ -34,7 +34,7 @@ public abstract class DialogWithChoicesOptions : DialogOptions
     /// <summary>
     /// optionally set a max lifetime that will cause the dialog to close when it expires
     /// </summary>
-    public ILifetimeManager? MaxLifetime { get; set; }
+    public ILifetime? MaxLifetime { get; set; }
 
     /// <summary>
     /// Derived options classes should use this to create their content. The content

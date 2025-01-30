@@ -7,12 +7,12 @@ namespace klooie.tests;
 [TestCategory(Categories.Observability)]
 public partial class ObservabilityTests
 {
-    public partial class SomeOtherObservable : Lifetime, IObservableObject
+    public partial class SomeOtherObservable : Recyclable, IObservableObject
     {
         public partial string Name { get; set; }
     }
 
-    public partial class SomeObservable : Lifetime, IObservableObject
+    public partial class SomeObservable : Recyclable, IObservableObject
     {
         public Event SomeEvent { get; private set; } = new Event();
         public Event<string> SomeEventWithAString { get; private set; } = new Event<string>();
@@ -34,7 +34,8 @@ public partial class ObservabilityTests
 
         var triggerCount = 0;
 
-        using (Lifetime lifetime = new Lifetime())
+        var lifetime = DefaultRecyclablePool.Instance.Rent();
+        try
         {
             observable.NameChanged.Subscribe(() =>
             {
@@ -44,6 +45,10 @@ public partial class ObservabilityTests
             Assert.AreEqual(0, triggerCount);
             observable.Name = "Some value";
             Assert.AreEqual(1, triggerCount);
+        }
+        finally
+        {
+            lifetime.Dispose();
         }
 
         observable.Name = "Some new value";
@@ -57,7 +62,8 @@ public partial class ObservabilityTests
 
         var triggerCount = 0;
 
-        using (var lifetime = new Lifetime())
+        var lifetime = DefaultRecyclablePool.Instance.Rent();
+        try
         {
             observable.NameChanged.Subscribe(() =>
             {
@@ -67,6 +73,10 @@ public partial class ObservabilityTests
             Assert.AreEqual(0, triggerCount);
             observable.Name = "Some value";
             Assert.AreEqual(1, triggerCount);
+        }
+        finally
+        {
+            lifetime.Dispose();
         }
 
         observable.Name = "Some new value again";
@@ -92,8 +102,10 @@ public partial class ObservabilityTests
         var observable = new SomeObservable();
         int numChanged = 0;
 
-        using (var lifetime = new Lifetime())
+        var lifetime = DefaultRecyclablePool.Instance.Rent();
+        try
         {
+
             observable.SubscribeToAnyPropertyChange(this, (o) => { numChanged++; }, lifetime);
 
             Assert.AreEqual(0, numChanged);
@@ -102,7 +114,10 @@ public partial class ObservabilityTests
             observable.Number = 1;
             Assert.AreEqual(2, numChanged);
         }
-
+        finally
+        {
+            lifetime.Dispose();
+        }
         Assert.AreEqual(2, numChanged);
         observable.Name = "Foo2";
         Assert.AreEqual(2, numChanged);
@@ -116,13 +131,18 @@ public partial class ObservabilityTests
     {
         var observable = new SomeObservable();
         var triggerCount = 0;
-        using (var lt = new Lifetime())
+        var lifetime = DefaultRecyclablePool.Instance.Rent();
+        try
         {
-            observable.SomeEventWithAString.Subscribe((s) => { triggerCount++; }, lt);
+            observable.SomeEventWithAString.Subscribe((s) => { triggerCount++; }, lifetime);
 
             Assert.AreEqual(0, triggerCount);
             observable.SomeEventWithAString.Fire("Foo");
             Assert.AreEqual(1, triggerCount);
+        }
+        finally
+        {
+            lifetime.Dispose();
         }
         observable.SomeEventWithAString.Fire("Foo");
         Assert.AreEqual(1, triggerCount);
@@ -135,7 +155,8 @@ public partial class ObservabilityTests
 
         var triggerCount = 0;
 
-        using (var lifetime = new Lifetime())
+        var lifetime = DefaultRecyclablePool.Instance.Rent();
+        try
         {
             observable.SomeEvent.Subscribe(() => { triggerCount++; }, lifetime);
 
@@ -143,7 +164,10 @@ public partial class ObservabilityTests
             observable.SomeEvent.Fire();
             Assert.AreEqual(1, triggerCount);
         }
-
+        finally
+        {
+            lifetime.Dispose();
+        }
         observable.SomeEvent.Fire();
         Assert.AreEqual(1, triggerCount);
     }
@@ -155,7 +179,8 @@ public partial class ObservabilityTests
 
         var triggerCount = 0;
 
-        using (var lifetime = new Lifetime())
+        var lifetime = DefaultRecyclablePool.Instance.Rent();
+        try
         {
 
             observable.SomeEvent.Subscribe(() => { triggerCount++; }, lifetime);
@@ -168,7 +193,10 @@ public partial class ObservabilityTests
             observable.SomeEvent.Fire();
             Assert.AreEqual(2, triggerCount);
         }
-
+        finally
+        {
+            lifetime.Dispose();
+        }
         observable.SomeEvent.Fire();
         Assert.AreEqual(2, triggerCount);
     }
@@ -182,7 +210,9 @@ public partial class ObservabilityTests
         observable.Strings.Add("a");
         observable.Strings.Add("b");
 
-        using (var lifetime = new Lifetime())
+
+        var lifetime = DefaultRecyclablePool.Instance.Rent();
+        try
         {
             observable.Strings.Sync((s) => { addCalls++; }, (s) => { removeCalls++; }, () => { changedCalls++; }, lifetime);
 
@@ -200,7 +230,10 @@ public partial class ObservabilityTests
             Assert.AreEqual(1, removeCalls);
             Assert.AreEqual(3, changedCalls);
         }
-
+        finally
+        {
+            lifetime.Dispose();
+        }
         observable.Strings.Add("d");
         observable.Strings.Remove("d");
         Assert.AreEqual(3, addCalls);
@@ -295,32 +328,32 @@ public partial class ObservabilityTests
         ev.Fire();
         Assert.AreEqual(1, counter);
     }
-
-    [TestMethod]
-    public void TestCollectionIndexAssignmentBehavior()
-    {
-        var collection = new ObservableCollection<string>();
-        collection.Add("Hello");
-
-        var asserted = false;
-        collection.AssignedToIndex.SubscribeOnce((assignment) =>
-        {
-            Assert.AreEqual("Hello", assignment.OldValue);
-            Assert.AreEqual("Goodbye", assignment.NewValue);
-            asserted = true;
-        });
-        collection[0] = "Goodbye";
-        Assert.IsTrue(asserted);
-    }
+ 
 
     [TestMethod]
     public void TestDisposal()
     {
-        var lt = new Lifetime();
+        var lt = DefaultRecyclablePool.Instance.Rent();
         var fired = false;
         lt.OnDisposed(() => fired = true);
         Assert.IsFalse(fired);
         lt.Dispose();
         Assert.IsTrue(fired);
+    }
+
+    [TestMethod]
+    public void TestRecycle()
+    {
+        var recyclable = DefaultRecyclablePool.Instance.Rent();
+
+        Assert.IsFalse(recyclable.IsExpired);
+        Assert.IsFalse(recyclable.IsExpiring);
+
+        recyclable.Dispose();
+
+        var reRented = DefaultRecyclablePool.Instance.Rent();
+        Assert.AreSame(recyclable, reRented);
+        Assert.IsFalse(reRented.IsExpired);
+        Assert.IsFalse(reRented.IsExpiring);
     }
 }

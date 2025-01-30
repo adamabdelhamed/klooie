@@ -4,20 +4,20 @@ internal partial class ObservabilitySamples
 {
     public static async Task Foo()
     {
-//#Sample -id LifetimeDisposable
+        //#Sample -id LifetimeDisposable
 
         // SomeCodeThatRunsWhenEnterIsPressed will only be called when the user presses the Enter key AND
         // while the following using block is in scope.
-        using (var someLifetime = ConsoleApp.Current.CreateChildLifetime())
-        {
-            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, SomeCodeThatRunsWhenEnterIsPressed, someLifetime);
-            await SomeAsyncWork();
-            SomeSyncWork();
-            await SomeMoreAsyncWork();
-        }
-//#EndSample
-
+        var someLifetime = ConsoleApp.Current.CreateChildRecyclable();
         
+        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, SomeCodeThatRunsWhenEnterIsPressed, someLifetime);
+        await SomeAsyncWork();
+        SomeSyncWork();
+        await SomeMoreAsyncWork();
+        someLifetime.Dispose();
+        //#EndSample
+
+
 
 
     }
@@ -56,8 +56,6 @@ internal partial class ObservabilitySamples
         // subscribe for the lifetime of the control
         control.SomethingCoolHappened.Subscribe(() => { /* handler here */ }, control);
 
-        // subscribe forever (should rarely be used)
-        control.SomethingCoolHappened.Subscribe(() => { /* handler here */}, Lifetime.Forever);
 
         // subscribe with args
         control.SomethingCoolHappenedWithArgs.SubscribeOnce((stringArgs) => { /* handler here that gets access to the args */ });

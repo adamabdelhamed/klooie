@@ -73,9 +73,9 @@ public partial class Rectangular :  Recyclable, IObservableObject, ICollidable
  
     }
 
-    protected override void ProtectedInit()
+    protected override void OnInit()
     {
-        base.ProtectedInit();
+        base.OnInit();
         ColliderHashCode = -1;
         BoundsChanged.Subscribe(this, SyncBoundsFromExistingBounds, this);
     }

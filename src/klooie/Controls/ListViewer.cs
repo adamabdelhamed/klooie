@@ -36,7 +36,7 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
 
     private ListViewerPanel presenter;
     private List<ConsoleControl> highlightedControls;
-    private List<Lifetime> highlightLifetimes = new List<Lifetime>();
+    private List<Recyclable> highlightLifetimes = new List<Recyclable>();
 
     public Event SelectionChanged { get; private init; } = new Event();
     public partial int SelectedRowIndex { get; set; }
@@ -206,7 +206,7 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
 
         foreach (var cellDisplayControl in controls)
         {
-            var highlightLifetime = new Lifetime();
+            var highlightLifetime = DefaultRecyclablePool.Instance.Rent();
             highlightLifetimes.Add(highlightLifetime);
             if (cellDisplayControl is Label label)
             {

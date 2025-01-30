@@ -3,7 +3,7 @@
 namespace klooie.Theming;
 internal static class ThemeEvaluator
 {
-    public static ThemeApplicationTracker Apply(Style[] styles, ConsolePanel root = null, ILifetimeManager lt = null)
+    public static ThemeApplicationTracker Apply(Style[] styles, ConsolePanel root = null, ILifetime lt = null)
     {
         styles.For((s, i) => s.Index = i);
         var tracker = new ThemeApplicationTracker(styles);
@@ -21,7 +21,7 @@ internal static class ThemeEvaluator
         return tracker;
     }
 
-    private static void EvaulateAllControls(ConsolePanel root, ILifetimeManager applyLifetime, Style[] styles, ThemeApplicationTracker tracker)
+    private static void EvaulateAllControls(ConsolePanel root, ILifetime applyLifetime, Style[] styles, ThemeApplicationTracker tracker)
     {
         ConsoleControl control = ConsoleApp.Current.LayoutRoot;
         if (ShouldEvaluate(control, root))
@@ -47,7 +47,7 @@ internal static class ThemeEvaluator
         }
     }
 
-    private static void EvaluateControl(ConsoleControl c, ILifetimeManager lt, Style[] styles, ThemeApplicationTracker tracker)
+    private static void EvaluateControl(ConsoleControl c, ILifetime lt, Style[] styles, ThemeApplicationTracker tracker)
     {
         var props = c.GetType().GetProperties();
         for(int i = 0; i < props.Length; i++)
@@ -60,7 +60,7 @@ internal static class ThemeEvaluator
         }
     }
 
-    private static void EvaluateProperty(ConsoleControl c, PropertyInfo property, Style[] styles, ILifetimeManager lt, ThemeApplicationTracker tracker)
+    private static void EvaluateProperty(ConsoleControl c, PropertyInfo property, Style[] styles, ILifetime lt, ThemeApplicationTracker tracker)
     {
         Style mostSpecificStyle = null;
         int? highestScore = null;
@@ -91,7 +91,7 @@ internal static class ThemeEvaluator
             if (tagsNeedToBeMonitored)
             {
                 tracker.MonitoredApplicationCounts[mostSpecificStyle.Index]++;
-                var evalLifetime = Lifetime.EarliestOf(lt);
+                var evalLifetime = Recyclable.EarliestOf(lt);
                 MonitorTags(c, property, styles, lt, evalLifetime, tracker);
                 mostSpecificStyle.ApplyPropertyValue(c, evalLifetime);
             }
@@ -144,7 +144,7 @@ internal static class ThemeEvaluator
         return ConsoleMath.Round(score);
     }
 
-    private static void MonitorTags(ConsoleControl c, PropertyInfo prop, Style[] styles, ILifetimeManager themeLt, Lifetime evalLifetime, ThemeApplicationTracker tracker)
+    private static void MonitorTags(ConsoleControl c, PropertyInfo prop, Style[] styles, ILifetime themeLt, Recyclable evalLifetime, ThemeApplicationTracker tracker)
     {
         // invalidate if any of my parents tags change
         foreach (var parent in ParentChain(c))

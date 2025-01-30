@@ -31,7 +31,7 @@ public class Wander : Movement
 
     internal Angle? _LastGoodAngle { get; set; }
     internal Angle _OptimalAngle { get; set; }
-    internal ILifetime _IterationLifetime { get; set; }
+    internal Recyclable _IterationLifetime { get; set; }
     internal GameCollider[] _Obstacles { get; set; }
     internal WanderScore _BestScore { get; set; }
     internal ICollidable _CuriosityPoint { get; set; }
@@ -114,7 +114,7 @@ public class Wander : Movement
             _CuriosityPoint = Options.CuriousityPoint?.Invoke();
             Velocity.Stop();
             _IterationLifetime?.Dispose();
-            _IterationLifetime = Game.Current.CreateChildLifetime();
+            _IterationLifetime = Game.Current.CreateChildRecyclable();
 
             elementBounds = Element.Bounds;
             var buffer = ObstacleBufferPool.Instance.Rent();
@@ -145,7 +145,7 @@ public class Wander : Movement
             }
             finally
             {
-                ObstacleBufferPool.Instance.Return(buffer);
+                buffer.Dispose();
             }
             SetOptimalAngle();
 
@@ -272,13 +272,13 @@ public class Wander : Movement
             finally
             {
                 ArrayPool<ICollidable>.Shared.Return(colliders);
-                CollisionPredictionPool.Instance.Return(prediction);
+                prediction.Dispose();
             }
 
         }
         finally
         {
-            ColliderBoxPool.Instance.Return(cpBox);
+            cpBox.Dispose();
         }
 
     }

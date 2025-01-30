@@ -20,8 +20,8 @@ public enum CompositionMode
 public abstract class Container : ConsoleControl
 {
     private Event<ConsoleControl> _descendentAdded, _descendentRemoved;
-    public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = EventPool<ConsoleControl>.Rent()); }
-    public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = EventPool<ConsoleControl>.Rent()); }
+    public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = EventPool<ConsoleControl>.Instance.Rent()); }
+    public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = EventPool<ConsoleControl>.Instance.Rent()); }
     public static SingleThreadObjectPool<List<ConsoleControl>> DescendentBufferPool { get; private set; } = new SingleThreadObjectPool<List<ConsoleControl>>();
     internal Container() { }
 

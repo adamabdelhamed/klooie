@@ -15,7 +15,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     private const int ChannelCount = 2;
     private readonly IWavePlayer outputDevice;
     private readonly MixingSampleProvider mixer;
-    private List<Lifetime> currentSoundLifetimes;
+    private List<Recyclable> currentSoundLifetimes;
     private HashSet<string> soundIds;
     private Dictionary<ISampleProvider, LoopInfo> runningLoops;
     private SamplePool samplePool;
@@ -37,7 +37,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     {
         try
         {
-            currentSoundLifetimes = new List<Lifetime>();
+            currentSoundLifetimes = new List<Recyclable>();
             runningLoops = new Dictionary<ISampleProvider, LoopInfo>();
             var sw = Stopwatch.StartNew();
             mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
@@ -63,7 +63,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     /// Plays the given sound
     /// </summary>
     /// <param name="soundId">the id of the sound</param>
-    public void Play(string? soundId, ILifetimeManager? maxDuration = null)
+    public void Play(string? soundId, ILifetime? maxDuration = null)
     {
         if (soundId == null) return;
         try
@@ -98,15 +98,15 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     /// </summary>
     /// <param name="soundId">the sound to loop</param>
     /// <param name="lt">the loop duration</param>
-    public void Loop(string? soundId, ILifetimeManager? lt = null)
+    public void Loop(string? soundId, ILifetime? lt = null)
     {
         if (soundId == null) return;
-        lt = lt ?? Lifetime.Forever;
+        lt = lt ?? Recyclable.Forever;
         try
         {
             if (soundIds.Contains(soundId))
             {
-                var overrideLifetime = new Lifetime();
+                var overrideLifetime = DefaultRecyclablePool.Instance.Rent();
                 lock (currentSoundLifetimes)
                 {
                     currentSoundLifetimes.Add(overrideLifetime);
@@ -324,8 +324,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 internal sealed class LifetimeAwareSampleProvider : ISampleProvider
 {
     internal ISampleProvider InnerSample;
-    private ILifetimeManager lt;
-    public LifetimeAwareSampleProvider(ISampleProvider inner, ILifetimeManager lt)
+    private ILifetime lt;
+    public LifetimeAwareSampleProvider(ISampleProvider inner, ILifetime lt)
     {
         this.InnerSample = inner;
         this.lt = lt;
@@ -384,6 +384,6 @@ internal sealed class VolumeSampleProvider : ISampleProvider
 internal sealed class LoopInfo
 {
     public string Sound { get; set; }
-    public ILifetimeManager Lifetime { get; set; }
+    public ILifetime Lifetime { get; set; }
 }
 

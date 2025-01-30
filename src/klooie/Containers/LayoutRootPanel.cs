@@ -10,7 +10,7 @@ internal class LayoutRootPanel : ConsolePanel
     private ConsoleCharacter defaultPen;
     private FrameRateMeter cycleRateMeter;
 
-    internal Event OnWindowResized { get => _onWindowResized ?? (_onWindowResized = EventPool.Rent()); }
+    internal Event OnWindowResized { get => _onWindowResized ?? (_onWindowResized = EventPool.Instance.Rent()); }
     internal int TotalCycles => cycleRateMeter.TotalFrames;
     internal int CyclesPerSecond => cycleRateMeter.CurrentFPS;
     internal int FramesPerSecond => paintRateMeter.CurrentFPS;

@@ -32,7 +32,7 @@ public partial class TabControl : ProtectedConsolePanel
     private StackPanel tabStack;
     private ConsolePanel body;
     private Label currentTabLabel;
-    private ILifetime arrowKeyLifetime;
+    private Recyclable arrowKeyLifetime;
     private List<TabLabel> tabs = new List<TabLabel>();
     private string _currentTab;
 
@@ -143,7 +143,7 @@ public partial class TabControl : ProtectedConsolePanel
         arrowKeyLifetime?.Dispose();
         var hasFocus = tabStack.Controls.Contains(ConsoleApp.Current.FocusedControl);
         if (hasFocus == false) return;
-        arrowKeyLifetime = this.CreateChildLifetime();
+        arrowKeyLifetime = this.CreateChildRecyclable();
 
         var next = () =>
         {

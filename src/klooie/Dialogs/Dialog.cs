@@ -117,9 +117,9 @@ public static class Dialog
         return cancelled;
     }
 
-    private static Task Forward(float duration, ILifetimeManager lt, Action<float> setter) => AnimateCommon(duration, lt, setter, 0, 1);
-    private static Task Reverse(float duration, ILifetimeManager lt, Action<float> setter) => AnimateCommon(duration, lt, setter, 1, 0);
-    private static Task AnimateCommon(float duration, ILifetimeManager lt, Action<float> setter, float from, float to)
+    private static Task Forward(float duration, ILifetime lt, Action<float> setter) => AnimateCommon(duration, lt, setter, 0, 1);
+    private static Task Reverse(float duration, ILifetime lt, Action<float> setter) => AnimateCommon(duration, lt, setter, 1, 0);
+    private static Task AnimateCommon(float duration, ILifetime lt, Action<float> setter, float from, float to)
     {
         if (duration == 0)
         {

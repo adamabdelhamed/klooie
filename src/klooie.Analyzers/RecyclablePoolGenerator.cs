@@ -1,7 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using System;
 using System.Linq;
 using System.Text;
 
@@ -10,7 +9,7 @@ namespace klooie
     [Generator]
     public class RecyclablePoolGenerator : ISourceGenerator
     {
-        private INamedTypeSymbol recyclableInterfaceSymbol;
+        private INamedTypeSymbol recyclableClassSymbol;
 
         public void Initialize(GeneratorInitializationContext context) { }
 
@@ -18,7 +17,7 @@ namespace klooie
         {
             var compilation = context.Compilation;
 
-            recyclableInterfaceSymbol = compilation.GetTypeByMetadataName("klooie.IRecyclable");
+            recyclableClassSymbol = compilation.GetTypeByMetadataName("klooie.Recyclable");
 
             var classes = compilation.SyntaxTrees
                 .SelectMany(st => st.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>())
@@ -34,12 +33,25 @@ namespace klooie
                 if (classSymbol.DeclaredAccessibility != Accessibility.Public) continue;
                 if (classSymbol.TypeParameters.Any()) continue; // Skip if it has generic arguments
                 if (classSymbol.ContainingType != null) continue; // Exclude nested types
-                if (!classSymbol.AllInterfaces.Any(i => i.Equals(recyclableInterfaceSymbol, SymbolEqualityComparer.Default))) continue;
+                if (!IsEqualsOrDerivesFromBaseType(classSymbol, recyclableClassSymbol)) continue;
                 if (!classSymbol.Constructors.Any(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public)) continue;
 
                 var source = GeneratePoolClass(classSymbol);
                 context.AddSource($"{classSymbol.Name}Pool.g.cs", SourceText.From(source, Encoding.UTF8));
             }
+        }
+
+        private bool IsEqualsOrDerivesFromBaseType(INamedTypeSymbol classSymbol, INamedTypeSymbol baseTypeSymbol)
+        {
+            var currentType = classSymbol;
+            while (currentType != null)
+            {
+                if (currentType.Equals(baseTypeSymbol, SymbolEqualityComparer.Default))
+                    return true;
+
+                currentType = currentType.BaseType;
+            }
+            return false;
         }
 
         private string GeneratePoolClass(INamedTypeSymbol classSymbol)

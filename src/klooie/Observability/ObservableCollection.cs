@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace klooie;
@@ -8,7 +9,6 @@ internal interface IObservableCollection : IEnumerable
     int LastModifiedIndex { get; }
     Event<object> Added { get; }
     Event<object> Removed { get; }
-    Event<IIndexAssignment> AssignedToIndex { get; }
     Event Changed { get; }
 
     void RemoveAt(int index);
@@ -16,85 +16,51 @@ internal interface IObservableCollection : IEnumerable
     object this[int index] { get;set; }
 }
 
-internal interface IIndexAssignment
-{
-    int Index { get; }
-    object OldValue { get; }
-    object NewValue { get; }
-}
-
-/// <summary>
-/// A class representing an index assignment in an observable collection
-/// </summary>
-/// <typeparam name="T">the type of object in the collection</typeparam>
-public class IndexAssignment<T> : IIndexAssignment
-{
-    /// <summary>
-    /// The index that changes
-    /// </summary>
-    public int Index { get; internal set; }
-
-    /// <summary>
-    /// The previous value
-    /// </summary>
-    public T OldValue { get; internal set; }
-
-    /// <summary>
-    /// the new value
-    /// </summary>
-    public T NewValue { get; internal set; }
-
-    object IIndexAssignment.OldValue => OldValue;
-    object IIndexAssignment.NewValue => NewValue;
-}
+ 
+ 
 
 /// <summary>
 /// An observable list implementation
 /// </summary>
 /// <typeparam name="T">the type of elements this collection will contain</typeparam>
-public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, IReadOnlyList<T>
+public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableCollection, IReadOnlyList<T>
 {
     private List<T> wrapped;
     private Dictionary<T, Recyclable> membershipLifetimes;
-    private Event<object> _untypedAdded = new Event<object>();
+    private Event<object> _untypedAdded = EventPool<object>.Instance.Rent();
     Event<Object> IObservableCollection.Added => _untypedAdded;
-    private Event<object> _untypedRemove = new Event<object>();
+    private Event<object> _untypedRemove = EventPool<object>.Instance.Rent();
     Event<Object> IObservableCollection.Removed => _untypedRemove;
-    private Event<IIndexAssignment> untyped_Assigned = new Event<IIndexAssignment>();
-    Event<IIndexAssignment> IObservableCollection.AssignedToIndex => untyped_Assigned;
 
-   
+    private Event<T> _beforeAdded, added, beforeRemoved, removed;
+    private Event changed;
     public int LastModifiedIndex { get; private set; }
     /// <summary>
     /// Called before an item is added to the list
     /// </summary>
-    public Event<T> BeforeAdded { get; private set; } = new Event<T>();
+    public Event<T> BeforeAdded => _beforeAdded ?? (_beforeAdded = EventPool<T>.Instance.Rent());
 
     /// <summary>
     /// Called after an item is removed from the list
     /// </summary>
-    public Event<T> BeforeRemoved { get; private set; } = new Event<T>();
+    public Event<T> BeforeRemoved => beforeRemoved ?? (beforeRemoved = EventPool<T>.Instance.Rent());
 
     /// <summary>
     /// Called when an element is added to this list
     /// </summary>
-    public Event<T> Added { get; private set; } = new Event<T>();
+    public Event<T> Added => added ?? (added = EventPool<T>.Instance.Rent());
 
     /// <summary>
     /// Called when an element is removed from this list
     /// </summary>
-    public Event<T> Removed { get; private set; } = new Event<T>();
+    public Event<T> Removed  => removed ?? (removed = EventPool<T>.Instance.Rent());
 
     /// <summary>
     /// Called whenever this list changes.  You may receive one event for multiple changes
     /// if the changes were atomic (e.g. after calling Clear()).
     /// </summary>
-    public Event Changed { get; private set; } = new Event();
+    public Event Changed => changed ?? (changed = EventPool.Instance.Rent());
 
-    /// <summary>
-    /// Called whenever an index assignment is made
-    /// </summary>
-    public Event<IndexAssignment<T>> AssignedToIndex { get; private set; } = new Event<IndexAssignment<T>>();
 
     /// <summary>
     /// Initialized the collection
@@ -105,6 +71,25 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
         membershipLifetimes = new Dictionary<T, Recyclable>();
     }
 
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        _untypedAdded?.Dispose();
+        _untypedAdded = null;
+        _untypedRemove?.Dispose();
+        _untypedRemove = null;
+        _beforeAdded?.Dispose();
+        _beforeAdded = null;
+        added?.Dispose();
+        added = null;
+        beforeRemoved?.Dispose();
+        beforeRemoved = null;
+        removed?.Dispose();
+        removed = null;
+        changed?.Dispose();
+        changed = null;
+    }
+
     /// <summary>
     /// Calls the change handler for each existing item, call the change handler once,
     /// and subscribes to future changes
@@ -113,7 +98,7 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
     /// <param name="removeAction">the remove handler</param>
     /// <param name="changedAction">the changed handler</param>
     /// <param name="manager">the lifetime of the subscriptions</param>
-    public void Sync(Action<T> addAction, Action<T> removeAction, Action changedAction, ILifetimeManager manager)
+    public void Sync(Action<T> addAction, Action<T> removeAction, Action changedAction, ILifetime manager)
     {
         Added.Subscribe(addAction, manager);
         Removed.Subscribe(removeAction, manager);
@@ -136,7 +121,7 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
     /// </summary>
     /// <param name="item">the item to track</param>
     /// <returns>a lifetime that expires when the given item is removed from the collection</returns>
-    public ILifetimeManager GetMembershipLifetime(T item) => membershipLifetimes[item];
+    public ILifetime GetMembershipLifetime(T item) => membershipLifetimes[item];
 
     /// <summary>
     /// Fires the Added event for the given item
@@ -145,9 +130,9 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
     internal void FireAdded(T item)
     {
         membershipLifetimes.Add(item, DefaultRecyclablePool.Instance.Rent());
-        Added.Fire(item);
-        _untypedAdded.Fire(item);
-        Changed.Fire();
+        added?.Fire(item);
+        _untypedAdded?.Fire(item);
+        changed?.Fire();
     }
 
     /// <summary>
@@ -156,25 +141,18 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
     /// <param name="item">The item that was removed</param>
     internal void FireRemoved(T item)
     {
-        Removed.Fire(item);
-        _untypedRemove.Fire(item);
+        removed?.Fire(item);
+        _untypedRemove?.Fire(item);
         Changed.Fire();
         var itemLifetime = membershipLifetimes[item];
         membershipLifetimes.Remove(item);
         itemLifetime.Dispose();
-        DefaultRecyclablePool.Instance.Return(itemLifetime);
     }
 
-    internal void FireAssignedToIndex(T added, T removed)
-    {
-        var assignmentArgs = new IndexAssignment<T>() { Index = LastModifiedIndex, NewValue = added, OldValue = removed };
-        AssignedToIndex.Fire(assignmentArgs);
-        untyped_Assigned.Fire(assignmentArgs);
-        Changed.Fire();
-    }
+    
 
-    internal void FireBeforeAdded(T item) => BeforeAdded.Fire(item);
-    internal void FireBeforeRemoved(T item) => BeforeRemoved.Fire(item);
+    internal void FireBeforeAdded(T item) => _beforeAdded?.Fire(item);
+    internal void FireBeforeRemoved(T item) => _beforeAdded?.Fire(item);
     
 
     /// <summary>
@@ -238,7 +216,6 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
 
             wrapped[index] = value;
 
-            FireAssignedToIndex(value, oldItem);
             FireRemoved(oldItem);
             FireAdded(value);
         }
@@ -345,4 +322,16 @@ public sealed class ObservableCollection<T> : IList<T>, IObservableCollection, I
     /// </summary>
     /// <returns>an enumerator for this list</returns>
     IEnumerator IEnumerable.GetEnumerator() => wrapped.GetEnumerator();
+}
+
+public class ObservableCollectionPool<T> : RecycleablePool<ObservableCollection<T>>
+{
+
+    private static ObservableCollectionPool<T> instance;
+    public static ObservableCollectionPool<T> Instance => instance ?? (instance = new ObservableCollectionPool<T>());
+
+    public override ObservableCollection<T> Factory()
+    {
+        return new ObservableCollection<T>();
+    }
 }

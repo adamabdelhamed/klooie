@@ -12,7 +12,10 @@ namespace klooie.tests;
 public class CollisionDetectorTests
 {
     public TestContext TestContext { get; set; }
- 
+
+    [TestInitialize]
+    public void Initialize() => TestContextHelper.GlobalSetup();
+
 
     /// <summary>
     /// Positions two rectangles so they are very close to each other and then predicts a collision
@@ -33,7 +36,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            CollisionPredictionPool.Instance.Return(prediction);
+            prediction.Dispose();
         }
     }
 
@@ -51,7 +54,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            CollisionPredictionPool.Instance.Return(prediction);
+            prediction.Dispose();
         }
     }
 
@@ -71,7 +74,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            CollisionPredictionPool.Instance.Return(prediction);
+            prediction.Dispose();
         }
     }
 
@@ -97,7 +100,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            CollisionPredictionPool.Instance.Return(prediction);
+            prediction.Dispose();
         }
     }
 
@@ -122,7 +125,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            CollisionPredictionPool.Instance.Return(prediction);
+            prediction.Dispose();
         }
     }
 
@@ -158,8 +161,8 @@ public class CollisionDetectorTests
         }
         finally
         {
-            CollisionPredictionPool.Instance.Return(predictionRough);
-            CollisionPredictionPool.Instance.Return(predictionPrecise);
+            predictionRough.Dispose();
+            predictionPrecise.Dispose();
         }
     }
 
@@ -235,14 +238,9 @@ public class CollisionDetectorTests
     [TestMethod]
     public void TestCloseMovementWithDebuggerSuccess()
     {
-        ConsoleProvider.Current = new KlooieTestConsole()
-        {
-            BufferWidth = 80,
-            WindowWidth = 80,
-            WindowHeight = 51
-        };
-        using (var lt = new Lifetime())
-        {
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        { 
             var stopwatch = new ManualStopwatch();
             var group = new ColliderGroup(lt, stopwatch);
             ColliderGroupDebugger.TryInit(group, CurrentTestFYIRootPath, lt);
@@ -260,18 +258,17 @@ public class CollisionDetectorTests
             Assert.IsTrue(movingObject.Left > 0);
             Assert.IsTrue(movingObject.Top == 0);
         }
+        finally
+        {
+            lt.Dispose();
+        }
     }
 
     [TestMethod]
     public void TestCollisionWithNotEnoughRoomToEncroach()
     {
-        ConsoleProvider.Current = new KlooieTestConsole()
-        {
-            BufferWidth = 80,
-            WindowWidth = 80,
-            WindowHeight = 51
-        };
-        using (var lt = new Lifetime())
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
             var stopwatch = new ManualStopwatch();
             var group = new ColliderGroup(lt, stopwatch);
@@ -321,18 +318,17 @@ public class CollisionDetectorTests
             Assert.IsTrue(bounceMoveDetected);
             Assert.AreEqual(10, movingObject.Velocity.Speed);
         }
+        finally
+        {
+            lt.Dispose();
+        }
     }
 
     [TestMethod]
     public void TestCollisionWithEnoughRoomToEncroach()
     {
-        ConsoleProvider.Current = new KlooieTestConsole()
-        {
-            BufferWidth = 80,
-            WindowWidth = 80,
-            WindowHeight = 51
-        };
-        using (var lt = new Lifetime())
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
             var stopwatch = new ManualStopwatch();
             var group = new ColliderGroup(lt, stopwatch);
@@ -355,6 +351,10 @@ public class CollisionDetectorTests
             Assert.IsTrue(movingObject.Top == 0); // didn't move up or down
             Assert.AreEqual(Angle.Left, movingObject.Velocity.Angle); // angle changed to left
             Assert.AreEqual(10, movingObject.Velocity.Speed);
+        }
+          finally
+        {
+            lt.Dispose();
         }
     }
 #endif

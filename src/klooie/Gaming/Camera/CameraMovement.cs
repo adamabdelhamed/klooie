@@ -2,7 +2,7 @@
 /// <summary>
 /// A movement that can be performed by a camera operator
 /// </summary>
-public abstract class CameraMovement : Lifetime
+public abstract class CameraMovement : Recyclable
 {
     /// <summary>
     /// Gets the camera
@@ -19,7 +19,7 @@ public abstract class CameraMovement : Lifetime
     /// A lifetime that will be set for you before Move is called. It will be
     /// cleaned up for you as well.
     /// </summary>
-    public ILifetimeManager MovementLifetime { get; internal set; }
+    public ILifetime MovementLifetime { get; internal set; }
 
     /// <summary>
     /// Derived classes are free to move the camera during this call

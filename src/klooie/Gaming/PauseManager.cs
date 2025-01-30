@@ -1,8 +1,8 @@
 ﻿namespace klooie.Gaming;
 public sealed class PauseManager : IDelayProvider
 {
-    private Lifetime? pauseLifetime;
-    public Event<ILifetimeManager> OnPaused { get; private set; } = new Event<ILifetimeManager>();
+    private Recyclable? pauseLifetime;
+    public Event<ILifetime> OnPaused { get; private set; } = new Event<ILifetime>();
 
     public bool IsPaused
     {
@@ -14,7 +14,7 @@ public sealed class PauseManager : IDelayProvider
             if (value)
             {
                 Game.Current.InnerLoopAPIs.Pause();
-                pauseLifetime = new Lifetime();
+                pauseLifetime = DefaultRecyclablePool.Instance.Rent();
                 OnPaused.Fire(pauseLifetime);
             }
             else

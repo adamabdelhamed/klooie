@@ -13,7 +13,7 @@ public class Navigate : Movement
     public ICollidable effectiveDestination { get; set; }
     public ICollidable _LocalTarget { get; set; }
     public NavigationPath _CurrentPath { get; set; }
-    public ILifetime _ResultLifetime { get; private set; } = Game.Current.CreateChildLifetime();
+    public Recyclable _ResultLifetime { get; private set; } = Game.Current.CreateChildRecyclable();
 
     private Func<ICollidable> destination;
     public NavigateOptions Options { get; private set; }
@@ -33,7 +33,7 @@ public class Navigate : Movement
             }
             finally
             {
-                ObstacleBufferPool.Instance.Return(buffer);
+                buffer.Dispose();
             }
         }
     }

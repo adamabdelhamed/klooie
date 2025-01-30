@@ -17,13 +17,18 @@ public class SourceGeneratorBasedObservabilityTests
         var observable = new SGObservable();
 
         int nameChangedCount = 0;
-        ILifetimeManager propValLt;
-        using(var lt = new Lifetime())
+        ILifetime propValLt;
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
             observable.NameChanged.Subscribe(() => nameChangedCount++, lt);  
             observable.Name = "new name";
             Assert.AreEqual(1, nameChangedCount);
             Assert.AreEqual("new name", observable.Name);
+        }
+        finally
+        {
+            lt.Dispose();
         }
         propValLt = observable.NameChanged.CreateNextFireLifetime();
         

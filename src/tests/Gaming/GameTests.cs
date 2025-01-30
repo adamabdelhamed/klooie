@@ -22,15 +22,7 @@ public class GameTests
     }
 
     [TestInitialize]
-    public void Setup()
-    {
-        ConsoleProvider.Current = new KlooieTestConsole()
-        {
-            BufferWidth = 80,
-            WindowWidth = 80,
-            WindowHeight = 51
-        };
-    }
+    public void Setup() => TestContextHelper.GlobalSetup();
 
     [TestMethod]
     public void EventBroadcaster_SingleVariable()
@@ -39,7 +31,8 @@ public class GameTests
         game.Invoke(() =>
         {
             var receiveCount = 0;
-            using (var subLt = new Lifetime())
+            var subLt = DefaultRecyclablePool.Instance.Rent();
+            try
             {
                 game.Subscribe("Ready", (e) =>
                 {
@@ -51,7 +44,10 @@ public class GameTests
                 game.Publish("Ready");
                 Assert.AreEqual(1, receiveCount);
             }
-
+            finally
+            {
+                subLt.Dispose();
+            }
             // lifetime is over, subscription should be terminated
             game.Publish("Ready");
             Assert.AreEqual(1, receiveCount);

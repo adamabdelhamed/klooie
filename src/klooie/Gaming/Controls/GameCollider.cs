@@ -22,9 +22,9 @@ public class GameCollider : ConsoleControl
         }
     }
 
-    protected override void ProtectedInit()
+    protected override void OnInit()
     {
-        base.ProtectedInit();
+        base.OnInit();
 
         if(Velocity == null && connectToMainColliderGroup)
         {
@@ -37,7 +37,7 @@ public class GameCollider : ConsoleControl
     private static void ReturnVelocity(object colliderObj)
     {
         var c = (colliderObj as GameCollider);
-        VelocityPool.Instance.Return(c.Velocity);
+        c.Velocity.Dispose();
         c.Velocity = null;
     }
 
@@ -71,7 +71,7 @@ public class GameCollider : ConsoleControl
         }
         finally
         {
-            ObstacleBufferPool.Instance.Return(buffer);
+            buffer.Dispose();
         }
     }
 
@@ -111,7 +111,7 @@ public class GameCollider : ConsoleControl
         }
         finally
         {
-            ObstacleBufferPool.Instance.Return(buffer);
+            buffer.Dispose();
         }
         if (causesOverlap == false)
         {
@@ -130,7 +130,7 @@ public class GameCollider : ConsoleControl
         var buffer = ObstacleBufferPool.Instance.Rent();
         GetOverlappingObstacles(buffer);
         isOverlapped = buffer.WriteableBuffer.Count > 0;
-        ObstacleBufferPool.Instance.Return(buffer);
+        buffer.Dispose();
         return isOverlapped;
     }
 

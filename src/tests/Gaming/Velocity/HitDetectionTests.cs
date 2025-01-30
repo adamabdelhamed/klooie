@@ -11,21 +11,14 @@ public class HitDetectionTests
     public TestContext TestContext { get; set; }
 
     [TestInitialize]
-    public void Setup()
-    {
-        ConsoleProvider.Current = new KlooieTestConsole()
-        {
-            BufferWidth = 80,
-            WindowWidth = 80,
-            WindowHeight = 51
-        };
-    }
+    public void Setup() => TestContextHelper.GlobalSetup();
 
     [TestMethod]
     public void HitDetection_Basic()
     {
-        using (var testLt = new Lifetime())
-        {
+        var testLt = DefaultRecyclablePool.Instance.Rent();
+        try
+        { 
             var group = new ColliderGroup(testLt);
 
             var from = new GameCollider(new RectF(0, 0, 1, 1), false);
@@ -42,6 +35,10 @@ public class HitDetectionTests
             prediction = CollisionDetector.Predict(from, Angle.Right, colliders, .001f, CastingMode.Precise, colliders.Length, prediction);
             Assert.AreEqual(true, prediction.CollisionPredicted);
             AssertCloseEnough(0.001f, prediction.LKGD);
+        }
+        finally
+        {
+            testLt.Dispose();
         }
     }
 

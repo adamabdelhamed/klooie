@@ -43,7 +43,7 @@ namespace klooie.tests
                 control.Background = RGB.Red;
                 ConsoleApp.Current.LayoutRoot.Add(control);
                 await Task.Yield();
-                ConsoleControlPool.Instance.Return(control);
+                control.Dispose();
             });
         });
 
@@ -56,7 +56,7 @@ namespace klooie.tests
                 control.Background = RGB.Red;
                 ConsoleApp.Current.LayoutRoot.Add(control);
                 await Task.Yield();
-                ConsolePanelPool.Instance.Return(control);
+                control.Dispose();
             });
         });
 
@@ -70,7 +70,7 @@ namespace klooie.tests
                 control.Background = RGB.Red;
                 Game.Current.GamePanel.Add(control);
                 await Task.Yield();
-                GameColliderPool.Instance.Return(control);
+                control.Dispose();
             });
         });
 

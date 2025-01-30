@@ -1,6 +1,6 @@
 ﻿using System.Runtime.ExceptionServices;
 namespace klooie;
-public class EventLoop : Lifetime
+public class EventLoop : Recyclable
 {
     private class SynchronizedEventPool  
     {
@@ -421,8 +421,8 @@ public class EventLoop : Lifetime
         work();
         return Task.CompletedTask;
     });
-    
 
+ 
     public void InvokeNextCycle(Func<Task> work) => Invoke(async () =>
     {
         await Task.Yield();

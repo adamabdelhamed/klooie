@@ -37,7 +37,7 @@ public class MovementTests
         cStill.MoveTo(112, 2);
 
         var successLt = cMover.Velocity.OnCollision.CreateNextFireLifetime();
-        var lt = Lifetime.EarliestOf(Task.Delay(2000).ToLifetime(), successLt);
+        var lt = Recyclable.EarliestOf(Task.Delay(2000).ToLifetime(), successLt);
         await Mover.InvokeOrTimeout(new Right(cMover.Velocity, () => 80), lt);
         var success = successLt.IsExpired;
         await Game.Current.Delay(250);
@@ -182,7 +182,7 @@ public class MovementTests
             cMover.GetObstacles(buffer);
             var overlaps = buffer.ReadableBuffer
             .Where(o => o.OverlapPercentage(cMover) > 0).ToArray();
-            ObstacleBufferPool.Instance.Return(buffer);
+            buffer.Dispose();
             if (overlaps.Any())
             {
                 Assert.Fail("overlaps detected");

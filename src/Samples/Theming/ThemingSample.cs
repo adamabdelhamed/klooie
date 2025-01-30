@@ -14,17 +14,16 @@ public class ThemingSample : ConsoleApp
     {
         CreateGridLayout();
         InitializeMenu();
-        using (var themeLifetime = this.CreateChildLifetime())
-        {
-            new OrangeTheme().Apply(lt: themeLifetime);
-            await Task.Delay(1000);
-        }
+        var themeLifetime = this.CreateChildRecyclable();
+        
+        new OrangeTheme().Apply(lt: themeLifetime);
+        await Task.Delay(1000);
+        themeLifetime.Dispose();
 
-        using (var themeLifetime = this.CreateChildLifetime())
-        {
-            new DarkTheme().Apply(lt: themeLifetime);
-            await Task.Delay(1000);
-        }
+        themeLifetime = this.CreateChildRecyclable();
+        new DarkTheme().Apply(lt: themeLifetime);
+        await Task.Delay(1000);
+        themeLifetime.Dispose();
 
         // apply for the remainder of the app lifetime
         new LightTheme().Apply();
