@@ -28,12 +28,10 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
     /// <summary>
     /// Gets the currently selected item
     /// </summary>
-    public partial T? SelectedItem { get; private set; }
+    public T SelectedItem => menuItems[SelectedIndex];
 
-    /// <summary>
-    /// An event that fires when the user activates the selected item
-    /// </summary>
-    public Event<T> ItemActivated { get; private init; } = new Event<T>();
+
+    private int visuallySelectedIndex;
 
     /// <summary>
     /// Creates a menu given a set of menu items. When this constructor is used the
@@ -63,9 +61,13 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
 
     private void AddMenuItems()
     {
-        var stack = ProtectedPanel.Add(new StackPanel() { Orientation = Orientation.Vertical, Margin = 1 }).Fill();
+        var stack = ProtectedPanel.Add(new StackPanel() { Orientation = Orientation.Vertical, Margin = 0 }).Fill();
         SyncBackground(stack);
-        menuItems.ForEach(menuItem => stack.Add(new Label() { Tag = menuItem }).FillHorizontally());
+        menuItems.ForEach(menuItem =>
+        {
+            var panel = stack.Add(new ConsolePanel() { Height = 3 }).FillHorizontally();
+            panel.Add(new Label() { Tag = menuItem, CompositionMode = CompositionMode.BlendBackground }).CenterBoth();
+        });
         SyncBackground(stack.Children.ToArray());
     }
 
@@ -74,7 +76,6 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         this.CanFocus = true;
         this.Focused.Sync(RefreshLabels, this);
         this.Unfocused.Subscribe(RefreshLabels, this);
-        SelectedIndexChanged.Sync(() => SelectedItem = menuItems[SelectedIndex], this);
         SelectedIndexChanged.Subscribe(RefreshLabels, this);
         this.KeyInputReceived.Subscribe(OnKeyPress, this);
     }
@@ -84,31 +85,46 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         var wasUpPressed = obj.Key == ConsoleKey.UpArrow || (AlternateUp.HasValue && obj.Key == AlternateUp.Value);
         var wasDownPressed = obj.Key == ConsoleKey.DownArrow || (AlternateDown.HasValue && obj.Key == AlternateDown.Value);
         var wasEnterPressed = obj.Key == ConsoleKey.Enter;
-        var canAdvanceBackwards = SelectedIndex > 0 && isEnabled(menuItems[SelectedIndex - 1]);
-        var canAdvanceForwards = SelectedIndex < menuItems.Count - 1 && isEnabled(menuItems[SelectedIndex + 1]);
+        var canAdvanceBackwards = visuallySelectedIndex > 0 && isEnabled(menuItems[visuallySelectedIndex - 1]);
+        var canAdvanceForwards = visuallySelectedIndex < menuItems.Count - 1 && isEnabled(menuItems[visuallySelectedIndex + 1]);
         var canActivateItem = SelectedItem != null;
 
         if (wasUpPressed && canAdvanceBackwards)
         {
-            SelectedIndex--;
+            visuallySelectedIndex--;
             RefreshLabels();
         }
         else if (wasDownPressed && canAdvanceForwards)
         {
-            SelectedIndex++;
+            visuallySelectedIndex++;
             RefreshLabels();
         }
         else if (wasEnterPressed && canActivateItem)
         {
-            ItemActivated.Fire(SelectedItem);
+            SelectedIndex = visuallySelectedIndex;
         }
     }
 
     private ConsoleString SelectedItemFormatter(T item)
     {
-        var ret = (formatter(item).StringValue).ToConsoleString(HasFocus ? Background : Foreground, HasFocus ? FocusColor : Background);
+        var isAlsoVisuallySelected = ReferenceEquals(item, menuItems[visuallySelectedIndex]);
+
+        var foreground = HasFocus && isAlsoVisuallySelected ?
+            Background : isAlsoVisuallySelected ? Foreground : Background.Darker;
+
+        var background = HasFocus && isAlsoVisuallySelected ?
+            Foreground : isAlsoVisuallySelected ? Background : Foreground.Darker;
+
+        var ret = (formatter(item).StringValue).ToConsoleString(foreground, background);
         return ret;
     }
+
+    private ConsoleString VisuallySelectedItemFormatter(T item)
+    {
+        var ret = (formatter(item).StringValue).ToConsoleString(HasFocus ? Background.Brighter : Foreground, HasFocus ? FocusColor : Background.Brighter);
+        return ret;
+    }
+
     private static void RefreshLabels(object me)
     {
         var _this = (Menu<T>)me;
@@ -120,8 +136,12 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         foreach (var label in ProtectedPanel.Descendents.WhereAs<Label>().Where(l => l.Tag is T))
         {
             var item = (T)label.Tag;
+            var labelParent = label.Parent;
             var isSelected = ReferenceEquals(label.Tag, SelectedItem);
-            label.Text = isSelected ? SelectedItemFormatter(item) : formatter(item);
+            var isVisuallySelected = ReferenceEquals(label.Tag, menuItems[visuallySelectedIndex]);
+
+            label.Text = isVisuallySelected ? VisuallySelectedItemFormatter(item) : isSelected ? SelectedItemFormatter(item) : formatter(item);
+            labelParent.Background = isSelected ? Background.Brighter : Background;
         }
     }
 

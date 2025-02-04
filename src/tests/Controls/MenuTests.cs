@@ -32,8 +32,9 @@ public class MenuTests
         for (var i = 0; i < items.Count;i++)
         {
             Assert.IsTrue(menu.HasFocus);
-            menu.ItemActivated.SubscribeOnce((itemActivated) =>
+            menu.SelectedIndexChanged.SubscribeOnce(() =>
             {
+                var itemActivated = menu.SelectedItem;
                 Assert.AreEqual(items[i], itemActivated);
                 Assert.AreEqual(items[i], menu.SelectedItem);
                 Assert.AreEqual(i, menu.SelectedIndex);
