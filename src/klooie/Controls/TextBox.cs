@@ -73,18 +73,21 @@ public partial class TextBox : ConsoleControl
         ConsoleApp.Current.Invoke(async () =>
         {
             blinkTimerHandle = this.CreateChildRecyclable();
-            while(blinkTimerHandle.ShouldContinue && HasFocus)
+            blinkTimerHandle.OnDisposed(() => ConsoleApp.Current.RequestPaint());
+            while (blinkTimerHandle.ShouldContinue && HasFocus)
             {
                 ConsoleApp.Current.RequestPaint();
                 await Task.Delay(BlinkInterval);
                 isBlinking = !isBlinking;
             }
+            isBlinking = false;
+            ConsoleApp.Current.RequestPaint();
         });
     }
 
     private void TextBox_Unfocused()
     {
-        blinkTimerHandle?.Dispose();
+        blinkTimerHandle?.TryDispose();
         isBlinking = false;
         isAllSelected = false;
     }
@@ -168,7 +171,7 @@ public partial class TextBox : ConsoleControl
 
         context.DrawString(new ConsoleString(bgTransformed), 0, 0);
 
-        if (isBlinking)
+        if (isBlinking && blinkTimerHandle?.ShouldContinue == true)
         {
             char blinkChar = Editor.CursorPosition >= toPaint.Length ? ' ' : toPaint[Editor.CursorPosition].Value;
             var pen = new ConsoleCharacter(blinkChar, DefaultColors.FocusContrastColor, FocusColor);
