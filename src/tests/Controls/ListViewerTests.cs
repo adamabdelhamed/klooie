@@ -103,6 +103,48 @@ public class ListViewerTests
     });
 
     [TestMethod]
+    public void ListViewer_ProgrammaticSelectionForOffPageItem() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
+    {
+        var items = Enumerable.Range(0, 100).Select(i => new Item() { Bar = "Bar" + i, Foo = "Foo" + i }).ToList();
+
+        var dataGrid = new ListViewer<Item>(new ListViewerOptions<Item>()
+        {
+            DataSource = items,
+            Columns = new List<HeaderDefinition<Item>>()
+            {
+                new HeaderDefinition<Item>()
+                {
+                    Header = "Foo".ToGreen(),
+                    Width = 20,
+                    Type = GridValueType.Pixels,
+                    Formatter = (item) => new Label(){ Text = item.Foo.ToConsoleString() }
+                },
+                new HeaderDefinition<Item>()
+                {
+                    Header = "Bar".ToRed(),
+                    Width = 20,
+                    Type = GridValueType.Pixels,
+                    Formatter = (item) => new Label(){ Text = item.Bar.ToConsoleString() }
+                }
+            },
+        });
+
+        var selectionLabel = ConsoleApp.Current.LayoutRoot.Add(new Label() { Text = "DEFAULT".ToConsoleString(), Height = 1 }).CenterHorizontally();
+        selectionLabel.Text = $"SelectedRowIndex: {dataGrid.SelectedRowIndex}, SelectedCellIndex: {dataGrid.SelectedColumnIndex}".ToConsoleString();
+        dataGrid.SelectionChanged.Subscribe(() =>
+        {
+            selectionLabel.Text = $"SelectedRowIndex: {dataGrid.SelectedRowIndex}, SelectedCellIndex: {dataGrid.SelectedColumnIndex}".ToConsoleString();
+        }, dataGrid);
+        ConsoleApp.Current.LayoutRoot.Add(dataGrid).Fill(padding: new Thickness(0, 0, 1, 0));
+        await context.PaintAndRecordKeyFrameAsync();
+        dataGrid.SelectedRowIndex = 1;
+        dataGrid.SelectedRowIndex = 50;
+        await context.PaintAndRecordKeyFrameAsync();
+        ConsoleApp.Current.Stop();
+
+    });
+
+    [TestMethod]
     public void ListViewer_CellSelection() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
         var items = Enumerable.Range(0, 100).Select(i => new Item() { Bar = "Bar" + i, Foo = "Foo" + i }).ToList();

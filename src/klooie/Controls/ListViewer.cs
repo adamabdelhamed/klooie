@@ -80,13 +80,26 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
     /// </summary>
     private void SelectedRowChanged()
     {
+        // Calculate the index of the row in the current page.
+        var presentedRowIndex = SelectedRowIndex - topOfPageDataIndex;
+
+        // If the presenter hasn't been composed yet or the computed index isn't available,
+        // force a recompose so that ControlsByRow is populated.
+        if (presenter.ControlsByRow == null || !presenter.ControlsByRow.ContainsKey(presentedRowIndex))
+        {
+            presenter.Recompose();
+            lastTopOfPageIndex = topOfPageDataIndex;
+            SelectedRowChanged();
+            return;
+        }
+
+        // If the top-of-page index has changed, recompose.
         if (lastTopOfPageIndex != topOfPageDataIndex)
         {
             presenter.Recompose();
         }
         else
         {
-            var presentedRowIndex = SelectedRowIndex - topOfPageDataIndex;
             var rowControls = presenter.ControlsByRow[presentedRowIndex];
             highlightedControls.Clear();
 
@@ -100,6 +113,7 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
 
             Highlight(highlightedControls);
         }
+
         lastTopOfPageIndex = topOfPageDataIndex;
         SelectionChanged.Fire();
     }
@@ -122,33 +136,27 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
     }
 
     public void Refresh() => presenter.Recompose();
-    
+
 
 
     private void BeforeRecompose()
     {
         highlightedControls.Clear();
-        // ensure the top of the page is on a proper page boundary
-        while (topOfPageDataIndex % presenter.MaxRowsThatCanBePresented != 0)
-        {
-            topOfPageDataIndex--;
-        }
 
         if (options.SelectionMode != ListViewerSelectionMode.None)
         {
-            // ensure that the selected row is in the viewport
-            while (SelectedRowIndex < topOfPageDataIndex)
-            {
-                topOfPageDataIndex -= presenter.MaxRowsThatCanBePresented;
-            }
-
-            while (SelectedRowIndex >= topOfPageDataIndex + presenter.MaxRowsThatCanBePresented)
-            {
-                topOfPageDataIndex += presenter.MaxRowsThatCanBePresented;
-            }
+            int pageSize = presenter.MaxRowsThatCanBePresented;
+            topOfPageDataIndex = (SelectedRowIndex / pageSize) * pageSize;
+        }
+        else
+        {
+            topOfPageDataIndex = 0;
         }
 
-        var range = options.DataSource.Skip(topOfPageDataIndex).Take(presenter.MaxRowsThatCanBePresented).ToArray();
+        var range = options.DataSource
+                     .Skip(topOfPageDataIndex)
+                     .Take(presenter.MaxRowsThatCanBePresented)
+                     .ToArray();
         presenter.Options.Rows = new List<DataGridPresentationRow>();
 
         for (var i = 0; i < range.Length; i++)
@@ -162,7 +170,6 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
                 var col = options.Columns[j];
 
                 bool shouldBeHighlighted = false;
-
                 if (options.SelectionMode == ListViewerSelectionMode.Row && deepIndex == SelectedRowIndex)
                 {
                     shouldBeHighlighted = true;
