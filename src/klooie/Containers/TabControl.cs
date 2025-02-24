@@ -42,12 +42,15 @@ public partial class TabControl : ProtectedConsolePanel
         set
         {
             if (Options.Tabs.Where(t => t == value).None()) throw new ArgumentException($"{value} is not one of your tab options");
-            if (value != CurrentTab)
+            if (value == CurrentTab) return;
+            
+            _currentTab = value;
+            foreach (var label in tabStack.Children.WhereAs<TabLabel>())
             {
-                _currentTab = value;
-                body.Controls.Clear();
-                body.Add(Options.BodyFactory(value)).Fill();
+                currentTabLabel = value == label.Text.ToString() ? label : currentTabLabel;
             }
+            body.Controls.Clear();
+            body.Add(Options.BodyFactory(value)).Fill();
         }
     }
     public TabControlOptions Options { get; private init; }
@@ -140,7 +143,7 @@ public partial class TabControl : ProtectedConsolePanel
 
     private void SetupArrowKeyNavigation()
     {
-        arrowKeyLifetime?.Dispose();
+        arrowKeyLifetime?.TryDispose();
         var hasFocus = tabStack.Controls.Contains(ConsoleApp.Current.FocusedControl);
         if (hasFocus == false) return;
         arrowKeyLifetime = this.CreateChildRecyclable();
