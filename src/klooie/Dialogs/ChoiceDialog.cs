@@ -56,7 +56,7 @@ public static class ChoiceDialog
     {
         options.UserChoices = options.UserChoices ?? Enumerable.Empty<DialogChoice>();
 
-        if(options.UserChoices.None() && options.AllowEnterToClose)
+        if(options.UserChoices.None())
         {
             options.UserChoices = DialogChoice.Close;
         }
@@ -96,10 +96,6 @@ public static class ChoiceDialog
                         choice = myOption;
                         layout.Dispose();
                     }, layout);
-
-                    // This ensures that the global enter handler on dialogs will still reflect
-                    // the most recently focused button
-                    button.Focused.Subscribe(() => choice = myOption , layout);
                 }
                 if (options.AutoFocusChoices)
                 {

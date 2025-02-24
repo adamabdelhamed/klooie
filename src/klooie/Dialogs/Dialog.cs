@@ -30,10 +30,6 @@ public class DialogOptions
     /// </summary>
     public bool AllowEscapeToClose { get; set; }
 
-    /// <summary>
-    /// If true allows the user to close the dialog via the enter key
-    /// </summary>
-    public bool AllowEnterToClose { get; set; }
 
     /// <summary>
     /// optionally sets the z-index of the control
@@ -94,7 +90,6 @@ public static class Dialog
 
 
         if (options.AllowEscapeToClose) ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => { cancelled = true; content.Dispose(); }, content);
-        if (options.AllowEnterToClose) ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, () => { cancelled = false; content.Dispose(); }, content);
 
         // animate in
         await Forward(300 * options.SpeedPercentage, content, percentage => dialogContainer.Width = Math.Max(1, ConsoleMath.Round((4 + content.Width) * percentage)));

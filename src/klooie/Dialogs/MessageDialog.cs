@@ -16,7 +16,6 @@ public class ShowMessageOptions : DialogWithChoicesOptions
     /// <param name="msg">a message to show</param>
     public ShowMessageOptions(ConsoleString msg)
     {
-        AllowEnterToClose = true;
         Message = msg;
     }
 
