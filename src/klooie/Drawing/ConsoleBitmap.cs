@@ -56,13 +56,13 @@ public sealed class ConsoleBitmap
     /// <param name="w">the width of the image</param>
     /// <param name="h">the height of the image</param>
     public ConsoleBitmap(int w, int h)
-    { 
+    {
         this.Width = w;
         this.Height = h;
         this.Console = ConsoleProvider.Current;
         this.lastBufferWidth = this.Console.BufferWidth;
         Pixels = new ConsoleCharacter[this.Width][];
-       
+
         for (int x = 0; x < this.Width; x++)
         {
             Pixels[x] = new ConsoleCharacter[this.Height];
@@ -135,7 +135,7 @@ public sealed class ConsoleBitmap
 
         return true;
     }
-    
+
     /// <summary>
     /// Resizes this image, preserving the data in the pixels that remain in the new area
     /// </summary>
@@ -171,7 +171,7 @@ public sealed class ConsoleBitmap
     /// <param name="y">the y coordinate</param>
     /// <returns>the pixel at the given location</returns>
     public ref ConsoleCharacter GetPixel(int x, int y) => ref Pixels[x][y];
-    
+
     /// <summary>
     /// Sets the value of the desired pixel
     /// </summary>
@@ -188,7 +188,7 @@ public sealed class ConsoleBitmap
     /// <param name="y">pixel y coordinate</param>
     /// <returns>true if the given coordinates are within the boundaries of the image</returns>
     public bool IsInBounds(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
-    
+
 
     /// <summary>
     /// Draws the given string onto the bitmap
@@ -236,7 +236,7 @@ public sealed class ConsoleBitmap
     /// <param name="y">the rectangle's y coordinate</param>
     /// <param name="w">the rectangle's width</param>
     /// <param name="h">the rectangle's height</param>
-    public void FillRect(in RGB color, int x, int y, int w, int h) => FillRect(new ConsoleCharacter(' ', backgroundColor: color),x,y,w,h);
+    public void FillRect(in RGB color, int x, int y, int w, int h) => FillRect(new ConsoleCharacter(' ', backgroundColor: color), x, y, w, h);
 
     /// <summary>
     /// Fills the given rectangle with a space character and a given background color
@@ -351,7 +351,7 @@ public sealed class ConsoleBitmap
     {
         var xStart = x;
         var span = str.AsSpan();
-        for(var i = 0; i < span.Length; i++)
+        for (var i = 0; i < span.Length; i++)
         {
             var character = span[i];
             if (character.Value == '\n')
@@ -441,7 +441,7 @@ public sealed class ConsoleBitmap
         }
     }
 
-    public void DrawPoint(in RGB pen, int x, int y) 
+    public void DrawPoint(in RGB pen, int x, int y)
         => DrawPoint(new ConsoleCharacter(' ', RGB.Black, pen), x, y);
 
     public void DrawLine(in RGB pen, int x1, int y1, int x2, int y2)
@@ -607,7 +607,7 @@ public sealed class ConsoleBitmap
         }
         return ret;
     }
-       
+
 
     /// <summary>
     /// Paints this bitmap to its console provider. If we detect Ansi support
@@ -641,7 +641,7 @@ public sealed class ConsoleBitmap
                 {
                     ref var pixel = ref Pixels[x][y];
 
-     
+
 
                     val = pixel.Value;
                     fg = pixel.ForegroundColor;
@@ -680,39 +680,39 @@ public sealed class ConsoleBitmap
 
                 currentChunk = null;
 
-                
-                    var left = 0;
-                    for (var i = 0; i < chunksOnLine.Count; i++)
+
+                var left = 0;
+                for (var i = 0; i < chunksOnLine.Count; i++)
+                {
+                    var chunk = chunksOnLine[i];
+
+
+                    if (chunk.Underlined)
                     {
-                        var chunk = chunksOnLine[i];
-                       
-
-                            if (chunk.Underlined)
-                            {
-                                paintBuilder.Append(Ansi.Text.UnderlinedOn);
-                            }
-
-                            Ansi.Cursor.Move.ToLocation(left + 1, y + 1, paintBuilder);
-                            Ansi.Color.Foreground.Rgb(chunk.FG, paintBuilder);
-                            Ansi.Color.Background.Rgb(chunk.BG, paintBuilder);
-                            paintBuilder.Append(chunk);
-                            if (chunk.Underlined)
-                            {
-                                paintBuilder.Append(Ansi.Text.UnderlinedOff);
-                            }
-                        
-
-                        left += chunk.Length;
+                        paintBuilder.Append(Ansi.Text.UnderlinedOn);
                     }
-                
 
-                foreach(var chunk in chunksOnLine)
+                    Ansi.Cursor.Move.ToLocation(left + 1, y + 1, paintBuilder);
+                    Ansi.Color.Foreground.Rgb(chunk.FG, paintBuilder);
+                    Ansi.Color.Background.Rgb(chunk.BG, paintBuilder);
+                    paintBuilder.Append(chunk);
+                    if (chunk.Underlined)
+                    {
+                        paintBuilder.Append(Ansi.Text.UnderlinedOff);
+                    }
+
+
+                    left += chunk.Length;
+                }
+
+
+                foreach (var chunk in chunksOnLine)
                 {
                     chunkPool.Return(chunk);
                 }
                 chunksOnLine.Clear();
             }
-            Ansi.Cursor.Move.ToLocation(Width-1, Height-1, paintBuilder);
+            Ansi.Cursor.Move.ToLocation(Width - 1, Height - 1, paintBuilder);
             fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
         }
         catch (IOException)
@@ -725,7 +725,7 @@ public sealed class ConsoleBitmap
         }
     }
 
- 
+
 
     /// <summary>
     /// Gets a string representation of this image 
@@ -768,8 +768,40 @@ public sealed class ConsoleBitmap
     /// </summary>
     /// <returns></returns>
     public override int GetHashCode() => base.GetHashCode();
-}
 
+    /// <summary>
+    /// Creates a visual diff of two bitmaps. The returned bitmap will have the same dimensions as the input bitmaps.
+    /// </summary>
+    /// <param name="a">the original image</param>
+    /// <param name="b">the changed image</param>
+    /// <returns>The diff or null if the provided images are different sizes</returns>
+    public static ConsoleBitmap? Diff(ConsoleBitmap a, ConsoleBitmap b)
+    {
+        if (a.Width != b.Width || a.Height != b.Height)
+        {
+            return null;
+        }
+
+        var ret = new ConsoleBitmap(a.Width, a.Height);
+        for (var x = 0; x < a.Width; x++)
+        {
+            for (var y = 0; y < a.Height; y++)
+            {
+                var pixelA = a.GetPixel(x, y);
+                var pixelB = b.GetPixel(x, y);
+                if (pixelA.Equals(pixelB) == false)
+                {
+                    ret.SetPixel(x, y, new ConsoleCharacter(pixelB.Value, RGB.Red, RGB.White));
+                }
+                else
+                {
+                    ret.SetPixel(x, y, new ConsoleCharacter(pixelA.Value, new RGB(50, 50, 50), RGB.Black));
+                }
+            }
+        }
+        return ret;
+    }
+}
 internal class ChunkAwarePaintBuffer : PaintBuffer
 {
     internal void Append(Chunk c)
