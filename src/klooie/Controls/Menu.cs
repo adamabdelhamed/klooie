@@ -31,7 +31,7 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
     public T SelectedItem => menuItems[SelectedIndex];
 
 
-    private int visuallySelectedIndex;
+    public int VisuallySelectedIndex { get; private set; }
 
     /// <summary>
     /// Creates a menu given a set of menu items. When this constructor is used the
@@ -85,29 +85,29 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
         var wasUpPressed = obj.Key == ConsoleKey.UpArrow || (AlternateUp.HasValue && obj.Key == AlternateUp.Value);
         var wasDownPressed = obj.Key == ConsoleKey.DownArrow || (AlternateDown.HasValue && obj.Key == AlternateDown.Value);
         var wasEnterPressed = obj.Key == ConsoleKey.Enter;
-        var canAdvanceBackwards = visuallySelectedIndex > 0 && isEnabled(menuItems[visuallySelectedIndex - 1]);
-        var canAdvanceForwards = visuallySelectedIndex < menuItems.Count - 1 && isEnabled(menuItems[visuallySelectedIndex + 1]);
+        var canAdvanceBackwards = VisuallySelectedIndex > 0 && isEnabled(menuItems[VisuallySelectedIndex - 1]);
+        var canAdvanceForwards = VisuallySelectedIndex < menuItems.Count - 1 && isEnabled(menuItems[VisuallySelectedIndex + 1]);
         var canActivateItem = SelectedItem != null;
 
         if (wasUpPressed && canAdvanceBackwards)
         {
-            visuallySelectedIndex--;
+            VisuallySelectedIndex--;
             RefreshLabels();
         }
         else if (wasDownPressed && canAdvanceForwards)
         {
-            visuallySelectedIndex++;
+            VisuallySelectedIndex++;
             RefreshLabels();
         }
         else if (wasEnterPressed && canActivateItem)
         {
-            SelectedIndex = visuallySelectedIndex;
+            SelectedIndex = VisuallySelectedIndex;
         }
     }
 
     private ConsoleString SelectedItemFormatter(T item)
     {
-        var isAlsoVisuallySelected = ReferenceEquals(item, menuItems[visuallySelectedIndex]);
+        var isAlsoVisuallySelected = ReferenceEquals(item, menuItems[VisuallySelectedIndex]);
 
         var foreground = HasFocus && isAlsoVisuallySelected ?
             Background : isAlsoVisuallySelected ? Foreground : Background.Darker;
@@ -138,7 +138,7 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
             var item = (T)label.Tag;
             var labelParent = label.Parent;
             var isSelected = ReferenceEquals(label.Tag, SelectedItem);
-            var isVisuallySelected = ReferenceEquals(label.Tag, menuItems[visuallySelectedIndex]);
+            var isVisuallySelected = ReferenceEquals(label.Tag, menuItems[VisuallySelectedIndex]);
 
             label.Text = isVisuallySelected ? VisuallySelectedItemFormatter(item) : isSelected ? SelectedItemFormatter(item) : formatter(item);
             labelParent.Background = isSelected ? Background.Brighter : Background;

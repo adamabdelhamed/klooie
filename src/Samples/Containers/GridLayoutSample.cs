@@ -44,8 +44,9 @@ public class GridLayoutSample : ConsoleApp
         menu.CompositionMode = CompositionMode.BlendBackground;
 
         // whenever a menu item is activated we will call ShowSelectedItem()
-        menu.ItemActivated.Subscribe((selectedItem)=>
+        menu.SelectedIndexChanged.Subscribe(()=>
         {
+            var selectedItem = menu.SelectedItem;
             mainPanel.Controls.Clear();
             mainPanel.Add(new Label(selectedItem.ToBlack()) { CompositionMode = CompositionMode.BlendBackground }).CenterBoth();
         }, menu);
@@ -57,12 +58,12 @@ public class GridLayoutSample : ConsoleApp
     private async Task SimulateUserBehavior()
     {
         menu.SelectedIndex = 0;
-        menu.ItemActivated.Fire(menu.SelectedItem);
+        menu.SelectedIndexChanged.Fire();
         for (var i = 1; i < menuItems.Count; i++)
         {
             await Task.Delay(1000);
             menu.SelectedIndex = i;
-            menu.ItemActivated.Fire(menu.SelectedItem);
+            menu.SelectedIndexChanged.Fire();
         }
     }
 }
