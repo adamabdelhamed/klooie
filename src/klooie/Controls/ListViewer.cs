@@ -444,10 +444,12 @@ internal class ListViewerPanel : ProtectedConsolePanel
             pager.Controls.Remove(pager.LastPageButton);
         }
 
-        if (firstButtonFocused) pager.FirstPageButton.Focus();
-        else if (previousButtonFocused) pager.PreviousPageButton.Focus();
-        else if (nextButtonFocused) pager.NextPageButton.Focus();
-        else if (lastButtonFocused) pager.LastPageButton.Focus();
+        
+        if (firstButtonFocused && FocusManager.CanFocus(pager.FirstPageButton)) pager.FirstPageButton.Focus();
+        else if (previousButtonFocused && FocusManager.CanFocus(pager.PreviousPageButton)) pager.PreviousPageButton.Focus();
+        else if (nextButtonFocused && FocusManager.CanFocus(pager.NextPageButton)) pager.NextPageButton.Focus();
+        else if (lastButtonFocused && FocusManager.CanFocus(pager.LastPageButton)) pager.LastPageButton.Focus();
+        
     }
 
     private class RandomAccessPager : StackPanel
