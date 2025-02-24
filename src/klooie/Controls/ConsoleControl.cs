@@ -136,6 +136,16 @@ public partial class ConsoleControl : Rectangular
     public partial bool IsVisible { get; set; }
 
     /// <summary>
+    /// Gets whether or not all parents of this control are visible
+    /// </summary>
+    public bool AreAllParentsVisible => Anscestors.All(a => a.IsVisible);
+
+    /// <summary>
+    /// Gets whether or not this control is visible and all parents are visible
+    /// </summary>
+    public bool IsVisibleAndAllParentsVisible => IsVisible && AreAllParentsVisible;
+
+    /// <summary>
     /// Gets or sets whether or not this control can accept focus.  By default this is set to true, but can
     /// be overridden by derived classes to be false by default.
     /// </summary>
@@ -227,6 +237,20 @@ public partial class ConsoleControl : Rectangular
                 yield return parent;
                 parent = parent.Parent;
             }
+        }
+    }
+
+    public Container Root
+    {
+        get
+        {
+            var parent = Parent;
+            while (parent != null)
+            {
+                if (parent.Parent == null) return parent;
+                parent = parent.Parent;
+            }
+            throw new InvalidOperationException("This control is not in the visual tree");
         }
     }
 
