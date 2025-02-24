@@ -50,6 +50,53 @@ public class DropdownTests
         ConsoleApp.Current.Stop();
     });
 
+    [TestMethod]
+    public void Dropdown_WithinDialog() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
+    {
+        var options = new List<DialogChoice>()
+        {
+            new DialogChoice(){ DisplayText = "RedItem".ToRed(), Id = "red" },
+            new DialogChoice(){ DisplayText = "BlueItem".ToBlue(), Id = "blue" },
+            new DialogChoice(){ DisplayText = "GreenItem".ToGreen(), Id = "green" },
+        };
+        var dropdown = new Dropdown(options);
+        var container = new ConsolePanel() { Width = 50, Height = 14 };
+        var dropdownTask = Dialog.Show(()=>
+        {
+            container.Add(dropdown).CenterBoth();
+            dropdown.Width = 3 + options.Select(o => o.DisplayText.Length).Max();
+            Assert.AreEqual("red", dropdown.Value.Id);
+            return container;
+           
+        });
+
+        await context.PaintAndRecordKeyFrameAsync();
+        await Task.Delay(1000);
+        dropdown.Focus();
+        Assert.IsTrue(dropdown.HasFocus);
+
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.DownArrow.KeyInfo(), "blue");
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.DownArrow.KeyInfo(), "green");
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.DownArrow.KeyInfo(), "red");
+
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.UpArrow.KeyInfo(), "green");
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.UpArrow.KeyInfo(), "blue");
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.UpArrow.KeyInfo(), "red");
+
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.Tab.KeyInfo(), "blue");
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.Tab.KeyInfo(), "green");
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.Tab.KeyInfo(), "red");
+
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.Tab.KeyInfo(shift: true), "green");
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.Tab.KeyInfo(shift: true), "blue");
+        await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.Tab.KeyInfo(shift: true), "red");
+
+        container.Dispose();
+        await dropdownTask;
+        ConsoleApp.Current.Stop();
+    });
+
+
     private async Task OpenDropdownChangeAndAssertValue(UITestManager context, Dropdown d, ConsoleKeyInfo dropdownOpenAction, string expectedId)
     {
         await ConsoleApp.Current.SendKey(ConsoleKey.Enter);
