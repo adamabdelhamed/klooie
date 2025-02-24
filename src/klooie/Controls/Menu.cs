@@ -31,7 +31,7 @@ public partial class Menu<T> : ProtectedConsolePanel where T : class
     public T SelectedItem => menuItems[SelectedIndex];
 
 
-    public int VisuallySelectedIndex { get; private set; }
+    public int VisuallySelectedIndex { get; set; }
 
     /// <summary>
     /// Creates a menu given a set of menu items. When this constructor is used the
