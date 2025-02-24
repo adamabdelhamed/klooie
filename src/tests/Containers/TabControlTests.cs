@@ -47,6 +47,31 @@ public class TabControlTests
         ConsoleApp.Current.Stop();
     });
 
+
+    [TestMethod]
+    public void TabControl_Connected() => AppTest.Run(TestContext.TestId(), UITestMode.Headless, async (context) =>
+    {
+        ConsoleControl body = null;
+        var options = new TabControlOptions("Tab1")
+        {
+            BodyFactory = (s) => body = new ConsoleControl()
+        };
+
+        var tabControl = ConsoleApp.Current.LayoutRoot.Add(new TabControl(options) { Background = new RGB(30, 30, 30) }).Fill();
+        await ConsoleApp.Current.RequestPaintAsync();
+        Assert.IsNotNull(body);
+
+        var parent = body.Parent;
+        while (true)
+        {
+            if(parent.Parent == null) break;
+            parent = parent.Parent;
+        }
+        Assert.AreSame(ConsoleApp.Current.LayoutRoot, parent);
+
+        ConsoleApp.Current.Stop();
+    });
+
     [TestMethod]
     public void TabControl_LeftAligned() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
