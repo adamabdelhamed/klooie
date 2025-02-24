@@ -102,6 +102,7 @@ public partial class Dropdown : ProtectedConsolePanel
             scrollPanel.ScrollableContent.Height = optionsStack.Height;
 
             var popup = new BorderPanel(scrollPanel) { FocusStackDepth = this.Parent.FocusStackDepth + 1, BorderColor = RGB.DarkCyan };
+            popup.AddTag(nameof(Dropdown));
             popup.Width = scrollPanel.Width + 4;
             popup.Height = scrollPanel.Height + 2;
             popup.X = this.AbsoluteX;
