@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Text;
 
 namespace klooie.tests;
 
@@ -152,6 +153,22 @@ public sealed class UITestManager
 
                 if (lkgFrame.Bitmap.Equals(currentFrame.Bitmap) == false)
                 {
+                    if(lkgFrame.Bitmap.Width == currentFrame.Bitmap.Width && lkgFrame.Bitmap.Height == currentFrame.Bitmap.Height)
+                    {
+                        var diff = ConsoleBitmap.Diff(lkgFrame.Bitmap, currentFrame.Bitmap);
+                        if (diff != null)
+                        {
+                            using (var outputStream = File.Create(Path.Combine(CurrentTestTempPath, "Diff.cv")))
+                            {
+                                var bitmapVideoWriter = new ConsoleBitmapVideoWriter(s => outputStream.Write(Encoding.Default.GetBytes(s)));
+                                bitmapVideoWriter.WriteFrame(lkgFrame.Bitmap).Clone();
+                                bitmapVideoWriter.WriteFrame(currentFrame.Bitmap).Clone();
+                                bitmapVideoWriter.WriteFrame(diff).Clone();
+                                bitmapVideoWriter.Finish();
+                            }
+                        }
+                    }
+                    
                     Assert.Fail("Frames do not match at index " + i);
                 }
             }
