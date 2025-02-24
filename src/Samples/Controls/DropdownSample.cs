@@ -23,7 +23,7 @@ public class DropdownSample : ConsoleApp
         await Task.Delay(1000);
         await SendKey(ConsoleKey.Enter);
         await Task.Delay(1000);
-        await MessageDialog.Show(new ShowMessageOptions(ConsoleString.Parse($"Value: [B=Cyan][Black] {dropdown.Value} ")) { MaxLifetime = Task.Delay(3000).ToLifetime(), AllowEnterToClose = false, AllowEscapeToClose = false });
+        await MessageDialog.Show(new ShowMessageOptions(ConsoleString.Parse($"Value: [B=Cyan][Black] {dropdown.Value} ")) { MaxLifetime = Task.Delay(3000).ToLifetime(), AllowEscapeToClose = false });
         Stop();
     }
 }
