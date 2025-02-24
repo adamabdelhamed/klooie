@@ -47,3 +47,62 @@ public sealed class FormLabelAttribute : Attribute
     /// <param name="label">The label to display on the form element</param>
     public FormLabelAttribute(string label) { this.Label = label; }
 }
+
+public sealed class FormDropdownFromEnumAttribute : Attribute
+{
+    public static readonly DialogChoice NullOption = new DialogChoice()
+    {
+        DisplayText = "None".ToConsoleString(),
+        Id = "None",
+        Value = null,
+    };
+
+    public Type EnumType { get; private init; }
+    public bool Nullable { get; private init; }
+    public FormDropdownFromEnumAttribute(Type enumType, bool nullable)
+    {
+        this.EnumType = enumType;
+        this.Nullable = nullable;
+    }
+
+    public List<DialogChoice> GetOptions()
+    {
+        var ret = new List<DialogChoice>();
+
+        if (Nullable)
+        {
+            ret.Add(NullOption);
+        }
+
+        foreach (var value in Enum.GetValues(EnumType))
+        {
+            var labelAttribute = EnumType.GetField(value.ToString()).Attr<FormLabelAttribute>();
+            var label = labelAttribute?.Label ?? value.ToString();
+            var choice = new DialogChoice()
+            {
+                DisplayText = label.ToConsoleString(),
+                Id = value.ToString(),
+                Value = value,
+            };
+            ret.Add(choice);
+        }
+        return ret;
+    }
+}
+
+public sealed class FormDropdownProviderAttribute : Attribute
+{
+    public Type DropdownProviderType { get; private init; }
+    public FormDropdownProviderAttribute(Type dropdownProviderType) => this.DropdownProviderType = dropdownProviderType;
+
+    public List<DialogChoice> GetOptions()
+    {
+        var provider = Activator.CreateInstance(DropdownProviderType) as IFormDropdownProvider;
+        return provider.Options;
+    }
+}
+
+public interface IFormDropdownProvider
+{
+    List<DialogChoice> Options { get; }
+}

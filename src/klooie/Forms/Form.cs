@@ -39,7 +39,12 @@ public sealed class FormOptions
     /// <summary>
     /// The form elements to render
     /// </summary>
-    public List<FormElement> Elements { get; private set; } = new List<FormElement>(); 
+    public List<FormElement> Elements { get; private set; } = new List<FormElement>();
+
+    /// <summary>
+    /// True if labels should be shown, false otherwise
+    /// </summary>
+    public bool ShowLabels { get; set; } = true;
 }
 
 /// <summary>
@@ -72,7 +77,10 @@ public sealed class Form : ProtectedConsolePanel
         for (int i = 0; i < Options.Elements.Count; i++)
         {
             var element = this.Options.Elements[i];
-            var label = grid.Add(new Label(element.Label), 0, rowMap[i]);
+            if (Options.ShowLabels)
+            {
+                grid.Add(new Label(element.Label), 0, rowMap[i]);
+            }
             var valueControl = WrapInPanelIfCannotBeResized(element);
             grid.Add(valueControl, 1, rowMap[i]);
         }
@@ -107,6 +115,40 @@ public sealed class Form : ProtectedConsolePanel
         var rowSpec = new GridLayoutOptions() { Rows = rows }.GetRowSpec();
         var colSpec = Options.LabelColumnSpec + ";" + Options.ValueColumnSpec;
         grid = ProtectedPanel.Add(new GridLayout(rowSpec, colSpec)).Fill();
+    }
+}
+
+public sealed class HoritontalForm : ProtectedConsolePanel
+{
+ 
+    /// <summary>
+    /// The options that were provided
+    /// </summary>
+    public FormOptions Options { get; private init; }
+
+    /// <summary>
+    /// Creates a form using the given options
+    /// </summary>
+    /// <param name="options">form options</param>
+    public HoritontalForm(FormOptions options)
+    {
+        this.Options = options;
+        this.Ready.Subscribe(InitializeForm, this);
+    }
+
+    private void InitializeForm()
+    {
+        var stack = ProtectedPanel.Add(new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Orientation = Orientation.Horizontal, Margin = 2 }).FillHorizontally();
+        stack.BoundsChanged.Sync(() => this.Height = stack.Height, this);
+        for (int i = 0; i < Options.Elements.Count; i++)
+        {
+            var element = this.Options.Elements[i];
+
+            var column = stack.Add(new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both });
+            if(Options.ShowLabels) column.Add(new Label(element.Label));
+
+            column.Add(element.ValueControl);
+        }
     }
 }
 
