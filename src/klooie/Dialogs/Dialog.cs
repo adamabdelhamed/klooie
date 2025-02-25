@@ -83,7 +83,12 @@ public static class Dialog
             borderColor = content.Background.Brighter;
         }
 
-        content.IsVisible = false;
+        IConsoleControlFilter[] filtersToAdd = [new ForegroundColorFilter(RGB.Black), new BackgroundColorFilter(RGB.Black)];
+
+        foreach (var item in filtersToAdd)
+        {
+            content.Filters.Add(item);
+        }
         var dialogContainer = options.Parent.Add(new BorderPanel(content) { FocusStackDepth = options.PushPop ? options.Parent.FocusStackDepth + 1 : options.Parent.FocusStackDepth, BorderColor = borderColor, Background = content.Background, Width = 1, Height = 1, ZIndex = options.ZIndex }).CenterBoth();
         dialogContainer.AddTag(Tag);
         options.Tags?.ForEach(t => dialogContainer.AddTag(t));
@@ -94,7 +99,12 @@ public static class Dialog
         // animate in
         await Forward(300 * options.SpeedPercentage, content, percentage => dialogContainer.Width = Math.Max(1, ConsoleMath.Round((4 + content.Width) * percentage)));
         await Forward(200 * options.SpeedPercentage, content, percentage => dialogContainer.Height = Math.Max(1, ConsoleMath.Round((2 + content.Height) * percentage)));
-        content.IsVisible = true;
+
+        foreach (var item in filtersToAdd)
+        {
+            content.Filters.Remove(item);
+        }
+
         Shown.Fire();
 
         if (content.ShouldContinue)
