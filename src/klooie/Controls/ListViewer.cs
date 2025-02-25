@@ -452,10 +452,10 @@ internal class ListViewerPanel : ProtectedConsolePanel
         }
 
         
-        if (firstButtonFocused && FocusManager.CanFocus(pager.FirstPageButton)) pager.FirstPageButton.Focus();
-        else if (previousButtonFocused && FocusManager.CanFocus(pager.PreviousPageButton)) pager.PreviousPageButton.Focus();
-        else if (nextButtonFocused && FocusManager.CanFocus(pager.NextPageButton)) pager.NextPageButton.Focus();
-        else if (lastButtonFocused && FocusManager.CanFocus(pager.LastPageButton)) pager.LastPageButton.Focus();
+        if (firstButtonFocused && FocusManager.CanReceiveFocusNow(pager.FirstPageButton)) pager.FirstPageButton.Focus();
+        else if (previousButtonFocused && FocusManager.CanReceiveFocusNow(pager.PreviousPageButton)) pager.PreviousPageButton.Focus();
+        else if (nextButtonFocused && FocusManager.CanReceiveFocusNow(pager.NextPageButton)) pager.NextPageButton.Focus();
+        else if (lastButtonFocused && FocusManager.CanReceiveFocusNow(pager.LastPageButton)) pager.LastPageButton.Focus();
         
     }
 

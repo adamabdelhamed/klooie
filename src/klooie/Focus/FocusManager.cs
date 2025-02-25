@@ -110,7 +110,7 @@ internal partial class FocusManager : IObservableObject
 
             targetStack.Push(handlerAction);
 
-            var lt = DefaultRecyclablePool.Instance.Rent();
+            var lt = new Recyclable();
             lt.OnDisposed(() =>
             {
                 handlerAction.Dispose();
@@ -409,12 +409,12 @@ internal partial class FocusManager : IObservableObject
             throw new InvalidOperationException("The given control is not in the focus stack. ");
         }
 
-        if (CanFocus(newFocusControl) == false)
+        if (CanReceiveFocusNow(newFocusControl) == false)
         {
             if (newFocusControl is Container)
             {
                 var firstChild = (newFocusControl as Container).Descendents
-                    .Where(c => CanFocus(c))
+                    .Where(c => CanReceiveFocusNow(c))
                     .FirstOrDefault();
                 if (firstChild != null)
                 {
@@ -476,7 +476,7 @@ internal partial class FocusManager : IObservableObject
         {
             bool wrapped = CycleFocusIndex(forward);
             var nextControl = focusStack[focusStack.Count - 1].Controls[focusStack[focusStack.Count - 1].FocusIndex];
-            if (CanFocus(nextControl) && nextControl.TabSkip == false)
+            if (CanReceiveFocusNow(nextControl) && nextControl.TabSkip == false)
             {
                 SetFocus(nextControl);
                 return;
@@ -489,7 +489,7 @@ internal partial class FocusManager : IObservableObject
 
     public void RestoreFocus()
     {
-        if (focusStack[focusStack.Count - 1].Controls.Where(c => CanFocus(c)).Count() == 0)
+        if (focusStack[focusStack.Count - 1].Controls.Where(c => CanReceiveFocusNow(c)).Count() == 0)
         {
             return;
         }
@@ -512,7 +512,7 @@ internal partial class FocusManager : IObservableObject
             var newFocusIndex = Math.Max(0, Math.Min(focusStack[focusStack.Count - 1].FocusIndex, focusStack[focusStack.Count - 1].Controls.Count - 1));
             focusStack[focusStack.Count - 1].FocusIndex = newFocusIndex;
             var nextControl = focusStack[focusStack.Count - 1].Controls[focusStack[focusStack.Count - 1].FocusIndex];
-            if (CanFocus(nextControl))
+            if (CanReceiveFocusNow(nextControl))
             {
                 SetFocus(nextControl);
                 return;
@@ -523,7 +523,7 @@ internal partial class FocusManager : IObservableObject
         while (focusStack[focusStack.Count - 1].FocusIndex != initialPosition);
     }
 
-    public static bool CanFocus(ConsoleControl c) => c.CanFocus && c.IsVisibleAndAllParentsVisible;
+    public static bool CanReceiveFocusNow(ConsoleControl c) => c.CanFocus && c.IsVisibleAndAllParentsVisible;
 
     public void ClearFocus()
     {

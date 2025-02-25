@@ -40,6 +40,7 @@ public partial class Dropdown : ProtectedConsolePanel
 
         this.KeyInputReceived.Subscribe(async (k) =>
         {
+            if (isOpen) return;
             if (k.Key == ConsoleKey.Enter || k.Key == ConsoleKey.DownArrow)
             {
                 await Open();
@@ -138,7 +139,7 @@ public partial class Dropdown : ProtectedConsolePanel
                 popup.Dispose();
             }, popup);
 
-            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, popup.Dispose, popup);
+             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, popup.Dispose, popup);
 
             Action up = () =>
             {

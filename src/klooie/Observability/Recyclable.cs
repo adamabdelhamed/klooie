@@ -55,6 +55,7 @@ public class Recyclable : ILifetime
             if (endedTaskCompletionSource != null)
             {
                 endedTaskCompletionSource.SetResult();
+                endedTaskCompletionSource = null;
             }
 
             if (Pool != null)
@@ -78,6 +79,9 @@ public class Recyclable : ILifetime
     {
         IsExpiring = false;
         IsExpired = false;
+        disposalSubscribers = null;
+        endedTaskCompletionSource = null;
+        Pool = null;
         OnInit();
     }
 

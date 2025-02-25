@@ -171,6 +171,8 @@ public class ConsoleApp : EventLoop
     public void MoveFocus(bool forward = true) => focus.MoveFocus(forward);
     public void SetFocus(ConsoleControl c) => focus.SetFocus(c);
     public void ClearFocus() => focus.ClearFocus();
+
+    public bool CanReceiveFocusNow(ConsoleControl c) => FocusManager.CanReceiveFocusNow(c);
     public void PushKeyForLifetime(ConsoleKey k, ConsoleModifiers? modifier, Action a, ILifetime lt) => focus.GlobalKeyHandlers.PushForLifetime(k, modifier, a, lt);
     public void PushKeyForLifetime(ConsoleKey k, Action a, ILifetime lt) => focus.GlobalKeyHandlers.PushForLifetime(k, null, a, lt);
     public void PushKeyForLifetime(ConsoleKey k, ConsoleModifiers modifier, Action a, ILifetime lt, int stackIndex) => focus.Stack[stackIndex].Interceptors.PushForLifetime(k, modifier, a, lt);
