@@ -42,7 +42,7 @@ public abstract class DialogWithChoicesOptions : DialogOptions
     /// </summary>
     /// <param name="contentContainer">the container that your content will be added to</param>
     /// <returns></returns>
-    public abstract ConsoleControl ContentFactory(ConsolePanel contentContainer);
+    public abstract ConsoleControl ContentFactory(ConsolePanel contentContainer, Container dialogRoot);
 }
 
 public static class ChoiceDialog
@@ -75,7 +75,7 @@ public static class ChoiceDialog
             var layout = new GridLayout(rowSpec, "100%") { Background = options.BackgroundColor, Width = options.DialogWidth, Height = options.DialogHeight };
             var contentContainer = layout.Add(new ScrollablePanel(), 0, 0);
            
-            var content = contentContainer.ScrollableContent.Add(options.ContentFactory(contentContainer.ScrollableContent));
+            var content = contentContainer.ScrollableContent.Add(options.ContentFactory(contentContainer.ScrollableContent, layout));
 
             content.BoundsChanged.Sync(() =>
             {

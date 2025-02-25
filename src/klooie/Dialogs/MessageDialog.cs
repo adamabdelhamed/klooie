@@ -30,7 +30,7 @@ public class ShowMessageOptions : DialogWithChoicesOptions
     /// </summary>
     /// <param name="contentContainer"></param>
     /// <returns></returns>
-    public override ConsoleControl ContentFactory(ConsolePanel contentContainer) => 
+    public override ConsoleControl ContentFactory(ConsolePanel contentContainer, Container dialogRoot) => 
         new TextViewer() { Y = 1, X = 2, Width = contentContainer.Width - 4, Text = Message };
 }
 

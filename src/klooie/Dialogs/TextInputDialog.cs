@@ -29,7 +29,7 @@ public sealed class ShowTextInputOptions : ShowMessageOptions
     /// </summary>
     /// <param name="contentContainer">the container</param>
     /// <returns>a label and a text box</returns>
-    public override ConsoleControl ContentFactory(ConsolePanel contentContainer)
+    public override ConsoleControl ContentFactory(ConsolePanel contentContainer, Container dialogRoot)
     {
         ConsolePanel content = new ConsolePanel();
         content.Ready.SubscribeOnce(() => content.Fill());
@@ -42,7 +42,11 @@ public sealed class ShowTextInputOptions : ShowMessageOptions
         content.BoundsChanged.Sync(()=> TextBox.Width = Math.Max(0, content.Width - 4), content);
         TextBox.ValueChanged.Sync(()=> Value = TextBox.Value, TextBox);
 
-        TextBox.Ready.SubscribeOnce(() => ConsoleApp.Current.InvokeNextCycle(() => TextBox.Focus()));
+        TextBox.Ready.SubscribeOnce(() =>
+        {
+            TextBox.Focus();
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, () => dialogRoot.Dispose(), TextBox);
+        });
         return content;
     }
 }

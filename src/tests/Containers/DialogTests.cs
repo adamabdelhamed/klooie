@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace klooie.tests;
 
 [TestClass]
-[TestCategory(Categories.Slow)]
+[TestCategory(Categories.ConsoleApp)]
 public class DialogTests
 {
     public TestContext TestContext { get; set; }
@@ -109,6 +109,10 @@ public class DialogTests
         await context.PaintAndRecordKeyFrameAsync();
         Assert.IsFalse(dialogTask.IsCompleted);
         await ConsoleApp.Current.SendKey(ConsoleKey.Enter);
+        // todo - This depended on enter closing the dialog, but we removed this behavior
+        //      - And it's worse because we don't control the dialog factory at this point
+        //        meaning that we can't control the lifetime of the dialog. We need to provide
+        //        a first class API for this.
         var stringVal = (await dialogTask).ToString();
         await context.PaintAndRecordKeyFrameAsync();
         Assert.AreEqual("Adam", stringVal);
@@ -133,10 +137,11 @@ public class DialogTests
         var options = new DialogOptions();
         await Dialog.Show(() =>
         {
-            var ret = new ConsolePanel() { Width = 60, Height = 7, Background = RGB.Red, IsVisible = false };
+            var ret = new ConsolePanel() { Width = 60, Height = 7, Background = RGB.Red, IsVisible = true };
             ret.Ready.SubscribeOnce(() => Assert.IsFalse(label.HasFocus));
-            ret.IsVisibleChanged.SubscribeOnce(async () =>
+            ConsoleApp.Current.Invoke(async () =>
             {
+                await Task.Delay(500);
                 if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
                 Assert.IsTrue(ret.IsVisible);
                 await ConsoleApp.Current.SendKey(ConsoleKey.Tab);
