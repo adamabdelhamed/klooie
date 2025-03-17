@@ -95,14 +95,14 @@ public sealed class FormDropdownProviderAttribute : Attribute
     public Type DropdownProviderType { get; private init; }
     public FormDropdownProviderAttribute(Type dropdownProviderType) => this.DropdownProviderType = dropdownProviderType;
 
-    public List<DialogChoice> GetOptions()
+    public List<DialogChoice> GetOptions(object model)
     {
         var provider = Activator.CreateInstance(DropdownProviderType) as IFormDropdownProvider;
-        return provider.Options;
+        return provider.GetOptions(model);
     }
 }
 
 public interface IFormDropdownProvider
 {
-    List<DialogChoice> Options { get; }
+    List<DialogChoice> GetOptions(object model);
 }

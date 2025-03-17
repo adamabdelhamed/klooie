@@ -32,7 +32,7 @@ public sealed class DropdownGenerator : FormFieldGeneratorAttribute
 
     private FormElement CreateFormElementUsingFormDropdownProvider(PropertyInfo property, IObservableObject formModel)
     {
-        var dropdown = new Dropdown(property.Attr<FormDropdownProviderAttribute>().GetOptions());
+        var dropdown = new Dropdown(property.Attr<FormDropdownProviderAttribute>().GetOptions(formModel));
         SyncDropdown(property, dropdown, formModel);
         return new FormElement()
         {
