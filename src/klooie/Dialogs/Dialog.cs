@@ -89,7 +89,10 @@ public static class Dialog
         {
             content.Filters.Add(item);
         }
-        var dialogContainer = options.Parent.Add(new BorderPanel(content) { FocusStackDepth = options.PushPop ? options.Parent.FocusStackDepth + 1 : options.Parent.FocusStackDepth, BorderColor = borderColor, Background = content.Background, Width = 1, Height = 1, ZIndex = options.ZIndex }).CenterBoth();
+
+        var maxFocusDepth = ConsoleApp.Current.LayoutRoot.Descendents.Select(c => c.FocusStackDepth).DefaultIfEmpty(0).Max();
+
+        var dialogContainer = options.Parent.Add(new BorderPanel(content) { FocusStackDepth = options.PushPop ? maxFocusDepth + 1 : maxFocusDepth, BorderColor = borderColor, Background = content.Background, Width = 1, Height = 1, ZIndex = options.ZIndex }).CenterBoth();
         dialogContainer.AddTag(Tag);
         options.Tags?.ForEach(t => dialogContainer.AddTag(t));
 
