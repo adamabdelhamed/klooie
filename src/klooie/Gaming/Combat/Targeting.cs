@@ -7,7 +7,7 @@ public class TargetingOptions
     public string? TargetTag { get; set; }
     public float AngularVisibility { get; set; } = 60;
     public float Range { get; set; } = Targeting.MaxVisibility;
-    public float Delay { get; set; } = 300;
+    public float Delay { get; set; } = 500;
 }
 
 public class TargetFilterContext
@@ -28,28 +28,40 @@ public class Targeting : Recyclable
 {
     public const float MaxVisibility = 1000;
 
+    private static int lastDelay;
+    private static int delaySpread = 5;
+    private static int maxDelay = 500;
+
     private TargetFilterContext targetFilterContext = new TargetFilterContext();
  
     private Event<GameCollider?>? _targetChanged;
     private Event<GameCollider>? _targetAcquired;
     private Event<TargetFilterContext>? _targetBeingEvaluated;
+    private static Event<Targeting>? _targetingInitiated;
     private Recyclable? currentTargetLifetime;
     private static TargetFilter targetFilter = new TargetFilter();
+    private static Throttler concurrentTargetingThrottler = new Throttler(10, TimeSpan.FromSeconds(.1));
 
     public Event<GameCollider?> TargetChanged => _targetChanged ?? (_targetChanged = EventPool<GameCollider?>.Instance.Rent());
     public Event<GameCollider> TargetAcquired => _targetAcquired ?? (_targetAcquired = EventPool<GameCollider>.Instance.Rent());
+
+    public static Event<Targeting> TargetingInitiated => _targetingInitiated ?? (_targetingInitiated = EventPool<Targeting>.Instance.Rent());
+
     public Event<TargetFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = EventPool<TargetFilterContext>.Instance.Rent());
 
     public GameCollider? Target { get; private set; }
 
-    public TargetingOptions Options { get; set; }
+    public TargetingOptions Options { get; private set; }
 
     public GameCollider Source => Options.Source;
+
+    public ILifetime? CurrentTargetLifetime => currentTargetLifetime;
 
     protected override void OnInit()
     {
         base.OnInit();
         this.OnDisposed(this, Cleanup);
+        _targetingInitiated?.Fire(this);
     }
 
     private static void Cleanup(object me)
@@ -70,8 +82,21 @@ public class Targeting : Recyclable
     {
         this.Options = options;
         if (ShouldContinue == false) return;
-        Game.Current.InnerLoopAPIs.Delay(Options.Delay, this, EvaluateStatic);
+        options.Source.OnDisposed(this, DisposeMe);
+        Game.Current.InnerLoopAPIs.Delay(Options.Delay + SpreadDelay(), this, EvaluateStatic);
     }
+
+    private static int SpreadDelay()
+    {
+        var newDelay = lastDelay + delaySpread;
+        if (newDelay > maxDelay)
+        {
+            newDelay = 0;
+        }
+        return newDelay;
+    }
+
+    private static void DisposeMe(object me) => (me as Targeting)?.TryDispose();
 
     private static void EvaluateStatic(object obj)
     {
@@ -82,6 +107,8 @@ public class Targeting : Recyclable
 
     public void Evaluate()
     {
+        if (concurrentTargetingThrottler.ShouldFire() == false) return;
+        if(ShouldContinue == false) return;
         if (Options.Range > MaxVisibility) throw new ArgumentException($"Range cannot exceed {MaxVisibility}");
         if (Options.Source.IsVisible == false) return;
         var buffer = ObstacleBufferPool.Instance.Rent();
@@ -125,6 +152,19 @@ public class Targeting : Recyclable
         if (delta >= Options.AngularVisibility) return false;
 
         var lineOfSightCast = CollisionPredictionPool.Instance.Rent();
+
+        for(var i = 0; i < buffer.WriteableBuffer.Count; i++)
+        {
+            var obstacle = buffer.WriteableBuffer[i];
+            targetFilterContext.Reset(obstacle);
+            _targetBeingEvaluated?.Fire(targetFilterContext);
+            if (targetFilterContext.Ignored)
+            {
+                buffer.WriteableBuffer.RemoveAt(i);
+                i--;
+            }
+        }
+
         CollisionDetector.Predict(Options.Source, angle, buffer.WriteableBuffer, Options.Range * 3, CastingMode.Precise, buffer.WriteableBuffer.Count, lineOfSightCast);
         var elementHit = lineOfSightCast.ColliderHit as GameCollider;
         lineOfSightCast.Dispose();
@@ -136,8 +176,7 @@ public class Targeting : Recyclable
     private void OnTargetChanged(GameCollider? newTarget)
     {
         if (newTarget == Target) return;
-
-        if (currentTargetLifetime != null) currentTargetLifetime.Dispose();
+        currentTargetLifetime?.Dispose();
         currentTargetLifetime = DefaultRecyclablePool.Instance.Rent();
         newTarget?.IsVisibleChanged.Subscribe(this, OnTargetVisibilityChanged, currentTargetLifetime);
         newTarget?.Velocity.Group.Removed.Subscribe(this, OnPotentialTargetRemoved, currentTargetLifetime);
@@ -165,7 +204,7 @@ public class Targeting : Recyclable
             }
         }
 
-        if (newTarget != null)
+        if (newTarget != null && newTarget.Filters.Contains(targetFilter) == false)
         {
             newTarget.Filters.Add(targetFilter);
         }
