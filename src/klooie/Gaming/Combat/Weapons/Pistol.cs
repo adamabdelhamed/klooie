@@ -1,7 +1,7 @@
 ﻿namespace klooie.Gaming;
 public class Pistol : Weapon
 {
-    public float Speed { get; set; } = 60;
+    public float Speed { get; set; } = 120;
     public ConsoleCharacter ProjectilePen { get; set; } = new ConsoleCharacter('*', RGB.Red);
     public Func<float> AngleVariation { get; set; } = () => 0;
     public Angle LastFireAngle { get; private set; }
