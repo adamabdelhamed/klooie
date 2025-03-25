@@ -208,6 +208,8 @@ public class Event<T> : Recyclable, IEventT
     private Event? innerEvent;
     public Stack<object> args { get; } = new Stack<object>(); // because notifications can be re-entrant
 
+    public bool HasSubscriptions => innerEvent?.HasSubscriptions == true;
+
     /// <summary>
     /// Subscribes for the given lifetime.
     /// </summary>
