@@ -1,8 +1,10 @@
-﻿namespace klooie;
+﻿using System.Diagnostics;
+
+namespace klooie;
 
 internal class LayoutRootPanel : ConsolePanel
 {
-    private Event _onWindowResized, _afterPaint;
+    private Event _onWindowResized;
     private int lastConsoleWidth, lastConsoleHeight;
     private List<TaskCompletionSource> paintRequests;
     private FrameRateMeter paintRateMeter;
@@ -70,9 +72,16 @@ internal class LayoutRootPanel : ConsolePanel
         paintRequested = true;
     }
 
+    private long lastPaintTime = Stopwatch.GetTimestamp();
+    private const double MaxFramesPerSecond = 31;
+    private const double minMillisecondsBetweenPaints = 1000.0 / MaxFramesPerSecond;
     private void DrainPaints()
     {
         if (paintRequests.None() && paintRequested == false) return;
+
+        var elapsed = Stopwatch.GetElapsedTime(lastPaintTime);
+        if (elapsed.TotalMilliseconds < minMillisecondsBetweenPaints) return;
+        lastPaintTime = Stopwatch.GetTimestamp();
 
         paintRequested = false;
         Bitmap.Fill(defaultPen);
