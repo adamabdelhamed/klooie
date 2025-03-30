@@ -76,6 +76,7 @@ public static class Dialog
         options.Parent = options.Parent ?? ConsoleApp.Current.LayoutRoot;
 
         var content = contentFactory();
+        var lease = content.Lease;
         var borderColor = options.BorderColor.HasValue ? options.BorderColor : content.Background.Darker;
 
         if(options.BorderColor.HasValue == false && content.Background == content.Background.Darker)
@@ -110,7 +111,8 @@ public static class Dialog
 
         Shown.Fire();
 
-        if (content.ShouldContinue)
+        
+        if (content.IsStillValid(lease))
         {
             // wait for the content to dispose, which indicates that it's time to close
             await content.AsTask();
@@ -136,13 +138,14 @@ public static class Dialog
         }
         else
         {
+            var lease = lt.Lease;
             return Animator.AnimateAsync(new FloatAnimationOptions()
             {
                 From = from,
                 To = to,
                 Duration = duration,
                 EasingFunction = EasingFunctions.EaseInOut,
-                IsCancelled = () => lt.IsExpired,
+                IsCancelled = () => lt.IsStillValid(lease) == false,
                 Setter = percentage => setter(percentage)
             });
         }

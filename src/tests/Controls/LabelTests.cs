@@ -13,11 +13,12 @@ public class LabelTests
     public void Label_Basic() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
         var label = LabelPool.Instance.Rent();
+        var lease = label.Lease;
         label.Text = "Hello World".ToGreen(bg: RGB.Orange);
         ConsoleApp.Current.LayoutRoot.Add(label).CenterBoth();
         await context.PaintAndRecordKeyFrameAsync();
         ConsoleApp.Current.Stop();
-        Assert.IsFalse(label.ShouldContinue);
+        Assert.IsFalse(label.IsStillValid(lease));
         Assert.IsTrue(label.ShouldStop);
     });
 

@@ -5,6 +5,7 @@
 public partial class TextBox : ConsoleControl
 {
     private static readonly TimeSpan BlinkInterval = TimeSpan.FromMilliseconds(500);
+    private int blinkTimerHandleLease;
     private Recyclable blinkTimerHandle;
     private bool isAllSelected;
     private bool isBlinking;
@@ -72,9 +73,9 @@ public partial class TextBox : ConsoleControl
         blinkTimerHandle?.TryDispose();
         ConsoleApp.Current.Invoke(async () =>
         {
-            blinkTimerHandle = this.CreateChildRecyclable();
+            blinkTimerHandle = this.CreateChildRecyclable(out blinkTimerHandleLease);
             blinkTimerHandle.OnDisposed(() => ConsoleApp.Current.RequestPaint());
-            while (blinkTimerHandle.ShouldContinue && HasFocus)
+            while (blinkTimerHandle?.IsStillValid(blinkTimerHandleLease) == true && HasFocus)
             {
                 ConsoleApp.Current.RequestPaint();
                 await Task.Delay(BlinkInterval);
@@ -88,6 +89,7 @@ public partial class TextBox : ConsoleControl
     private void TextBox_Unfocused()
     {
         blinkTimerHandle?.TryDispose();
+        blinkTimerHandle = null;
         isBlinking = false;
         isAllSelected = false;
     }
@@ -171,7 +173,7 @@ public partial class TextBox : ConsoleControl
 
         context.DrawString(new ConsoleString(bgTransformed), 0, 0);
 
-        if (isBlinking && blinkTimerHandle?.ShouldContinue == true)
+        if (isBlinking && blinkTimerHandle?.IsStillValid(blinkTimerHandleLease) == true)
         {
             char blinkChar = Editor.CursorPosition >= toPaint.Length ? ' ' : toPaint[Editor.CursorPosition].Value;
             var pen = new ConsoleCharacter(blinkChar, DefaultColors.FocusContrastColor, FocusColor);

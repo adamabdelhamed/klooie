@@ -204,9 +204,11 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
 
     private void Highlight(List<ConsoleControl> controls)
     {
-        foreach (var lifetime in highlightLifetimes)
+        while(highlightLifetimes.Count > 0)
         {
-            lifetime.Dispose();
+            var toDispose = highlightLifetimes[0];
+            highlightLifetimes.RemoveAt(0);
+            toDispose.TryDispose();
         }
 
         highlightLifetimes.Clear();
@@ -215,16 +217,15 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
         {
             var highlightLifetime = DefaultRecyclablePool.Instance.Rent();
             highlightLifetimes.Add(highlightLifetime);
+            highlightLifetime.OnDisposed(() => highlightLifetimes.Remove(highlightLifetime));
             if (cellDisplayControl is Label label)
             {
                 var originalText = label.Text;
                 label.Text = label.Text.ToBlack().ToDifferentBackground(HasFocus ? RGB.Cyan : RGB.DarkGray);
                 highlightLifetime.OnDisposed(() =>
                 {
-                    if (label.IsExpired == false)
-                    {
-                        label.Text = originalText;
-                    }
+                    label.Text = originalText;
+                    
                 });
             }
             else
@@ -235,11 +236,8 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
                 cellDisplayControl.Background = HasFocus ? RGB.Cyan : RGB.DarkGray;
                 highlightLifetime.OnDisposed(() =>
                 {
-                    if (cellDisplayControl.IsExpired == false)
-                    {
-                        cellDisplayControl.Foreground = originalFg;
-                        cellDisplayControl.Background = originalBg;
-                    }
+                    cellDisplayControl.Foreground = originalFg;
+                    cellDisplayControl.Background = originalBg;    
                 });
             }
         }

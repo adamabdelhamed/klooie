@@ -88,6 +88,7 @@ internal sealed class NotificationBufferPool
                 if (sub.ToAlsoDispose != null)
                 {
                     sub.ToAlsoDispose.TryDispose();
+                    sub.ToAlsoDispose = null;
                 }
             }
         }
@@ -99,17 +100,13 @@ internal sealed class NotificationBufferPool
 
     private static void Notify(Subscription sub)
     {
-        if (sub.Lifetime == null || sub.Lifetime?.IsExpired == false)
+        if (sub.ScopedCallback != null)
         {
-            // NEW OR MODIFIED CODE: if we have a ScopedCallback, call it; otherwise use Callback
-            if (sub.ScopedCallback != null)
-            {
-                sub.ScopedCallback(sub.Scope);
-            }
-            else
-            {
-                sub.Callback?.Invoke();
-            }
+            sub.ScopedCallback(sub.Scope);
+        }
+        else
+        {
+            sub.Callback?.Invoke();
         }
     }
 }
@@ -123,7 +120,7 @@ public sealed class Subscription : Recyclable
     internal Action<object,object>? TScopedCallback;
     internal IEventT? eventT;
 
-    internal ILifetime? Lifetime;
+    internal ILifetime? Lifetime { get; private set; }
     internal Recyclable? ToAlsoDispose;
     internal List<Subscription>? Subscribers;
 
@@ -131,6 +128,12 @@ public sealed class Subscription : Recyclable
     {
         base.OnInit();
         Reset();
+    }
+
+    internal void Bind(ILifetime lt)
+    {
+        Lifetime = lt;
+        lt.OnDisposed(()=> this.TryDispose());
     }
 
     private void Reset()

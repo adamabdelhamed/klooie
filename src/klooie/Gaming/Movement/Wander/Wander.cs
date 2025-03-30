@@ -25,7 +25,7 @@ public class WanderOptions
     public Dictionary<Type, float> Weights { get; set; } = DefaultWeights;
 }
 
-public class Wander : Movement
+public partial class Wander : Movement
 {
     public WanderOptions Options { get; private set; }
 
@@ -46,12 +46,24 @@ public class Wander : Movement
 
     private TaskCompletionSource moveTask;
 
-    private Wander(Velocity v, SpeedEval speed, WanderOptions options) : base(v, speed)
+    private void Bind(Velocity v, SpeedEval speed, WanderOptions options)
     {
+        base.Bind(v, speed);
         this.Options = options ?? new WanderOptions();
     }
 
-    public static Movement Create(Velocity v, SpeedEval speed, WanderOptions options = null) => new Wander(v, speed, options);
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        this.Options = null;
+    }
+
+    public static Movement Create(Velocity v, SpeedEval speed, WanderOptions options = null)
+    {
+        var wander = WanderPool.Instance.Rent();
+        wander.Bind(v, speed, options);
+        return wander;
+    }
 
     protected override Task Move()
     {
@@ -59,7 +71,6 @@ public class Wander : Movement
         _VisibilitySense = new VisibilitySense();
         _CloserToTargetSense = new CloserToTargetSense();
         _SimilarToCurrentDirectionSense = new SimilarToCurrentDirectionSense();
-
 
         var innerSpeed = Speed;
         Speed = () =>
@@ -87,12 +98,9 @@ public class Wander : Movement
 
     private void FinalizeMove()
     {
-        if (Velocity.Collider.IsExpired == false)
-        {
-            Velocity.Stop();
-        }
+        Velocity?.Stop();
 
-        if (_IterationLifetime != null && _IterationLifetime.IsExpired == false)
+        if (_IterationLifetime != null)
         {
             _IterationLifetime.Dispose();
         }
@@ -115,7 +123,7 @@ public class Wander : Movement
             Velocity.Stop();
             _IterationLifetime?.Dispose();
             _IterationLifetime = Game.Current.CreateChildRecyclable();
-
+            _IterationLifetime.OnDisposed(() => _IterationLifetime = null);
             elementBounds = Element.Bounds;
             var buffer = ObstacleBufferPool.Instance.Rent();
             try
@@ -222,7 +230,7 @@ public class Wander : Movement
         var _this = (Wander)state;
         try
         {
-            _this.AssertAlive();
+            if (_this.Velocity == null) throw new ShortCircuitException();
             _this.Options.OnDelay?.Invoke();
         }
         catch (Exception ex)
@@ -239,7 +247,7 @@ public class Wander : Movement
         var _this = (Wander)state;
         try
         {
-            _this.AssertAlive();
+            if (_this.Velocity == null) throw new ShortCircuitException();
             _this.then?.Invoke(_this.thenState);
         }catch(Exception ex)
         {

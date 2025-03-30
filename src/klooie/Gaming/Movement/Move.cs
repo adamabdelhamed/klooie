@@ -31,6 +31,7 @@ public class Mover
 
     public static async Task<bool> InvokeOrTimeout(Movement parent, Movement process, ILifetime maxLifetime)
     {
+        var lease = maxLifetime.Lease;
         try
         {
             maxLifetime.OnDisposed(() => process.TryDispose());
@@ -39,7 +40,7 @@ public class Mover
         }
         catch (ShortCircuitException)
         {
-            if (maxLifetime.IsExpired)
+            if (maxLifetime.IsStillValid(lease) == false)
             {
                 return false;
             }
@@ -70,7 +71,13 @@ public delegate float SpeedEval();
 
 public abstract class Movement<T> : Movement
 {
-    protected Movement(Velocity v, SpeedEval speed) : base(v, speed) { }
+    protected Movement() : base() { }
+
+    protected virtual void Bind(Velocity v, SpeedEval speed)
+    {
+        base.Bind(v, speed);
+    }
+
     public abstract T Result { get; protected set; }
 }
 
@@ -84,12 +91,25 @@ public abstract class Movement : Recyclable
     private Movement parent;
 
     private SpeedEval innerSpeedEval;
-    protected Movement(Velocity v, SpeedEval innerSpeedEval)
+    protected Movement()
+    {
+
+    }
+
+    protected void Bind(Velocity v, SpeedEval innerSpeedVal)
     {
         Velocity = v;
-        this.innerSpeedEval = innerSpeedEval;
+        innerSpeedEval = innerSpeedVal;
         Speed = CalculateEffectiveSpeed;
         v.Collider.OnDisposed(() => TryDispose());
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Velocity = null;
+        innerSpeedEval = null;
+        Speed = null;
     }
 
 
@@ -104,16 +124,14 @@ public abstract class Movement : Recyclable
 
     internal async Task InvokeInternal(Movement parent)
     {
-        if (IsExpired)
-        {
-            throw new NotSupportedException("Movement processes can only run once");
-        }
+        var lease = Lease;
+        var parentLease = parent?.Lease;
         try
         {
             this.parent = parent;
-            AssertAlive();
+            AssertAlive(lease, parentLease);
             await Move();
-            AssertAlive();
+            AssertAlive(lease, parentLease);
         }
         finally
         {
@@ -121,22 +139,16 @@ public abstract class Movement : Recyclable
         }
     }
 
-    public void AssertAlive()
+    public void AssertAlive(int lease, int? parentLease = null)
     {
-        if (IsExpired)
+        if (IsStillValid(lease) == false)
         {
             throw new ShortCircuitException();
         }
 
-       
-        if (IsExpired)
+        if (parent != null && parentLease.HasValue)
         {
-            throw new ShortCircuitException();
-        }
-
-        if (parent != null)
-        {
-            parent.AssertAlive();
+            parent.AssertAlive(parentLease.Value);
         }
     }
 

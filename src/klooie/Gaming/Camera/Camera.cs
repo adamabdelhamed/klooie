@@ -106,20 +106,21 @@ public sealed partial class Camera : ConsolePanel
         ease = ease ?? EasingFunctions.EaseInOut;
         var startX = cameraLocation.Left;
         var startY = cameraLocation.Top;
+        var lease = lt?.Lease;
         return Animator.AnimateAsync(new FloatAnimationOptions()
         {
             Duration = duration,
             EasingFunction = ease,
             From = 0,
             To = 1,
-            IsCancelled = () => lt != null && lt.IsExpired,
+            IsCancelled = () => lt != null && lt.IsStillValid(lease.Value) == false,
             Setter = v =>
             {
                 var xDelta = dest.Left - startX;
                 var yDelta = dest.Top - startY;
                 var frameX = startX + (v * xDelta);
                 var frameY = startY + (v * yDelta);
-                if (lt == null || (lt.IsExpiring == false && lt.IsExpired == false))
+                if (lt == null || (lt != null && lt.IsStillValid(lease.Value) == true))
                 {
                     CameraLocation = new LocF(frameX, frameY);
                 }

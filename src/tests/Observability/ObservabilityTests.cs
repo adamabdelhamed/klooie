@@ -297,16 +297,11 @@ public partial class ObservabilityTests
         var obj = new object();
         collection.Add(obj);
         var lifetime = collection.GetMembershipLifetime(obj);
+        var ltLease = lifetime.Lease;
         Assert.IsNotNull(lifetime);
-        Assert.IsTrue(lifetime.ShouldContinue);
-        Assert.IsFalse(lifetime.IsExpired);
-        Assert.IsFalse(lifetime.ShouldStop);
-        Assert.IsFalse(lifetime.IsExpiring);
+        Assert.IsTrue(lifetime.IsStillValid(ltLease));
         collection.Remove(obj);
-        Assert.IsFalse(lifetime.ShouldContinue);
-        Assert.IsTrue(lifetime.IsExpired);
-        Assert.IsTrue(lifetime.ShouldStop);
-        Assert.IsFalse(lifetime.IsExpiring);
+        Assert.IsFalse(lifetime.IsStillValid(ltLease));
     }
 
 
@@ -345,15 +340,16 @@ public partial class ObservabilityTests
     public void TestRecycle()
     {
         var recyclable = DefaultRecyclablePool.Instance.Rent();
-
-        Assert.IsFalse(recyclable.IsExpired);
-        Assert.IsFalse(recyclable.IsExpiring);
+        var originalLease = recyclable.Lease;
+        Assert.IsTrue(recyclable.IsStillValid(originalLease));
 
         recyclable.Dispose();
 
         var reRented = DefaultRecyclablePool.Instance.Rent();
+        var reRentedLease = reRented.Lease;
         Assert.AreSame(recyclable, reRented);
-        Assert.IsFalse(reRented.IsExpired);
-        Assert.IsFalse(reRented.IsExpiring);
+        Assert.AreNotEqual(originalLease, reRentedLease);
+        Assert.IsFalse(recyclable.IsStillValid(originalLease));
+        Assert.IsTrue(reRented.IsStillValid(reRentedLease));
     }
 }

@@ -20,6 +20,8 @@ public partial class Dropdown : ProtectedConsolePanel
     /// </summary>
     public bool EnableWAndSKeysForUpDown { get; set; }
 
+    public List<ConsoleKeyInfo> StandardKeysToOpen { get; set; } = new List<ConsoleKeyInfo> { ConsoleKey.Enter.KeyInfo(), ConsoleKey.DownArrow.KeyInfo() };
+
     /// <summary>
     /// Creates a new Dropdown
     /// <param name="options">the options to display</param>
@@ -41,11 +43,16 @@ public partial class Dropdown : ProtectedConsolePanel
         this.KeyInputReceived.Subscribe(async (k) =>
         {
             if (isOpen) return;
-            if (k.Key == ConsoleKey.Enter || k.Key == ConsoleKey.DownArrow)
+
+            foreach(var key in StandardKeysToOpen)
             {
-                await Open();
+                if (k.Key == key.Key && k.Modifiers == key.Modifiers)
+                {
+                    await Open();
+                    return;
+                }
             }
-            else if (EnableWAndSKeysForUpDown && (k.Key == ConsoleKey.W || k.Key == ConsoleKey.S))
+            if (EnableWAndSKeysForUpDown && (k.Key == ConsoleKey.W || k.Key == ConsoleKey.S))
             {
                 await Open();
             }

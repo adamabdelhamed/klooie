@@ -76,18 +76,20 @@ public sealed class Style
 
     internal void ApplyPropertyValue(ConsoleControl c, ILifetime lt)
     {
+        var controlLease = c.Lease;
+        var ltLease = lt.Lease;
         var prop = c.GetType().GetProperty(PropertyName);
         if (prop == null) throw new ArgumentException($"Failed to apply style to missing property {PropertyName} on type {c.GetType().FullName}");
         var unstyledValue = prop.GetValue(c);
         prop.SetValue(c, Value);
         lt.OnDisposed(() =>
         {
-            if (c.ShouldContinue == false) return;
+            if (c.IsStillValid(controlLease) == false) return;
             prop?.SetValue(c, unstyledValue);
         });
         c.SubscribeToAnyPropertyChange(null,(_) =>
         {
-            if (lt.ShouldContinue == false) return;
+            if (lt.IsStillValid(ltLease) == false) return;
             prop.SetValue(c, Value);
         }, lt);
     }

@@ -31,11 +31,11 @@ public class SourceGeneratorBasedObservabilityTests
             lt.Dispose();
         }
         propValLt = observable.NameChanged.CreateNextFireLifetime();
-        
-        Assert.IsFalse(propValLt.IsExpired);
+        var lease = propValLt.Lease;
+        Assert.IsTrue(propValLt.IsStillValid(lease));
         observable.Name = "new name2";
         var a = 1;
-        Assert.IsTrue(propValLt.IsExpired);
+        Assert.IsFalse(propValLt.IsStillValid(lease));
         Assert.AreEqual(1, nameChangedCount);
         Assert.AreEqual("new name2", observable.Name);
     }

@@ -188,6 +188,7 @@ public class NavigateTests
         }
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
         var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new GameCollider());
+        var cMoverLease = cMover.Lease;
         cMover.Background = RGB.Red;
         cMover.ResizeTo(.8f, .8f);
         cMover.MoveTo(Game.Current.GameBounds.Top + 2.5f, Game.Current.GameBounds.Left + 1.5f);
@@ -230,7 +231,7 @@ public class NavigateTests
             var lastIndex = path.Count - 1;
             var lastBounds = path.Last();
             var lastNow = Game.Current.MainColliderGroup.Now;
-            while (cMover.ShouldContinue)
+            while (cMover.IsStillValid(cMoverLease))
             {
                 while (Game.Current.MainColliderGroup.Now - lastNow < TimeSpan.FromSeconds(2))
                 {
@@ -276,21 +277,6 @@ public class NavigateTests
         Game.Current.GamePanel.Controls.Clear();
         await Game.Current.RequestPaintAsync();
         Console.WriteLine();
-    }
-
- 
-    public class Right : Movement
-    {
-        public Right(Velocity v, SpeedEval innerSpeedEval) : base(v, innerSpeedEval) { }
-        protected override async Task Move()
-        {
-            Velocity.Angle = 0;
-            Velocity.Speed = Speed();
-            while(ShouldContinue)
-            {
-                await Task.Yield();
-            }
-        }
     }
 }
 

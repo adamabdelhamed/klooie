@@ -115,12 +115,13 @@ public sealed class TestGame : Game
     protected override async Task Startup()
     {
         await base.Startup();
+        var lease = Lease;
         if (options.Mode == UITestMode.RealTimeFYI)
         {
             var fr = LayoutRoot.Add(new Label() { Foreground = RGB.White, Background = RGB.Black }).DockToRight(padding: 2).DockToTop(padding: 1);
             Invoke(async () =>
             {
-                while (ShouldContinue)
+                while (IsStillValid(lease))
                 {
                     await Task.Delay(100);
                     fr.Text = (FramesPerSecond + " FPS").ToConsoleString();

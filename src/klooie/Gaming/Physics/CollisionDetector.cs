@@ -121,7 +121,6 @@ public static class CollisionDetector
         {
             ICollidable obstacle = colliders[i];
 
-            if (obstacle is ILifetime ltm && ltm.ShouldStop) continue;
             if (ReferenceEquals(from, obstacle) || !from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
             if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obstacle.Bounds) > visibility + VerySmallNumber) continue;
 

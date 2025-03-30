@@ -2,13 +2,15 @@
 /// <summary>
 /// A movement that forcefully moves an element along a clear path
 /// </summary>
-public class Puppet : Movement
+public partial class Puppet : Movement
 {
     private RectF destination;
     private float closeEnough;
 
-    private Puppet(Velocity v, SpeedEval speed, RectF destination, float closeEnough) : base(v, speed)
+ 
+    protected void Bind(Velocity v, SpeedEval speed, RectF destination, float closeEnough)
     {
+        base.Bind(v, speed);
         this.destination = destination;
         this.closeEnough = closeEnough;
     }
@@ -20,7 +22,12 @@ public class Puppet : Movement
     /// <param name="speed">the movement speed</param>
     /// <param name="destination">the final location of the puppet</param>
     /// <returns>a task</returns>
-    public static Movement Create(Velocity v, SpeedEval speed, RectF destination, float closeEnough = Mover.DefaultCloseEnough) => new Puppet(v, speed, destination, closeEnough);
+    public static Movement Create(Velocity v, SpeedEval speed, RectF destination, float closeEnough = Mover.DefaultCloseEnough)
+    {
+        var puppet = PuppetPool.Instance.Rent();
+        puppet.Bind(v, speed, destination, closeEnough);
+        return puppet;
+    }
  
     protected override async Task Move()
     {

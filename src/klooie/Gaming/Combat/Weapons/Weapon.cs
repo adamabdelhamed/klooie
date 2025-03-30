@@ -85,7 +85,7 @@ public partial class Weapon : Recyclable, IObservableObject
 
 public class WeaponElement : GameCollider
 {
-    public Weapon Weapon { get; set; }
+    public Weapon Weapon { get; private set; }
     protected override void OnInit()
     {
         base.OnInit();
@@ -102,6 +102,7 @@ public class WeaponElement : GameCollider
 
     public override bool CanCollideWith(ICollidable other)
     {
+        if(this.Weapon == null) throw new InvalidOperationException("Weapon is null");
         if (base.CanCollideWith(other) == false) return false;
         if (other == Weapon.Source) return false;
         if ((other as WeaponElement)?.Weapon.Source == Weapon.Source) return false;

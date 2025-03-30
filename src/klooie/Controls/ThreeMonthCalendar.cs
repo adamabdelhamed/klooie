@@ -13,6 +13,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
     private MonthCalendar center;
     private MonthCalendar right;
 
+    private int seekLtLease;
     private Recyclable seekLt;
 
     private ConsoleControl leftPlaceHolder;
@@ -53,8 +54,8 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
 
     public async Task<bool> SeekAsync(bool forward, float duration)
     {
-        if (seekLt != null && seekLt.IsExpired == false) return false;
-        seekLt = this.CreateChildRecyclable();
+        if (seekLt?.IsStillValid(seekLtLease) == true) return false;
+        seekLt = this.CreateChildRecyclable(out seekLtLease);
         try
         {
             var thisMonth = new DateTime(Options.Year, Options.Month, 1);
@@ -79,7 +80,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
             EasingFunction ease = EasingFunctions.EaseInOut;
             var tempAnimation = temp.AnimateAsync(new ConsoleControlAnimationOptions()
             {
-                IsCancelled = () => seekLt.IsExpired,
+                IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false,
                 Destination = () => tempDest,
                 Duration = duration,
                 EasingFunction = ease
@@ -93,9 +94,9 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
 
                 await Task.WhenAll
                 (
-                    right.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt.IsExpired, EasingFunction = ease, Destination = () => rightAnimationDest, Duration = duration }),
-                    center.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt.IsExpired, EasingFunction = ease, Destination = () => centerAnimationDest, Duration = duration }),
-                    left.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt.IsExpired, EasingFunction = ease, Destination = () => leftAnimationDest, Duration = duration }),
+                    right.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => rightAnimationDest, Duration = duration }),
+                    center.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => centerAnimationDest, Duration = duration }),
+                    left.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => leftAnimationDest, Duration = duration }),
                     tempAnimation
                 );
 
@@ -112,9 +113,9 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
 
                 await Task.WhenAll
                 (
-                    right.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt.IsExpired, EasingFunction = ease, Destination = () => rightAnimationDest, Duration = duration }),
-                    center.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt.IsExpired, EasingFunction = ease, Destination = () => centerAnimationDest, Duration = duration }),
-                    left.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt.IsExpired, EasingFunction = ease, Destination = () => leftAnimationDest, Duration = duration }),
+                    right.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => rightAnimationDest, Duration = duration }),
+                    center.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => centerAnimationDest, Duration = duration }),
+                    left.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => leftAnimationDest, Duration = duration }),
                     tempAnimation
                 );
 
@@ -136,7 +137,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
         }
         finally
         {
-            seekLt.Dispose();
+            seekLt?.TryDispose();
             seekLt = null;
         }
     }
@@ -147,7 +148,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
         if (Width == 0 || Height == 0) return;
 
 
-        seekLt?.Dispose();
+        seekLt?.TryDispose();
         var leftDest = CalculateLeftDestination();
         var centerDest = CalculateCenterDestination();
         var rightDest = CalculateRightDestination();

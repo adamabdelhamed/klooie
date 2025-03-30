@@ -11,6 +11,7 @@ public class MinimumSizeShield : ConsolePanel
 {
     private MinimumSizeShieldOptions options;
     private Label messageLabel;
+    private int tooSmallLifetimeLease;
     private Recyclable tooSmallLifetime;
     private ConsoleControl focusThief;
     public MinimumSizeShield(MinimumSizeShieldOptions options)
@@ -29,7 +30,7 @@ public class MinimumSizeShield : ConsolePanel
         {
             if (tooSmallLifetime == null)
             {
-                tooSmallLifetime = DefaultRecyclablePool.Instance.Rent();
+                tooSmallLifetime = DefaultRecyclablePool.Instance.Rent(out tooSmallLifetimeLease);
                 IsVisible = true;
 
                 focusThief = Add(new ConsoleControl() { IsVisible = false, CanFocus = false, FocusStackDepth = this.FocusStackDepth + 1 });
@@ -42,7 +43,7 @@ public class MinimumSizeShield : ConsolePanel
         else
         {
             IsVisible = false;
-            if (tooSmallLifetime != null)
+            if (tooSmallLifetime?.IsStillValid(tooSmallLifetimeLease) == true)
             {
                 tooSmallLifetime.Dispose();
                 tooSmallLifetime = null;
@@ -58,7 +59,7 @@ public class MinimumSizeShield : ConsolePanel
 
     private async Task OnTooSmall()
     {
-        while (tooSmallLifetime != null && tooSmallLifetime.IsExpired == false)
+        while (tooSmallLifetime?.IsStillValid(tooSmallLifetimeLease) == true)
         {
             ConsoleString msg = ConsoleString.Empty;
             if (Width >= 75)

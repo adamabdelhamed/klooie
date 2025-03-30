@@ -32,10 +32,10 @@ internal partial class FocusManager : IObservableObject
     {
         private class HandlerContext
         {
-            internal Dictionary<ConsoleKey, Stack<KeyboardAction>> NakedHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<KeyboardAction>>();
-            internal Dictionary<ConsoleKey, Stack<KeyboardAction>> AltHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<KeyboardAction>>();
-            internal Dictionary<ConsoleKey, Stack<KeyboardAction>> ShiftHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<KeyboardAction>>();
-            internal Dictionary<ConsoleKey, Stack<KeyboardAction>> ControlHandlers { get; private set; } = new Dictionary<ConsoleKey, Stack<KeyboardAction>>();
+            internal Dictionary<ConsoleKey, List<KeyboardAction>> NakedHandlers { get; private set; } = new Dictionary<ConsoleKey, List<KeyboardAction>>();
+            internal Dictionary<ConsoleKey, List<KeyboardAction>> AltHandlers { get; private set; } = new Dictionary<ConsoleKey, List<KeyboardAction>>();
+            internal Dictionary<ConsoleKey, List<KeyboardAction>> ShiftHandlers { get; private set; } = new Dictionary<ConsoleKey, List<KeyboardAction>>();
+            internal Dictionary<ConsoleKey, List<KeyboardAction>> ControlHandlers { get; private set; } = new Dictionary<ConsoleKey, List<KeyboardAction>>();
         }
 
         private Stack<HandlerContext> handlerStack;
@@ -59,25 +59,25 @@ internal partial class FocusManager : IObservableObject
 
                 if (noModifier && ctx.NakedHandlers.ContainsKey(keyInfo.Key))
                 {
-                    ctx.NakedHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    ctx.NakedHandlers[keyInfo.Key][^1].Invoke(keyInfo);
                     handlerCount++;
                 }
 
                 if (alt && ctx.AltHandlers.ContainsKey(keyInfo.Key))
                 {
-                    ctx.AltHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    ctx.AltHandlers[keyInfo.Key][^1].Invoke(keyInfo);
                     handlerCount++;
                 }
 
                 if (shift && ctx.ShiftHandlers.ContainsKey(keyInfo.Key))
                 {
-                    ctx.ShiftHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    ctx.ShiftHandlers[keyInfo.Key][^1].Invoke(keyInfo);
                     handlerCount++;
                 }
 
                 if (control && ctx.ControlHandlers.ContainsKey(keyInfo.Key))
                 {
-                    ctx.ControlHandlers[keyInfo.Key].Peek().Invoke(keyInfo);
+                    ctx.ControlHandlers[keyInfo.Key][^1].Invoke(keyInfo);
                     handlerCount++;
                 }
 
@@ -89,7 +89,7 @@ internal partial class FocusManager : IObservableObject
             }
         }
 
-        private Dictionary<ConsoleKey, Stack<KeyboardAction>> GetDictionaryForModifier(ConsoleModifiers? modifier)
+        private Dictionary<ConsoleKey, List<KeyboardAction>> GetDictionaryForModifier(ConsoleModifiers? modifier)
         {
             var ctx = handlerStack.Peek();
             if (!modifier.HasValue || modifier == ConsoleModifiers.None) return ctx.NakedHandlers;
@@ -100,22 +100,33 @@ internal partial class FocusManager : IObservableObject
             throw new ArgumentException($"Unsupported modifier: {modifier.Value}");
         }
 
-        private Recyclable PushHandler(Dictionary<ConsoleKey, Stack<KeyboardAction>> dictionary, ConsoleKey key, KeyboardAction handlerAction)
+        private Recyclable PushHandler(Dictionary<ConsoleKey, List<KeyboardAction>> dictionary, ConsoleKey key, KeyboardAction handlerAction)
         {
-            if (!dictionary.TryGetValue(key, out var targetStack))
+            if (!dictionary.TryGetValue(key, out var handlerList))
             {
-                targetStack = new Stack<KeyboardAction>();
-                dictionary.Add(key, targetStack);
+                handlerList = new List<KeyboardAction>();
+                dictionary.Add(key, handlerList);
             }
 
-            targetStack.Push(handlerAction);
+            handlerList.Add(handlerAction);
+            int index = handlerList.Count - 1;
 
             var lt = new Recyclable();
             lt.OnDisposed(() =>
             {
                 handlerAction.Dispose();
-                targetStack.Pop();
-                if (targetStack.Count == 0)
+
+                // Remove the handler from the list only if it's still there
+                if (index >= 0 && index < handlerList.Count && handlerList[index] == handlerAction)
+                {
+                    handlerList.RemoveAt(index);
+                }
+                else
+                {
+                    handlerList.Remove(handlerAction); // fallback to remove by value
+                }
+
+                if (handlerList.Count == 0)
                 {
                     dictionary.Remove(key);
                 }
@@ -284,10 +295,7 @@ internal partial class FocusManager : IObservableObject
         }
         else if (FocusedControl != null)
         {
-            if (FocusedControl.IsExpired == false)
-            {
-                FocusedControl.HandleKeyInput(info);
-            }
+            FocusedControl.HandleKeyInput(info);
         }
         else
         {
@@ -527,7 +535,6 @@ internal partial class FocusManager : IObservableObject
 
     public void ClearFocus()
     {
-        if (ConsoleApp.Current?.ShouldContinue == false) return;
         if (FocusedControl != null)
         {
             FocusedControl.HasFocus = false;

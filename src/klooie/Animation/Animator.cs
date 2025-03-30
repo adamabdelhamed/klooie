@@ -16,13 +16,13 @@ public static class Animator
     public static async Task AnimateAsync(FloatAnimationOptions options)
     {
         options.DelayProvider = options.DelayProvider ?? new WallClockDelayProvider();
-
+        var loopLease = options.Loop?.Lease;
         var originalFrom = options.From;
         var originalTo = options.To;
         try
         {
             var i = 0;
-            while (i == 0 || (options.Loop != null && options.Loop.IsExpired == false))
+            while (i == 0 || (options.Loop != null && options.Loop?.IsStillValid(loopLease.Value) == true))
             {
                 i++;
                 await AnimateAsyncInternal(options);

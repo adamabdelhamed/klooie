@@ -19,14 +19,14 @@ public class Program
     private static ColliderGroup splatterGroup;
     public static void GameEx()
     {
-        var poolManager = new PoolManager();
-        poolManager.Pools.Add(EventPool.Instance.Fill(10_000));
-        poolManager.Pools.Add(SubscriptionPool.Instance.Fill(10_000));
-        poolManager.Pools.Add(EventPool<Collision>.Instance.Fill(10_000));
-        poolManager.Pools.Add(EventPool<ConsoleKeyInfo>.Instance.Fill(100));
-        poolManager.Pools.Add(DefaultRecyclablePool.Instance.Fill(10_000));
-        poolManager.Pools.Add(ObservableCollectionPool<IConsoleControlFilter>.Instance.Fill(100));
-        poolManager.Pools.Add(ObservableCollectionPool<ConsoleControl>.Instance.Fill(100));
+        var poolManager = PoolManager.Instance;
+        poolManager.Get<EventPool>().Fill(10_000);
+        poolManager.Get<SubscriptionPool>().Fill(10_000);
+        poolManager.Get<EventPool<Collision>>().Fill(10_000);
+        poolManager.Get<EventPool<ConsoleKeyInfo>>().Fill(100);
+        poolManager.Get<DefaultRecyclablePool>().Fill(10_000);
+        poolManager.Get<ObservableCollectionPool<IConsoleControlFilter>>().Fill(100);
+        poolManager.Get<ObservableCollectionPool<ConsoleControl>>().Fill(100);
 
         var game = new Game();
         game.Invoke(async () =>
@@ -88,6 +88,7 @@ public class Program
         }
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
         var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new GameCollider());
+        var cMoverLease = cMover.Lease;
         cMover.Background = RGB.Red;
         cMover.ResizeTo(3, 1);
         cMover.MoveTo(Game.Current.GameBounds.Left + 4, Game.Current.GameBounds.Top + 3);
@@ -103,10 +104,7 @@ public class Program
             }
         }, cMover);
 
-        cMover.OnDisposed(() =>
-        {
-
-        });
+        
         cMover.BoundsChanged.Subscribe(() =>
         {
             var buffer = ObstacleBufferPool.Instance.Rent();
@@ -148,7 +146,7 @@ public class Program
                 return extraTight ? new ColliderBox(Game.Current.GameBounds.Center.ToRect(1, 1)) : null;
             },
         }));
-        if (cMover.IsExpired == false) throw new Exception("Failed to expire");
+        if (cMover.IsStillValid(cMoverLease)) throw new Exception("Failed to expire");
         if(failed) throw new Exception("Failed to keep moving");
        
         if (extraTight)
@@ -392,10 +390,11 @@ public class MotionTracker
     public MotionTracker(Velocity v)
     {
         this.v = v;
+        var vLease = v.Lease;
         lastKnownBounds = v.Collider.Bounds;
         Game.Current.Invoke(async () =>
         {
-            while(v.ShouldContinue)
+            while(v.IsStillValid(vLease))
             {
                 Track();
                 await Game.Current.Delay(100);

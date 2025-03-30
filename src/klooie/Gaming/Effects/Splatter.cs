@@ -226,20 +226,19 @@ public static class Splatter
         state.Velocity.Stop();
         state.Friction.TryDispose();
 
-        if (!state.SplatterElement.IsExpired)
-        {
-            state.SplatterElement.MoveTo(state.SplatterElement.Left, state.SplatterElement.Top, 232323);
-            state.Velocity.Angle = PseudoRandom.Next(80, 100);
-            state.Velocity.Speed = 25;
+        if (state.SplatterElement == null) return;
+        
+        state.SplatterElement.MoveTo(state.SplatterElement.Left, state.SplatterElement.Top, 232323);
+        state.Velocity.Angle = PseudoRandom.Next(80, 100);
+        state.Velocity.Speed = 25;
 
-            ConsoleApp.Current.InnerLoopAPIs.Delay(50, state, Step2);
-        }
+        ConsoleApp.Current.InnerLoopAPIs.Delay(50, state, Step2);        
     }
 
     private static void Step2(object stateObj)
     {
         var state = (FinishSplatterState)stateObj;
-
+        if (state.SplatterElement == null) return;
         state.Velocity.Speed = 50;
         ConsoleApp.Current.InnerLoopAPIs.Delay(50, state, Step3);
     }
@@ -247,7 +246,7 @@ public static class Splatter
     private static void Step3(object stateObj)
     {
         var state = (FinishSplatterState)stateObj;
-
+        if (state.SplatterElement == null) return;
         state.Velocity.Speed = 100;
         ConsoleApp.Current.InnerLoopAPIs.Delay(50, state, Step4);
     }
@@ -255,7 +254,7 @@ public static class Splatter
     private static void Step4(object stateObj)
     {
         var state = (FinishSplatterState)stateObj;
-
+        if (state.SplatterElement == null) return;
         state.Velocity.Speed = 200;
         ConsoleApp.Current.InnerLoopAPIs.Delay(2000, state, FinalStep);
     }
@@ -263,14 +262,15 @@ public static class Splatter
     private static void FinalStep(object stateObj)
     {
         var state = (FinishSplatterState)stateObj;
-
+        if (state.SplatterElement == null) return;
         state.SplatterElement.TryDispose();
+        state.SplatterElement = null;
         state.Options.FinishedCount++;
 
         if (state.Options.FinishedCount == state.Options.Splatter.Count)
         {
-            state.Options.Dispose();
-            state.Dispose();
+            state.Options.TryDispose();
+            state.TryDispose();
         }
     }
 }
@@ -278,7 +278,7 @@ public static class Splatter
 public class FinishSplatterState : Recyclable
 {
     public SplatterOptions Options;
-    public SplatterElement SplatterElement;
+    public SplatterElement? SplatterElement;
     public Velocity Velocity;
     public Friction Friction;
     protected override void OnInit()

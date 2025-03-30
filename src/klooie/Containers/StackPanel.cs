@@ -64,7 +64,7 @@ public partial class StackPanel : ConsolePanel
     
     private void RedoLayout()
     {
-        if (this.IsExpired || this.IsExpiring) return;
+        // if (this.IsExpired || this.IsExpiring) return; // Should not be needed
         if (Orientation == Orientation.Vertical)
         {
             int h = Layout.StackVertically(Margin, Controls);

@@ -1,18 +1,17 @@
 ﻿namespace klooie.Gaming;
-
 public class TargetingOptions
 {
     public bool HighlightTargets { get; set; }
     public required GameCollider Source { get; set; }
     public string? TargetTag { get; set; }
-    public float AngularVisibility { get; set; } = 60;
+    public float AngularVisibility { get; set; } = 20;
     public float Range { get; set; } = Targeting.MaxVisibility;
     public float Delay { get; set; } = 500;
 }
 
 public class TargetFilterContext
 {
-    internal bool Ignored { get; private set; }  
+    internal bool Ignored { get; private set; }
     public GameCollider PotentialTarget { get; internal set; }
 
     internal void Reset(GameCollider toBind)
@@ -28,19 +27,21 @@ public class Targeting : Recyclable
 {
     public const float MaxVisibility = 1000;
 
-    private static int lastDelay;
-    private static int delaySpread = 5;
-    private static int maxDelay = 500;
-
     private TargetFilterContext targetFilterContext = new TargetFilterContext();
- 
+
     private Event<GameCollider?>? _targetChanged;
     private Event<GameCollider>? _targetAcquired;
     private Event<TargetFilterContext>? _targetBeingEvaluated;
     private static Event<Targeting>? _targetingInitiated;
     private Recyclable? currentTargetLifetime;
     private static TargetFilter targetFilter = new TargetFilter();
-    private static Throttler concurrentTargetingThrottler = new Throttler(10, TimeSpan.FromSeconds(.1));
+
+
+    // --- New Queue-based Evaluation Mechanism ---
+    private static readonly List<Targeting> evaluationQueue = new List<Targeting>();
+    private static bool isDrainingQueue = false;
+    private const int DrainIntervalMs = 2; // adjust this rate as needed
+
 
     public Event<GameCollider?> TargetChanged => _targetChanged ?? (_targetChanged = EventPool<GameCollider?>.Instance.Rent());
     public Event<GameCollider> TargetAcquired => _targetAcquired ?? (_targetAcquired = EventPool<GameCollider>.Instance.Rent());
@@ -67,11 +68,12 @@ public class Targeting : Recyclable
     private static void Cleanup(object me)
     {
         Targeting _this = (me as Targeting)!;
-        if (_this._targetChanged != null) _this._targetChanged.Dispose();
-        if (_this._targetAcquired != null) _this._targetAcquired.Dispose();
-        if (_this._targetBeingEvaluated != null) _this._targetBeingEvaluated.Dispose();
-        if (_this.currentTargetLifetime != null) _this.currentTargetLifetime.Dispose();
+        if (_this._targetChanged != null) _this._targetChanged.TryDispose();
+        if (_this._targetAcquired != null) _this._targetAcquired.TryDispose();
+        if (_this._targetBeingEvaluated != null) _this._targetBeingEvaluated.TryDispose();
+        if (_this.currentTargetLifetime != null) _this.currentTargetLifetime.TryDispose();
 
+        evaluationQueue.Remove(_this);
         _this._targetChanged = null;
         _this._targetAcquired = null;
         _this._targetBeingEvaluated = null;
@@ -81,36 +83,30 @@ public class Targeting : Recyclable
     public void Bind(TargetingOptions options)
     {
         this.Options = options;
-        if (ShouldContinue == false) return;
         options.Source.OnDisposed(this, DisposeMe);
-        Game.Current.InnerLoopAPIs.Delay(Options.Delay + SpreadDelay(), this, EvaluateStatic);
-    }
-
-    private static int SpreadDelay()
-    {
-        var newDelay = lastDelay + delaySpread;
-        if (newDelay > maxDelay)
-        {
-            newDelay = 0;
-        }
-        return newDelay;
+        Game.Current.InnerLoopAPIs.Delay(Options.Delay, this, EvaluateStatic);
     }
 
     private static void DisposeMe(object me) => (me as Targeting)?.TryDispose();
 
+    /// <summary>
+    /// Instead of immediately firing an evaluation, we enqueue it.
+    /// </summary>
     private static void EvaluateStatic(object obj)
     {
-        var _this = (obj as Targeting)!;
-        _this.Evaluate();
-        _this.Bind(_this.Options);
+        var _this = (Targeting)obj;
+        EnqueueEvaluation(_this);
     }
 
+    /// <summary>
+    /// This method now processes the evaluation immediately (once dequeued).
+    /// </summary>
     public void Evaluate()
     {
-        if (concurrentTargetingThrottler.ShouldFire() == false) return;
-        if(ShouldContinue == false) return;
-        if (Options.Range > MaxVisibility) throw new ArgumentException($"Range cannot exceed {MaxVisibility}");
+        if (Options.Range > MaxVisibility)
+            throw new ArgumentException($"Range cannot exceed {MaxVisibility}");
         if (Options.Source.IsVisible == false) return;
+
         var buffer = ObstacleBufferPool.Instance.Rent();
         Options.Source.GetObstacles(buffer);
         try
@@ -137,11 +133,14 @@ public class Targeting : Recyclable
 
     private bool MeetsTargetingCriteria(GameCollider potentialTarget, ObstacleBuffer buffer)
     {
+        if(ShouldStop) return false;
         if (potentialTarget.ShouldStop) return false;
-        if (potentialTarget.CanCollideWith(this.Options.Source) == false && this.Options.Source.CanCollideWith(potentialTarget) == false) return false;
+        if (potentialTarget.CanCollideWith(this.Options.Source) == false &&
+            this.Options.Source.CanCollideWith(potentialTarget) == false) return false;
         if (Options.TargetTag != null && potentialTarget.HasSimpleTag(Options.TargetTag) == false) return false;
         if (potentialTarget.IsVisible == false) return false;
-        if (Options.Range != float.MaxValue && potentialTarget.CalculateNormalizedDistanceTo(Options.Source) > Options.Range) return false;
+        if (Options.Range != float.MaxValue &&
+            potentialTarget.CalculateNormalizedDistanceTo(Options.Source) > Options.Range) return false;
 
         targetFilterContext.Reset(potentialTarget);
         _targetBeingEvaluated?.Fire(targetFilterContext); // todo - Peek immunity, filtering out weapon elements, and concealment can be untangled from this class using this event
@@ -153,7 +152,7 @@ public class Targeting : Recyclable
 
         var lineOfSightCast = CollisionPredictionPool.Instance.Rent();
 
-        for(var i = 0; i < buffer.WriteableBuffer.Count; i++)
+        for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
         {
             var obstacle = buffer.WriteableBuffer[i];
             targetFilterContext.Reset(obstacle);
@@ -164,12 +163,12 @@ public class Targeting : Recyclable
                 i--;
             }
         }
-
+        if(ShouldStop) return false;
         CollisionDetector.Predict(Options.Source, angle, buffer.WriteableBuffer, Options.Range * 3, CastingMode.Precise, buffer.WriteableBuffer.Count, lineOfSightCast);
         var elementHit = lineOfSightCast.ColliderHit as GameCollider;
         lineOfSightCast.Dispose();
         if (elementHit != potentialTarget) return false;
-        
+
         return true;
     }
 
@@ -212,18 +211,57 @@ public class Targeting : Recyclable
 
     private static void OnTargetVisibilityChanged(object me)
     {
-        var _this = (me as Targeting)!;
-        if(_this.Target?.IsVisible == true) return;
+        var _this = (Targeting)me;
+        if (_this.Target?.IsVisible == true) return;
         _this.OnTargetChanged(null);
     }
 
     private static void OnPotentialTargetRemoved(object me, object colliderObj)
     {
-        
+
         var collider = (GameCollider)colliderObj;
         var _this = (me as Targeting)!;
         if (ReferenceEquals(_this.Target, collider) == false) return;
         _this.OnTargetChanged(null);
+    }
+
+    // --- Queue-based Evaluation Methods ---
+    private static void EnqueueEvaluation(Targeting instance)
+    {
+        evaluationQueue.Add(instance);
+        StartQueueDrainIfNeeded();
+    }
+
+    private static void StartQueueDrainIfNeeded()
+    {
+        if (!isDrainingQueue && evaluationQueue.Count > 0)
+        {
+            isDrainingQueue = true;
+            Game.Current.InnerLoopAPIs.Delay(DrainIntervalMs, null, DrainQueue);
+        }
+    }
+
+    private static void DrainQueue(object state)
+    {
+        Targeting instance = null;
+
+        if (evaluationQueue.Count > 0)
+        {
+            instance = evaluationQueue[evaluationQueue.Count - 1];
+            evaluationQueue.RemoveAt(evaluationQueue.Count-1);
+            instance.Evaluate();
+            // Rebind for the next evaluation cycle.
+            instance.Bind(instance.Options);
+        }
+
+        if (evaluationQueue.Count > 0)
+        {
+            Game.Current.InnerLoopAPIs.Delay(DrainIntervalMs, null, DrainQueue);
+        }
+        else
+        {
+            isDrainingQueue = false;
+        }
     }
 }
 
@@ -233,11 +271,11 @@ public class TargetFilter : IConsoleControlFilter
 
     public void Filter(ConsoleBitmap bitmap)
     {
-        for(var x = 0; x < bitmap.Width; x++)
+        for (var x = 0; x < bitmap.Width; x++)
         {
             for (var y = 0; y < bitmap.Height; y++)
             {
-                bitmap.SetPixel(x,y, new ConsoleCharacter(bitmap.GetPixel(x, y).Value, RGB.Black, RGB.Cyan));
+                bitmap.SetPixel(x, y, new ConsoleCharacter(bitmap.GetPixel(x, y).Value, RGB.Black, RGB.Cyan));
             }
         }
     }

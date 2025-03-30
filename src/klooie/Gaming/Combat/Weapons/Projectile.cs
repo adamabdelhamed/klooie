@@ -1,5 +1,78 @@
 ﻿
+
+
+
+
+
 namespace klooie.Gaming;
+
+public class ProjectileRule : IRule
+{
+    private static ColliderGroup shrapnelGroup;
+    public Task ExecuteAsync()
+    {
+        Targeting.TargetingInitiated.Subscribe(OnTargetingInitiated, Game.Current);
+        Game.Current.MainColliderGroup.OnCollision.Subscribe(OnCollision, Game.Current);
+        return Task.CompletedTask;
+    }
+
+    private void OnCollision(Collision collision)
+    {
+        if (collision.MovingObject is Projectile == false || collision.ColliderHit is Projectile == false) return;
+
+        shrapnelGroup = shrapnelGroup ?? new ColliderGroup(Game.Current);
+        var a = (Projectile)collision.MovingObject;
+        var b = (Projectile)collision.ColliderHit;
+
+      
+        if(a.Velocity == null || b.Velocity == null) return;
+
+        var aAngle = ColliderGroup.ComputeBounceAngle(a, b.Bounds, collision.Prediction);
+        var bAngle = aAngle.Opposite();
+
+        SpawnShrapnel(a, aAngle.Add(15+random.Next(-10,10)));
+        SpawnShrapnel(a, aAngle.Add(-15 + random.Next(-10, 10)));
+        SpawnShrapnel(b, bAngle.Add(15 + random.Next(-10, 10)));
+        SpawnShrapnel(b, bAngle.Add(-15 + random.Next(-10, 10)));
+    }
+
+    private static ConsoleString pen = ".".ToYellow();
+    private static Random random = new Random();
+    private static void SpawnShrapnel(Projectile p, Angle angle)
+    {
+        var shrapnel = ShrapnelPool.Instance.Rent();
+        shrapnel.CompositionMode = CompositionMode.BlendBackground;
+        shrapnel.ConnectToGroup(shrapnelGroup);
+        shrapnel.MoveTo(p.TopLeft());
+        shrapnel.Content = pen;
+        shrapnel.Velocity.Speed = 50;
+        shrapnel.Velocity.Angle = angle;
+        Game.Current.GamePanel.Add(shrapnel);
+        Game.Current.InnerLoopAPIs.Delay(random.Next(200,500), shrapnel, DisposeShrapnel);
+    }
+
+    private static void DisposeShrapnel(object obj) => ((Recyclable)obj).TryDispose();
+    
+
+    private void OnTargetingInitiated(Targeting targeting)
+    {
+        targeting.TargetBeingEvaluated.Subscribe(OnTargetBeingEvaluated, targeting);
+    }
+
+    private void OnTargetBeingEvaluated(TargetFilterContext context)
+    {
+        if (context.PotentialTarget is Projectile == true)
+        {
+            context.IgnoreTargeting();
+        }
+    }
+}
+
+public partial class Shrapnel : TextCollider
+{
+    public override bool CanCollideWith(ICollidable other) => false;
+}
+
 public class Projectile : WeaponElement
 {
     private static readonly ConsoleCharacter DefaultPen = new ConsoleCharacter('*', RGB.Red);
@@ -8,6 +81,8 @@ public class Projectile : WeaponElement
     private RectF startLocation;
     public void Bind(Weapon w, float speed, Angle angle)
     {
+        if(w.Source == null) throw new InvalidOperationException("Weapon source is null");
+        if(w.Source.Velocity == null) throw new InvalidOperationException("Weapon source velocity is null");
         base.Bind(w);
         CompositionMode = CompositionMode.BlendBackground;
         Velocity.Angle = angle;
@@ -16,7 +91,7 @@ public class Projectile : WeaponElement
         Velocity.OnCollision.Subscribe(this, OnCollision, this);
         BoundsChanged.Subscribe(this, EnforceRangeStatic, this);
     }
-
+ 
     private static void EnforceRangeStatic(object me)
     {
         var _this = (me as Projectile)!;

@@ -37,9 +37,12 @@ public class MovementTests
         cStill.MoveTo(112, 2);
 
         var successLt = cMover.Velocity.OnCollision.CreateNextFireLifetime();
+        var successLtLease = successLt.Lease;
         var lt = Recyclable.EarliestOf(Task.Delay(2000).ToLifetime(), successLt);
-        await Mover.InvokeOrTimeout(new Right(cMover.Velocity, () => 80), lt);
-        var success = successLt.IsExpired;
+        var right = new Right();
+        right.Bind(cMover.Velocity, () => 80);
+        await Mover.InvokeOrTimeout(right, lt);
+        var success = successLt.IsStillValid(successLtLease) == false;
         await Game.Current.Delay(250);
         Assert.IsTrue(success);
         Game.Current.Stop();
@@ -59,8 +62,10 @@ public class MovementTests
             cMover.Dispose();
         });
 
-        await Mover.InvokeWithShortCircuit(new Right(cMover.Velocity, () => 80));
-        Assert.IsTrue(cMover.IsExpired);
+        var right = new Right();
+        right.Bind(cMover.Velocity, () => 80);
+        await Mover.InvokeWithShortCircuit(right);
+        Assert.IsTrue(cMover.IsStillValid(cMover.CurrentVersion)); // not rented
         await Game.Current.RequestPaintAsync();
         await Game.Current.Delay(500);
         Game.Current.Stop();
@@ -164,6 +169,7 @@ public class MovementTests
         }
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
         var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new GameCollider());
+        var cMoverLease = cMover.Lease;
         cMover.Background = RGB.Red;
         cMover.ResizeTo(3, 1);
 
@@ -214,7 +220,7 @@ public class MovementTests
         {
             CuriousityPoint = ()=> extraTight ? new ColliderBox(Game.Current.GameBounds.Center.ToRect(1,1)) : null,
         }));
-        Assert.IsTrue(cMover.IsExpired);
+        Assert.IsTrue(cMover.IsStillValid(cMoverLease) == false);
         Assert.IsFalse(failed, "Failed to keep moving");
 
         if(extraTight)
@@ -269,14 +275,18 @@ public class MovementTests
     public class Terrain : GameCollider { }
     public class OuterWall : GameCollider { }
 
-    public class Right : Movement
+    public partial class Right : Movement
     {
-        public Right(Velocity v, SpeedEval innerSpeedEval) : base(v, innerSpeedEval) { }
+        public void Bind(Velocity v, SpeedEval speed)
+        {
+            base.Bind(v, speed);
+        }
+
         protected override async Task Move()
         {
             Velocity.Angle = 0;
             Velocity.Speed = Speed();
-            while(ShouldContinue)
+            while(Velocity != null)
             {
                 await Task.Yield();
             }

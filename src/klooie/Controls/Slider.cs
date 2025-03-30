@@ -104,7 +104,7 @@ public partial class SliderWithValueLabel : ProtectedConsolePanel
         
         this.ValueChanged.Sync(updateSliderWidth, this);
         slider.ValueChanged.Subscribe(() => label.Text = slider.Value.ToString().ToConsoleString(), this);
-        slider.ValueChanged.Subscribe(() => ValueChanged.Fire(), this);
+        slider.ValueChanged.Subscribe(() => { Value = slider.Value; ValueChanged.Fire(); }, this);
 
         MinChanged.Subscribe(() => slider.Min = Min, this);
         MaxChanged.Subscribe(() => slider.Max = Max, this);

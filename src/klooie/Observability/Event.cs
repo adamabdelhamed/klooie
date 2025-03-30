@@ -27,7 +27,7 @@ public sealed class Event : Recyclable
         eventSubscribers ??= SubscriptionListPool.Rent();
         var subscription = SubscriptionPool.Instance.Rent();
         subscription.Callback = handler;
-        subscription.Lifetime = lifetimeManager;
+        subscription.Bind(lifetimeManager);
         subscription.Subscribers = eventSubscribers;
         eventSubscribers.Add(subscription);
         lifetimeManager.OnDisposed(subscription);
@@ -47,7 +47,7 @@ public sealed class Event : Recyclable
         var subscription = SubscriptionPool.Instance.Rent();
         subscription.Scope = scope;
         subscription.ScopedCallback = handler;
-        subscription.Lifetime = lifetimeManager;
+        subscription.Bind(lifetimeManager);
         subscription.Subscribers = eventSubscribers;
         eventSubscribers.Add(subscription);
         lifetimeManager.OnDisposed(subscription);
@@ -64,7 +64,7 @@ public sealed class Event : Recyclable
         eventSubscribers ??= SubscriptionListPool.Rent();
         var subscription = SubscriptionPool.Instance.Rent();
         subscription.Callback = handler;
-        subscription.Lifetime = lifetimeManager;
+        subscription.Bind(lifetimeManager);
         subscription.Subscribers = eventSubscribers;
         eventSubscribers.Insert(0, subscription);
         lifetimeManager.OnDisposed(subscription);
@@ -79,7 +79,7 @@ public sealed class Event : Recyclable
         var subscription = SubscriptionPool.Instance.Rent();
         subscription.Scope = scope;
         subscription.ScopedCallback = handler;
-        subscription.Lifetime = lifetimeManager;
+        subscription.Bind(lifetimeManager);
         subscription.Subscribers = eventSubscribers;
         eventSubscribers.Insert(0, subscription);
         lifetimeManager.OnDisposed(subscription);
@@ -139,7 +139,7 @@ public sealed class Event : Recyclable
         Subscribe(lt, DisposeStatic, lt);
     }
 
-    public static void DisposeStatic(object lt) => ((Recyclable)lt).Dispose();
+    public static void DisposeStatic(object lt) => ((Recyclable)lt).TryDispose();
 
     // NEW OR MODIFIED CODE: Overload that accepts a scope object for one notification
     public void SubscribeOnce<TScope>(TScope scope, Action<object> handler)
@@ -231,7 +231,7 @@ public class Event<T> : Recyclable, IEventT
         innerEvent = innerEvent ?? EventPool.Instance.Rent();
         innerEvent.eventSubscribers ??= SubscriptionListPool.Rent(); 
         var subscription = SubscriptionPool.Instance.Rent();
-        subscription.Lifetime = lt;
+        subscription.Bind(lt);
         subscription.ScopedCallback = StaticCallback;
         subscription.TScopedCallback = handler;
         subscription.Scope = subscription;

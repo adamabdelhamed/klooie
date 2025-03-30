@@ -331,10 +331,10 @@ public class EventTests
     {
         var ev = new Event();
         var lifetime = ev.CreateNextFireLifetime();
-        Assert.IsFalse(lifetime.IsExpired);
-
+        var lease = lifetime.Lease;
+        Assert.IsTrue(lifetime.IsStillValid(lease));
         ev.Fire();
-        Assert.IsTrue(lifetime.IsExpired, "Lifetime created should end after next fire.");
+        Assert.IsFalse(lifetime.IsStillValid(lease), "Lifetime created should end after next fire.");
     }
 
     [TestMethod]
@@ -523,10 +523,10 @@ public class EventTests
     {
         var ev = new Event<int>();
         var lifetime = ev.CreateNextFireLifetime();
-        Assert.IsFalse(lifetime.IsExpired);
-
+        var ltLease = lifetime.Lease;
+        Assert.IsTrue(lifetime.IsStillValid(ltLease));
         ev.Fire(100);
-        Assert.IsTrue(lifetime.IsExpired, "Lifetime should end on next Fire.");
+        Assert.IsFalse(lifetime.IsStillValid(ltLease), "Lifetime should end on next Fire.");
     }
 
     [TestMethod]

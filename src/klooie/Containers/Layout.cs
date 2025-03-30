@@ -144,9 +144,13 @@ public static class Layout
     private static T DoTwoWayLayoutAction<T>(this T child, Action<T, Container> a) where T : ConsoleControl
     {
         if (child.Parent == null) throw new ArgumentException("This control does yet have a parent");
-        var syncAction = () =>
+
+        var childLease = child.Lease;
+        var parentLease = child.Parent.Lease;
+
+         var syncAction = () =>
         {
-            if (child.ShouldContinue == false || child.Parent == null || child.Parent.ShouldContinue == false) return;
+            if (child.IsStillValid(childLease) == false || child.Parent == null || child.Parent.IsStillValid(parentLease) == false) return;
             a(child, child.Parent);
         };
         child.BoundsChanged.Subscribe(syncAction, child.Parent);
@@ -158,10 +162,13 @@ public static class Layout
     private static T DoParentTriggeredLayoutAction<T>(this T child, Action<T, Container> a) where T : ConsoleControl
     {
         if (child.Parent == null) throw new ArgumentException("This control does yet have a parent");
+
+        var childLease = child.Lease;
+        var parentLease = child.Parent.Lease;
         var parent = child.Parent;
         var syncAction = () =>
         {
-            if (child.ShouldContinue == false || child.Parent == null || child.Parent.ShouldContinue == false) return;
+            if (child.IsStillValid(childLease) == false || child.Parent == null || child.Parent.IsStillValid(parentLease) == false) return;
             a(child, child.Parent);  
         };
         child.Parent.BoundsChanged.Subscribe(syncAction, child.Parent);

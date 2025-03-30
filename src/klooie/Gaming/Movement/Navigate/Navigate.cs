@@ -13,7 +13,7 @@ public class Navigate : Movement
     public ICollidable effectiveDestination { get; set; }
     public ICollidable _LocalTarget { get; set; }
     public NavigationPath _CurrentPath { get; set; }
-    public Recyclable _ResultLifetime { get; private set; } = Game.Current.CreateChildRecyclable();
+    public Recyclable _ResultLifetime { get; private set; }
 
     private Func<ICollidable> destination;
     public NavigateOptions Options { get; private set; }
@@ -37,14 +37,22 @@ public class Navigate : Movement
             }
         }
     }
-    private Navigate(Velocity v, SpeedEval speed, Func<ICollidable> destination, NavigateOptions options) : base(v, speed)
+    private void Bind(Velocity v, SpeedEval speed, Func<ICollidable> destination, NavigateOptions options)  
     {
+        base.Bind(v, speed);
         AssertSupported();
+        _ResultLifetime = Game.Current.CreateChildRecyclable();
+        _ResultLifetime.OnDisposed(() => _ResultLifetime = null);
         this.Options = options ?? new NavigateOptions();
         this.destination = destination;
     }
 
-    public static Movement Create(Velocity v, SpeedEval speed, Func<ICollidable> destination, NavigateOptions options = null) => new Navigate(v, speed, destination, options);
+    public static Movement Create(Velocity v, SpeedEval speed, Func<ICollidable> destination, NavigateOptions options = null)
+    {
+        var ret = NavigatePool.Instance.Rent();
+        ret.Bind(v, speed, destination, options);
+        return ret;
+    }
 
     protected override async Task Move()
     {
@@ -84,7 +92,7 @@ public class Navigate : Movement
         EnsurePathUpdated();
         Options.OnDelay?.Invoke();
 
-        if (_ResultLifetime.IsExpired)
+        if (_ResultLifetime == null)
         {
             return;
         }

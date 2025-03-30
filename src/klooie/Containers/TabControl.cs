@@ -98,6 +98,7 @@ public partial class TabControl : ProtectedConsolePanel
         else
         {
             arrowKeyLifetime?.TryDispose();
+            arrowKeyLifetime = null;
         }
 
         var currentTabFg = hasFocus ? FocusContrastColor : Foreground;

@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-
 namespace klooie;
 
 public class Recyclable : ILifetime
@@ -8,20 +7,35 @@ public class Recyclable : ILifetime
     public static Recyclable Forever => forever;
 
     private List<Subscription>? disposalSubscribers;
-
     private List<Subscription> DisposalSubscribers => disposalSubscribers ?? (disposalSubscribers = SubscriptionListPool.Rent());
 
     internal IObjectPool? Pool { get; set; }
 
-    public bool IsExpired { get; private set; }  
+    private bool IsExpiring { get;  set; }
+    private bool IsExpired { get; set; }
 
-    public bool IsExpiring { get; private set; }
-
-    public bool ShouldContinue => IsExpired == false && IsExpiring == false;
+    private bool ShouldContinue
+    {
+        get
+        {
+            if (Pool != null)
+                throw new InvalidOperationException("Pooled recyclable: use lease-based IsStillValid()");
+            return !IsExpired && !IsExpiring;
+        }
+    }
 
     public bool ShouldStop => !ShouldContinue;
 
-    private TaskCompletionSource endedTaskCompletionSource;
+    public int CurrentVersion { get; private set; }
+
+    public int Lease => CurrentVersion;
+
+    public bool IsStillValid(int leaseVersion)
+    {
+        return !IsExpired && !IsExpiring && leaseVersion == CurrentVersion;
+    }
+
+    private TaskCompletionSource? endedTaskCompletionSource;
 
     public Recyclable()
     {
@@ -32,7 +46,7 @@ public class Recyclable : ILifetime
 
     public bool TryDispose()
     {
-        if (ShouldStop) return false;
+        if (IsExpired || IsExpiring) return false;
         Dispose();
         return true;
     }
@@ -43,9 +57,7 @@ public class Recyclable : ILifetime
         IsExpiring = true;
         try
         {
-
-
-            if(disposalSubscribers != null && disposalSubscribers.Count > 0)
+            if (disposalSubscribers != null && disposalSubscribers.Count > 0)
             {
                 NotificationBufferPool.Notify(disposalSubscribers);
                 SubscriptionListPool.Return(disposalSubscribers);
@@ -63,7 +75,6 @@ public class Recyclable : ILifetime
                 OnReturn();
                 Pool.ReturnThatShouldOnlyBeCalledInternally(this);
             }
-
         }
         finally
         {
@@ -74,64 +85,46 @@ public class Recyclable : ILifetime
 
     protected virtual void OnInit() { }
     protected virtual void OnReturn() { }
-     
+
     internal void Rent()
     {
+        CurrentVersion++;
         IsExpiring = false;
         IsExpired = false;
         disposalSubscribers = null;
         endedTaskCompletionSource = null;
-        Pool = null;
         OnInit();
     }
 
-    public static Recyclable EarliestOf(params ILifetime[] others)
-    {
-        return EarliestOf((IEnumerable<ILifetime>)others);
-    }
-
-    /// <summary>
-    /// Creates a new lifetime that will end when all of the given lifetimes end
-    /// </summary>
-    /// <param name="others">the lifetimes to use to generate this new lifetime</param>
-    /// <returns>a new lifetime that will end when all of the given lifetimes end</returns>
+    public static Recyclable EarliestOf(params ILifetime[] others) => EarliestOf((IEnumerable<ILifetime>)others);
     public static Recyclable WhenAll(params ILifetime[] others) => new WhenAllTracker(others);
-
-    /// <summary>
-    /// Creates a new lifetime that will end when any of the given
-    /// lifetimes ends
-    /// </summary>
-    /// <param name="others">the lifetimes to use to generate this new lifetime</param>
-    /// <returns>a new lifetime that will end when any of the given
-    /// lifetimes ends</returns>
     public static Recyclable EarliestOf(IEnumerable<ILifetime> others) => new EarliestOfTracker(others.ToArray());
 
-    /// <summary>
-    /// Creates a new lifetime that will dispose when the parent disposes
-    /// </summary>
-    /// <param name="lt">the parent</param>
-    /// <returns>the new lifetime</returns>
-    public Recyclable CreateChildRecyclable()
+    public Recyclable CreateChildRecyclable(out int lease)
     {
-        var ret = DefaultRecyclablePool.Instance.Rent();
+        var ret = DefaultRecyclablePool.Instance.Rent(out lease);
         OnDisposed(ret, TryDisposeChild);
         return ret;
+    }
+
+    public Recyclable CreateChildRecyclable()
+    {
+        return CreateChildRecyclable(out _);
     }
 
     private static void TryDisposeChild(object rec) => ((Recyclable)rec).TryDispose();
 
     public void OnDisposed(Action cleanupCode)
     {
-        var subscription = SubscriptionPool.Instance.Rent();
+        var subscription = SubscriptionPool.Instance.Rent(out int _);
         subscription.Callback = cleanupCode;
         DisposalSubscribers.Add(subscription);
     }
-    
 
     public void OnDisposed(object scope, Action<object> cleanupCode)
     {
         if (scope == null) throw new ArgumentNullException(nameof(scope));
-        var subscription = SubscriptionPool.Instance.Rent();
+        var subscription = SubscriptionPool.Instance.Rent(out int _);
         subscription.Scope = scope;
         subscription.ScopedCallback = cleanupCode;
         DisposalSubscribers.Add(subscription);
@@ -139,7 +132,7 @@ public class Recyclable : ILifetime
 
     public void OnDisposed(Recyclable obj)
     {
-        var subscription = SubscriptionPool.Instance.Rent();
+        var subscription = SubscriptionPool.Instance.Rent(out int _);
         subscription.ToAlsoDispose = obj;
         subscription.Scope = obj;
         subscription.ScopedCallback = Event.DisposeStatic;
@@ -155,7 +148,6 @@ public class Recyclable : ILifetime
                 Dispose();
                 return;
             }
-
             foreach (var lt in lts)
             {
                 lt?.OnDisposed(() => TryDispose());
@@ -179,7 +171,6 @@ public class Recyclable : ILifetime
                 lt.OnDisposed(Count);
             }
         }
-
         private void Count()
         {
             if (Interlocked.Decrement(ref remaining) == 0)
@@ -192,9 +183,15 @@ public class Recyclable : ILifetime
 
 public interface IObjectPool
 {
+#if DEBUG
+    int Created { get; }
+    int Rented { get; }
+    int Returned { get; }
+    int AllocationsSaved => Rented - Created;
+#endif
     void Clear();
     IObjectPool Fill(int? count = null);
-    public void ReturnThatShouldOnlyBeCalledInternally(Recyclable rented);
+    void ReturnThatShouldOnlyBeCalledInternally(Recyclable rented);
 }
 
 public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
@@ -204,35 +201,63 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public int Rented { get; private set; }
     public int Returned { get; private set; }
     public int AllocationsSaved => Rented - Created;
-
 #endif
     private readonly Stack<T> _pool = new Stack<T>();
-
     public abstract T Factory();
-
     public int DefaultFillSize { get; set; } = 10;
 
-    protected RecycleablePool() { }
-    public T Rent()
+    protected RecycleablePool()
+    {
+        PoolManager.Instance.Add(this);
+    }
+
+    public override string ToString()
+    {
+        var typeName = GetFriendlyName(typeof(T));
+#if DEBUG
+        return $"{typeName}: Pending Return: {Rented - Returned} Created: {Created} Rented: {Rented} Returned: {Returned} AllocationsSaved: {AllocationsSaved}";
+#endif
+        return $"{typeName}";
+    }
+
+    public static string GetFriendlyName(Type type)
+    {
+        if (type.IsGenericType)
+        {
+            var baseName = type.Name.Substring(0, type.Name.IndexOf('`'));
+            var genericArgs = type.GetGenericArguments();
+            var formattedArgs = string.Join(", ", Array.ConvertAll(genericArgs, GetFriendlyName));
+            return $"{baseName}<{formattedArgs}>";
+        }
+        return type.Name;
+    }
+
+    public T Rent(out int lease)
     {
 #if DEBUG
         Rented++;
 #endif
+        T ret;
         if (_pool.Count > 0)
         {
-            var ret = _pool.Pop();
-            ret.Rent();
-            ret.Pool = this;
-            return ret;
+            ret = _pool.Pop();
         }
-
+        else
+        {
 #if DEBUG
-        Created++;
+            Created++;
 #endif
+            ret = Factory();
+        }
+        ret.Pool = this;
+        ret.Rent();
+        lease = ret.CurrentVersion;
+        return ret;
+    }
 
-        var newInstance = Factory();
-        newInstance.Pool = this;
-        return newInstance;
+    public T Rent()
+    {
+        return Rent(out _);
     }
 
     public void ReturnThatShouldOnlyBeCalledInternally(Recyclable rented)
@@ -240,11 +265,11 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 #if DEBUG
         Returned++;
 #endif
-        if(rented.Pool != this) throw new InvalidOperationException("Object returned to wrong pool");
+        if (rented.Pool != this) throw new InvalidOperationException("Object returned to wrong pool");
         rented.Pool = null;
         _pool.Push((T)rented);
     }
- 
+
     public void Clear()
     {
         _pool.Clear();
@@ -252,7 +277,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
     public IObjectPool Fill(int? count = null)
     {
-        count = count ?? DefaultFillSize;
+        count ??= DefaultFillSize;
         for (var i = 0; i < count.Value; i++)
         {
             _pool.Push(Factory());
@@ -260,30 +285,22 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         return this;
     }
 }
+
 public class GenericReferenceEqualityComparer<T> : IEqualityComparer<T>
 {
     public static GenericReferenceEqualityComparer<T> Instance { get; } = new GenericReferenceEqualityComparer<T>();
-
     private GenericReferenceEqualityComparer() { }
-
     public bool Equals(T x, T y) => ReferenceEquals(x, y);
-
     public int GetHashCode(T obj) => RuntimeHelpers.GetHashCode(obj);
 }
- 
+
 public static class TaskExtensions
 {
-    /// <summary>
-    /// Converts a task to a lifetime
-    /// </summary>
-    /// <param name="t">the tast</param>
-    /// <returns>a lifetime</returns>
     public static ILifetime ToLifetime(this Task t, EventLoop loop = null)
     {
-        loop = loop ?? ConsoleApp.Current;
+        loop ??= ConsoleApp.Current;
         if (loop == null) throw new ArgumentException("ToLifetime() requires an event loop");
-
-        var lt = DefaultRecyclablePool.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent(out _);
         loop.Invoke(async () =>
         {
             await t;
@@ -292,5 +309,3 @@ public static class TaskExtensions
         return lt;
     }
 }
-
- 

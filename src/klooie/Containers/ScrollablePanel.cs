@@ -148,7 +148,7 @@ public partial class ScrollablePanel : ProtectedConsolePanel
     {
         bool focusedControlIsWithinMe = VisitControlTree((control) =>
         {
-            if (IsExpired || IsExpiring) return false;
+            // if (IsExpired || IsExpiring) return false; // Should not be needed since subscription was for this lifetime
             return control is Scrollbar == false && control == ConsoleApp.Current.FocusedControl;
         });
 

@@ -27,7 +27,8 @@ public class TargetingTests
             shooter.MoveTo(0, 0);
             victim.MoveTo(10, 0);
 
-            var targeting = new Targeting() { Options = new TargetingOptions() { Source = shooter } };
+            var targeting = new Targeting();
+            targeting.Bind(new TargetingOptions() { Source = shooter });
 
             var targetFound = false;
             targeting.TargetAcquired.SubscribeOnce((target) =>
@@ -70,7 +71,8 @@ public class TargetingTests
             shooter.MoveTo(0, 0);
             victim.MoveTo(10, 0);
 
-            var targeting = new Targeting() { Options = new TargetingOptions() { Source = shooter } };
+            var targeting = new Targeting();
+            targeting.Bind(new TargetingOptions() { Source = shooter });
 
             var targetFound = false;
             targeting.TargetAcquired.SubscribeOnce((target) =>
@@ -124,8 +126,8 @@ public class TargetingTests
             obstacle.MoveTo(10, 0);
             victim.MoveTo(20, 0);
 
-            var targeting = new Targeting() { Options = new TargetingOptions() { Source = shooter, TargetTag = "target" } };
-
+            var targeting = new Targeting();
+            targeting.Bind(new TargetingOptions() { Source = shooter, TargetTag = "target" });
             // Initially blocked by obstacle
             targeting.Evaluate();
             Assert.IsNull(targeting.Target, "Target should not be acquired due to obstacle.");
@@ -169,14 +171,12 @@ public class TargetingTests
             outOfRangeTarget.MoveByRadial(Angle.Right, 100);
             var distance = shooter.CalculateDistanceTo(outOfRangeTarget);
 
-            var targeting = new Targeting
+            var targeting = new Targeting();
+            targeting.Bind(new TargetingOptions
             {
-                Options = new TargetingOptions
-                {
-                    Source = shooter,
-                    Range = distance - CollisionDetector.VerySmallNumber // Just out of range
-                }
-            };
+                Source = shooter,
+                Range = distance - CollisionDetector.VerySmallNumber // Just out of range
+            });
 
             targeting.Evaluate();
             Assert.IsNull(targeting.Target);

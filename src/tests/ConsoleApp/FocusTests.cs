@@ -20,4 +20,25 @@ public class FocusTests
         
         ConsoleApp.Current.Stop();
     });
+
+    [TestMethod]
+    public void FocusManager_StackIntegrity() => AppTest.Run(TestContext.TestId(), UITestMode.Headless, async (context) =>
+    {
+        var lt1 = new Recyclable();
+        var lt2 = new Recyclable();
+
+        var firstItemFired = false;
+        var secondItemFired = false;
+
+        ConsoleApp.Current.PushKeyForLifetime(System.ConsoleKey.Enter,()=> { firstItemFired = true; }, lt1);
+        ConsoleApp.Current.PushKeyForLifetime(System.ConsoleKey.Enter, () => { secondItemFired = true; }, lt2);
+
+        lt1.Dispose();
+        await ConsoleApp.Current.SendKey(System.ConsoleKey.Enter);
+        Assert.IsFalse(firstItemFired);
+        Assert.IsTrue(secondItemFired);
+
+        ConsoleApp.Current.Stop();
+    });
+
 }

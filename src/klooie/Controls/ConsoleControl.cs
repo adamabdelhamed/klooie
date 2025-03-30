@@ -100,7 +100,7 @@ public partial class ConsoleControl : Rectangular
     /// <summary>
     /// An event that fires any time its tags changes
     /// </summary>
-    public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = EventPool.Instance.Rent()); }
+    public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = EventPool.Instance.Rent(out int _)); }
 
     /// <summary>
     /// Gets a reference to this control's parent in the visual tree.  It will be null if this control is not in the visual tree 
@@ -306,7 +306,7 @@ public partial class ConsoleControl : Rectangular
     private static void HandleCanFocusChanged(object me)
     {
         var _this = me as ConsoleControl;
-        if (_this.HasFocus && _this.CanFocus == false && _this.ShouldContinue) ConsoleApp.Current?.MoveFocus();
+        if (_this.HasFocus && _this.CanFocus == false) ConsoleApp.Current?.MoveFocus();
     }
 
   
@@ -605,7 +605,7 @@ public partial class ConsoleControl : Rectangular
     private static void ResizeBitmapOnBoundsChanged(object me)
     {
         var _this = me as ConsoleControl;
-        if (_this.ShouldContinue == false || _this.Width <= 0 || _this.Height <= 0) return;
+        if (_this.Width <= 0 || _this.Height <= 0) return;
         if (_this.Bitmap == null)
         {
             _this.Bitmap = new ConsoleBitmap(_this.Width, _this.Height);
