@@ -38,7 +38,7 @@ public class Targeting : Recyclable
 
 
     // --- New Queue-based Evaluation Mechanism ---
-    private static readonly List<Targeting> evaluationQueue = new List<Targeting>();
+    private static readonly List<(Targeting target, int lease)> evaluationQueue = new List<(Targeting target, int lease)>();
     private static bool isDrainingQueue = false;
     private const int DrainIntervalMs = 2; // adjust this rate as needed
 
@@ -73,7 +73,6 @@ public class Targeting : Recyclable
         if (_this._targetBeingEvaluated != null) _this._targetBeingEvaluated.TryDispose();
         if (_this.currentTargetLifetime != null) _this.currentTargetLifetime.TryDispose();
 
-        evaluationQueue.Remove(_this);
         _this._targetChanged = null;
         _this._targetAcquired = null;
         _this._targetBeingEvaluated = null;
@@ -133,6 +132,8 @@ public class Targeting : Recyclable
 
     private bool MeetsTargetingCriteria(GameCollider potentialTarget, ObstacleBuffer buffer)
     {
+        var lease = Lease;
+        if (potentialTarget.Velocity == null) return false;
         if (potentialTarget.CanCollideWith(this.Options.Source) == false &&
             this.Options.Source.CanCollideWith(potentialTarget) == false) return false;
         if (Options.TargetTag != null && potentialTarget.HasSimpleTag(Options.TargetTag) == false) return false;
@@ -161,7 +162,7 @@ public class Targeting : Recyclable
                 i--;
             }
         }
-
+        if (IsStillValid(lease) == false) return false;
         CollisionDetector.Predict(Options.Source, angle, buffer.WriteableBuffer, Options.Range * 3, CastingMode.Precise, buffer.WriteableBuffer.Count, lineOfSightCast);
         var elementHit = lineOfSightCast.ColliderHit as GameCollider;
         lineOfSightCast.Dispose();
@@ -226,7 +227,7 @@ public class Targeting : Recyclable
     // --- Queue-based Evaluation Methods ---
     private static void EnqueueEvaluation(Targeting instance)
     {
-        evaluationQueue.Add(instance);
+        evaluationQueue.Add((instance, instance.Lease));
         StartQueueDrainIfNeeded();
     }
 
@@ -245,8 +246,11 @@ public class Targeting : Recyclable
 
         if (evaluationQueue.Count > 0)
         {
-            instance = evaluationQueue[evaluationQueue.Count - 1];
+            var record = evaluationQueue[evaluationQueue.Count - 1];
+            instance = record.target;
             evaluationQueue.RemoveAt(evaluationQueue.Count-1);
+            if (record.target.IsStillValid(record.lease) == false) return;
+            
             instance.Evaluate();
             // Rebind for the next evaluation cycle.
             instance.Bind(instance.Options);

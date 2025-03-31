@@ -49,9 +49,7 @@ public sealed class ColliderGroup
         ConsoleApp.Current?.Invoke(ExecuteAsync);
     }
 
-    public bool TryLookupVelocity(GameCollider c, out Velocity v) => velocities.TryGetValue(c, out v);
-
-    internal (int RowIndex, int ColIndex) Add(GameCollider c)
+    internal void Add(GameCollider c)
     {
         if (c.ColliderHashCode >= 0)
         {
@@ -66,15 +64,14 @@ public sealed class ColliderGroup
 
         }
         c.Velocity.lastEvalTime = (float)lastExecuteTime.TotalSeconds;
-        var ret = velocities.Add(c, c.Velocity);
+        velocities.Add(c, c.Velocity);
         Count++;
         _added?.Fire(c);
-        return ret;
     }
 
     internal bool Remove(GameCollider c)
     {
-        if (velocities.Remove(c, out Velocity v))
+        if (velocities.Remove(c))
         {
             _removed?.Fire(c);
             Count--;
@@ -143,7 +140,8 @@ public sealed class ColliderGroup
 
     private bool TryDetectCollision(VelocityHashTable.Item item, float expectedTravelDistance)
     {
-        CollisionDetector.Predict(item, item.Velocity.Angle, colliderBuffer, expectedTravelDistance, CastingMode.Precise, numColliders, hitPrediction);
+        CollisionDetector.Predict(item.Collider, item.Velocity.Angle, colliderBuffer, expectedTravelDistance, CastingMode.Precise, numColliders, hitPrediction);
+        hitPrediction.ColliderHit = hitPrediction.ColliderHit is VelocityHashTable.Item vItem ? vItem.Collider : hitPrediction.ColliderHit;
         item.Velocity.NextCollision = hitPrediction;
         return hitPrediction.CollisionPredicted;  
     }
@@ -194,7 +192,7 @@ public sealed class ColliderGroup
         var collision = CollisionPool.Instance.Rent();
         try
         {
-            collision.Bind(item.Velocity.speed, item.Velocity.angle, item, hitPrediction.ColliderHit, hitPrediction);
+            collision.Bind(item.Velocity.speed, item.Velocity.angle, item.Collider, hitPrediction.ColliderHit, hitPrediction);
             OnCollision.Fire(collision);
             item.Velocity?._onCollision?.Fire(collision);
             if (item.IsExpired) return;
@@ -295,6 +293,7 @@ public sealed class ColliderGroup
             {
                 if (colliderBuffer[j] == item) continue;
                 var prediction = CollisionDetector.Predict(item, angle, colliderBuffer, .5f, CastingMode.Precise, numColliders, new CollisionPrediction());
+                hitPrediction.ColliderHit = hitPrediction.ColliderHit is VelocityHashTable.Item vItem ? vItem.Collider : hitPrediction.ColliderHit;
                 if (prediction.CollisionPredicted == false) return angle;
             }
         }
@@ -392,7 +391,8 @@ public sealed class ColliderGroup
             for (var j = 0; j < entry.Length; j++)
             {
                 var item = entry[j];
-                if (item == null || item.IsExpired) continue;
+                if (item == null) continue;
+                if (item.IsExpired) continue;
                 colliderBufferSpan[ret] = item;
                 ret++;
             }
@@ -444,7 +444,7 @@ public sealed class ColliderGroup
             private int colliderLease;
             private int velocityLease;
 
-            public Item(GameCollider c, Velocity v)
+            public void Bind(GameCollider c, Velocity v)
             {
                 Collider = c;
                 Velocity = v;
@@ -452,7 +452,10 @@ public sealed class ColliderGroup
                 velocityLease = v.Lease;
             }
 
-            public bool IsStillValid => Collider.IsStillValid(colliderLease) && Velocity.IsStillValid(velocityLease);
+            public bool IsColliderStillValid => Collider?.IsStillValid(colliderLease) == true;
+            public bool IsVelocityStillValid => Velocity?.IsStillValid(velocityLease) == true;
+
+            public bool IsStillValid => IsColliderStillValid && IsVelocityStillValid;
             public bool IsExpired => !IsStillValid;
 
             public RectF Bounds => Collider.Bounds;
@@ -480,8 +483,7 @@ public sealed class ColliderGroup
                 {
                     var item = _pool[_pool.Count - 1];
                     _pool.RemoveAt(_pool.Count - 1);
-                    item.Collider = c;
-                    item.Velocity = v;
+                    item.Bind(c, v);
                     return item;
                 }
 
@@ -489,7 +491,9 @@ public sealed class ColliderGroup
         Created++;
 #endif
 
-                return new Item(c, v);
+                var ret = new Item();
+                ret.Bind(c, v);
+                return ret;
             }
 
             internal static void Return(Item item)
@@ -515,24 +519,7 @@ public sealed class ColliderGroup
             }
         }
 
-        public void ValidateEntries()
-        {
-            for (var i = 0; i < Table.Length; i++)
-            {
-                for (var j = 0; j < Table[i].Length; j++)
-                {
-                    var entry = Table[i][j];
-                    if (entry == null) continue;
-                    var correctIndex = entry.Collider.ColliderHashCode % Table.Length;
-                    if (correctIndex != i)
-                    {
-                        throw new System.Exception($"Item in the wrong place: Expected: {correctIndex}, Actual: {i}");
-                    }
-                }
-            }
-        }
-
-        internal (int RowIndex, int ColIndex) Add(GameCollider c, Velocity v)
+        internal void Add(GameCollider c, Velocity v)
         {
             var i = c.ColliderHashCode % Table.Length;
             var myArray = Table[i].AsSpan();
@@ -541,17 +528,16 @@ public sealed class ColliderGroup
                 if (myArray[j] == null)
                 {
                     myArray[j] = ItemPool.Rent(c, v);
-                    return (i, j);
+                    return;
                 }
             }
             var biggerArray = new Item[myArray.Length * 2];
             Array.Copy(Table[i], biggerArray, myArray.Length);
             biggerArray[myArray.Length] = ItemPool.Rent(c, v);
             Table[i] = biggerArray;
-            return (i, myArray.Length);
         }
 
-        public bool Remove(GameCollider c, out Velocity v)
+        internal bool Remove(GameCollider c)
         {
             var i = c.ColliderHashCode % Table.Length;
             var myArray = Table[i].AsSpan();
@@ -559,7 +545,6 @@ public sealed class ColliderGroup
             {
                 if (ReferenceEquals(c, myArray[j]?.Collider))
                 {
-                    v = myArray[j].Velocity;
                     ItemPool.Return(myArray[j]);
                     myArray[j] = null;
                     for (var k = j; k < myArray.Length - 1; k++)
@@ -571,30 +556,6 @@ public sealed class ColliderGroup
                     return true;
                 }
             }
-            v = null;
-            return false;
-        }
-
-        public bool TryGetValue(GameCollider c, out Velocity v)
-        {
-            var i = c.ColliderHashCode % Table.Length;
-            var myArray = Table[i].AsSpan();
-            for (var j = 0; j < myArray.Length; j++)
-            {
-                var item = myArray[j];
-                if (item == null)
-                {
-                    v = null;
-                    return false;
-                }
-
-                if (ReferenceEquals(c, item.Collider))
-                {
-                    v = item.Velocity;
-                    return true;
-                }
-            }
-            v = null;
             return false;
         }
     }

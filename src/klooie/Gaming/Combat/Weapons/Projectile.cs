@@ -121,4 +121,9 @@ public class Projectile : WeaponElement
 
     private static void OnCollision(object me, object collision) =>  (me as Projectile)!.TryDispose();
     protected override void OnPaint(ConsoleBitmap context) => context.Fill(Pen);
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+    }
 }
