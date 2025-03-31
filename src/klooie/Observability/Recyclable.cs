@@ -230,6 +230,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         if (_pool.Count > 0)
         {
             ret = _pool.Pop();
+            ret.Rent();
         }
         else
         {
@@ -239,7 +240,6 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
             ret = Factory();
         }
         ret.Pool = this;
-        ret.Rent();
         lease = ret.CurrentVersion;
         return ret;
     }
