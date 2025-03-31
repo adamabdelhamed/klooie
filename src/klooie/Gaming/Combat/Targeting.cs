@@ -246,14 +246,15 @@ public class Targeting : Recyclable
 
         if (evaluationQueue.Count > 0)
         {
-            var record = evaluationQueue[evaluationQueue.Count - 1];
-            instance = record.target;
-            evaluationQueue.RemoveAt(evaluationQueue.Count-1);
-            if (record.target.IsStillValid(record.lease) == false) return;
-            
-            instance.Evaluate();
-            // Rebind for the next evaluation cycle.
-            instance.Bind(instance.Options);
+            var queuedJobRecord = evaluationQueue[evaluationQueue.Count - 1];
+            evaluationQueue.RemoveAt(evaluationQueue.Count - 1);
+            instance = queuedJobRecord.target;
+            if (instance.IsStillValid(queuedJobRecord.lease))
+            {
+                instance.Evaluate();
+                // Rebind for the next evaluation cycle.
+                instance.Bind(instance.Options);
+            }
         }
 
         if (evaluationQueue.Count > 0)

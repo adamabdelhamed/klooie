@@ -460,7 +460,7 @@ public sealed class ColliderGroup
 
             public RectF Bounds => Collider.Bounds;
 
-            public bool CanCollideWith(ICollidable other) => Collider.CanCollideWith(other);
+            public bool CanCollideWith(ICollidable other) => IsStillValid ? Collider.CanCollideWith(other) : false;
         }
 
         public static class ItemPool
