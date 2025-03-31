@@ -338,6 +338,9 @@ public partial class ConsoleControl : Rectangular
         _this._filters?.Dispose();
         _this._filters = null;
 
+        _this.tags?.Clear();
+        _this.Tag = null;
+
         // This is here because controls can either be removed using Dispose() or by calling Remove from a parent's Controls collection.
         // In the case where Dispose() is called somebody needs to remove this control from its parent.
         // We could do this from within ConsolePanel, but it would require a lambda with a capture, which causes an allocation.
