@@ -236,11 +236,11 @@ public class Targeting : Recyclable
         if (!isDrainingQueue && evaluationQueue.Count > 0)
         {
             isDrainingQueue = true;
-            Game.Current.InnerLoopAPIs.Delay(DrainIntervalMs, null, DrainQueue);
+            Game.Current.InvokeNextCycle(DrainQueue);
         }
     }
 
-    private static void DrainQueue(object state)
+    private static void DrainQueue()
     {
         Targeting instance = null;
 
@@ -259,7 +259,7 @@ public class Targeting : Recyclable
 
         if (evaluationQueue.Count > 0)
         {
-            Game.Current.InnerLoopAPIs.Delay(DrainIntervalMs, null, DrainQueue);
+            Game.Current.InvokeNextCycle(DrainQueue);
         }
         else
         {

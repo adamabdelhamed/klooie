@@ -30,6 +30,9 @@ public class ProjectileRule : IRule
         var aAngle = ColliderGroup.ComputeBounceAngle(a.Velocity, b.Bounds, collision.Prediction);
         var bAngle = aAngle.Opposite();
 
+        a.TryDispose();
+        b.TryDispose();
+
         SpawnShrapnel(a, aAngle.Add(15+random.Next(-10,10)));
         SpawnShrapnel(a, aAngle.Add(-15 + random.Next(-10, 10)));
         SpawnShrapnel(b, bAngle.Add(15 + random.Next(-10, 10)));
@@ -105,7 +108,7 @@ public class Projectile : WeaponElement
     {
         this.ResizeTo(1, 1);
         this.MoveTo(w.Source.CenterX() - (Width / 2f), w.Source.CenterY() - (Height / 2f), w.Source.ZIndex);
-        var offset = this.RadialOffset(angle, 1, false);
+        var offset = this.RadialOffset(angle, 1.5f, false);
         this.MoveTo(offset.Left, offset.Top);
         startLocation = this.Bounds;
     }
@@ -118,8 +121,10 @@ public class Projectile : WeaponElement
             Velocity.speed += Weapon.Source.Velocity.Speed;
         }
     }
+    private static void OnCollision(object me, object collision) => Game.Current.InvokeNextCycle(DisposeMe, me);
+    
 
-    private static void OnCollision(object me, object collision) =>  (me as Projectile)!.TryDispose();
+    private static void DisposeMe(object me) => ((Recyclable)me).TryDispose();
     protected override void OnPaint(ConsoleBitmap context) => context.Fill(Pen);
 
     protected override void OnReturn()
