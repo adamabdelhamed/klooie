@@ -133,8 +133,6 @@ public class Targeting : Recyclable
 
     private bool MeetsTargetingCriteria(GameCollider potentialTarget, ObstacleBuffer buffer)
     {
-        if(ShouldStop) return false;
-        if (potentialTarget.ShouldStop) return false;
         if (potentialTarget.CanCollideWith(this.Options.Source) == false &&
             this.Options.Source.CanCollideWith(potentialTarget) == false) return false;
         if (Options.TargetTag != null && potentialTarget.HasSimpleTag(Options.TargetTag) == false) return false;
@@ -163,7 +161,7 @@ public class Targeting : Recyclable
                 i--;
             }
         }
-        if(ShouldStop) return false;
+
         CollisionDetector.Predict(Options.Source, angle, buffer.WriteableBuffer, Options.Range * 3, CastingMode.Precise, buffer.WriteableBuffer.Count, lineOfSightCast);
         var elementHit = lineOfSightCast.ColliderHit as GameCollider;
         lineOfSightCast.Dispose();

@@ -19,7 +19,6 @@ public class LabelTests
         await context.PaintAndRecordKeyFrameAsync();
         ConsoleApp.Current.Stop();
         Assert.IsFalse(label.IsStillValid(lease));
-        Assert.IsTrue(label.ShouldStop);
     });
 
     [TestMethod]

@@ -27,7 +27,7 @@ public class ProjectileRule : IRule
       
         if(a.Velocity == null || b.Velocity == null) return;
 
-        var aAngle = ColliderGroup.ComputeBounceAngle(a, b.Bounds, collision.Prediction);
+        var aAngle = ColliderGroup.ComputeBounceAngle(a.Velocity, b.Bounds, collision.Prediction);
         var bAngle = aAngle.Opposite();
 
         SpawnShrapnel(a, aAngle.Add(15+random.Next(-10,10)));

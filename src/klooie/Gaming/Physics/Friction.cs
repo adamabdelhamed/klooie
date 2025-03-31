@@ -18,13 +18,13 @@ public sealed class Friction : Recyclable
 
     private static void DisposeMe(object obj) => (obj as Friction).TryDispose();
 
-    private static void Execute(object me)
+    private void Execute(object leaseObj)
     {
-        var friction = me as Friction;
-        if (friction.ShouldStop) return;
+        var lease = leaseObj as int? ?? 0;
+        if (this.IsStillValid(lease) == false) return;
         
-        friction.velocity.Speed *= friction.decay;
-        if (friction.velocity.Speed < .1f) friction.velocity.Speed = 0;
-        ConsoleApp.Current.InnerLoopAPIs.Delay(friction.evalFrequency, me, Execute);
+        this.velocity.Speed *= this.decay;
+        if (this.velocity.Speed < .1f) this.velocity.Speed = 0;
+        ConsoleApp.Current.InnerLoopAPIs.Delay(this.evalFrequency, lease, Execute);
     }
 }

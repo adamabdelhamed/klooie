@@ -20,7 +20,7 @@ public sealed class ColliderGroup
     public const float HighestSpeedForEvalCalc = 60; // x2
     public const float EvalFrequencySlope = (MostFrequentEval - LeastFrequentEval) / (HighestSpeedForEvalCalc - LowestSpeedForEvalCalc);
 
-    private GameCollider[] colliderBuffer;
+    private VelocityHashTable.Item[] colliderBuffer;
     private CollisionPrediction hitPrediction;
     private ILifetime? lt;
     private TimeSpan lastExecuteTime;
@@ -44,7 +44,7 @@ public sealed class ColliderGroup
         hitPrediction = new CollisionPrediction();
         this.stopwatch = stopwatch ?? new WallClockStopwatch();
         velocities = new VelocityHashTable();
-        colliderBuffer = new GameCollider[100];
+        colliderBuffer = new VelocityHashTable.Item[100];
         lastExecuteTime = TimeSpan.Zero;
         ConsoleApp.Current?.Invoke(ExecuteAsync);
     }
@@ -61,7 +61,7 @@ public sealed class ColliderGroup
         if (Count == colliderBuffer.Length)
         {
             var tmp = colliderBuffer;
-            colliderBuffer = new GameCollider[tmp.Length * 2];
+            colliderBuffer = new VelocityHashTable.Item[tmp.Length * 2];
             Array.Copy(tmp, colliderBuffer, tmp.Length);
 
         }
@@ -124,44 +124,44 @@ public sealed class ColliderGroup
         lastExecuteTime = nowTime;
     }
 
-    private void Tick(GameCollider collider)
+    private void Tick(VelocityHashTable.Item item)
     {
-        if(collider.ShouldStop) return;
-        if (IsReadyToMove(collider) == false) return;
+        if (item.IsExpired) return;
+        if (IsReadyToMove(item) == false) return;
 
-        var expectedTravelDistance = CalculateExpectedTravelDistance(collider.Velocity);
-        if(TryDetectCollision(collider, expectedTravelDistance))
+        var expectedTravelDistance = CalculateExpectedTravelDistance(item.Velocity);
+        if(TryDetectCollision(item, expectedTravelDistance))
         {
-            ProcessCollision(collider, expectedTravelDistance);
+            ProcessCollision(item, expectedTravelDistance);
         }
         else
         {
-            MoveColliderWithoutCollision(collider, expectedTravelDistance);
+            MoveColliderWithoutCollision(item, expectedTravelDistance);
         }
-        collider.Velocity?._onVelocityEnforced?.Fire();
+        item.Velocity?._onVelocityEnforced?.Fire();
     }
 
-    private bool TryDetectCollision(GameCollider collider, float expectedTravelDistance)
+    private bool TryDetectCollision(VelocityHashTable.Item item, float expectedTravelDistance)
     {
-        CollisionDetector.Predict(collider, collider.Velocity.Angle, colliderBuffer, expectedTravelDistance, CastingMode.Precise, numColliders, hitPrediction);
-        collider.Velocity.NextCollision = hitPrediction;
+        CollisionDetector.Predict(item, item.Velocity.Angle, colliderBuffer, expectedTravelDistance, CastingMode.Precise, numColliders, hitPrediction);
+        item.Velocity.NextCollision = hitPrediction;
         return hitPrediction.CollisionPredicted;  
     }
 
-    private void MoveColliderWithoutCollision(GameCollider collider, float expectedTravelDistance)
+    private void MoveColliderWithoutCollision(VelocityHashTable.Item item, float expectedTravelDistance)
     {
-        var colliderBoundsBeforeMovement = collider.Bounds;
-        var newLocation = collider.Bounds.RadialOffset(collider.Velocity.Angle, expectedTravelDistance, false);
+        var colliderBoundsBeforeMovement = item.Bounds;
+        var newLocation = item.Bounds.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false);
 
-        if (WouldCauseTouching(collider, newLocation, out GameCollider preventer))
+        if (WouldCauseTouching(item, newLocation, out GameCollider preventer))
         {
 #if DEBUG
             ColliderGroupDebugger.VelocityEventOccurred?.Fire(new FailedMove()
             {
-                MovingObject = collider,
+                MovingObject = item.Collider,
                 Obstacle = preventer,
-                Angle = collider.Velocity.Angle,
-                From = collider.Bounds,
+                Angle = item.Velocity.Angle,
+                From = item.Bounds,
                 To = newLocation,
                 NowSeconds = now
             });
@@ -172,79 +172,75 @@ public sealed class ColliderGroup
 #if DEBUG
         ColliderGroupDebugger.VelocityEventOccurred?.Fire(new SuccessfulMove()
         {
-            MovingObject = collider,
-            Angle = collider.Velocity.Angle,
+            MovingObject = item.Collider,
+            Angle = item.Velocity.Angle,
             From = colliderBoundsBeforeMovement,
             To = newLocation,
             NowSeconds = now
         });
 #endif
 
-        collider.MoveTo(newLocation.Left, newLocation.Top);
+        item.Collider.MoveTo(newLocation.Left, newLocation.Top);
     }
 
-    private void ProcessCollision(GameCollider collider, float expectedTravelDistance)
+    private void ProcessCollision(VelocityHashTable.Item item, float expectedTravelDistance)
     {
-        var encroachment = GetCloseToColliderWeAreCollidingWith(collider.Velocity);
+        var encroachment = GetCloseToColliderWeAreCollidingWith(item);
 
 
         var otherBounds = hitPrediction.ColliderHit.Bounds;
 
-        if (collider.ShouldStop) return;
+        if (item.IsExpired) return;
         var collision = CollisionPool.Instance.Rent();
         try
         {
-            collision.MovingObjectSpeed = collider.Velocity.speed;
-            collision.Angle = collider.Velocity.Angle;
-            collision.MovingObject = collider;
-            collision.ColliderHit = hitPrediction.ColliderHit;
-            collision.Prediction = hitPrediction;
+            collision.Bind(item.Velocity.speed, item.Velocity.angle, item, hitPrediction.ColliderHit, hitPrediction);
             OnCollision.Fire(collision);
-            collider.Velocity?._onCollision?.Fire(collision);
-            if (collider.ShouldStop) return;
+            item.Velocity?._onCollision?.Fire(collision);
+            if (item.IsExpired) return;
         }
         finally
         {
             collision.Dispose();
         }
-        if (collider.ShouldStop) return;
-        if (collider.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
+        if (item.IsExpired) return;
+        if (item.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
         {
-            BounceMe(collider, otherBounds, hitPrediction.ColliderHit, expectedTravelDistance, encroachment);
+            BounceMe(item, otherBounds, hitPrediction.ColliderHit, expectedTravelDistance, encroachment);
         }
-        else if (collider.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Stop)
+        else if (item.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Stop)
         {
-            collider.Velocity.Stop();
+            item.Velocity.Stop();
         }
     }
      
-    private void BounceMe(GameCollider collider, RectF otherBounds, ICollidable other, float expectedTravelDistance, float encroachment)
+    private void BounceMe(VelocityHashTable.Item item, RectF otherBounds, ICollidable other, float expectedTravelDistance, float encroachment)
     {
-        Angle newAngleDegrees = ComputeBounceAngle(collider, otherBounds, hitPrediction);
-        collider.Velocity.Angle = newAngleDegrees;
+        Angle newAngleDegrees = ComputeBounceAngle(item.Velocity, otherBounds, hitPrediction);
+        item.Velocity.Angle = newAngleDegrees;
 
-        var adjustedBounds = collider.Velocity.Collider.Bounds.RadialOffset(collider.Velocity.Angle, encroachment == 0 ? expectedTravelDistance : encroachment * 2, false);
-        if (TryMoveIfWouldNotCauseTouching(collider.Velocity, adjustedBounds, RGB.Orange) == false)
+        var adjustedBounds = item.Velocity.Collider.Bounds.RadialOffset(item.Velocity.Angle, encroachment == 0 ? expectedTravelDistance : encroachment * 2, false);
+        if (TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange) == false)
         {
-            adjustedBounds = collider.Velocity.Collider.Bounds.RadialOffset(collider.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
-            if (TryMoveIfWouldNotCauseTouching(collider.Velocity, adjustedBounds, RGB.Orange.Darker) == false)
+            adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
+            if (TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange.Darker) == false)
             {
-                var saveMeAngle = collider.Center().CalculateAngleTo(hitPrediction.Intersection).Opposite();
+                var saveMeAngle = item.Bounds.Center.CalculateAngleTo(hitPrediction.Intersection).Opposite();
 
 #if DEBUG
                 ColliderGroupDebugger.VelocityEventOccurred?.Fire(new AngleChange()
                 {
-                    MovingObject = collider,
-                    From = collider.Velocity.Angle,
+                    MovingObject = item.Collider,
+                    From = item.Velocity.Angle,
                     To = saveMeAngle,
                     NowSeconds = now,
                 });
 #endif
 
-                collider.Velocity.Angle = FindFreeAngle(collider, saveMeAngle);
+                item.Velocity.Angle = FindFreeAngle(item, saveMeAngle);
                 if (other is GameCollider collider2)
                 {
-                    var otherAngle = collider2.CalculateAngleTo(collider.Bounds).Opposite();
+                    var otherAngle = collider2.CalculateAngleTo(item.Bounds).Opposite();
 #if DEBUG
                     ColliderGroupDebugger.VelocityEventOccurred?.Fire(new AngleChange()
                     {
@@ -256,17 +252,17 @@ public sealed class ColliderGroup
 #endif
                     collider2.Velocity.Angle = otherAngle;
                 }
-                adjustedBounds = collider.Velocity.Collider.Bounds.RadialOffset(collider.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
-                TryMoveIfWouldNotCauseTouching(collider.Velocity, adjustedBounds, RGB.Orange.Darker);
+                adjustedBounds = item.Velocity.Collider.Bounds.RadialOffset(item.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
+                TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange.Darker);
             }
         }
     }
 
-    public static Angle ComputeBounceAngle(GameCollider collider, RectF otherBounds, CollisionPrediction hitPrediction)
+    public static Angle ComputeBounceAngle(Velocity v, RectF otherBounds, CollisionPrediction hitPrediction)
     {
         // Convert velocity to Cartesian components
-        float velocityX = collider.Velocity.Speed * MathF.Cos(collider.Velocity.Angle.ToRadians());
-        float velocityY = collider.Velocity.Speed * MathF.Sin(collider.Velocity.Angle.ToRadians());
+        float velocityX = v.Speed * MathF.Cos(v.Angle.ToRadians());
+        float velocityY = v.Speed * MathF.Sin(v.Angle.ToRadians());
 
         // Determine the normal vector based on the edge hit
         (float normalX, float normalY) = hitPrediction.Edge switch
@@ -290,15 +286,15 @@ public sealed class ColliderGroup
     }
 
     private Random r = new Random();
-    private Angle FindFreeAngle(GameCollider collider, Angle priority)
+    private Angle FindFreeAngle(VelocityHashTable.Item item, Angle priority)
     {
         return priority.Add(r.Next(-45,45));
         foreach (var angle in Angle.Enumerate360Angles(priority,30))
         {
             for (var j = 0; j < colliderBuffer.Length; j++)
             {
-                if (colliderBuffer[j] == collider) continue;
-                var prediction = CollisionDetector.Predict(collider, angle, colliderBuffer, .5f, CastingMode.Precise, numColliders, new CollisionPrediction());
+                if (colliderBuffer[j] == item) continue;
+                var prediction = CollisionDetector.Predict(item, angle, colliderBuffer, .5f, CastingMode.Precise, numColliders, new CollisionPrediction());
                 if (prediction.CollisionPredicted == false) return angle;
             }
         }
@@ -314,32 +310,32 @@ public sealed class ColliderGroup
         return expectedTravelDistance;
     }
 
-    private bool IsReadyToMove(GameCollider collider)
+    private bool IsReadyToMove(VelocityHashTable.Item item)
     {
-        if(collider.ShouldStop) return false;
-        var velocity = collider.Velocity;
+        if (item.IsExpired) return false;
+        var velocity = item.Velocity;
         velocity._beforeEvaluate?.Fire();
-        var isReadyToMove = !(velocity.ShouldStop || velocity.Speed == 0 || now < velocity.MinEvalSeconds);
+        var isReadyToMove = !(item.IsExpired || velocity.Speed == 0 || now < velocity.MinEvalSeconds);
 
         if(isReadyToMove)
         {
             velocity._beforeMove?.Fire();
-            if (velocity.ShouldStop) isReadyToMove = false;
+            if (item.IsExpired) isReadyToMove = false;
         }
         return isReadyToMove;
     }
     
 
-    private float GetCloseToColliderWeAreCollidingWith(Velocity velocity)
+    private float GetCloseToColliderWeAreCollidingWith(VelocityHashTable.Item item)
     {
-        var proposedBounds = velocity.Collider.Bounds.RadialOffset(velocity.Angle, hitPrediction.LKGD, false);
-        var encroachment = TryMoveIfWouldNotCauseTouching(velocity, proposedBounds, RGB.Green) ? hitPrediction.LKGD : 0;
+        var proposedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, hitPrediction.LKGD, false);
+        var encroachment = TryMoveIfWouldNotCauseTouching(item, proposedBounds, RGB.Green) ? hitPrediction.LKGD : 0;
         return encroachment;
     }
 
-    private bool TryMoveIfWouldNotCauseTouching(Velocity item, RectF proposedBounds, RGB color)
+    private bool TryMoveIfWouldNotCauseTouching(VelocityHashTable.Item item, RectF proposedBounds, RGB color)
     {
-        if (WouldCauseTouching(item.Collider, proposedBounds, out GameCollider preventer) == false)
+        if (WouldCauseTouching(item, proposedBounds, out GameCollider preventer) == false)
         {
 #if DEBUG
             ColliderGroupDebugger.VelocityEventOccurred?.Fire(new SuccessfulMove()
@@ -369,16 +365,16 @@ public sealed class ColliderGroup
         return false;
     }
 
-    private bool WouldCauseTouching(ICollidable item, RectF proposed, out GameCollider preventer)
+    private bool WouldCauseTouching(VelocityHashTable.Item item, RectF proposed, out GameCollider preventer)
     {
         for (var i = 0; i < numColliders; i++)
         {
             var obstacle = colliderBuffer[i];
-            if (obstacle == item || obstacle.ShouldStop || obstacle.CanCollideWith(item) == false || item.CanCollideWith(obstacle) == false) continue;
+            if (obstacle == item || obstacle.IsExpired || obstacle.CanCollideWith(item) == false || item.CanCollideWith(obstacle) == false) continue;
             var distance = colliderBuffer[i].Bounds.CalculateDistanceTo(proposed);
             if (Math.Abs(distance) == 0)
             {
-                preventer = obstacle;
+                preventer = obstacle.Collider;
                 return true;
             }
         }
@@ -395,9 +391,8 @@ public sealed class ColliderGroup
             var entry = span[i];
             for (var j = 0; j < entry.Length; j++)
             {
-                var item = entry[j]?.Collider;
-                if (item == null) continue;
-
+                var item = entry[j];
+                if (item == null || item.IsExpired) continue;
                 colliderBufferSpan[ret] = item;
                 ret++;
             }
@@ -431,24 +426,38 @@ public sealed class ColliderGroup
             var entry = table[i];
             for (var j = 0; j < entry.Length; j++)
             {
-                var item = entry[j]?.Collider;
-                if (item == null || item == owner || item.ShouldStop || owner.ShouldStop || owner.CanCollideWith(item) == false || item.CanCollideWith(owner) == false) continue;
-                buffer.WriteableBuffer.Add(item);
+                var item = entry[j];
+                var collider = entry[j]?.Collider;
+                if (collider == null || collider == owner || item.IsExpired || owner.CanCollideWith(collider) == false || collider.CanCollideWith(owner) == false) continue;
+                buffer.WriteableBuffer.Add(collider);
             }
         }
     }
 
     private sealed class VelocityHashTable
     {
-        public sealed class Item
+        public sealed class Item : ICollidable
         {
             public GameCollider Collider;
             public Velocity Velocity;
+
+            private int colliderLease;
+            private int velocityLease;
+
             public Item(GameCollider c, Velocity v)
             {
                 Collider = c;
                 Velocity = v;
+                colliderLease = c.Lease;
+                velocityLease = v.Lease;
             }
+
+            public bool IsStillValid => Collider.IsStillValid(colliderLease) && Velocity.IsStillValid(velocityLease);
+            public bool IsExpired => !IsStillValid;
+
+            public RectF Bounds => Collider.Bounds;
+
+            public bool CanCollideWith(ICollidable other) => Collider.CanCollideWith(other);
         }
 
         public static class ItemPool

@@ -25,7 +25,6 @@ public class MinimumSizeShield : ConsolePanel
 
     private void CheckSize()
     {
-        if (ShouldStop) return;
         if (Width < options.MinWidth || Height < options.MinHeight)
         {
             if (tooSmallLifetime == null)

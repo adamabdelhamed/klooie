@@ -71,7 +71,7 @@ public partial class Wander : Movement
         _VisibilitySense = new VisibilitySense();
         _CloserToTargetSense = new CloserToTargetSense();
         _SimilarToCurrentDirectionSense = new SimilarToCurrentDirectionSense();
-
+        var moveLease = Lease;
         var innerSpeed = Speed;
         Speed = () =>
         {
@@ -92,7 +92,7 @@ public partial class Wander : Movement
             }
         };
 
-        MoveLoopBody();
+        MoveLoopBody(moveLease);
         return moveTask.Task;
     }
 
@@ -108,11 +108,11 @@ public partial class Wander : Movement
     }
     private RectF elementBounds;
     private Angle lkg;
-    private void MoveLoopBody()
+    private void MoveLoopBody(int moveLease)
     {
         try
         {
-            if (this.ShouldStop)
+            if (this.IsStillValid(moveLease) == false)
             {
                 FinalizeMove();
                 return;
@@ -181,7 +181,7 @@ public partial class Wander : Movement
                 Velocity.Speed = Speed();
                 lkg = _BestScore.Angle;
             }
-            YieldForVelocityAndDelay(this, StaticFinishBody);
+            YieldForVelocityAndDelay(moveLease, FinishBody);
             HandleBeingStuck(elementBounds);
             _LastGoodAngle = lkg;
         }
@@ -192,12 +192,13 @@ public partial class Wander : Movement
         }
     }
 
-    private static void StaticFinishBody(object staticFinishBody)
+    private void FinishBody(object moveLeaseObj)
     {
-        var _this = (Wander)staticFinishBody;
+        var moveLease = (int)moveLeaseObj;
+        var _this = this;
         _this.HandleBeingStuck(_this.elementBounds);
         _this._LastGoodAngle = _this.lkg;
-        _this.MoveLoopBody();
+        _this.MoveLoopBody(moveLease);
     }
 
     private void HandleBeingStuck(RectF previousLoction)

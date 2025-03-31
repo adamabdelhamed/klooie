@@ -14,17 +14,6 @@ public class Recyclable : ILifetime
     private bool IsExpiring { get;  set; }
     private bool IsExpired { get; set; }
 
-    private bool ShouldContinue
-    {
-        get
-        {
-            if (Pool != null)
-                throw new InvalidOperationException("Pooled recyclable: use lease-based IsStillValid()");
-            return !IsExpired && !IsExpiring;
-        }
-    }
-
-    public bool ShouldStop => !ShouldContinue;
 
     public int CurrentVersion { get; private set; }
 
