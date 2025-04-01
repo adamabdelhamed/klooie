@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text;
 namespace klooie;
 
 public class Recyclable : ILifetime
@@ -190,6 +192,8 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public int Rented { get; private set; }
     public int Returned { get; private set; }
     public int AllocationsSaved => Rented - Created;
+
+    public Dictionary<string, int> StackCounts { get; private set; } = new Dictionary<string, int>();
 #endif
     private readonly Stack<T> _pool = new Stack<T>();
     public abstract T Factory();
@@ -225,6 +229,15 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     {
 #if DEBUG
         Rented++;
+        var trace = GetCurrentStackTrace(3);
+        if(StackCounts.TryGetValue(trace, out var count))
+        {
+            StackCounts[trace.ToString()] = count + 1;
+        }
+        else
+        {
+            StackCounts.Add(trace, 1);
+        }
 #endif
         T ret;
         if (_pool.Count > 0)
@@ -241,9 +254,24 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         }
         ret.Pool = this;
         lease = ret.CurrentVersion;
+   
         return ret;
     }
+    static string GetCurrentStackTrace(int limit)
+    {
+        var trace = new StackTrace(true);
+        var frames = trace.GetFrames();
+        if (frames == null) return string.Empty;
 
+        var sb = new StringBuilder();
+        for (int i = 2; i < Math.Min(limit+2, frames.Length); i++)
+        {
+            sb.AppendLine(frames[i].ToString());
+        }
+
+
+        return sb.ToString();
+    }
     public T Rent()
     {
         return Rent(out _);
@@ -262,6 +290,10 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public void Clear()
     {
         _pool.Clear();
+        Created = 0;
+        Rented = 0;
+        Returned = 0;
+        StackCounts.Clear();
     }
 
     public IObjectPool Fill(int? count = null)

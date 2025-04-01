@@ -39,7 +39,14 @@ public static class SubscriptionListPool
 #if DEBUG
         Returned++;
 #endif
-        
+        for(var i = 0; i < subscriptions.Count; i++)
+        {
+            if (subscriptions[i].IsStillValid(subscriptions[i].CurrentVersion))
+            {
+                subscriptions[i].TryDispose();
+                i--;
+            }
+        }
         subscriptions.Clear();
         _pool.Add(subscriptions);
     }

@@ -2,7 +2,7 @@
 
 namespace klooie;
 
-internal class LayoutRootPanel : ConsolePanel
+public partial class LayoutRootPanel : ConsolePanel
 {
     private Event _onWindowResized;
     private int lastConsoleWidth, lastConsoleHeight;
@@ -20,7 +20,7 @@ internal class LayoutRootPanel : ConsolePanel
     internal bool PaintEnabled { get; set; } = true;
     internal bool ClearOnExit { get; set; } = true;
 
-    internal LayoutRootPanel()
+    public LayoutRootPanel()
     {
         ConsoleApp.AssertAppThread();
         defaultPen = new ConsoleCharacter(' ', null, DefaultColors.BackgroundColor);
@@ -33,6 +33,14 @@ internal class LayoutRootPanel : ConsolePanel
         ConsoleApp.Current!.EndOfCycle.Subscribe(OnEndOfCycle, this);
         DescendentAdded.Subscribe(OnDescendentAdded, this);
         OnDisposed(RestoreConsoleState);
+        FocusStackDepth = 1;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        _onWindowResized?.TryDispose();
+        _onWindowResized = null;
     }
 
     private void OnEndOfCycle()

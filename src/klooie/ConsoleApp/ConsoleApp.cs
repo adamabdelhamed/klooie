@@ -150,9 +150,10 @@ public class ConsoleApp : EventLoop
         {
             _current = this;
             Name = GetType().Name;
-            layoutRoot = new LayoutRootPanel() { FocusStackDepth = 1 };
+            layoutRoot = LayoutRootPanelPool.Instance.Rent();
             OnDisposed(LayoutRoot.Dispose);
-            focus = new FocusManager();
+            focus = FocusManagerPool.Instance.Rent();
+            OnDisposed(focus.Dispose);
             base.Run();
         }
         finally

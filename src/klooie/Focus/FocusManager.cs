@@ -5,7 +5,7 @@ namespace klooie;
 
 
 
-internal partial class FocusManager : IObservableObject
+public partial class FocusManager : Recyclable,  IObservableObject
 {
     private static readonly long CycleThrottlerIntervalTicks = Stopwatch.Frequency / 1000 * 25; // 25ms in ticks
     private long lastCycleThrottlerCheck;
@@ -15,7 +15,18 @@ internal partial class FocusManager : IObservableObject
 
     private Event<ConsoleKeyInfo> _globalKeyPressed;
     public Event<ConsoleKeyInfo> GlobalKeyPressed    { get => _globalKeyPressed ?? (_globalKeyPressed = EventPool<ConsoleKeyInfo>.Instance.Rent()); }
-    internal class FocusContext
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        _globalKeyPressed?.Dispose();
+        _globalKeyPressed = null;
+        sendKeys.Clear();
+        lastKeyPressTime = DateTime.MinValue;
+        lastKey = default;
+    }
+
+    public class FocusContext
     {
         public KeyboardInterceptionManager Interceptors { get; private set; } = new KeyboardInterceptionManager();
         public List<ConsoleControl> Controls { get; internal set; }
@@ -28,7 +39,7 @@ internal partial class FocusManager : IObservableObject
         }
     }
 
-    internal class KeyboardInterceptionManager
+    public class KeyboardInterceptionManager
     {
         private class HandlerContext
         {
