@@ -1,7 +1,19 @@
 ﻿namespace klooie.Gaming;
 public partial class Weapon : Recyclable, IObservableObject
 {
-    public static Event<Weapon> OnFire { get; private set; } = new Event<Weapon>();
+    private static Event<Weapon>? onFire;
+    public static Event<Weapon> OnFire 
+    {
+        get
+        {
+            if (onFire == null)
+            {
+                onFire = EventPool<Weapon>.Instance.Rent();
+                Game.Current.OnDisposed(onFire.Dispose);
+            }
+            return onFire;
+        }
+    }
 
     private Throttle? Debouncer { get; set; }
     public Targeting Targeting { get; private set; }

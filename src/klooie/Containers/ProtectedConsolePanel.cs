@@ -15,7 +15,7 @@ public class ProtectedConsolePanel : Container
     /// <summary>
     /// Gets the children of this control
     /// </summary>
-    public override IReadOnlyList<ConsoleControl> Children => ProtectedPanel.Children;
+    public override IReadOnlyList<ConsoleControl> Children => [ProtectedPanel];
 
     protected override void OnInit()
     {

@@ -96,7 +96,7 @@ public partial class ConsoleControl : Rectangular
     /// An event that fires when a key is pressed while this control has focus and the control has decided not to process
     /// the key press internally.
     /// </summary>
-    public Event<ConsoleKeyInfo> KeyInputReceived { get => _keyInputReceived ?? (_keyInputReceived = new Event<ConsoleKeyInfo>()); }
+    public Event<ConsoleKeyInfo> KeyInputReceived { get => _keyInputReceived ?? (_keyInputReceived = EventPool<ConsoleKeyInfo>.Instance.Rent()); }
 
     /// <summary>
     /// An event that fires any time its tags changes
@@ -335,6 +335,12 @@ public partial class ConsoleControl : Rectangular
         {
             _this._tagsChanged.Dispose();
             _this._tagsChanged = null;
+        }
+
+        if (_this._keyInputReceived != null)
+        {
+            _this._keyInputReceived.Dispose();
+            _this._keyInputReceived = null;
         }
 
         _this.HasFocus = false;

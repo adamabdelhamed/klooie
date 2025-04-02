@@ -22,6 +22,11 @@ public partial class LayoutRootPanel : ConsolePanel
 
     public LayoutRootPanel()
     {
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
         ConsoleApp.AssertAppThread();
         defaultPen = new ConsoleCharacter(' ', null, DefaultColors.BackgroundColor);
         paintRequests = new List<TaskCompletionSource>();

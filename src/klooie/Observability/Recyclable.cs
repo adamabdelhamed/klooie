@@ -193,6 +193,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public int Returned { get; private set; }
     public int AllocationsSaved => Rented - Created;
 
+    public HashSet<PendingRecyclableTracker> PendingReturns { get; } = new HashSet<PendingRecyclableTracker>();
     public RecyclablePoolHunter StackHunter { get; set; } = new RecyclablePoolHunter();
 #endif
     private readonly Stack<T> _pool = new Stack<T>();
@@ -229,7 +230,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     {
 #if DEBUG
         Rented++;
-        StackHunter.RegisterCurrentStackTrace(2, 4);
+        var trace = StackHunter.RegisterCurrentStackTrace(2, 10);
 #endif
         T ret;
         if (_pool.Count > 0)
@@ -246,7 +247,11 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         }
         ret.Pool = this;
         lease = ret.CurrentVersion;
-   
+
+#if DEBUG
+        if(trace != null) PendingReturns.Add(new PendingRecyclableTracker(ret, trace));
+#endif
+
         return ret;
     }
  
@@ -259,6 +264,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     {
 #if DEBUG
         Returned++;
+        PendingReturns.Remove(new PendingRecyclableTracker((T)rented, null));
 #endif
         if (rented.Pool != this) throw new InvalidOperationException("Object returned to wrong pool");
         rented.Pool = null;
@@ -284,6 +290,29 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
             _pool.Push(Factory());
         }
         return this;
+    }
+}
+
+public class PendingRecyclableTracker
+{
+    public Recyclable Rented { get; init; }
+
+    public ComparableStackTrace RenterStackTrace { get; init; }
+
+    public PendingRecyclableTracker(Recyclable rented, ComparableStackTrace renterStackTrace)
+    {
+        Rented = rented;
+        RenterStackTrace = renterStackTrace;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is PendingRecyclableTracker other && ReferenceEquals(Rented, other.Rented);
+    }
+
+    public override int GetHashCode()
+    {
+        return Rented.GetHashCode();
     }
 }
 

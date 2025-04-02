@@ -5,7 +5,7 @@ public partial class ForLoopLifetime : Recyclable
 {
     public List<ForLoopState> forLoopStates;
 
-    protected ForLoopLifetime()
+    public ForLoopLifetime()
     {
         forLoopStates = new List<ForLoopState>();
     }

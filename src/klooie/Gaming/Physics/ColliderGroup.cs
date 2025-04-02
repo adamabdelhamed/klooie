@@ -7,7 +7,9 @@ public sealed class ColliderGroup
     public int FramesPerSecond => frameRateMeter.CurrentFPS;
 
     private int NextHashCode = 0;
-    public Event<Collision> OnCollision { get; private set; } = new Event<Collision>();
+
+    private Event<Collision>? onCollision;
+    public Event<Collision> OnCollision => onCollision ?? (onCollision = EventPool<Collision>.Instance.Rent());
     public int Count { get; private set; }
     private VelocityHashTable velocities;
     public float LatestDT { get; private set; }
@@ -28,10 +30,10 @@ public sealed class ColliderGroup
     private int numColliders;
     
     private Event<GameCollider> _added;
-    public Event<GameCollider> Added { get => _added ?? (_added = new Event<GameCollider>()); }
+    public Event<GameCollider> Added { get => _added ?? (_added = EventPool<GameCollider>.Instance.Rent()); }
 
     private Event<GameCollider> _removed;
-    public Event<GameCollider> Removed { get => _removed ?? (_removed = new Event<GameCollider>()); }
+    public Event<GameCollider> Removed { get => _removed ?? (_removed = EventPool<GameCollider>.Instance.Rent()); }
     
     public float SpeedRatio { get; set; } = 1;
 
@@ -47,6 +49,17 @@ public sealed class ColliderGroup
         colliderBuffer = new VelocityHashTable.Item[100];
         lastExecuteTime = TimeSpan.Zero;
         ConsoleApp.Current?.Invoke(ExecuteAsync);
+        ConsoleApp.Current?.OnDisposed(Cleanup);
+    }
+
+    private void Cleanup()
+    {
+        _added?.Dispose();
+        _removed?.Dispose();
+        onCollision?.Dispose();
+        _added = null;
+        _removed = null;
+        onCollision = null;
     }
 
     internal void Add(GameCollider c)

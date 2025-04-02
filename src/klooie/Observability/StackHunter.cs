@@ -17,19 +17,18 @@ namespace klooie
         /// Registers the current stack trace, skipping and taking a specified number of frames.
         /// The stack trace is only recorded if it isn't an exception.
         /// </summary>
-        public void RegisterCurrentStackTrace(int skip, int take)
+        public ComparableStackTrace? RegisterCurrentStackTrace(int skip, int take)
         {
             var trace = new StackTrace(true);
             var frames = trace.GetFrames();
-            if (frames == null) return;
+            if (frames == null) return null;
 
             // Skip the first few frames (e.g., the hunter's methods) and take the ones we care about.
             frames = frames.Skip(skip).Take(take).ToArray();
             var comparableTrace = new ComparableStackTrace(frames);
 
             // Check if this stack trace should be excluded
-            if (!ShouldRecordStackTrace(comparableTrace))
-                return;
+            if (!ShouldRecordStackTrace(comparableTrace)) return null;
 
             // Record or update count
             if (_stackTraces.TryGetValue(comparableTrace, out var count))
@@ -40,6 +39,7 @@ namespace klooie
             {
                 _stackTraces.Add(comparableTrace, 1);
             }
+            return comparableTrace;
         }
 
         /// <summary>
