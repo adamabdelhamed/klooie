@@ -28,6 +28,14 @@ public partial class Slider : ConsoleControl
             {
                 focusLt?.TryDispose();
                 focusLt = DefaultRecyclablePool.Instance.Rent();
+                var focusLease = focusLt.Lease;
+                ConsoleApp.Current.OnDisposed(() =>
+                {
+                    if(focusLt?.IsStillValid(focusLease) == true)
+                    {
+                        focusLt.Dispose();
+                    }
+                });
                 ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, SlideUp, focusLt);
                 ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, SlideDown, focusLt);
                 ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.UpArrow, SlideUp, focusLt);

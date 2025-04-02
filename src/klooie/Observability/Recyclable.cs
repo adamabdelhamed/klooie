@@ -193,7 +193,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public int Returned { get; private set; }
     public int AllocationsSaved => Rented - Created;
 
-    public Dictionary<string, int> StackCounts { get; private set; } = new Dictionary<string, int>();
+    public RecyclablePoolHunter StackHunter { get; set; } = new RecyclablePoolHunter();
 #endif
     private readonly Stack<T> _pool = new Stack<T>();
     public abstract T Factory();
@@ -229,15 +229,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     {
 #if DEBUG
         Rented++;
-        var trace = GetCurrentStackTrace(3);
-        if(StackCounts.TryGetValue(trace, out var count))
-        {
-            StackCounts[trace.ToString()] = count + 1;
-        }
-        else
-        {
-            StackCounts.Add(trace, 1);
-        }
+        StackHunter.RegisterCurrentStackTrace(2, 4);
 #endif
         T ret;
         if (_pool.Count > 0)
@@ -257,21 +249,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
    
         return ret;
     }
-    static string GetCurrentStackTrace(int limit)
-    {
-        var trace = new StackTrace(true);
-        var frames = trace.GetFrames();
-        if (frames == null) return string.Empty;
-
-        var sb = new StringBuilder();
-        for (int i = 2; i < Math.Min(limit+2, frames.Length); i++)
-        {
-            sb.AppendLine(frames[i].ToString());
-        }
-
-
-        return sb.ToString();
-    }
+ 
     public T Rent()
     {
         return Rent(out _);
@@ -290,10 +268,12 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public void Clear()
     {
         _pool.Clear();
+#if DEBUG
         Created = 0;
         Rented = 0;
         Returned = 0;
-        StackCounts.Clear();
+        StackHunter = new RecyclablePoolHunter();
+#endif
     }
 
     public IObjectPool Fill(int? count = null)
@@ -304,6 +284,25 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
             _pool.Push(Factory());
         }
         return this;
+    }
+}
+
+public class RecyclablePoolHunter : StackHunter
+{
+    private ComparableStackTrace[] exceptions =
+    [
+        
+    ];
+
+
+    protected override bool ShouldRecordStackTrace(ComparableStackTrace stackTrace)
+    {
+        foreach (var exception in exceptions)
+        {
+            if (stackTrace.EndsWith(exception))
+                return false;
+        }
+        return true;
     }
 }
 

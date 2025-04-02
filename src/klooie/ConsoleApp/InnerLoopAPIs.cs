@@ -3,12 +3,42 @@ namespace klooie;
 
 public partial class ForLoopLifetime : Recyclable
 {
-    public List<ForLoopState> forLoopStates = new List<ForLoopState>();
+    public List<ForLoopState> forLoopStates;
+
+    protected ForLoopLifetime()
+    {
+        forLoopStates = new List<ForLoopState>();
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        foreach (var loopState in forLoopStates)
+        {
+            loopState.Dispose();
+        }
+        forLoopStates.Clear();
+    }
 }
 
 public partial class DoLoopLifetime : Recyclable
 {
-    public List<DoLoopState> doLoopStates = new List<DoLoopState>();
+    public List<DoLoopState> doLoopStates;
+
+    public DoLoopLifetime()
+    {
+        doLoopStates = new List<DoLoopState>();
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        foreach (var loopState in doLoopStates)
+        {
+            loopState.Dispose();
+        }
+        doLoopStates.Clear();
+    }
 }
 
 public sealed class InnerLoopAPIs
@@ -25,6 +55,15 @@ public sealed class InnerLoopAPIs
     internal InnerLoopAPIs(EventLoop parent)
     {
         this.parent = parent;
+        parent.OnDisposed(Cleanup);
+    }
+
+    private void Cleanup()
+    {
+        if(forLifetime?.IsStillValid(forLease) == true) forLifetime.Dispose();
+        if (doLifetime?.IsStillValid(doLease) == true) doLifetime.Dispose();
+        forLifetime = null;
+        doLifetime = null;
     }
 
     internal void Pause()

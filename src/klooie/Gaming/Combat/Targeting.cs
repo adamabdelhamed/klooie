@@ -61,22 +61,24 @@ public class Targeting : Recyclable
     protected override void OnInit()
     {
         base.OnInit();
-        this.OnDisposed(this, Cleanup);
         _targetingInitiated?.Fire(this);
     }
 
-    private static void Cleanup(object me)
+    protected override void OnReturn()
     {
-        Targeting _this = (me as Targeting)!;
-        if (_this._targetChanged != null) _this._targetChanged.TryDispose();
-        if (_this._targetAcquired != null) _this._targetAcquired.TryDispose();
-        if (_this._targetBeingEvaluated != null) _this._targetBeingEvaluated.TryDispose();
-        if (_this.currentTargetLifetime != null) _this.currentTargetLifetime.TryDispose();
+        base.OnReturn();
+        if (_targetChanged != null) _targetChanged.TryDispose();
+        if (_targetAcquired != null) _targetAcquired.TryDispose();
+        if (_targetBeingEvaluated != null) _targetBeingEvaluated.TryDispose();
+        if (_targetingInitiated != null) _targetingInitiated.TryDispose();
+        if (currentTargetLifetime != null) currentTargetLifetime.TryDispose();
 
-        _this._targetChanged = null;
-        _this._targetAcquired = null;
-        _this._targetBeingEvaluated = null;
-        _this.currentTargetLifetime = null;
+
+        _targetChanged = null;
+        _targetAcquired = null;
+        _targetBeingEvaluated = null;
+        _targetingInitiated = null;
+        currentTargetLifetime = null;
     }
 
     public void Bind(TargetingOptions options)
@@ -190,7 +192,7 @@ public class Targeting : Recyclable
     {
         if (Options.HighlightTargets == false) return;
 
-        if (Target != null)
+        if (Target?.HasFilters == true)
         {
             for (var i = 0; i < Target.Filters.Count; i++)
             {
@@ -202,7 +204,7 @@ public class Targeting : Recyclable
             }
         }
 
-        if (newTarget != null && newTarget.Filters.Contains(targetFilter) == false)
+        if (newTarget != null && (newTarget.HasFilters == false || newTarget.Filters.Contains(targetFilter) == false))
         {
             newTarget.Filters.Add(targetFilter);
         }

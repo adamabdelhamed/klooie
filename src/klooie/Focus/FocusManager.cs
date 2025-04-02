@@ -24,6 +24,7 @@ public partial class FocusManager : Recyclable,  IObservableObject
         sendKeys.Clear();
         lastKeyPressTime = DateTime.MinValue;
         lastKey = default;
+        FocusedControl = null;
     }
 
     public class FocusContext
@@ -122,11 +123,9 @@ public partial class FocusManager : Recyclable,  IObservableObject
             handlerList.Add(handlerAction);
             int index = handlerList.Count - 1;
 
-            var lt = new Recyclable();
-            lt.OnDisposed(() =>
+ 
+            handlerAction.OnDisposed(() =>
             {
-                handlerAction.Dispose();
-
                 // Remove the handler from the list only if it's still there
                 if (index >= 0 && index < handlerList.Count && handlerList[index] == handlerAction)
                 {
@@ -143,20 +142,18 @@ public partial class FocusManager : Recyclable,  IObservableObject
                 }
             });
 
-            return lt;
+            return handlerAction;
         }
 
-        internal Recyclable PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler)
+        private Recyclable PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler)
         {
             var target = GetDictionaryForModifier(modifier);
             var handlerAction = KeyboardActionPool.Instance.Rent();
             handlerAction.Callback = handler;
-    
-
             return PushHandler(target, key, handlerAction);
         }
 
-        internal Recyclable PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, object scope, Action<object, ConsoleKeyInfo> handler)
+        private Recyclable PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, object scope, Action<object, ConsoleKeyInfo> handler)
         {
             var target = GetDictionaryForModifier(modifier);
             var handlerAction = KeyboardActionPool.Instance.Rent();
@@ -181,18 +178,6 @@ public partial class FocusManager : Recyclable,  IObservableObject
         public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler, ILifetime manager)
         {
             manager.OnDisposed(PushUnmanaged(key, modifier, handler));
-        }
-
-        /// <summary>
-        /// Pushes this handler onto the appropriate handler stack
-        /// </summary>
-        /// <param name="key">the key ti handle</param>
-        /// <param name="modifier">the modifier, or null if you want to handle the unmodified keypress</param>
-        /// <param name="handler">the code to run when the key input is intercepted</param>
-        /// <returns>A subscription that you should dispose when you no longer want this interception to happen</returns>
-        public Recyclable PushUnmanaged(ConsoleKey key, ConsoleModifiers? modifier, Action handler)
-        {
-            return PushUnmanaged(key, modifier, (k) => { handler(); });
         }
 
         /// <summary>

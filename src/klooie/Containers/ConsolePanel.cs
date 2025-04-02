@@ -29,18 +29,11 @@ public class ConsolePanel : Container
         Controls = ObservableCollectionPool<ConsoleControl>.Instance.Rent();
         Controls.Added.Subscribe(OnControlAddedInternal, this);
         Controls.Removed.Subscribe(OnControlRemovedInternal, this);
-        this.OnDisposed(DisposeChildren);
+        this.OnDisposed(Cleanup);
         this.CanFocus = false;
     }
 
-    protected override void OnReturn()
-    {
-        base.OnReturn();
-        Controls.Dispose();
-        Controls = null;
-    }
-
-    private void DisposeChildren()
+    private void Cleanup()
     {
         var count = Controls.Count;
         var buffer = ArrayPool<ConsoleControl>.Shared.Rent(count);
@@ -59,6 +52,9 @@ public class ConsolePanel : Container
         {
             ArrayPool<ConsoleControl>.Shared.Return(buffer);
         }
+        Controls.Clear();
+        Controls.Dispose();
+        Controls = null;
     }
 
     private void OnControlRemovedInternal(ConsoleControl c)

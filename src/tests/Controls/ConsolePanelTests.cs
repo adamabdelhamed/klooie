@@ -29,9 +29,10 @@ public class ConsolePanelTests
         });
 
         app.Run();
-
+#if DEBUG
         var poolsWithPendingReturns = PoolManager.Instance.Pools.Where(p => p.Rented != p.Returned).OrderByDescending(p => p.Rented - p.Returned).ToArray();
         Assert.AreEqual(0,poolsWithPendingReturns.Length);
+#endif
     }
 }
 

@@ -26,6 +26,11 @@ public class ProtectedConsolePanel : Container
         ProtectedPanel.Fill();
         this.BackgroundChanged.Sync(() => ProtectedPanel.Background = Background, this);
         this.ForegroundChanged.Sync(() => ProtectedPanel.Foreground = Foreground, this);
+        OnDisposed(() =>
+        {
+            ProtectedPanel.TryDispose();
+            ProtectedPanel = null;
+        });
     }
 
     protected override void OnPaint(ConsoleBitmap context) => Compose(ProtectedPanel);

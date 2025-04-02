@@ -67,6 +67,12 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     /// </summary>
     public ObservableCollection()
     {
+
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
         wrapped = new List<T>();
         membershipLifetimes = new Dictionary<T, Recyclable>();
     }
@@ -88,6 +94,7 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
         removed = null;
         changed?.Dispose();
         changed = null;
+        Clear();
     }
 
     /// <summary>

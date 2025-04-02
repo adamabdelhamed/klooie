@@ -62,6 +62,7 @@ public partial class ConsoleControl : Rectangular
 
     internal ObservableCollection<IConsoleControlFilter> _filters;
     public ObservableCollection<IConsoleControlFilter> Filters { get => _filters ?? (_filters = ObservableCollectionPool<IConsoleControlFilter>.Instance.Rent()); } 
+    public bool HasFilters => _filters != null && _filters.Count > 0;
 
     /// <summary>
     /// Controls how controls are painted when multiple controls overlap
@@ -276,6 +277,7 @@ public partial class ConsoleControl : Rectangular
         base.OnInit();
         HasBeenAddedToVisualTree = false;
         CanFocus = true;
+        HasFocus = false;
         TabSkip = false;
         this.Width = 1;
         this.Height = 1;
@@ -334,6 +336,8 @@ public partial class ConsoleControl : Rectangular
             _this._tagsChanged.Dispose();
             _this._tagsChanged = null;
         }
+
+        _this.HasFocus = false;
 
         _this._filters?.Dispose();
         _this._filters = null;
