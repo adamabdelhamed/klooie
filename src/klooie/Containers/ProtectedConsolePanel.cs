@@ -28,7 +28,7 @@ public class ProtectedConsolePanel : Container
         this.ForegroundChanged.Sync(() => ProtectedPanel.Foreground = Foreground, this);
         OnDisposed(() =>
         {
-            ProtectedPanel.TryDispose();
+            ProtectedPanel?.TryDispose();
             ProtectedPanel = null;
         });
     }
