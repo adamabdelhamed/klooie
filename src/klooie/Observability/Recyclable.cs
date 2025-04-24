@@ -141,9 +141,11 @@ public class Recyclable : ILifetime
             }
             foreach (var lt in lts)
             {
-                lt?.OnDisposed(() => TryDispose());
+                lt?.OnDisposed(this, DisposeMe);
             }
         }
+
+        private static void DisposeMe(object me) => ((EarliestOfTracker)me).TryDispose();
     }
 
     private class WhenAllTracker : Recyclable
