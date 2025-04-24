@@ -9,7 +9,11 @@ public partial class Weapon : Recyclable, IObservableObject
             if (onFire == null)
             {
                 onFire = EventPool<Weapon>.Instance.Rent();
-                Game.Current.OnDisposed(onFire.Dispose);
+                Game.Current.OnDisposed(()=>
+                {
+                    onFire.Dispose();
+                    onFire = null;
+                });
             }
             return onFire;
         }
