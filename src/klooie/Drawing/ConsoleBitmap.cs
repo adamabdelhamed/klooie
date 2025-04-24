@@ -428,6 +428,32 @@ public sealed class ConsoleBitmap
         }
     }
 
+    public void DrawString(ConsoleCharacter[] buffer, int x, int y, bool vert = false)
+    {
+        var xStart = x;
+        for (var i = 0; i < buffer.Length; i++)
+        {
+            var character = buffer[i];
+            if (character.Value == '\n')
+            {
+                y++;
+                x = xStart;
+                continue;
+            }
+            else if (character.Value == '\r')
+            {
+                // ignore
+            }
+            else if (IsInBounds(x, y))
+            {
+                Pixels[x][y] = character;
+            }
+
+            if (vert) y++;
+            else x++;
+        }
+    }
+
     /// <summary>
     /// Draw a single pixel value at the given point using the current pen
     /// </summary>
