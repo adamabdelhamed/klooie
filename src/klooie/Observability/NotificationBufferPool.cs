@@ -133,8 +133,10 @@ public sealed class Subscription : Recyclable
     internal void Bind(ILifetime lt)
     {
         Lifetime = lt;
-        lt.OnDisposed(()=> this.TryDispose());
+        lt.OnDisposed(this, DisposeMe);
     }
+
+    private static void DisposeMe(object me) => ((Subscription)me)?.TryDispose();
 
     private void Reset()
     {
