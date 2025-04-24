@@ -105,6 +105,7 @@ public partial class Wander : Movement
             _IterationLifetime.Dispose();
         }
         moveTask.SetResult();
+        moveTask = null;
     }
     private RectF elementBounds;
     private Angle lkg;
@@ -187,7 +188,8 @@ public partial class Wander : Movement
         }
         catch(Exception ex)
         {
-            moveTask.SetException(ex);
+            moveTask?.SetException(ex);
+            moveTask = null;
             return;
         }
     }
@@ -236,7 +238,8 @@ public partial class Wander : Movement
         }
         catch (Exception ex)
         {
-            _this.moveTask.SetException(ex);
+            _this.moveTask?.SetException(ex);
+            _this.moveTask = null;
             return;
         }
         var delay = _this.Velocity.EvalFrequencySeconds * 1025;
@@ -252,7 +255,8 @@ public partial class Wander : Movement
             _this.then?.Invoke(_this.thenState);
         }catch(Exception ex)
         {
-            _this.moveTask.SetException(ex);
+            _this.moveTask?.SetException(ex);
+            _this.moveTask = null;
             return;
         }
     }
