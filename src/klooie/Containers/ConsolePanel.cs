@@ -27,8 +27,8 @@ public class ConsolePanel : Container
     {
         base.OnInit();
         Controls = ObservableCollectionPool<ConsoleControl>.Instance.Rent();
-        Controls.Added.Subscribe(OnControlAddedInternal, this);
-        Controls.Removed.Subscribe(OnControlRemovedInternal, this);
+        Controls.Added.Subscribe(OnControlAddedInternal, Controls);
+        Controls.Removed.Subscribe(OnControlRemovedInternal, Controls);
         this.OnDisposed(Cleanup);
         this.CanFocus = false;
     }
@@ -55,6 +55,7 @@ public class ConsolePanel : Container
         Controls.Clear();
         Controls.Dispose();
         Controls = null;
+        sortedControls.Clear();
     }
 
     private void OnControlRemovedInternal(ConsoleControl c)
