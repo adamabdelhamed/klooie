@@ -14,7 +14,13 @@ public partial class TextCollider : GameCollider
     protected override void OnInit()
     {
         base.OnInit();
-        ContentChanged.Sync(() => ResizeTo(Content?.Length ?? 0, 1), this);
+        ContentChanged.Sync(this, ResizeMe, this);
+    }
+
+    private static void ResizeMe(object me)
+    {
+        var _this = (TextCollider)me;
+        _this.ResizeTo(_this.Content?.Length ?? 0, 1);
     }
 
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);
