@@ -67,4 +67,21 @@ public partial class Label : ConsoleControl
     }
 }
 
+public partial class ConsoleStringRenderer : ConsoleControl
+{
+    public partial ConsoleString Content { get; set; }
+
  
+    public ConsoleStringRenderer(ConsoleString? content = null)
+    {
+        this.Content = content ?? ConsoleString.Empty;
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
+        ContentChanged.Sync(() => ResizeTo(Content?.Length ?? 0, 1), this);
+    }
+
+    protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);
+}
