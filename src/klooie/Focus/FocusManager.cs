@@ -226,6 +226,12 @@ public partial class FocusManager : Recyclable,  IObservableObject
 
     public FocusManager()
     {
+
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
         focusStack = new List<FocusContext>();
         focusStack.Add(new FocusContext());
         StackDepth = 1;
