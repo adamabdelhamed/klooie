@@ -37,8 +37,9 @@ public class Program
             var player = game.GamePanel.Add(new GameCollider() { Background = RGB.Green });
             player.MoveTo(game.GameBounds.Center.GetRounded());
 
+            var targetingQueue = TargetingQueuePool.Instance.Rent();
             var targeting = TargetingPool.Instance.Rent();
-            targeting.Bind(new TargetingOptions() { Source = player, HighlightTargets = true, Delay = 50 });
+            targeting.Bind(new TargetingOptions() { Source = player, HighlightTargets = true, Delay = 50 }, targetingQueue);
 
             var pistol = PistolPool.Instance.Rent();
             pistol.AmmoAmount = 1000;
@@ -110,7 +111,7 @@ public class Program
             var buffer = ObstacleBufferPool.Instance.Rent();
             cMover.GetObstacles(buffer);
             var overlaps = buffer.ReadableBuffer
-            .Where(o => o.OverlapPercentage(cMover) > 0).ToArray();
+            .Where(o => o.Bounds.OverlapPercentage(cMover.Bounds) > 0).ToArray();
             buffer.Dispose();
             if (overlaps.Any())
             {
@@ -408,7 +409,7 @@ public class MotionTracker
         lastKnownBounds = v.Collider.Bounds;
 
        
-        v.Collider.Background = sameBoundsCount > 1 ? RGB.Red : RGB.White;
-        v.Collider.Tag = sameBoundsCount > 1 ? "Stuck" : null;
+        (v.Collider as GameCollider).Background = sameBoundsCount > 1 ? RGB.Red : RGB.White;
+        (v.Collider as GameCollider).Tag = sameBoundsCount > 1 ? "Stuck" : null;
     }
 }

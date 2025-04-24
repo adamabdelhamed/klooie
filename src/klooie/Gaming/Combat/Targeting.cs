@@ -4,7 +4,7 @@ public class TargetingOptions
     public bool HighlightTargets { get; set; }
     public required GameCollider Source { get; set; }
     public string? TargetTag { get; set; }
-    public float AngularVisibility { get; set; } = 20;
+    public float AngularVisibility { get; set; } = 60;
     public float Range { get; set; } = Targeting.MaxVisibility;
     public float Delay { get; set; } = 500;
 }
@@ -36,11 +36,6 @@ public class Targeting : Recyclable
     private Recyclable? currentTargetLifetime;
     private static TargetFilter targetFilter = new TargetFilter();
 
-
-    // --- New Queue-based Evaluation Mechanism ---
-    private static readonly List<(Targeting target, int lease)> evaluationQueue = new List<(Targeting target, int lease)>();
-    private static bool isDrainingQueue = false;
-    private const int DrainIntervalMs = 2; // adjust this rate as needed
 
 
     public Event<GameCollider?> TargetChanged => _targetChanged ?? (_targetChanged = EventPool<GameCollider?>.Instance.Rent());
@@ -81,23 +76,15 @@ public class Targeting : Recyclable
         currentTargetLifetime = null;
     }
 
-    public void Bind(TargetingOptions options)
+    public void Bind(TargetingOptions options, TargetingQueue queue)
     {
         this.Options = options;
         options.Source.OnDisposed(this, DisposeMe);
-        Game.Current.InnerLoopAPIs.Delay(Options.Delay, this, EvaluateStatic);
+        queue.Add(this);
     }
 
     private static void DisposeMe(object me) => (me as Targeting)?.TryDispose();
-
-    /// <summary>
-    /// Instead of immediately firing an evaluation, we enqueue it.
-    /// </summary>
-    private static void EvaluateStatic(object obj)
-    {
-        var _this = (Targeting)obj;
-        EnqueueEvaluation(_this);
-    }
+ 
 
     /// <summary>
     /// This method now processes the evaluation immediately (once dequeued).
@@ -141,7 +128,7 @@ public class Targeting : Recyclable
         if (Options.TargetTag != null && potentialTarget.HasSimpleTag(Options.TargetTag) == false) return false;
         if (potentialTarget.IsVisible == false) return false;
         if (Options.Range != float.MaxValue &&
-            potentialTarget.CalculateNormalizedDistanceTo(Options.Source) > Options.Range) return false;
+         potentialTarget.CalculateNormalizedDistanceTo(Options.Source) > Options.Range) return false;
 
         targetFilterContext.Reset(potentialTarget);
         _targetBeingEvaluated?.Fire(targetFilterContext); // todo - Peek immunity, filtering out weapon elements, and concealment can be untangled from this class using this event
@@ -178,10 +165,8 @@ public class Targeting : Recyclable
         if (newTarget == Target) return;
         currentTargetLifetime?.Dispose();
         currentTargetLifetime = DefaultRecyclablePool.Instance.Rent();
-        newTarget?.IsVisibleChanged.Subscribe(this, OnTargetVisibilityChanged, currentTargetLifetime);
         newTarget?.Velocity.Group.Removed.Subscribe(this, OnPotentialTargetRemoved, currentTargetLifetime);
-        ProcessHighlightFiltering(newTarget);
-
+  
         Target = newTarget;
         _targetChanged?.Fire(newTarget);
         if (newTarget == null) return;
@@ -225,50 +210,8 @@ public class Targeting : Recyclable
         if (ReferenceEquals(_this.Target, collider) == false) return;
         _this.OnTargetChanged(null);
     }
-
-    // --- Queue-based Evaluation Methods ---
-    private static void EnqueueEvaluation(Targeting instance)
-    {
-        evaluationQueue.Add((instance, instance.Lease));
-        StartQueueDrainIfNeeded();
-    }
-
-    private static void StartQueueDrainIfNeeded()
-    {
-        if (!isDrainingQueue && evaluationQueue.Count > 0)
-        {
-            isDrainingQueue = true;
-            Game.Current.InvokeNextCycle(DrainQueue);
-        }
-    }
-
-    private static void DrainQueue()
-    {
-        Targeting instance = null;
-
-        if (evaluationQueue.Count > 0)
-        {
-            var queuedJobRecord = evaluationQueue[evaluationQueue.Count - 1];
-            evaluationQueue.RemoveAt(evaluationQueue.Count - 1);
-            instance = queuedJobRecord.target;
-            if (instance.IsStillValid(queuedJobRecord.lease))
-            {
-                instance.Evaluate();
-                // Rebind for the next evaluation cycle.
-                instance.Bind(instance.Options);
-            }
-        }
-
-        if (evaluationQueue.Count > 0)
-        {
-            Game.Current.InvokeNextCycle(DrainQueue);
-        }
-        else
-        {
-            isDrainingQueue = false;
-        }
-    }
 }
+
 
 public class TargetFilter : IConsoleControlFilter
 {
