@@ -70,6 +70,13 @@ public sealed class Velocity : Recyclable
 
     public Velocity() { }
 
+    protected override void OnInit()
+    {
+        base.OnInit();
+        speed = 0;
+        angle = 0;
+    }
+
     protected override void OnReturn()
     {
         base.OnReturn();
@@ -91,13 +98,9 @@ public sealed class Velocity : Recyclable
     {
         this.Group = group;
         this.Collider = collider;
-        if (collider.AutoAddToColliderGroup)
-        {
-            group.Add(collider);
-
-            this.Group = group;
-            this.Collider = collider;
-        }
+        group.Add(collider);
+        this.Group = group;
+        this.Collider = collider;
 
         collider.OnDisposed(this, RemoveMyselfFromGroup);
     }
