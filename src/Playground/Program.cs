@@ -239,18 +239,25 @@ public class PhysicsSample : Game
     {
         await base.Startup();
         LayoutRoot.Background = RGB.Green;
-        var bigBounds = new Loc().ToRect(80000, 20000);
+        var bigBounds = new Loc().ToRect(4000, 50);
         camera = LayoutRoot.Add(new Camera() {  BigBounds = bigBounds }).FillMax(maxWidth: (int)bigBounds.Width, maxHeight: (int)bigBounds.Height);
+        camera.EnableKeyboardPanning();
         camera.Background = RGB.Blue;
         LayoutRoot.BoundsChanged.Sync(() =>
         {
             camera.PointAt(GameBounds.Center);
         }, camera);
         AddWalls();
-        for (var i = 0; i < 3000; i++)
+        var ballCount = 0;
+        for(var x = bigBounds.Left+2; x < bigBounds.Right-3; x+=5)
         {
-            AddRandomWhiteSquare();
+            for(var y = bigBounds.Top+1; y < bigBounds.Bottom-2; y+=3)
+            {
+                AddWhiteSquare(x, y);
+                ballCount++;
+            }
         }
+        
         camera.Background = RGB.Black;
         Invoke(async () =>
         {
@@ -289,8 +296,20 @@ public class PhysicsSample : Game
         }
     }
 
+    private void AddWhiteSquare(float x, float y)
+    {
+       
+            var whiteSquare = GamePanel.Add(new Ball()
+            {
+                Background = RGB.White,
+                Bounds = new RectF(x, y, 2, 1)
+            });
+            whiteSquare.Velocity.Speed = 30f;
+            whiteSquare.Velocity.Angle = random.Next(0, 360);
+            whiteSquare.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
+        
+    }
 
- 
 
     private LocF? FindRandomEmptyLocation(float w, float h)
     {

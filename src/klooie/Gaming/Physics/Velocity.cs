@@ -108,10 +108,7 @@ public sealed class Velocity : Recyclable
     private static void RemoveMyselfFromGroup(object me)
     {
         var _this = me as Velocity;
-        if (_this.Group.Remove(_this.Collider) == false)
-        {
-            throw new InvalidOperationException($"Failed to remove myself from group after dispose: {_this.Collider.GetType().Name}-{_this.Collider.ColliderHashCode}");
-        }
+        _this.Group.Remove(_this.Collider);
     }
 
     public void GetObstacles(ObstacleBuffer buffer) => Group.GetObstacles(Collider, buffer);

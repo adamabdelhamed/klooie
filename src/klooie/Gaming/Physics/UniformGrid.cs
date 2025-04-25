@@ -26,8 +26,9 @@ internal sealed class UniformGrid : ISpatialIndex
 {
     private HashSet<int> querySet = new HashSet<int>();
     private List<UniformGridCell> cellBuffer = new List<UniformGridCell>();
-    private const float _cellSize = 20f;
+    private const float _cellSize = 80f;
     private readonly Dictionary<UniformGridCell, ObstacleBuffer> _buckets = new Dictionary<UniformGridCell, ObstacleBuffer>();
+    private readonly Dictionary<GameCollider,int> leases = new Dictionary<GameCollider, int>();
 
     private void LoadCells(RectF b)
     {
@@ -49,8 +50,15 @@ internal sealed class UniformGrid : ISpatialIndex
         }
     }
 
+    public bool IsExpired(GameCollider c)
+    {
+        if (leases.TryGetValue(c, out var lease) == false) return true;
+        return c.IsStillValid(lease) == false;
+    }
+
     public void Insert(GameCollider obj)
     {
+        leases.Add(obj, obj.Lease);
         LoadCells(obj.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)
         {
@@ -65,6 +73,7 @@ internal sealed class UniformGrid : ISpatialIndex
 
     public void Remove(GameCollider obj)
     {
+        leases.Remove(obj);
         LoadCells(obj.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)
         {
@@ -128,6 +137,85 @@ internal sealed class UniformGrid : ISpatialIndex
                     {
                         buffer.Items.Add(obj);
                     }
+                }
+            }
+        }
+    }
+
+    public void Query(in RectF area, ObstacleBuffer buffer)
+    {
+        querySet.Clear();
+        LoadCells(area);
+        for (int i = 0; i < cellBuffer.Count; i++)
+        {
+            UniformGridCell cell = cellBuffer[i];
+            if (_buckets.TryGetValue(cell, out var list))
+            {
+                for (int j = 0; j < list.WriteableBuffer.Count; j++)
+                {
+                    GameCollider? obj = list.WriteableBuffer[j];
+                    if (querySet.Add(obj.ColliderHashCode))
+                    {
+                        buffer.WriteableBuffer.Add(obj);
+                    }
+                }
+            }
+        }
+    }
+
+    public void Query(in RectF area, CollidableBuffer buffer, GameCollider except)
+    {
+        querySet.Clear();
+        LoadCells(area);
+        for (int i = 0; i < cellBuffer.Count; i++)
+        {
+            UniformGridCell cell = cellBuffer[i];
+            if (_buckets.TryGetValue(cell, out var list))
+            {
+                for (int j = 0; j < list.WriteableBuffer.Count; j++)
+                {
+                    GameCollider? obj = list.WriteableBuffer[j];
+                    if (obj != except && querySet.Add(obj.ColliderHashCode))
+                    {
+                        buffer.Items.Add(obj);
+                    }
+                }
+            }
+        }
+    }
+
+    public void Query(in RectF area, ObstacleBuffer buffer, GameCollider except)
+    {
+        querySet.Clear();
+        LoadCells(area);
+        for (int i = 0; i < cellBuffer.Count; i++)
+        {
+            UniformGridCell cell = cellBuffer[i];
+            if (_buckets.TryGetValue(cell, out var list))
+            {
+                for (int j = 0; j < list.WriteableBuffer.Count; j++)
+                {
+                    GameCollider? obj = list.WriteableBuffer[j];
+                    if (obj != except && querySet.Add(obj.ColliderHashCode))
+                    {
+                        buffer.WriteableBuffer.Add(obj);
+                    }
+                }
+            }
+        }
+    }
+
+    public void EnumerateAll(ObstacleBuffer buffer)
+    {
+        querySet.Clear();
+        foreach(var list in _buckets.Values)
+        { 
+            for (int j = 0; j < list.WriteableBuffer.Count; j++)
+            {
+                GameCollider? obj = list.WriteableBuffer[j];
+                if (querySet.Add(obj.ColliderHashCode))
+                {
+                    buffer.WriteableBuffer.Add(obj);
                 }
             }
         }

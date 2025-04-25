@@ -146,16 +146,24 @@ public class VelocityTests
                 var checkBounds = () =>
                 {
                     totalChecks++;
-
-                    var touching = group.EnumerateCollidersSlow(null).Where(c => c != collider && c.NumberOfPixelsThatOverlap(collider) > 0).ToArray();
-                    if (touching.Any())
+                    var buffer = ObstacleBufferPool.Instance.Rent();
+                    try
                     {
-                        Assert.Fail("Colliders touching at time " + group.Now.TotalSeconds);
+                        group.SpacialIndex.EnumerateAll(buffer);
+                        var touching = buffer.WriteableBuffer.Where(c => c != collider && c.NumberOfPixelsThatOverlap(collider) > 0).ToArray();
+                        if (touching.Any())
+                        {
+                            Assert.Fail("Colliders touching at time " + group.Now.TotalSeconds);
+                        }
+
+                        if (collider.NumberOfPixelsThatOverlap(left) > 0 || collider.NumberOfPixelsThatOverlap(top) > 0 || collider.NumberOfPixelsThatOverlap(right) > 0 || collider.NumberOfPixelsThatOverlap(bottom) > 0)
+                        {
+                            Assert.Fail("Collider overlapping wall at time " + group.Now.TotalSeconds);
+                        }
                     }
-
-                    if (collider.NumberOfPixelsThatOverlap(left) > 0 || collider.NumberOfPixelsThatOverlap(top) > 0 || collider.NumberOfPixelsThatOverlap(right) > 0 || collider.NumberOfPixelsThatOverlap(bottom) > 0)
+                    finally
                     {
-                        Assert.Fail("Collider overlapping wall at time " + group.Now.TotalSeconds);
+                        buffer.Dispose();
                     }
                 };
 
@@ -169,9 +177,10 @@ public class VelocityTests
                 group.Tick();
             }
             Console.WriteLine(totalChecks);
-       
 
-            foreach(var collider in group.EnumerateCollidersSlow(null))
+            var buffer = ObstacleBufferPool.Instance.Rent();
+            group.SpacialIndex.EnumerateAll(buffer);
+            foreach (var collider in buffer.WriteableBuffer)
             {
                 collider.Dispose();
             }

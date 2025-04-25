@@ -13,8 +13,9 @@ public sealed class ColliderGroup
     private Event<Collision>? onCollision;
     public Event<Collision> OnCollision => onCollision ?? (onCollision = EventPool<Collision>.Instance.Rent());
     public int Count { get; private set; }
-    private VelocityHashTable velocities;
+
     private ISpatialIndex spatialIndex;
+    public ISpatialIndex SpacialIndex => spatialIndex;
     private readonly CollidableBuffer sharedQueryBuffer = CollidableBufferPool.Instance.Rent();
     public float LatestDT { get; private set; }
 
@@ -25,13 +26,11 @@ public sealed class ColliderGroup
     public const float MostFrequentEval = .002f; // y2
     public const float HighestSpeedForEvalCalc = 60; // x2
     public const float EvalFrequencySlope = (MostFrequentEval - LeastFrequentEval) / (HighestSpeedForEvalCalc - LowestSpeedForEvalCalc);
-
-    private VelocityHashTable.Item[] colliderBuffer;
+    private ObstacleBuffer colliderBuffer;
     private CollisionPrediction hitPrediction;
     private ILifetime? lt;
     private TimeSpan lastExecuteTime;
     private float now;
-    private int numColliders;
     
     private Event<GameCollider> _added;
     public Event<GameCollider> Added { get => _added ?? (_added = EventPool<GameCollider>.Instance.Rent()); }
@@ -49,8 +48,7 @@ public sealed class ColliderGroup
         lt.OnDisposed(() => this.lt = null);
         hitPrediction = new CollisionPrediction();
         this.stopwatch = stopwatch ?? new WallClockStopwatch();
-        velocities = new VelocityHashTable();
-        colliderBuffer = new VelocityHashTable.Item[100];
+        colliderBuffer = ObstacleBufferPool.Instance.Rent();
         lastExecuteTime = TimeSpan.Zero;
         spatialIndex = new UniformGrid();
         ConsoleApp.Current?.Invoke(ExecuteAsync);
@@ -59,6 +57,7 @@ public sealed class ColliderGroup
 
     private void Cleanup()
     {
+        colliderBuffer.WriteableBuffer.Clear();
         _added?.Dispose();
         _removed?.Dispose();
         onCollision?.Dispose();
@@ -74,15 +73,7 @@ public sealed class ColliderGroup
             throw new System.Exception("Already has a hashcode");
         }
         c.ColliderHashCode = NextHashCode++;
-        if (Count == colliderBuffer.Length)
-        {
-            var tmp = colliderBuffer;
-            colliderBuffer = new VelocityHashTable.Item[tmp.Length * 2];
-            Array.Copy(tmp, colliderBuffer, tmp.Length);
-
-        }
-        c.Velocity.lastEvalTime = (float)lastExecuteTime.TotalSeconds;
-        velocities.Add(c, c.Velocity);  
+        c.Velocity.lastEvalTime = (float)lastExecuteTime.TotalSeconds; 
         Count++;
         _added?.Fire(c);
 
@@ -95,16 +86,11 @@ public sealed class ColliderGroup
         }, c);
     }
 
-    internal bool Remove(GameCollider c)
+    internal void Remove(GameCollider c)
     {
-        if (velocities.Remove(c))
-        {
-            spatialIndex.Remove(c);
-            _removed?.Fire(c);
-            Count--;
-            return true;
-        }
-        return false;
+        spatialIndex.Remove(c);
+        _removed?.Fire(c);
+        Count--;
     }
 
     public TimeSpan Now => stopwatch.Elapsed;
@@ -133,9 +119,9 @@ public sealed class ColliderGroup
         UpdateTime();
         FillColliderBuffer();
         frameRateMeter.Increment();
-        for (var i = 0; i < numColliders; i++)
+        for (var i = 0; i < colliderBuffer.WriteableBuffer.Count; i++)
         {
-            Tick(colliderBuffer[i]);
+            Tick(colliderBuffer.WriteableBuffer[i]);
         }
     }
 
@@ -148,9 +134,9 @@ public sealed class ColliderGroup
         lastExecuteTime = nowTime;
     }
 
-    private void Tick(VelocityHashTable.Item item)
+    private void Tick(GameCollider item)
     {
-        if (item.IsExpired) return;
+        if (spatialIndex.IsExpired(item)) return;
         if (IsReadyToMove(item) == false) return;
 
         var expectedTravelDistance = CalculateExpectedTravelDistance(item.Velocity);
@@ -165,7 +151,7 @@ public sealed class ColliderGroup
         item.Velocity?._onVelocityEnforced?.Fire();
     }
 
-    private bool TryDetectCollision(VelocityHashTable.Item item, float expectedTravelDistance)
+    private bool TryDetectCollision(GameCollider item, float expectedTravelDistance)
     {
         // Swept AABB: from where it is to where it’s going
         var from = item.Bounds;
@@ -174,17 +160,15 @@ public sealed class ColliderGroup
 
         sharedQueryBuffer.Items.Clear();
         spatialIndex.Query(swept, sharedQueryBuffer);
-        //GetColliders(sharedQueryBuffer);
-
         var list = sharedQueryBuffer.Items;
 
-        CollisionDetector.Predict(item.Collider, item.Velocity.Angle, list, expectedTravelDistance, CastingMode.Precise, list.Count, hitPrediction);
-        hitPrediction.ColliderHit = hitPrediction.ColliderHit is VelocityHashTable.Item vItem ? vItem.Collider : hitPrediction.ColliderHit;
+        CollisionDetector.Predict(item, item.Velocity.Angle, list, expectedTravelDistance, CastingMode.Precise, list.Count, hitPrediction);
+        hitPrediction.ColliderHit = hitPrediction.ColliderHit;
         item.Velocity.NextCollision = hitPrediction;
         return hitPrediction.CollisionPredicted;
     }
 
-    private void MoveColliderWithoutCollision(VelocityHashTable.Item item, float expectedTravelDistance)
+    private void MoveColliderWithoutCollision(GameCollider item, float expectedTravelDistance)
     {
         var colliderBoundsBeforeMovement = item.Bounds;
         var newLocation = item.Bounds.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false);
@@ -194,7 +178,7 @@ public sealed class ColliderGroup
 #if DEBUG
             ColliderGroupDebugger.VelocityEventOccurred?.Fire(new FailedMove()
             {
-                MovingObject = item.Collider,
+                MovingObject = item,
                 Obstacle = preventer,
                 Angle = item.Velocity.Angle,
                 From = item.Bounds,
@@ -208,7 +192,7 @@ public sealed class ColliderGroup
 #if DEBUG
         ColliderGroupDebugger.VelocityEventOccurred?.Fire(new SuccessfulMove()
         {
-            MovingObject = item.Collider,
+            MovingObject = item,
             Angle = item.Velocity.Angle,
             From = colliderBoundsBeforeMovement,
             To = newLocation,
@@ -216,30 +200,30 @@ public sealed class ColliderGroup
         });
 #endif
 
-        item.Collider.MoveTo(newLocation.Left, newLocation.Top);
+        item.MoveTo(newLocation.Left, newLocation.Top);
     }
 
-    private void ProcessCollision(VelocityHashTable.Item item, float expectedTravelDistance)
+    private void ProcessCollision(GameCollider item, float expectedTravelDistance)
     {
         var encroachment = GetCloseToColliderWeAreCollidingWith(item);
 
 
         var otherBounds = hitPrediction.ColliderHit.Bounds;
 
-        if (item.IsExpired) return;
+        if (spatialIndex.IsExpired(item)) return;
         var collision = CollisionPool.Instance.Rent();
         try
         {
-            collision.Bind(item.Velocity.speed, item.Velocity.angle, item.Collider, hitPrediction.ColliderHit, hitPrediction);
+            collision.Bind(item.Velocity.speed, item.Velocity.angle, item, hitPrediction.ColliderHit, hitPrediction);
             OnCollision.Fire(collision);
             item.Velocity?._onCollision?.Fire(collision);
-            if (item.IsExpired) return;
+            if (spatialIndex.IsExpired(item)) return;
         }
         finally
         {
             collision.Dispose();
         }
-        if (item.IsExpired) return;
+        if (spatialIndex.IsExpired(item)) return;
         if (item.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
         {
             BounceMe(item, otherBounds, hitPrediction.ColliderHit, expectedTravelDistance, encroachment);
@@ -250,7 +234,7 @@ public sealed class ColliderGroup
         }
     }
      
-    private void BounceMe(VelocityHashTable.Item item, RectF otherBounds, ICollidable other, float expectedTravelDistance, float encroachment)
+    private void BounceMe(GameCollider item, RectF otherBounds, ICollidable other, float expectedTravelDistance, float encroachment)
     {
         Angle newAngleDegrees = ComputeBounceAngle(item.Velocity, otherBounds, hitPrediction);
         item.Velocity.Angle = newAngleDegrees;
@@ -266,7 +250,7 @@ public sealed class ColliderGroup
 #if DEBUG
                 ColliderGroupDebugger.VelocityEventOccurred?.Fire(new AngleChange()
                 {
-                    MovingObject = item.Collider,
+                    MovingObject = item,
                     From = item.Velocity.Angle,
                     To = saveMeAngle,
                     NowSeconds = now,
@@ -322,9 +306,10 @@ public sealed class ColliderGroup
     }
 
     private Random r = new Random();
-    private Angle FindFreeAngle(VelocityHashTable.Item item, Angle priority)
+    private Angle FindFreeAngle(GameCollider item, Angle priority)
     {
         return priority.Add(r.Next(-45,45));
+        /*
         foreach (var angle in Angle.Enumerate360Angles(priority,30))
         {
             for (var j = 0; j < colliderBuffer.Length; j++)
@@ -336,6 +321,7 @@ public sealed class ColliderGroup
             }
         }
         return priority;
+        */
     }
 
     private float CalculateExpectedTravelDistance(Velocity velocity)
@@ -347,54 +333,54 @@ public sealed class ColliderGroup
         return expectedTravelDistance;
     }
 
-    private bool IsReadyToMove(VelocityHashTable.Item item)
+    private bool IsReadyToMove(GameCollider item)
     {
-        if (item.IsExpired) return false;
+        if (spatialIndex.IsExpired(item)) return false;
         var velocity = item.Velocity;
         velocity._beforeEvaluate?.Fire();
-        var isReadyToMove = !(item.IsExpired || velocity.Speed == 0 || now < velocity.MinEvalSeconds);
+        var isReadyToMove = !(spatialIndex.IsExpired(item) || velocity.Speed == 0 || now < velocity.MinEvalSeconds);
 
         if(isReadyToMove)
         {
             velocity._beforeMove?.Fire();
-            if (item.IsExpired) isReadyToMove = false;
+            if (spatialIndex.IsExpired(item)) isReadyToMove = false;
         }
         return isReadyToMove;
     }
     
 
-    private float GetCloseToColliderWeAreCollidingWith(VelocityHashTable.Item item)
+    private float GetCloseToColliderWeAreCollidingWith(GameCollider item)
     {
         var proposedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, hitPrediction.LKGD, false);
         var encroachment = TryMoveIfWouldNotCauseTouching(item, proposedBounds, RGB.Green) ? hitPrediction.LKGD : 0;
         return encroachment;
     }
 
-    private bool TryMoveIfWouldNotCauseTouching(VelocityHashTable.Item item, RectF proposedBounds, RGB color)
+    private bool TryMoveIfWouldNotCauseTouching(GameCollider item, RectF proposedBounds, RGB color)
     {
         if (WouldCauseTouching(item, proposedBounds, out GameCollider preventer) == false)
         {
 #if DEBUG
             ColliderGroupDebugger.VelocityEventOccurred?.Fire(new SuccessfulMove()
             {
-                MovingObject = item.Collider,
-                Angle = item.Collider.Velocity.Angle,
-                From = item.Collider.Bounds,
+                MovingObject = item,
+                Angle = item.Velocity.Angle,
+                From = item.Bounds,
                 To = proposedBounds,
                 NowSeconds = now,
             });
 #endif
-            item.Collider.MoveTo(proposedBounds.Left, proposedBounds.Top);
+            item.MoveTo(proposedBounds.Left, proposedBounds.Top);
             return true;
         }
 
 #if DEBUG
         ColliderGroupDebugger.VelocityEventOccurred?.Fire(new FailedMove()
         {
-            MovingObject = item.Collider,
+            MovingObject = item,
             Obstacle = preventer,
-            Angle = item.Collider.Velocity.Angle,
-            From = item.Collider.Bounds,
+            Angle = item.Velocity.Angle,
+            From = item.Bounds,
             To = proposedBounds,
             NowSeconds = now
         });
@@ -402,21 +388,18 @@ public sealed class ColliderGroup
         return false;
     }
 
-    private bool WouldCauseTouching(VelocityHashTable.Item item, RectF proposed, out GameCollider preventer)
+    private bool WouldCauseTouching(GameCollider item, RectF proposed, out GameCollider preventer)
     {
         var swept = item.Bounds.SweptAABB(proposed).Grow(.01f);
         sharedQueryBuffer.Items.Clear();
         spatialIndex.Query(swept, sharedQueryBuffer);
-        //GetColliders(sharedQueryBuffer);
         var list = sharedQueryBuffer.Items;
 
         for (int i = 0; i < list.Count; i++)
         {
             var obstacle = list[i] as GameCollider;
-            if (obstacle == null || ReferenceEquals(obstacle, item.Collider)) continue;
-            var otherItem = obstacle.Velocity != null ? new VelocityHashTable.Item() : null;
-            otherItem?.Bind(obstacle, obstacle.Velocity);
-            if (otherItem == null || otherItem.IsExpired || !CollidableFast.CanCollideFast(item, otherItem)) continue;
+            if (obstacle == null || ReferenceEquals(obstacle, item) || spatialIndex.IsExpired(obstacle) || !CollidableFast.CanCollideFast(item, obstacle)) continue;
+
             var distance = obstacle.Bounds.CalculateDistanceTo(proposed);
             if (Math.Abs(distance) == 0)
             {
@@ -429,211 +412,14 @@ public sealed class ColliderGroup
     }
     private void FillColliderBuffer()
     {
-        var ret = 0;
-        var colliderBufferSpan = colliderBuffer;
-        var span = velocities.Table;
-        for (var i = 0; i < span.Length; i++)
-        {
-            var entry = span[i];
-            for (var j = 0; j < entry.Length; j++)
-            {
-                var item = entry[j];
-                if (item == null) continue;
-                if (item.IsExpired) continue;
-                colliderBufferSpan[ret] = item;
-                ret++;
-            }
-        }
-        numColliders = ret;
+        colliderBuffer.WriteableBuffer.Clear();
+        spatialIndex.EnumerateAll(colliderBuffer);
     }
 
-    public IEnumerable<GameCollider> EnumerateCollidersSlow(List<GameCollider> list)
-    {
-        list = list ?? new List<GameCollider>(Count);
-        var span = velocities.Table;
-        for (var i = 0; i < span.Length; i++)
-        {
-            var entry = span[i];
-            for (var j = 0; j < entry.Length; j++)
-            {
-                var item = entry[j]?.Collider;
-                if (item == null) continue;
-                list.Add(item);
-            }
-        }
-        return list;
-    }
  
-
     public void GetObstacles(GameCollider owner, ObstacleBuffer buffer)
     {
-        var table = velocities.Table;
-        for (var i = 0; i < table.Length; i++)
-        {
-            var entry = table[i];
-            for (var j = 0; j < entry.Length; j++)
-            {
-                var item = entry[j];
-                var collider = entry[j]?.Collider;
-                if (collider == null || collider == owner || item.IsExpired || owner.CanCollideWith(collider) == false || collider.CanCollideWith(owner) == false) continue;
-                buffer.WriteableBuffer.Add(collider);
-            }
-        }
-    }
-
-    public void GetColliders(CollidableBuffer buffer)
-    {
-        var table = velocities.Table;
-        for (var i = 0; i < table.Length; i++)
-        {
-            var entry = table[i];
-            for (var j = 0; j < entry.Length; j++)
-            {
-                var item = entry[j];
-                var collider = entry[j]?.Collider;
-                if (collider == null || item.IsExpired) continue;
-                buffer.Items.Add(collider);
-            }
-        }
-    }
-
-    private sealed class VelocityHashTable
-    {
-        public sealed class Item : ICollidable
-        {
-            public GameCollider Collider;
-            public Velocity Velocity;
-
-            private int colliderLease;
-            private int velocityLease;
-
-            public void Bind(GameCollider c, Velocity v)
-            {
-                Collider = c;
-                Velocity = v;
-                colliderLease = c.Lease;
-                velocityLease = v.Lease;
-            }
-
-            public bool IsColliderStillValid => Collider?.IsStillValid(colliderLease) == true;
-            public bool IsVelocityStillValid => Velocity?.IsStillValid(velocityLease) == true;
-
-            public bool IsStillValid => IsColliderStillValid && IsVelocityStillValid;
-            public bool IsExpired => !IsStillValid;
-
-            public RectF Bounds => Collider.Bounds;
-
-            public bool CanCollideWith(ICollidable other) => IsStillValid ? Collider.CanCollideWith(other) : false;
-        }
-
-        public static class ItemPool
-        {
-#if DEBUG
-    public static int Created { get; private set; }
-    public static int Rented { get; private set; }
-    public static int Returned { get; private set; }
-    public static int AllocationsSaved => Rented - Created;
-
-#endif
-            private static readonly List<Item> _pool = new List<Item>();
-
-            internal static Item Rent(GameCollider c, Velocity v)
-            {
-#if DEBUG
-        Rented++;
-#endif
-                if (_pool.Count > 0)
-                {
-                    var item = _pool[_pool.Count - 1];
-                    _pool.RemoveAt(_pool.Count - 1);
-                    item.Bind(c, v);
-                    return item;
-                }
-
-#if DEBUG
-        Created++;
-#endif
-
-                var ret = new Item();
-                ret.Bind(c, v);
-                return ret;
-            }
-
-            internal static void Return(Item item)
-            {
-#if DEBUG
-        Returned++;
-#endif
-                item.Collider = null;
-                item.Velocity = null;
-                _pool.Add(item);
-            }
-        }
-
-        public Item[][] Table;
-
-        public VelocityHashTable()
-        {
-            Table = new Item[300][];
-            var span = Table.AsSpan();
-            for (var i = 0; i < span.Length; i++)
-            {
-                span[i] = new Item[4];
-            }
-        }
-
-        internal void Add(GameCollider c, Velocity v)
-        {
-            var i = c.ColliderHashCode % Table.Length;
-            var myArray = Table[i].AsSpan();
-            for (var j = 0; j < myArray.Length; j++)
-            {
-                if (myArray[j] == null)
-                {
-                    myArray[j] = ItemPool.Rent(c, v);
-                    return;
-                }
-            }
-            var biggerArray = new Item[myArray.Length * 2];
-            Array.Copy(Table[i], biggerArray, myArray.Length);
-            biggerArray[myArray.Length] = ItemPool.Rent(c, v);
-            Table[i] = biggerArray;
-        }
-
-        internal Item GetItem(GameCollider c)
-        {
-            var i = c.ColliderHashCode % Table.Length;
-            var arr = Table[i];
-            for (int j = 0; j < arr.Length; j++)
-            {
-                var entry = arr[j];
-                if (entry != null && ReferenceEquals(entry.Collider, c))
-                    return entry;
-            }
-            return null;
-        }
-
-        internal bool Remove(GameCollider c)
-        {
-            var i = c.ColliderHashCode % Table.Length;
-            var myArray = Table[i].AsSpan();
-            for (var j = 0; j < myArray.Length; j++)
-            {
-                if (ReferenceEquals(c, myArray[j]?.Collider))
-                {
-                    ItemPool.Return(myArray[j]);
-                    myArray[j] = null;
-                    for (var k = j; k < myArray.Length - 1; k++)
-                    {
-                        myArray[k] = myArray[k + 1];
-                        myArray[k + 1] = null;
-                        if (myArray[k] == null) break;
-                    }
-                    return true;
-                }
-            }
-            return false;
-        }
+        spatialIndex.Query(owner.Bounds, buffer, owner);
     }
 }
 
