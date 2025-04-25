@@ -165,8 +165,10 @@ public class Targeting : Recyclable
         if (newTarget == Target) return;
         currentTargetLifetime?.Dispose();
         currentTargetLifetime = DefaultRecyclablePool.Instance.Rent();
+        newTarget?.IsVisibleChanged.Subscribe(this, OnTargetVisibilityChanged, currentTargetLifetime);
         newTarget?.Velocity.Group.Removed.Subscribe(this, OnPotentialTargetRemoved, currentTargetLifetime);
-  
+
+        ProcessHighlightFiltering(newTarget);
         Target = newTarget;
         _targetChanged?.Fire(newTarget);
         if (newTarget == null) return;
