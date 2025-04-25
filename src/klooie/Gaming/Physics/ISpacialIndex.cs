@@ -21,11 +21,8 @@ public interface ISpatialIndex
     /// Returns all objects whose bucket(s) overlap <paramref name="aabb"/>.  
     /// Enumeration alloc-free and safe against inserts/removes on the same message-loop thread.
     /// </summary>
-    void Query(in RectF aabb, CollidableBuffer buffer);
     void Query(in RectF aabb, ObstacleBuffer buffer);
-
-    void Query(in RectF aabb, CollidableBuffer buffer, GameCollider except);
-    void Query(in RectF aabb, ObstacleBuffer buffer, GameCollider except);
+    void QueryExcept(ObstacleBuffer buffer, GameCollider except);
 
     void EnumerateAll(ObstacleBuffer buffer);
 

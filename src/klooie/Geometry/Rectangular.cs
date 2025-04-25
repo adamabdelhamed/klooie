@@ -7,8 +7,7 @@ public partial class Rectangular :  Recyclable, IObservableObject, ICollidable
     public virtual bool CanCollideWith(ICollidable other) => true;
     public partial int ZIndex { get; set; }
 
-    internal int ColliderHashCode { get; set; } = -1;
-
+    internal uint QueryStamp { get; set; } = 0;
     public partial RectF Bounds { get; set; }
 
     public int Width
@@ -76,7 +75,6 @@ public partial class Rectangular :  Recyclable, IObservableObject, ICollidable
     protected override void OnInit()
     {
         base.OnInit();
-        ColliderHashCode = -1;
         BoundsChanged.Subscribe(this, SyncBoundsFromExistingBounds, this);
     }
 

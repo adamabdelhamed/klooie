@@ -16,7 +16,7 @@ public sealed class ColliderGroup
 
     private ISpatialIndex spatialIndex;
     public ISpatialIndex SpacialIndex => spatialIndex;
-    private readonly CollidableBuffer sharedQueryBuffer = CollidableBufferPool.Instance.Rent();
+    private readonly ObstacleBuffer sharedQueryBuffer = ObstacleBufferPool.Instance.Rent();
     public float LatestDT { get; private set; }
 
     // these properties model a linear progression that determines the appropriate min
@@ -68,11 +68,6 @@ public sealed class ColliderGroup
 
     internal void Add(GameCollider c)
     {
-        if (c.ColliderHashCode >= 0)
-        {
-            throw new System.Exception("Already has a hashcode");
-        }
-        c.ColliderHashCode = NextHashCode++;
         c.Velocity.lastEvalTime = (float)lastExecuteTime.TotalSeconds; 
         Count++;
         _added?.Fire(c);
@@ -158,9 +153,9 @@ public sealed class ColliderGroup
         var to = from.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false);
         var swept = from.SweptAABB(to).Grow(.01f);
 
-        sharedQueryBuffer.Items.Clear();
+        sharedQueryBuffer.WriteableBuffer.Clear();
         spatialIndex.Query(swept, sharedQueryBuffer);
-        var list = sharedQueryBuffer.Items;
+        var list = sharedQueryBuffer.WriteableBuffer;
 
         CollisionDetector.Predict(item, item.Velocity.Angle, list, expectedTravelDistance, CastingMode.Precise, list.Count, hitPrediction);
         hitPrediction.ColliderHit = hitPrediction.ColliderHit;
@@ -391,9 +386,9 @@ public sealed class ColliderGroup
     private bool WouldCauseTouching(GameCollider item, RectF proposed, out GameCollider preventer)
     {
         var swept = item.Bounds.SweptAABB(proposed).Grow(.01f);
-        sharedQueryBuffer.Items.Clear();
+        sharedQueryBuffer.WriteableBuffer.Clear();
         spatialIndex.Query(swept, sharedQueryBuffer);
-        var list = sharedQueryBuffer.Items;
+        var list = sharedQueryBuffer.WriteableBuffer;
 
         for (int i = 0; i < list.Count; i++)
         {
@@ -419,7 +414,7 @@ public sealed class ColliderGroup
  
     public void GetObstacles(GameCollider owner, ObstacleBuffer buffer)
     {
-        spatialIndex.Query(owner.Bounds, buffer, owner);
+        spatialIndex.QueryExcept(buffer, owner);
     }
 }
 
@@ -433,16 +428,6 @@ public class ObstacleBuffer : Recyclable
     protected override void OnInit()
     {
         _buffer.Clear();
-    }
-}
-
-public class CollidableBuffer : Recyclable
-{
-    public List<ICollidable> Items { get; private set; } = new List<ICollidable>();
-
-    protected override void OnInit()
-    {
-        Items.Clear();
     }
 }
 

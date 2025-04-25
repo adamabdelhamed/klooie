@@ -23,13 +23,12 @@ public readonly struct UniformGridCell : IEquatable<UniformGridCell>
     }
 }
 internal sealed class UniformGrid : ISpatialIndex
-{
-    private HashSet<int> querySet = new HashSet<int>();
+{  
     private List<UniformGridCell> cellBuffer = new List<UniformGridCell>();
     private const float _cellSize = 80f;
     private readonly Dictionary<UniformGridCell, ObstacleBuffer> _buckets = new Dictionary<UniformGridCell, ObstacleBuffer>();
     private readonly Dictionary<GameCollider,int> leases = new Dictionary<GameCollider, int>();
-
+    private uint _stamp;
     private void LoadCells(RectF b)
     {
         cellBuffer.Clear();
@@ -121,30 +120,9 @@ internal sealed class UniformGrid : ISpatialIndex
         }
     }
 
-    public void Query(in RectF area, CollidableBuffer buffer)
-    {
-        querySet.Clear();
-        LoadCells(area);
-        for (int i = 0; i < cellBuffer.Count; i++)
-        {
-            UniformGridCell cell = cellBuffer[i];
-            if (_buckets.TryGetValue(cell, out var list))
-            {
-                for (int j = 0; j < list.WriteableBuffer.Count; j++)
-                {
-                    GameCollider? obj = list.WriteableBuffer[j];
-                    if (querySet.Add(obj.ColliderHashCode))
-                    {
-                        buffer.Items.Add(obj);
-                    }
-                }
-            }
-        }
-    }
-
     public void Query(in RectF area, ObstacleBuffer buffer)
     {
-        querySet.Clear();
+        _stamp++;
         LoadCells(area);
         for (int i = 0; i < cellBuffer.Count; i++)
         {
@@ -154,40 +132,22 @@ internal sealed class UniformGrid : ISpatialIndex
                 for (int j = 0; j < list.WriteableBuffer.Count; j++)
                 {
                     GameCollider? obj = list.WriteableBuffer[j];
-                    if (querySet.Add(obj.ColliderHashCode))
+                    if (obj.QueryStamp != _stamp)
                     {
                         buffer.WriteableBuffer.Add(obj);
+                        obj.QueryStamp = _stamp;
                     }
                 }
             }
         }
     }
 
-    public void Query(in RectF area, CollidableBuffer buffer, GameCollider except)
-    {
-        querySet.Clear();
-        LoadCells(area);
-        for (int i = 0; i < cellBuffer.Count; i++)
-        {
-            UniformGridCell cell = cellBuffer[i];
-            if (_buckets.TryGetValue(cell, out var list))
-            {
-                for (int j = 0; j < list.WriteableBuffer.Count; j++)
-                {
-                    GameCollider? obj = list.WriteableBuffer[j];
-                    if (obj != except && querySet.Add(obj.ColliderHashCode))
-                    {
-                        buffer.Items.Add(obj);
-                    }
-                }
-            }
-        }
-    }
+   
 
-    public void Query(in RectF area, ObstacleBuffer buffer, GameCollider except)
+    public void QueryExcept(ObstacleBuffer buffer, GameCollider except)
     {
-        querySet.Clear();
-        LoadCells(area);
+        _stamp++;
+        LoadCells(except.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)
         {
             UniformGridCell cell = cellBuffer[i];
@@ -196,9 +156,10 @@ internal sealed class UniformGrid : ISpatialIndex
                 for (int j = 0; j < list.WriteableBuffer.Count; j++)
                 {
                     GameCollider? obj = list.WriteableBuffer[j];
-                    if (obj != except && querySet.Add(obj.ColliderHashCode))
+                    if (obj != except && obj.QueryStamp != _stamp)
                     {
                         buffer.WriteableBuffer.Add(obj);
+                        obj.QueryStamp = _stamp;
                     }
                 }
             }
@@ -207,15 +168,16 @@ internal sealed class UniformGrid : ISpatialIndex
 
     public void EnumerateAll(ObstacleBuffer buffer)
     {
-        querySet.Clear();
+        _stamp++;
         foreach(var list in _buckets.Values)
         { 
             for (int j = 0; j < list.WriteableBuffer.Count; j++)
             {
                 GameCollider? obj = list.WriteableBuffer[j];
-                if (querySet.Add(obj.ColliderHashCode))
+                if (obj.QueryStamp != _stamp)
                 {
                     buffer.WriteableBuffer.Add(obj);
+                    obj.QueryStamp = _stamp;
                 }
             }
         }

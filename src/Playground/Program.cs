@@ -239,7 +239,7 @@ public class PhysicsSample : Game
     {
         await base.Startup();
         LayoutRoot.Background = RGB.Green;
-        var bigBounds = new Loc().ToRect(4000, 50);
+        var bigBounds = new Loc().ToRect(800, 60);
         camera = LayoutRoot.Add(new Camera() {  BigBounds = bigBounds }).FillMax(maxWidth: (int)bigBounds.Width, maxHeight: (int)bigBounds.Height);
         camera.EnableKeyboardPanning();
         camera.Background = RGB.Blue;
