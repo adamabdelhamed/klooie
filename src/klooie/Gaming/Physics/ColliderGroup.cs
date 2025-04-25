@@ -1,4 +1,6 @@
-﻿namespace klooie.Gaming;
+﻿using System.Runtime.CompilerServices;
+
+namespace klooie.Gaming;
 public sealed class ColliderGroup
 {
     private const float MaxDTSeconds = .05f;
@@ -12,6 +14,8 @@ public sealed class ColliderGroup
     public Event<Collision> OnCollision => onCollision ?? (onCollision = EventPool<Collision>.Instance.Rent());
     public int Count { get; private set; }
     private VelocityHashTable velocities;
+    private ISpatialIndex spatialIndex;
+    private readonly CollidableBuffer sharedQueryBuffer = CollidableBufferPool.Instance.Rent();
     public float LatestDT { get; private set; }
 
     // these properties model a linear progression that determines the appropriate min
@@ -48,6 +52,7 @@ public sealed class ColliderGroup
         velocities = new VelocityHashTable();
         colliderBuffer = new VelocityHashTable.Item[100];
         lastExecuteTime = TimeSpan.Zero;
+        spatialIndex = new UniformGrid();
         ConsoleApp.Current?.Invoke(ExecuteAsync);
         ConsoleApp.Current?.OnDisposed(Cleanup);
     }
@@ -77,15 +82,24 @@ public sealed class ColliderGroup
 
         }
         c.Velocity.lastEvalTime = (float)lastExecuteTime.TotalSeconds;
-        velocities.Add(c, c.Velocity);
+        velocities.Add(c, c.Velocity);  
         Count++;
         _added?.Fire(c);
+
+        RectF previousBounds = c.Bounds;
+        spatialIndex.Insert(c);
+        c.BoundsChanged.Subscribe(() =>
+        {
+            spatialIndex.Update(c, previousBounds);
+            previousBounds = c.Bounds;
+        }, c);
     }
 
     internal bool Remove(GameCollider c)
     {
         if (velocities.Remove(c))
         {
+            spatialIndex.Remove(c);
             _removed?.Fire(c);
             Count--;
             return true;
@@ -153,10 +167,21 @@ public sealed class ColliderGroup
 
     private bool TryDetectCollision(VelocityHashTable.Item item, float expectedTravelDistance)
     {
-        CollisionDetector.Predict(item.Collider, item.Velocity.Angle, colliderBuffer, expectedTravelDistance, CastingMode.Precise, numColliders, hitPrediction);
+        // Swept AABB: from where it is to where it’s going
+        var from = item.Bounds;
+        var to = from.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false);
+        var swept = from.SweptAABB(to).Grow(.01f);
+
+        sharedQueryBuffer.Items.Clear();
+        spatialIndex.Query(swept, sharedQueryBuffer);
+        //GetColliders(sharedQueryBuffer);
+
+        var list = sharedQueryBuffer.Items;
+
+        CollisionDetector.Predict(item.Collider, item.Velocity.Angle, list, expectedTravelDistance, CastingMode.Precise, list.Count, hitPrediction);
         hitPrediction.ColliderHit = hitPrediction.ColliderHit is VelocityHashTable.Item vItem ? vItem.Collider : hitPrediction.ColliderHit;
         item.Velocity.NextCollision = hitPrediction;
-        return hitPrediction.CollisionPredicted;  
+        return hitPrediction.CollisionPredicted;
     }
 
     private void MoveColliderWithoutCollision(VelocityHashTable.Item item, float expectedTravelDistance)
@@ -379,16 +404,25 @@ public sealed class ColliderGroup
 
     private bool WouldCauseTouching(VelocityHashTable.Item item, RectF proposed, out GameCollider preventer)
     {
-        for (var i = 0; i < numColliders; i++)
+        var swept = item.Bounds.SweptAABB(proposed).Grow(.01f);
+        sharedQueryBuffer.Items.Clear();
+        spatialIndex.Query(swept, sharedQueryBuffer);
+        //GetColliders(sharedQueryBuffer);
+        var list = sharedQueryBuffer.Items;
+
+        for (int i = 0; i < list.Count; i++)
         {
-            var obstacle = colliderBuffer[i];
-            if (obstacle == item || obstacle.IsExpired || obstacle.CanCollideWith(item) == false || item.CanCollideWith(obstacle) == false) continue;
-            var distance = colliderBuffer[i].Bounds.CalculateDistanceTo(proposed);
+            var obstacle = list[i] as GameCollider;
+            if (obstacle == null || ReferenceEquals(obstacle, item.Collider)) continue;
+            var otherItem = obstacle.Velocity != null ? new VelocityHashTable.Item() : null;
+            otherItem?.Bind(obstacle, obstacle.Velocity);
+            if (otherItem == null || otherItem.IsExpired || !CollidableFast.CanCollideFast(item, otherItem)) continue;
+            var distance = obstacle.Bounds.CalculateDistanceTo(proposed);
             if (Math.Abs(distance) == 0)
             {
-                preventer = obstacle.Collider;
+                preventer = obstacle;
                 return true;
-            }
+            }         
         }
         preventer = null;
         return false;
@@ -443,6 +477,22 @@ public sealed class ColliderGroup
                 var collider = entry[j]?.Collider;
                 if (collider == null || collider == owner || item.IsExpired || owner.CanCollideWith(collider) == false || collider.CanCollideWith(owner) == false) continue;
                 buffer.WriteableBuffer.Add(collider);
+            }
+        }
+    }
+
+    public void GetColliders(CollidableBuffer buffer)
+    {
+        var table = velocities.Table;
+        for (var i = 0; i < table.Length; i++)
+        {
+            var entry = table[i];
+            for (var j = 0; j < entry.Length; j++)
+            {
+                var item = entry[j];
+                var collider = entry[j]?.Collider;
+                if (collider == null || item.IsExpired) continue;
+                buffer.Items.Add(collider);
             }
         }
     }
@@ -550,6 +600,19 @@ public sealed class ColliderGroup
             Table[i] = biggerArray;
         }
 
+        internal Item GetItem(GameCollider c)
+        {
+            var i = c.ColliderHashCode % Table.Length;
+            var arr = Table[i];
+            for (int j = 0; j < arr.Length; j++)
+            {
+                var entry = arr[j];
+                if (entry != null && ReferenceEquals(entry.Collider, c))
+                    return entry;
+            }
+            return null;
+        }
+
         internal bool Remove(GameCollider c)
         {
             var i = c.ColliderHashCode % Table.Length;
@@ -585,4 +648,24 @@ public class ObstacleBuffer : Recyclable
     {
         _buffer.Clear();
     }
+}
+
+public class CollidableBuffer : Recyclable
+{
+    public List<ICollidable> Items { get; private set; } = new List<ICollidable>();
+
+    protected override void OnInit()
+    {
+        Items.Clear();
+    }
+}
+
+internal static class CollidableFast
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool CanCollideFast<TLeft, TRight>(TLeft left, TRight right)
+        where TLeft : ICollidable
+        where TRight : ICollidable
+        // NB: left ↔ right symmetry kept, exactly matches original semantics
+        => left.CanCollideWith(right) && right.CanCollideWith(left);
 }

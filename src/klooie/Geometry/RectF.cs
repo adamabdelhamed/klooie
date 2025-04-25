@@ -295,7 +295,16 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         BottomRight
     };
 
-public static RectF FromMass(ConsoleControl c, IEnumerable<ConsoleControl> others)
+    public RectF SweptAABB(in RectF after)
+    {
+        float left = MathF.Min(this.Left, after.Left);
+        float top = MathF.Min(this.Top, after.Top);
+        float right = MathF.Max(this.Right, after.Right);
+        float bottom = MathF.Max(this.Bottom, after.Bottom);
+        return new RectF(left, top, right - left, bottom - top);
+    }
+
+    public static RectF FromMass(ConsoleControl c, IEnumerable<ConsoleControl> others)
     {
 
         var left = c.Left;

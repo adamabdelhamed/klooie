@@ -198,8 +198,8 @@ public class Program
             }
         }
     }
-    public class Terrain : GameCollider { }
-    public class OuterWall : GameCollider { }
+    public sealed class Terrain : GameCollider { }
+    public sealed class OuterWall : GameCollider { }
 
     private static void RentSubscribeDisposeAndReturnOneMillionEvents()
     {
@@ -222,20 +222,36 @@ public class Program
     }
 }
 
+
+public sealed class Wall : GameCollider { }
+public sealed class  Ball : GameCollider
+{
+    
+}
 public class PhysicsSample : Game
 {
+    private Camera camera;
+    public override ConsolePanel GamePanel => camera;
+    public override RectF GameBounds => camera.BigBounds;
 
     private Random random = new Random();
     protected override async Task Startup()
     {
         await base.Startup();
-
+        LayoutRoot.Background = RGB.Green;
+        var bigBounds = new Loc().ToRect(800, 200);
+        camera = LayoutRoot.Add(new Camera() {  BigBounds = bigBounds }).FillMax(maxWidth: (int)bigBounds.Width, maxHeight: (int)bigBounds.Height);
+        camera.Background = RGB.Blue;
+        LayoutRoot.BoundsChanged.Sync(() =>
+        {
+            camera.PointAt(GameBounds.Center);
+        }, camera);
         AddWalls();
-        for (var i = 0; i < 50; i++)
+        for (var i = 0; i < 3000; i++)
         {
             AddRandomWhiteSquare();
         }
-
+        camera.Background = RGB.Black;
         Invoke(async () =>
         {
             var c = GamePanel.Controls.WhereAs<GameCollider>().Skip(10).First();
@@ -250,10 +266,11 @@ public class PhysicsSample : Game
 
     private void AddWalls()
     {
-        var leftWall = GamePanel.Add(new GameCollider() { Background = RGB.Orange, Bounds = new RectF(GamePanel.Left, GamePanel.Top, 2, Height) });
-        var rightWall = GamePanel.Add(new GameCollider() { Background = RGB.Orange, Bounds = new RectF(GamePanel.Right() - 2, GamePanel.Top, 2, Height) });
-        var topWall = GamePanel.Add(new GameCollider() { Background = RGB.Orange, Bounds = new RectF(GamePanel.Left, GamePanel.Top, Width, 1) });
-        var bottomWall = GamePanel.Add(new GameCollider() { Background = RGB.Orange, Bounds = new RectF(GamePanel.Left, GamePanel.Bottom() - 1, Width, 1) });
+        var center = GamePanel.Add(new ConsoleStringRenderer("C".ToRed()) { ZIndex = int.MaxValue });
+        var leftWall = GamePanel.Add(new Wall() { ZIndex = int.MinValue, Background = RGB.Orange, Bounds = new RectF(GameBounds.Left, GameBounds.Top, 2, GameBounds.Height) });
+        var rightWall = GamePanel.Add(new Wall() { ZIndex = int.MinValue, Background = RGB.Orange, Bounds = new RectF(GameBounds.Right - 2, GameBounds.Top, 2, GameBounds.Height) });
+        var topWall = GamePanel.Add(new Wall() { ZIndex = int.MinValue, Background = RGB.Orange, Bounds = new RectF(GameBounds.Left, GameBounds.Top, GameBounds.Width, 1) });
+        var bottomWall = GamePanel.Add(new Wall() { ZIndex = int.MinValue, Background = RGB.Orange, Bounds = new RectF(GameBounds.Left, GameBounds.Bottom - 1, GameBounds.Width, 1) });
     }
 
     private void AddRandomWhiteSquare()
@@ -261,7 +278,7 @@ public class PhysicsSample : Game
         var randomLocation = FindRandomEmptyLocation(2, 1);
         if (randomLocation.HasValue)
         {
-            var whiteSquare = GamePanel.Add(new GameCollider()
+            var whiteSquare = GamePanel.Add(new Ball()
             {
                 Background = RGB.White,
                 Bounds = new RectF(randomLocation.Value.Left, randomLocation.Value.Top, 2, 1)
