@@ -273,7 +273,7 @@ public partial class ConsoleControl : Rectangular
     }
     protected override void OnInit()
     {
-        if(Parent != null) throw new InvalidOperationException("Controls cannot be re-initialized while they are still in the visual tree.");
+        if(Parent != null) throw new InvalidOperationException($"Parent is not null, indicating this object has not been reset properly. HasBeenAddedToVisualTree == {HasBeenAddedToVisualTree}");
         base.OnInit();
         HasBeenAddedToVisualTree = false;
         CanFocus = true;
