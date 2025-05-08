@@ -30,7 +30,7 @@ public sealed class Event : Recyclable
         subscription.Bind(lifetimeManager);
         subscription.Subscribers = eventSubscribers;
         eventSubscribers.Add(subscription);
-        lifetimeManager.OnDisposed(subscription);
+        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
     // NEW OR MODIFIED CODE: Overload that accepts a scope object
@@ -50,7 +50,7 @@ public sealed class Event : Recyclable
         subscription.Bind(lifetimeManager);
         subscription.Subscribers = eventSubscribers;
         eventSubscribers.Add(subscription);
-        lifetimeManager.OnDisposed(subscription);
+        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ public sealed class Event : Recyclable
         subscription.Bind(lifetimeManager);
         subscription.Subscribers = eventSubscribers;
         eventSubscribers.Insert(0, subscription);
-        lifetimeManager.OnDisposed(subscription);
+        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
     /// <summary>
@@ -82,7 +82,7 @@ public sealed class Event : Recyclable
         subscription.Bind(lifetimeManager);
         subscription.Subscribers = eventSubscribers;
         eventSubscribers.Insert(0, subscription);
-        lifetimeManager.OnDisposed(subscription);
+        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
     /// <summary>
@@ -192,6 +192,8 @@ public sealed class Event : Recyclable
             eventSubscribers = null;
         }
     }
+
+    private static void TryDisposeMe(object me) => ((Recyclable)me).TryDispose();
 }
 
 public interface IEventT
@@ -239,14 +241,40 @@ public class Event<T> : Recyclable, IEventT
         subscription.eventT = this;
         subscription.Subscribers = innerEvent.eventSubscribers;
         innerEvent.eventSubscribers.Add(subscription);
-        lt.OnDisposed(subscription);
+        lt.OnDisposed(subscription, TryDisposeMe);
 
     }
+
+    private static void TryDisposeMe(object me) => ((Recyclable)me).TryDispose();
 
     private static void StaticCallback(object me)
     {
         var sub = (Subscription)me;
-        sub.TScopedCallback.Invoke(sub.TScope, sub.eventT.args.Peek());
+        if (sub.eventT.args.TryPeek(out var arg) == false)
+        {
+            throw new InvalidOperationException("Event<T> is firing without args in the stack");
+        }
+        sub.TScopedCallback.Invoke(sub.TScope, arg);
+    }
+
+    private void Execute(Action<T> handler)
+    {
+        if(args.TryPeek(out var arg) == false)
+        {
+            return;
+        }
+        
+        handler((T)arg);
+    }
+
+    private void Execute<TScope>(TScope scope, Action<TScope, T> handler)
+    {
+        if (args.TryPeek(out var arg) == false)
+        {
+            throw new InvalidOperationException("Event<T> is firing without args present.");
+        }
+
+        handler(scope, (T)arg);
     }
 
 
@@ -258,7 +286,7 @@ public class Event<T> : Recyclable, IEventT
     public void SubscribeWithPriority(Action<T> handler, ILifetime lt)
     {
         innerEvent = innerEvent ?? EventPool.Instance.Rent();
-        innerEvent.SubscribeWithPriority(() => handler((T)args.Peek()), lt);
+        innerEvent.SubscribeWithPriority(() => Execute(handler), lt);
     }
 
     // -----------------------------------------------
@@ -270,7 +298,7 @@ public class Event<T> : Recyclable, IEventT
     public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope, T> handler, ILifetime lt)
     {
         innerEvent = innerEvent ?? EventPool.Instance.Rent();
-        innerEvent.SubscribeWithPriority(scope, s => handler((TScope)s!, (T)args.Peek()), lt);
+        innerEvent.SubscribeWithPriority(scope, s => Execute((TScope)s!,handler), lt);
     }
 
     /// <summary>
@@ -280,7 +308,7 @@ public class Event<T> : Recyclable, IEventT
     public void SubscribeOnce(Action<T> handler)
     {
         innerEvent = innerEvent ?? EventPool.Instance.Rent();
-        innerEvent.SubscribeOnce(() => handler((T)args.Peek()));
+        innerEvent.SubscribeOnce(() => Execute(handler));
     }
 
     // -----------------------------------------------
@@ -298,7 +326,7 @@ public class Event<T> : Recyclable, IEventT
         {
             try
             {
-                handler(scope, (T)args.Peek());
+                Execute(scope, handler);
             }
             finally
             {
