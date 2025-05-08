@@ -130,6 +130,12 @@ public sealed class Subscription : Recyclable
         Reset();
     }
 
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Reset();
+    }
+
     internal void Bind(ILifetime lt)
     {
         Lifetime = lt;
@@ -150,11 +156,5 @@ public sealed class Subscription : Recyclable
         eventT = null;
         TScope = null;
         ToAlsoDispose = null;
-    }
-
-    protected override void OnReturn()
-    {
-        base.OnReturn();
-        Reset();
     }
 }
