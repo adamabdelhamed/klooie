@@ -109,6 +109,7 @@ public sealed class Velocity : Recyclable
     {
         var _this = me as Velocity;
         _this.Group.Remove(_this.Collider);
+        _this.Group = null;
     }
 
     public void GetObstacles(ObstacleBuffer buffer) => Group.GetObstacles(Collider, buffer);
