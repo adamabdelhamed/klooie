@@ -120,23 +120,22 @@ internal sealed class UniformGrid : ISpatialIndex
         }
     }
 
-    public void Query(in RectF area, ObstacleBuffer buffer)
+    public void Query(in RectF area, ObstacleBuffer outputBuffer)
     {
         _stamp++;
         LoadCells(area);
         for (int i = 0; i < cellBuffer.Count; i++)
         {
-            UniformGridCell cell = cellBuffer[i];
-            if (_buckets.TryGetValue(cell, out var list))
+            var cell = cellBuffer[i];
+            if (_buckets.TryGetValue(cell, out var bucketBuffer))
             {
-                for (int j = 0; j < list.WriteableBuffer.Count; j++)
+                for (int j = 0; j < bucketBuffer.WriteableBuffer.Count; j++)
                 {
-                    GameCollider? obj = list.WriteableBuffer[j];
-                    if (obj.QueryStamp != _stamp)
-                    {
-                        buffer.WriteableBuffer.Add(obj);
-                        obj.QueryStamp = _stamp;
-                    }
+                    var itemFromBucket = bucketBuffer.WriteableBuffer[j];
+                    if (itemFromBucket.QueryStamp == _stamp) continue;
+                    
+                    outputBuffer.WriteableBuffer.Add(itemFromBucket);
+                    itemFromBucket.QueryStamp = _stamp;
                 }
             }
         }
@@ -147,7 +146,7 @@ internal sealed class UniformGrid : ISpatialIndex
     public void QueryExcept(ObstacleBuffer buffer, GameCollider except)
     {
         _stamp++;
-        LoadCells(except.Bounds);
+        LoadCells(except.Bounds.Grow(80,40)); // TODO - Hacky, but we grow all colliders to increase the # of obstacles that can be seen.
         for (int i = 0; i < cellBuffer.Count; i++)
         {
             UniformGridCell cell = cellBuffer[i];
