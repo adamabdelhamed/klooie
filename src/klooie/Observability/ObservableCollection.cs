@@ -153,7 +153,7 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
         changed?.Fire();
         var itemLifetime = membershipLifetimes[item];
         membershipLifetimes.Remove(item);
-        itemLifetime.Dispose();
+        itemLifetime.TryDispose();
     }
 
     
