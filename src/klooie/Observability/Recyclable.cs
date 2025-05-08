@@ -181,6 +181,8 @@ public interface IObjectPool
     int Rented { get; }
     int Returned { get; }
     int AllocationsSaved => Rented - Created;
+    RecyclablePoolHunter StackHunter { get; }
+    HashSet<PendingRecyclableTracker> PendingReturns { get; }
 #endif
     void Clear();
     IObjectPool Fill(int? count = null);
@@ -196,7 +198,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public int AllocationsSaved => Rented - Created;
 
     public HashSet<PendingRecyclableTracker> PendingReturns { get; } = new HashSet<PendingRecyclableTracker>();
-    public RecyclablePoolHunter StackHunter { get; set; } = new RecyclablePoolHunter();
+    public RecyclablePoolHunter StackHunter { get; private set; } = new RecyclablePoolHunter();
 #endif
     private readonly Stack<T> _pool = new Stack<T>();
     public abstract T Factory();
