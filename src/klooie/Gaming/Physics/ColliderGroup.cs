@@ -16,7 +16,7 @@ public sealed class ColliderGroup
 
     private ISpatialIndex spatialIndex;
     public ISpatialIndex SpacialIndex => spatialIndex;
-    private readonly ObstacleBuffer sharedQueryBuffer = ObstacleBufferPool.Instance.Rent();
+    private ObstacleBuffer queryBuffer = ObstacleBufferPool.Instance.Rent();
     public float LatestDT { get; private set; }
 
     // these properties model a linear progression that determines the appropriate min
@@ -58,6 +58,11 @@ public sealed class ColliderGroup
     private void Cleanup()
     {
         colliderBuffer.WriteableBuffer.Clear();
+        colliderBuffer.Dispose();
+        queryBuffer.Dispose();
+
+        colliderBuffer = null;
+        queryBuffer = null;
         _added?.Dispose();
         _removed?.Dispose();
         onCollision?.Dispose();
@@ -153,9 +158,9 @@ public sealed class ColliderGroup
         var to = from.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false);
         var swept = from.SweptAABB(to).Grow(.01f);
 
-        sharedQueryBuffer.WriteableBuffer.Clear();
-        spatialIndex.Query(swept, sharedQueryBuffer);
-        var list = sharedQueryBuffer.WriteableBuffer;
+        queryBuffer.WriteableBuffer.Clear();
+        spatialIndex.Query(swept, queryBuffer);
+        var list = queryBuffer.WriteableBuffer;
 
         CollisionDetector.Predict(item, item.Velocity.Angle, list, expectedTravelDistance, CastingMode.Precise, list.Count, hitPrediction);
         hitPrediction.ColliderHit = hitPrediction.ColliderHit;
@@ -386,9 +391,9 @@ public sealed class ColliderGroup
     private bool WouldCauseTouching(GameCollider item, RectF proposed, out GameCollider preventer)
     {
         var swept = item.Bounds.SweptAABB(proposed).Grow(.01f);
-        sharedQueryBuffer.WriteableBuffer.Clear();
-        spatialIndex.Query(swept, sharedQueryBuffer);
-        var list = sharedQueryBuffer.WriteableBuffer;
+        queryBuffer.WriteableBuffer.Clear();
+        spatialIndex.Query(swept, queryBuffer);
+        var list = queryBuffer.WriteableBuffer;
 
         for (int i = 0; i < list.Count; i++)
         {
