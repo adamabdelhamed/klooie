@@ -3,7 +3,7 @@
 namespace klooie.Gaming;
 public partial class TargetingQueue : Recyclable, IObservableObject
 {
-    private const double Delay = 50;
+    private const double Delay = 2;
     private List<TargetingQueueEntry> evaluationQueue;
     public partial int PendingEvaluations { get; set; }
     public partial int Enqueues { get; set; }
