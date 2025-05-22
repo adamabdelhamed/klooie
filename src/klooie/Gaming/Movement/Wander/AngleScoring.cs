@@ -1,6 +1,6 @@
 ﻿namespace klooie.Gaming;
 
-public class ScoreComponent
+public class ScoreComponent : Recyclable
 {
     public string Id { get; set; }
     public float Value { get; set; }
@@ -8,6 +8,7 @@ public class ScoreComponent
     public float WeightedScore => Value * (Weight * WeightBoostMultiplier);
     public bool NeedsToBeNormalized { get; set; } = true;
     public float WeightBoostMultiplier { get; set; } = 1f;
+    public ScoreComponent() { }
     public ScoreComponent WeighIfNotSet(float weight)
     {
         if (Weight == -1)
@@ -17,13 +18,25 @@ public class ScoreComponent
         return this;
     }
 
+    public static ScoreComponent Create() => ScoreComponentPool.Instance.Rent();
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Id = null;
+        Value = default;
+        Weight = -1;
+        NeedsToBeNormalized = true;
+        WeightBoostMultiplier = 1f;
+    }
+
     public override string ToString() => $"{Id} - {Value} X {Weight} = {WeightedScore}";
 }
 
 public class WanderScore
 {
     public Angle Angle { get; set; }
-    public List<ScoreComponent> Components { get; set; }
+    public RecyclableList<ScoreComponent> Components { get; set; }
 
     public float FinalScore
     {
@@ -105,8 +118,9 @@ public class WanderScore
         var allComponents = new HashSet<string>();
         foreach (var s in scores)
         {
-            foreach (var c in s.Components)
+            for(var i = 0; i < s.Components.Count; i++)
             {
+                var c = s.Components[i];
                 if (c.NeedsToBeNormalized)
                 {
                     allComponents.Add(c.Id);
@@ -172,8 +186,7 @@ public class WanderScore
     {
         //   Filter(scores);
         ConsoleTableBuilder builder = new ConsoleTableBuilder();
-        var props = IterateThrough(scores
-                .Select(s => s.Components))
+        var props = scores.SelectMany(scores => scores.Components.Items)
                 .OrderByDescending(c => c.Weight)
                 .Select(c => new WeightedLabel() { Weight = c.Weight, Label = c.Id.ToYellow() })
                 .Distinct(WeightedLabelEqualityComparer.Default)
@@ -196,7 +209,7 @@ public class WanderScore
             ret.Add((ConsoleMath.Round(100 * s.FinalScore) + "").ToWhite());
             foreach (var prop in props)
             {
-                var cVal = s.Components.Where(c => c.Id == prop.Label.StringValue).FirstOrDefault();
+                var cVal = s.Components.Items.Where(c => c.Id == prop.Label.StringValue).FirstOrDefault();
                 ret.Add(Compress(cVal.Value) + $",{(cVal.Weight * cVal.WeightBoostMultiplier + "").Replace("0.", ".")}".ToWhite());
             }
             return ret;

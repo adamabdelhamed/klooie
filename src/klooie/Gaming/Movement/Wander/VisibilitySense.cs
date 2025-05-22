@@ -18,11 +18,10 @@ public class VisibilitySense : IWanderSense
             visibilityScore = Math.Min(visibilityScore, 1);
         }
 
-        return new ScoreComponent()
-        {
-            Id = GetType().Name,
-            Value = visibilityScore,
-            NeedsToBeNormalized = false,
-        };
+        var ret= ScoreComponent.Create();
+        ret.Id = GetType().Name;
+        ret.Value = visibilityScore;
+        ret.NeedsToBeNormalized = false;
+        return ret;
     }
 }

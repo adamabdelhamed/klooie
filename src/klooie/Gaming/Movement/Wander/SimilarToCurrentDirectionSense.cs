@@ -9,12 +9,11 @@ public class SimilarToCurrentDirectionSense : IWanderSense
 
         if (wander._LastGoodAngle.HasValue == false)
         {
-            return new ScoreComponent()
-            {
-                Id = "LAST",
-                Value = 0,
-                Weight = 0
-            };
+            var defaultRet = ScoreComponent.Create();
+            defaultRet.Id = "LAST";
+            defaultRet.Value = 0;
+            defaultRet.Weight = 0;
+            return defaultRet;
         }
 
         previousAngles.Add(wander._LastGoodAngle.Value);
@@ -34,14 +33,12 @@ public class SimilarToCurrentDirectionSense : IWanderSense
             weightMultiplier = 10;
         }
 
-
-        return new ScoreComponent()
-        {
-            Id = "LAST",
-            Value = score,
-            NeedsToBeNormalized = false,
-            WeightBoostMultiplier = weightMultiplier
-        };
+        var ret = ScoreComponent.Create();
+        ret.Id = "LAST";
+        ret.Value = score;
+        ret.NeedsToBeNormalized = false;
+        ret.WeightBoostMultiplier = weightMultiplier;
+        return ret;
     }
 
     private bool IsFlipFlopping(Wander wander, Angle proposedAngle)
