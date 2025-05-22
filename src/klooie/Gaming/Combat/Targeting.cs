@@ -225,7 +225,8 @@ public class TargetFilter : IConsoleControlFilter
         {
             for (var y = 0; y < bitmap.Height; y++)
             {
-                bitmap.SetPixel(x, y, new ConsoleCharacter(bitmap.GetPixel(x, y).Value, RGB.Black, RGB.Cyan));
+                var pix = bitmap.GetPixel(x, y);
+                bitmap.SetPixel(x, y, new ConsoleCharacter(pix.Value, pix.ForegroundColor, pix.ForegroundColor.Darker));
             }
         }
     }
