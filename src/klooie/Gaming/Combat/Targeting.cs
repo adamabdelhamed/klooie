@@ -163,8 +163,8 @@ public class Targeting : Recyclable
     private void OnTargetChanged(GameCollider? newTarget)
     {
         if (newTarget == Target) return;
-        currentTargetLifetime?.Dispose();
-        currentTargetLifetime = DefaultRecyclablePool.Instance.Rent();
+        currentTargetLifetime?.TryDispose();
+        currentTargetLifetime = newTarget == null ? null : DefaultRecyclablePool.Instance.Rent();
         newTarget?.IsVisibleChanged.Subscribe(this, OnTargetVisibilityChanged, currentTargetLifetime);
         newTarget?.Velocity.Group.Removed.Subscribe(this, OnPotentialTargetRemoved, currentTargetLifetime);
 
