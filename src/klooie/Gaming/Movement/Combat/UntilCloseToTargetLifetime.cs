@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace klooie.Gaming;
+﻿namespace klooie.Gaming;
 
 public class UntilCloseToTargetLifetime : Recyclable
 {
@@ -20,38 +14,45 @@ public class UntilCloseToTargetLifetime : Recyclable
         instance.mover = mover;
         instance.targeting = targeting;
         instance.closeEnough = closeEnough;
-        Game.Current.Invoke(instance.Monitor);
+        Monitor(instance);
         return instance;
     }
 
-    private async Task Monitor()
+    private static void Monitor(object me)
     {
-        var lease = this.Lease;
-        var colliderLease = mover.Lease;
-        var targetingLease = targeting.Lease;
+        var _this = (UntilCloseToTargetLifetime)me;
+        var lease = _this.Lease;
+        var colliderLease = _this.mover.Lease;
+        var targetingLease = _this.targeting.Lease;
  
-        while (IsStillValid(lease) && mover.IsStillValid(colliderLease))
+        if (_this.IsStillValid(lease) && _this.mover.IsStillValid(colliderLease))
         {
-            if (targeting.Target == null)
+            if (_this.targeting.Target == null)
             {
-                await Task.Delay(250);
-                continue;
+                Game.Current.InnerLoopAPIs.Delay(250, me, Monitor);
+                return;
             }
-            var buffer = ObstacleBufferPool.Instance.Rent();
-            mover.GetObstacles(buffer);
-            try
+            if (_this.IsFinished()) return;
+            Game.Current.InnerLoopAPIs.Delay(250, me, Monitor);
+        }
+    }
+
+    private bool IsFinished()
+    {
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        mover.GetObstacles(buffer);
+        try
+        {
+            if (mover.CalculateDistanceTo(targeting.Target.Bounds) <= closeEnough && mover.HasLineOfSight(targeting.Target, buffer.WriteableBuffer))
             {
-                if (mover.CalculateDistanceTo(targeting.Target.Bounds) <= closeEnough && mover.HasLineOfSight(targeting.Target, buffer.WriteableBuffer))
-                {
-                    TryDispose();
-                    break;
-                }
+                TryDispose();
+                return true;
             }
-            finally
-            {
-                buffer.TryDispose();
-            }
-            await Task.Delay(250);
+            return false;
+        }
+        finally
+        {
+            buffer.TryDispose();
         }
     }
 }

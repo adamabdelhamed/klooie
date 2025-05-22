@@ -173,21 +173,21 @@ public partial class Wander : Movement
             }
             else
             {
+                var scores = RecyclableListPool<WanderScore>.Instance.Rent();
                 var stuckTime = IsStuck ? Velocity.Group.Now - LastStuckTime.Value : TimeSpan.Zero; ;
-                var scores = GetMovementAngleCandidates().Select(a => ScoreThisOption(a, stuckTime)).ToList();
-                WanderScore.NormalizeScores(scores);
-                scores = scores.OrderByDescending(s => s.FinalScore).ToList();
-                _BestScore = scores.First();
+                foreach(var angle in  GetMovementAngleCandidates())
+                {
+                    scores.Items.Add(ScoreThisOption(angle, stuckTime));
+                }
+                WanderScore.NormalizeScores(scores.Items);
+                DescendingScoreComparer.SortScores(scores);
+                _BestScore = scores.Items[0];
                 Velocity.Angle = _BestScore.Angle;
                 Velocity.Speed = Speed();
                 lkg = _BestScore.Angle;
                 for (var i = 0; i < scores.Count; i++)
                 {
-                    for(var j = 0; j < scores[i].Components.Count; j++)
-                    {
-                        scores[i].Components[j].Dispose();
-                    }
-                    scores[i].Components.Dispose();
+                    scores[i].Dispose();
                 }
             }
             YieldForVelocityAndDelay(moveLease, FinishBody);
@@ -306,15 +306,12 @@ public partial class Wander : Movement
 
     private WanderScore ScoreThisOption(Angle angle, TimeSpan stuckDuration)
     {
-        var components = RecyclableListPool<ScoreComponent>.Instance.Rent();
-        components.Items.Add(_VisibilitySense.Measure(this, angle, stuckDuration).WeighIfNotSet(Options.Weights[typeof(VisibilitySense)]));
-        components.Items.Add(_CloserToTargetSense.Measure(this, angle, stuckDuration).WeighIfNotSet(Options.Weights[typeof(CloserToTargetSense)]));
-        components.Items.Add(_SimilarToCurrentDirectionSense.Measure(this, angle, stuckDuration).WeighIfNotSet(Options.Weights[typeof(SimilarToCurrentDirectionSense)]));
-        return new WanderScore()
-        {
-            Angle = angle,
-            Components = components,
-        };
+        var ret = WanderScore.Create();
+        ret.Angle = angle;
+        ret.Components.Items.Add(_VisibilitySense.Measure(this, angle, stuckDuration).WeighIfNotSet(Options.Weights[typeof(VisibilitySense)]));
+        ret.Components.Items.Add(_CloserToTargetSense.Measure(this, angle, stuckDuration).WeighIfNotSet(Options.Weights[typeof(CloserToTargetSense)]));
+        ret.Components.Items.Add(_SimilarToCurrentDirectionSense.Measure(this, angle, stuckDuration).WeighIfNotSet(Options.Weights[typeof(SimilarToCurrentDirectionSense)]));
+        return ret;
     }
 
     private IEnumerable<Angle> GetMovementAngleCandidates()

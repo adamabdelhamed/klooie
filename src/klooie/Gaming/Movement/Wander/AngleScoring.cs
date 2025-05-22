@@ -33,7 +33,15 @@ public class ScoreComponent : Recyclable
     public override string ToString() => $"{Id} - {Value} X {Weight} = {WeightedScore}";
 }
 
-public class WanderScore
+public class DescendingScoreComparer : IComparer<WanderScore>
+{
+    public static DescendingScoreComparer Instance = new DescendingScoreComparer();
+    private DescendingScoreComparer() { }
+    public int Compare(WanderScore? x, WanderScore? y) => y.FinalScore.CompareTo(x.FinalScore);
+    public static void SortScores(RecyclableList<WanderScore> scores) => scores.Items.Sort(Instance);
+}
+
+public class WanderScore : Recyclable
 {
     public Angle Angle { get; set; }
     public RecyclableList<ScoreComponent> Components { get; set; }
@@ -54,35 +62,27 @@ public class WanderScore
         }
     }
 
-    public override string ToString() => $"Angle: {Angle}, Score: {FinalScore}";
+    public WanderScore() { }
 
-    private static IEnumerable<T> IterateThrough<T>(IEnumerable<IEnumerable<T>> items)
+    public static WanderScore Create() => WanderScorePool.Instance.Rent();
+
+    protected override void OnInit()
     {
-        foreach (var enumerable in items)
+        Components = RecyclableListPool<ScoreComponent>.Instance.Rent();
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Angle = default;
+        for (var j = 0; j < Components.Count; j++)
         {
-            foreach (var item in enumerable)
-            {
-                yield return item;
-            }
+           Components[j].Dispose();
         }
+        Components.Dispose();
     }
 
-
-    private static Random rand = new Random();
-    public static Dictionary<Type, float> Mutate(Dictionary<Type, float> original)
-    {
-        var ret = new Dictionary<Type, float>();
-        foreach (var val in original) ret.Add(val.Key, val.Value);
-
-        var configs = ret.ToArray();
-        var toMutate = configs[rand.Next(0, configs.Length)];
-        var amount = rand.Next(1, 10) * .01f;
-        var direction = rand.NextDouble() <= .5 ? -1 : 1;
-        var newVal = toMutate.Value + (toMutate.Value * amount * direction);
-        ret[toMutate.Key] = newVal;
-        return ret;
-    }
-
+    public override string ToString() => $"Angle: {Angle}, Score: {FinalScore}";
 
     private class WeightedLabelEqualityComparer : IEqualityComparer<WeightedLabel>
     {
@@ -95,24 +95,9 @@ public class WanderScore
     {
         public ConsoleString Label { get; set; }
         public float Weight { get; set; }
-
-
         public string Hash => (Label.StringValue + "-" + Weight);
 
     }
-
-    private static ConsoleString Compress(float score)
-    {
-        score = (float)ConsoleMath.Round(score * 100);
-        if (score == 100) return "$".ToGreen();
-
-        var color = score > 70 ? RGB.Green :
-                    score > 40 ? RGB.Yellow
-                    : RGB.Red;
-
-        return ("" + score).Replace("0.", "0").ToConsoleString(color);
-    }
-
     public static void NormalizeScores(List<WanderScore> scores)
     {
         var allComponents = new HashSet<string>();
@@ -180,42 +165,6 @@ public class WanderScore
             var percentage = deltaFromMin / range;
             cs.Value = percentage;
         }
-    }
-
-    public static ConsoleString MakeTable(List<WanderScore> scores)
-    {
-        //   Filter(scores);
-        ConsoleTableBuilder builder = new ConsoleTableBuilder();
-        var props = scores.SelectMany(scores => scores.Components.Items)
-                .OrderByDescending(c => c.Weight)
-                .Select(c => new WeightedLabel() { Weight = c.Weight, Label = c.Id.ToYellow() })
-                .Distinct(WeightedLabelEqualityComparer.Default)
-                .ToList();
-        var cols = new ConsoleString[]
-        {
-                    "Ang".ToYellow(),
-                    "F".ToYellow(),
-        }
-            .Union(
-                props
-                .Take(4)
-                .Select(l => l.Label.Length <= 3 ? l.Label : l.Label.Substring(0, 3)))
-            .ToList();
-
-        var rows = scores.Select(s =>
-        {
-            var ret = new List<ConsoleString>();
-            ret.Add((ConsoleMath.Round(s.Angle.Value) + "").ToWhite());
-            ret.Add((ConsoleMath.Round(100 * s.FinalScore) + "").ToWhite());
-            foreach (var prop in props)
-            {
-                var cVal = s.Components.Items.Where(c => c.Id == prop.Label.StringValue).FirstOrDefault();
-                ret.Add(Compress(cVal.Value) + $",{(cVal.Weight * cVal.WeightBoostMultiplier + "").Replace("0.", ".")}".ToWhite());
-            }
-            return ret;
-        }).ToList();
-
-        return builder.FormatAsTable(cols, rows);
     }
 }
 
