@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+﻿using System.Runtime.CompilerServices;
 
 namespace klooie.Gaming;
 
@@ -32,7 +32,7 @@ public partial class Wander : Movement
     internal Angle? _LastGoodAngle { get; set; }
     internal Angle _OptimalAngle { get; set; }
     internal Recyclable _IterationLifetime { get; set; }
-    internal GameCollider[] _Obstacles { get; set; }
+    internal ObstacleBuffer _Obstacles { get; set; }
     internal WanderScore _BestScore { get; set; }
     internal ICollidable _CuriosityPoint { get; set; }
 
@@ -46,6 +46,11 @@ public partial class Wander : Movement
 
     private TaskCompletionSource moveTask;
 
+    public Wander()
+    {
+        _finishBodyDelegate = FinishBody;
+    }
+
     private void Bind(Velocity v, SpeedEval speed, WanderOptions options)
     {
         base.Bind(v, speed);
@@ -56,6 +61,7 @@ public partial class Wander : Movement
     {
         base.OnReturn();
         this.Options = null;
+        _IterationLifetime?.TryDispose();
     }
 
     public static Movement Create(Velocity v, SpeedEval speed, WanderOptions options = null)
@@ -100,10 +106,7 @@ public partial class Wander : Movement
     {
         Velocity?.Stop();
 
-        if (_IterationLifetime != null)
-        {
-            _IterationLifetime.Dispose();
-        }
+        _IterationLifetime?.TryDispose();
         moveTask.SetResult();
         moveTask = null;
     }
@@ -119,88 +122,106 @@ public partial class Wander : Movement
                 return;
             }
 
-            _BestScore = null;
-            _CuriosityPoint = Options.CuriousityPoint?.Invoke();
-            Velocity.Stop();
-            _IterationLifetime?.Dispose();
-            _IterationLifetime = Game.Current.CreateChildRecyclable();
-            _IterationLifetime.OnDisposed(() => _IterationLifetime = null);
-            elementBounds = Element.Bounds;
-            var buffer = ObstacleBufferPool.Instance.Rent();
-            try
-            {
-                Velocity.GetObstacles(buffer);
-
-                var count = 0;
-                for(int i = 0; i < buffer.WriteableBuffer.Count; i++)
-                {
-                    var other = buffer.WriteableBuffer[i];
-                    if (other.CalculateDistanceTo(elementBounds) <= Options.Visibility)
-                    {
-                        count++;
-                    }
-                }
-                _Obstacles = new GameCollider[count];
-
-                count = 0;
-                for (int i = 0; i < buffer.WriteableBuffer.Count; i++)
-                {
-                    var other = buffer.WriteableBuffer[i];
-                    if (other.CalculateDistanceTo(elementBounds) <= Options.Visibility)
-                    {
-                        _Obstacles[count++] = other;
-                    }
-                }
-            }
-            finally
-            {
-                buffer.Dispose();
-            }
+            PrepareIteration();
+            FilterObstacles();
             SetOptimalAngle();
 
             var cpd = _CuriosityPoint == null ? -1f : _CuriosityPoint.Bounds.CalculateNormalizedDistanceTo(Element.Bounds);
             if (_CuriosityPoint != null && cpd <= Options.CloseEnough)
             {
-                var a = Element.Bounds.Center.CalculateAngleTo(_CuriosityPoint.Bounds.Center);
-                Element.TryMoveTo(_CuriosityPoint.Bounds.Left, _CuriosityPoint.Bounds.Top);
-                lkg = a;
+                AtCuriosityPointBranch();
             }
             else if (_CuriosityPoint != null && HasStraightPath(_CuriosityPoint.Bounds))
             {
-                Velocity.Angle = Element.Bounds.CalculateAngleTo(_CuriosityPoint.Bounds);
-                Velocity.Speed = Speed();
-                lkg = Velocity.Angle;
+                StraightTowardsCuriosityPointBranch();
             }
             else
             {
-                var scores = RecyclableListPool<WanderScore>.Instance.Rent();
-                var stuckTime = IsStuck ? Velocity.Group.Now - LastStuckTime.Value : TimeSpan.Zero; ;
-                foreach(var angle in  GetMovementAngleCandidates())
-                {
-                    scores.Items.Add(ScoreThisOption(angle, stuckTime));
-                }
-                WanderScore.NormalizeScores(scores.Items);
-                DescendingScoreComparer.SortScores(scores);
-                _BestScore = scores.Items[0];
-                Velocity.Angle = _BestScore.Angle;
-                Velocity.Speed = Speed();
-                lkg = _BestScore.Angle;
-                for (var i = 0; i < scores.Count; i++)
-                {
-                    scores[i].Dispose();
-                }
+                ScoringBranch();
             }
-            YieldForVelocityAndDelay(moveLease, FinishBody);
+            YieldForVelocityAndDelay(moveLease, _finishBodyDelegate);
             HandleBeingStuck(elementBounds);
             _LastGoodAngle = lkg;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             moveTask?.SetException(ex);
             moveTask = null;
             return;
         }
+        finally
+        {
+            _Obstacles?.TryDispose();
+        }
     }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void StraightTowardsCuriosityPointBranch()
+    {
+        Velocity.Angle = Element.Bounds.CalculateAngleTo(_CuriosityPoint.Bounds);
+        Velocity.Speed = Speed();
+        lkg = Velocity.Angle;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void AtCuriosityPointBranch()
+    {
+        var a = Element.Bounds.Center.CalculateAngleTo(_CuriosityPoint.Bounds.Center);
+        Element.TryMoveTo(_CuriosityPoint.Bounds.Left, _CuriosityPoint.Bounds.Top);
+        lkg = a;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void FilterObstacles()
+    {
+        _Obstacles = ObstacleBufferPool.Instance.Rent();
+
+        Velocity.GetObstacles(_Obstacles);
+
+        for (int i = 0; i < _Obstacles.WriteableBuffer.Count; i++)
+        {
+            var other = _Obstacles.WriteableBuffer[i];
+            if (other.CalculateDistanceTo(elementBounds) > Options.Visibility)
+            {
+                _Obstacles.WriteableBuffer.Remove(other);
+            }
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void PrepareIteration()
+    {
+        _BestScore = null;
+        _CuriosityPoint = Options.CuriousityPoint?.Invoke();
+        Velocity.Stop();
+        _IterationLifetime?.TryDispose();
+        _IterationLifetime = DefaultRecyclablePool.Instance.Rent();
+        elementBounds = Element.Bounds;
+    }
+
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
+    private void ScoringBranch()
+    {
+        var scores = RecyclableListPool<WanderScore>.Instance.Rent(20);
+        var stuckTime = IsStuck ? Velocity.Group.Now - LastStuckTime.Value : TimeSpan.Zero; ;
+        foreach (var angle in GetMovementAngleCandidates())
+        {
+            scores.Items.Add(ScoreThisOption(angle, stuckTime));
+        }
+        WanderScore.NormalizeScores(scores.Items);
+        DescendingScoreComparer.SortScores(scores);
+        _BestScore = scores.Items[0];
+        Velocity.Angle = _BestScore.Angle;
+        Velocity.Speed = Speed();
+        lkg = _BestScore.Angle;
+        for (var i = 0; i < scores.Count; i++)
+        {
+            scores[i].Dispose();
+        }
+        scores.Dispose();
+    }
+
+    private readonly Action<object> _finishBodyDelegate;
 
     private void FinishBody(object moveLeaseObj)
     {
@@ -211,6 +232,7 @@ public partial class Wander : Movement
         _this.MoveLoopBody(moveLease);
     }
 
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
     private void HandleBeingStuck(RectF previousLoction)
     {
         var locNow = Element.Bounds;
@@ -229,6 +251,8 @@ public partial class Wander : Movement
 
     private Action<object> then;
     private object thenState;
+
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
     private void YieldForVelocityAndDelay(object thenState, Action<object> then)
     {
         this.then = then;
@@ -269,6 +293,7 @@ public partial class Wander : Movement
         }
     }
 
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
     private bool HasStraightPath(RectF cp)
     {
         var cpBox = ColliderBoxPool.Instance.Rent();
@@ -276,14 +301,13 @@ public partial class Wander : Movement
         try
         {
             var a = Element.Bounds.Center.CalculateAngleTo(cp.Center);
-            var colliders = ArrayPool<ICollidable>.Shared.Rent(_Obstacles.Length + 1);
+            ArrayPlusOne<GameCollider> colliders = ArrayPlusOnePool<GameCollider>.Instance.Rent();
+            colliders.Bind(_Obstacles.WriteableBuffer,cpBox);
             var prediction = CollisionPredictionPool.Instance.Rent();
             try
             {
-                Array.Copy(_Obstacles, colliders, _Obstacles.Length);
-                colliders[_Obstacles.Length] = cpBox;
                 var visibility = Element.Bounds.CalculateDistanceTo(cp) * 2f;
-                CollisionDetector.Predict(Element, a, colliders, visibility, CastingMode.Rough, bufferLen: _Obstacles.Length + 1, prediction);
+                CollisionDetector.Predict(Element, a, colliders, visibility, CastingMode.Rough, bufferLen: _Obstacles.WriteableBuffer.Count + 1, prediction);
 
                 var perfect = prediction.ColliderHit == cpBox;
                 if (perfect) return true;
@@ -292,7 +316,7 @@ public partial class Wander : Movement
             }
             finally
             {
-                ArrayPool<ICollidable>.Shared.Return(colliders);
+                colliders.Dispose();
                 prediction.Dispose();
             }
 
