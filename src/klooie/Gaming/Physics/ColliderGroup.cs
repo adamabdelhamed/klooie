@@ -8,14 +8,12 @@ public sealed class ColliderGroup
     private FrameRateMeter frameRateMeter = new FrameRateMeter();
     public int FramesPerSecond => frameRateMeter.CurrentFPS;
 
-    private int NextHashCode = 0;
-
     private Event<Collision>? onCollision;
     public Event<Collision> OnCollision => onCollision ?? (onCollision = EventPool<Collision>.Instance.Rent());
     public int Count { get; private set; }
 
-    private ISpatialIndex spatialIndex;
-    public ISpatialIndex SpacialIndex => spatialIndex;
+    private UniformGrid spatialIndex;
+    public UniformGrid SpacialIndex => spatialIndex;
     private ObstacleBuffer queryBuffer = ObstacleBufferPool.Instance.Rent();
     public float LatestDT { get; private set; }
 
@@ -77,13 +75,7 @@ public sealed class ColliderGroup
         Count++;
         _added?.Fire(c);
 
-        RectF previousBounds = c.Bounds;
         spatialIndex.Insert(c);
-        c.BoundsChanged.Subscribe(() =>
-        {
-            spatialIndex.Update(c, previousBounds);
-            previousBounds = c.Bounds;
-        }, c);
     }
 
     internal void Remove(GameCollider c)

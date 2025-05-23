@@ -22,12 +22,14 @@ public readonly struct UniformGridCell : IEquatable<UniformGridCell>
         return HashCode.Combine(X, Y);
     }
 }
-internal sealed class UniformGrid : ISpatialIndex
+public sealed class UniformGrid
 {  
     private List<UniformGridCell> cellBuffer = new List<UniformGridCell>();
     private const float _cellSize = 30f;
     private readonly Dictionary<UniformGridCell, ObstacleBuffer> _buckets = new Dictionary<UniformGridCell, ObstacleBuffer>();
     private readonly Dictionary<GameCollider,int> leases = new Dictionary<GameCollider, int>();
+    private readonly Dictionary<GameCollider, RectF> _previousBounds = new();
+ 
     private uint _stamp;
     private void LoadCells(RectF b)
     {
@@ -58,6 +60,17 @@ internal sealed class UniformGrid : ISpatialIndex
     public void Insert(GameCollider obj)
     {
         leases.Add(obj, obj.Lease);
+        _previousBounds[obj] = obj.Bounds;
+
+        // Subscribe UniformGrid to the collider's bounds changes.
+        // Note that we subscribe for the lifetime of the collider.
+        // As of the time of this commit we can be sure that we always
+        // remove the collider from the grid when it is disposed.
+        // If that ever changes then we will need to unsubscribe in
+        // a different way, possibly by using an observable collection.
+        obj.BoundsChanged.Subscribe(obj, HandleBoundsChanged, obj);
+ 
+
         LoadCells(obj.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)
         {
@@ -68,11 +81,19 @@ internal sealed class UniformGrid : ISpatialIndex
             }
             list.WriteableBuffer.Add(obj);
         }
+    }
+
+    private void HandleBoundsChanged(object state)
+    {
+        var obj = (GameCollider)state;
+        Update(obj);
     }
 
     public void Remove(GameCollider obj)
     {
         leases.Remove(obj);
+        _previousBounds.Remove(obj); // Clean up
+
         LoadCells(obj.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)
         {
@@ -89,10 +110,13 @@ internal sealed class UniformGrid : ISpatialIndex
         }
     }
 
-    public void Update(GameCollider obj, in RectF oldBounds)
+    public void Update(GameCollider obj)
     {
+        if (!_previousBounds.TryGetValue(obj, out var oldBounds))
+            oldBounds = obj.Bounds; // fallback, shouldn't happen for registered colliders
+
+        // Remove from old cells
         LoadCells(oldBounds);
-        // remove from old cells
         for (int i = 0; i < cellBuffer.Count; i++)
         {
             UniformGridCell cell = cellBuffer[i];
@@ -107,7 +131,7 @@ internal sealed class UniformGrid : ISpatialIndex
             }
         }
 
-        // insert into new cells
+        // Add to new cells
         LoadCells(obj.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)
         {
@@ -118,6 +142,9 @@ internal sealed class UniformGrid : ISpatialIndex
             }
             list.WriteableBuffer.Add(obj);
         }
+
+        // Update previous bounds
+        _previousBounds[obj] = obj.Bounds;
     }
 
     public void Query(in RectF area, ObstacleBuffer outputBuffer)
