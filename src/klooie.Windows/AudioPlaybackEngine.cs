@@ -246,13 +246,13 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         private Dictionary<string, SoundContext> soundContext;
 
         // Map from sample provider back to its soundId
-        private Dictionary<ISampleProvider, string> soundIdLookup;
+        //private Dictionary<ISampleProvider, string> soundIdLookup;
 
         public SampleFactory(Dictionary<string, Func<Stream>> rawSoundData)
         {
             // Create a single memory copy of all sounds
             soundContext = new Dictionary<string, SoundContext>(StringComparer.OrdinalIgnoreCase);
-            soundIdLookup = new Dictionary<ISampleProvider, string>();
+            //soundIdLookup = new Dictionary<ISampleProvider, string>();
 
             foreach (var kvp in rawSoundData)
             {
@@ -277,10 +277,10 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             var freshCopy = context.StreamFactory();
             var waveReader = new WaveFileReader(freshCopy);
             var freshSample = waveReader.ToSampleProvider();
-            soundIdLookup[freshSample] = soundId;
+            //soundIdLookup[freshSample] = soundId;
             return freshSample;
         }
-
+        /*
         private ISampleProvider UnwrapSampleProvider(ISampleProvider sample)
         {
             while (!soundIdLookup.ContainsKey(sample))
@@ -292,6 +292,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
             return sample;
         }
+        */
     }
 }
 
