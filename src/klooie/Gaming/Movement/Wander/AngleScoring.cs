@@ -33,12 +33,11 @@ public class ScoreComponent : Recyclable
     public override string ToString() => $"{Id} - {Value} X {Weight} = {WeightedScore}";
 }
 
-public class DescendingScoreComparer : IComparer<WanderScore>
+public static class DescendingScoreComparer
 {
-    public static DescendingScoreComparer Instance = new DescendingScoreComparer();
-    private DescendingScoreComparer() { }
-    public int Compare(WanderScore? x, WanderScore? y) => y.FinalScore.CompareTo(x.FinalScore);
-    public static void SortScores(RecyclableList<WanderScore> scores) => scores.Items.Sort(Instance);
+    private static Comparison<WanderScore> comparison = new Comparison<WanderScore>(Compare);
+    private static int Compare(WanderScore x, WanderScore y) => y.FinalScore.CompareTo(x.FinalScore);
+    public static void SortScores(RecyclableList<WanderScore> scores) => scores.Items.Sort(comparison);
 }
 
 public class WanderScore : Recyclable
@@ -98,9 +97,11 @@ public class WanderScore : Recyclable
         public string Hash => (Label.StringValue + "-" + Weight);
 
     }
+
+    private static HashSet<string> sharedHashSet = new HashSet<string>();
     public static void NormalizeScores(List<WanderScore> scores)
     {
-        var allComponents = new HashSet<string>();
+        sharedHashSet.Clear();
         foreach (var s in scores)
         {
             for(var i = 0; i < s.Components.Count; i++)
@@ -108,12 +109,12 @@ public class WanderScore : Recyclable
                 var c = s.Components[i];
                 if (c.NeedsToBeNormalized)
                 {
-                    allComponents.Add(c.Id);
+                    sharedHashSet.Add(c.Id);
                 }
             }
         }
 
-        foreach (var c in allComponents)
+        foreach (var c in sharedHashSet)
         {
             NormalizeScores(scores, c);
         }

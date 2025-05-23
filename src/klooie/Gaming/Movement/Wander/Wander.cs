@@ -139,7 +139,9 @@ public partial class Wander : Movement
             {
                 ScoringBranch();
             }
-            YieldForVelocityAndDelay(moveLease, _finishBodyDelegate);
+            var recyclableInt = RecyclableStruct<int>.Create();
+            recyclableInt.Value = moveLease;
+            YieldForVelocityAndDelay(recyclableInt, _finishBodyDelegate);
             HandleBeingStuck(elementBounds);
             _LastGoodAngle = lkg;
         }
@@ -203,11 +205,14 @@ public partial class Wander : Movement
     private void ScoringBranch()
     {
         var scores = RecyclableListPool<WanderScore>.Instance.Rent(20);
-        var stuckTime = IsStuck ? Velocity.Group.Now - LastStuckTime.Value : TimeSpan.Zero; ;
-        foreach (var angle in GetMovementAngleCandidates())
+        var stuckTime = IsStuck ? Velocity.Group.Now - LastStuckTime.Value : TimeSpan.Zero;
+        var angleCandidates = GetMovementAngleCandidates();
+        for(var i = 0; i < angleCandidates.Count; i++)
         {
+            var angle = angleCandidates[i];
             scores.Items.Add(ScoreThisOption(angle, stuckTime));
         }
+        angleCandidates.Dispose();
         WanderScore.NormalizeScores(scores.Items);
         DescendingScoreComparer.SortScores(scores);
         _BestScore = scores.Items[0];
@@ -225,7 +230,9 @@ public partial class Wander : Movement
 
     private void FinishBody(object moveLeaseObj)
     {
-        var moveLease = (int)moveLeaseObj;
+        var recycleableInt = (RecyclableStruct<int>)moveLeaseObj;
+        var moveLease = recycleableInt.Value;
+        recycleableInt.Dispose();
         var _this = this;
         _this.HandleBeingStuck(_this.elementBounds);
         _this._LastGoodAngle = _this.lkg;
@@ -338,19 +345,20 @@ public partial class Wander : Movement
         return ret;
     }
 
-    private IEnumerable<Angle> GetMovementAngleCandidates()
+    private RecyclableList<Angle> GetMovementAngleCandidates()
     {
-        yield return _OptimalAngle;
-
+        var ret = RecyclableListPool<Angle>.Instance.Rent(20);
+        ret.Items.Add(_OptimalAngle);
         Angle effectiveOptimalAngle = (float)(ConsoleMath.Round(_OptimalAngle.Value / Options.AnglePrecision) * Options.AnglePrecision);
         for (var a = 0f; a <= 180; a += Options.AnglePrecision)
         {
-            yield return effectiveOptimalAngle.Add(a);
+            ret.Items.Add(effectiveOptimalAngle.Add(a));
             if (a != 0)
             {
-                yield return effectiveOptimalAngle.Add(-a);
+                ret.Items.Add(effectiveOptimalAngle.Add(-a));
             }
         }
+        return ret;
     }
 
     public void SetOptimalAngle()
