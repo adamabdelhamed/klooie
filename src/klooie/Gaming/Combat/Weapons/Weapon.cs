@@ -21,7 +21,7 @@ public partial class Weapon : Recyclable, IObservableObject
 
     private Throttle? Debouncer { get; set; }
     public Targeting Targeting { get; private set; }
-    public GameCollider Source => Targeting.Source;
+    public GameCollider Source => Targeting.Options?.Vision?.Eye;
     public partial int AmmoAmount { get; set; }
     private TimeSpan? lastFireTime;
     protected TimeSpan MinTimeBetweenShots { get; set; } = TimeSpan.FromSeconds(.1);
@@ -121,7 +121,7 @@ public class WeaponElement : GameCollider
         if(this.Weapon == null) throw new InvalidOperationException("Weapon is null");
         if (base.CanCollideWith(other) == false) return false;
         if (other == Weapon.Source) return false;
-        if ((other as WeaponElement)?.Weapon.Source == Weapon.Source) return false;
+        if ((other as WeaponElement)?.Weapon?.Source == Weapon?.Source) return false;
         return true;
     }
 }

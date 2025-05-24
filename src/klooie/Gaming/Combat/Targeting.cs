@@ -1,187 +1,91 @@
 ﻿namespace klooie.Gaming;
+
 public class TargetingOptions
 {
     public bool HighlightTargets { get; set; }
     public required GameCollider Source { get; set; }
+    public required Vision Vision { get; set; }
     public string? TargetTag { get; set; }
-    public float AngularVisibility { get; set; } = 60;
-    public float Range { get; set; } = Targeting.MaxVisibility;
-    public float Delay { get; set; } = 500;
-}
-
-public class TargetFilterContext
-{
-    internal bool Ignored { get; private set; }
-    public GameCollider PotentialTarget { get; internal set; }
-
-    internal void Reset(GameCollider toBind)
-    {
-        Ignored = false;
-        PotentialTarget = toBind;
-    }
-
-    public void IgnoreTargeting() => Ignored = true;
 }
 
 public class Targeting : Recyclable
 {
-    public const float MaxVisibility = 1000;
+    private static readonly TargetFilter targetFilter = new TargetFilter();
 
-    private TargetFilterContext targetFilterContext = new TargetFilterContext();
+    public Recyclable? CurrentTargetLifetime { get; private set; }
 
     private Event<GameCollider?>? _targetChanged;
     private Event<GameCollider>? _targetAcquired;
-    private Event<TargetFilterContext>? _targetBeingEvaluated;
-    private static Event<Targeting>? _targetingInitiated;
-    private Recyclable? currentTargetLifetime;
-    private static TargetFilter targetFilter = new TargetFilter();
 
+    private int visionLease = 0; // Lease for the Vision instance at subscription time.
+    private int colliderLease = 0; // Lease for the Source GameCollider at subscription time.
 
-
-    public Event<GameCollider?> TargetChanged => _targetChanged ?? (_targetChanged = EventPool<GameCollider?>.Instance.Rent());
-    public Event<GameCollider> TargetAcquired => _targetAcquired ?? (_targetAcquired = EventPool<GameCollider>.Instance.Rent());
-
-    public static Event<Targeting> TargetingInitiated => _targetingInitiated ?? (_targetingInitiated = EventPool<Targeting>.Instance.Rent());
-
-    public Event<TargetFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = EventPool<TargetFilterContext>.Instance.Rent());
+    public Event<GameCollider?> TargetChanged => _targetChanged ??= EventPool<GameCollider?>.Instance.Rent();
+    public Event<GameCollider> TargetAcquired => _targetAcquired ??= EventPool<GameCollider>.Instance.Rent();
 
     public GameCollider? Target { get; private set; }
+    public TargetingOptions Options { get; private set; } = null!;
 
-    public TargetingOptions Options { get; private set; }
-
-    public GameCollider Source => Options.Source;
-
-    public ILifetime? CurrentTargetLifetime => currentTargetLifetime;
-
-    protected override void OnInit()
+    public void Bind(TargetingOptions options)
     {
-        base.OnInit();
-        _targetingInitiated?.Fire(this);
-    }
+        Options = options;
+        colliderLease = options.Source.Lease;
+        visionLease = options.Vision.Lease;
 
-    protected override void OnReturn()
-    {
-        base.OnReturn();
-        if (_targetChanged != null) _targetChanged.TryDispose();
-        if (_targetAcquired != null) _targetAcquired.TryDispose();
-        if (_targetBeingEvaluated != null) _targetBeingEvaluated.TryDispose();
-        if (_targetingInitiated != null) _targetingInitiated.TryDispose();
-        if (currentTargetLifetime != null) currentTargetLifetime.TryDispose();
-
-
-        _targetChanged = null;
-        _targetAcquired = null;
-        _targetBeingEvaluated = null;
-        _targetingInitiated = null;
-        currentTargetLifetime = null;
-    }
-
-    public void Bind(TargetingOptions options, TargetingQueue queue)
-    {
-        this.Options = options;
         options.Source.OnDisposed(this, DisposeMe);
-        queue.Add(this);
+
+        // Subscribe to vision's event; this = lifetime for safe cleanup
+        options.Vision.VisibleObjectsChanged.Subscribe(this, OnVisionChanged, this);
     }
 
     private static void DisposeMe(object me) => (me as Targeting)?.TryDispose();
- 
 
-    /// <summary>
-    /// This method now processes the evaluation immediately (once dequeued).
-    /// </summary>
-    public void Evaluate()
+    private static void OnVisionChanged(object me)
     {
-        if (Options.Range > MaxVisibility)
-            throw new ArgumentException($"Range cannot exceed {MaxVisibility}");
-        if (Options.Source.IsVisible == false) return;
-
-        var buffer = ObstacleBufferPool.Instance.Rent();
-        Options.Source.GetObstacles(buffer);
-        try
-        {
-            GameCollider? newTarget = null;
-            float closestPotentialTargetDistance = float.MaxValue;
-            for (int i = 0; i < buffer.WriteableBuffer.Count; i++)
-            {
-                GameCollider? element = buffer.WriteableBuffer[i];
-                if (MeetsTargetingCriteria(element, buffer) == false) continue;
-                var potentialTargetDistance = Options.Source.CalculateNormalizedDistanceTo(element);
-                if (potentialTargetDistance >= closestPotentialTargetDistance) continue;
-                closestPotentialTargetDistance = potentialTargetDistance;
-                newTarget = element;
-            }
-
-            OnTargetChanged(newTarget);
-        }
-        finally
-        {
-            buffer.Dispose();
-        }
+        var targeting = (Targeting)me;
+        // Defensive: Only act if Vision and Collider are still valid (don't check self)
+        if (!targeting.Options.Vision.IsStillValid(targeting.visionLease)) return;
+        if (!targeting.Options.Source.IsStillValid(targeting.colliderLease)) return;
+        targeting.Evaluate();
     }
 
-    private bool MeetsTargetingCriteria(GameCollider potentialTarget, ObstacleBuffer buffer)
+    public void Evaluate()
     {
-        var lease = Lease;
-        if (potentialTarget.Velocity == null) return false;
-        if (potentialTarget.CanCollideWith(this.Options.Source) == false &&
-            this.Options.Source.CanCollideWith(potentialTarget) == false) return false;
-        if (Options.TargetTag != null && potentialTarget.HasSimpleTag(Options.TargetTag) == false) return false;
-        if (potentialTarget.IsVisible == false) return false;
-        if (Options.Range != float.MaxValue &&
-         potentialTarget.CalculateNormalizedDistanceTo(Options.Source) > Options.Range) return false;
+        // Defensive: Only act if Vision and Collider are still valid
+        if (!Options.Vision.IsStillValid(visionLease)) return;
+        if (!Options.Source.IsStillValid(colliderLease)) return;
 
-        targetFilterContext.Reset(potentialTarget);
-        _targetBeingEvaluated?.Fire(targetFilterContext); // todo - Peek immunity, filtering out weapon elements, and concealment can be untangled from this class using this event
-        if (targetFilterContext.Ignored) return false;
+        if (!Options.Source.IsVisible)
+            return;
 
-        var angle = Options.Source.CalculateAngleTo(potentialTarget.Bounds);
-        var delta = Options.Source.Velocity.Angle.DiffShortest(angle);
-        if (delta >= Options.AngularVisibility) return false;
-
-        var lineOfSightCast = CollisionPredictionPool.Instance.Rent();
-
-        for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
+        VisuallyTrackedObject? best = null;
+        float closestDistance = float.MaxValue;
+        foreach (var tracked in Options.Vision.TrackedObjects)
         {
-            var obstacle = buffer.WriteableBuffer[i];
-            targetFilterContext.Reset(obstacle);
-            _targetBeingEvaluated?.Fire(targetFilterContext);
-            if (targetFilterContext.Ignored)
+            var tgt = tracked.Target;
+            if (Options.TargetTag != null && !tgt.HasSimpleTag(Options.TargetTag))
+                continue;
+
+            // Add more custom per-target logic here if needed
+
+            if (tracked.Distance < closestDistance)
             {
-                buffer.WriteableBuffer.RemoveAt(i);
-                i--;
+                closestDistance = tracked.Distance;
+                best = tracked;
             }
         }
-        if (IsStillValid(lease) == false) return false;
-        CollisionDetector.Predict(Options.Source, angle, buffer.WriteableBuffer, Options.Range * 3, CastingMode.Precise, buffer.WriteableBuffer.Count, lineOfSightCast);
-        var elementHit = lineOfSightCast.ColliderHit as GameCollider;
-        lineOfSightCast.Dispose();
-        if (elementHit != potentialTarget) return false;
 
-        return true;
+        OnTargetChanged(best?.Target);
     }
 
     private void OnTargetChanged(GameCollider? newTarget)
     {
         if (newTarget == Target) return;
-        currentTargetLifetime?.TryDispose();
-        currentTargetLifetime = newTarget == null ? null : DefaultRecyclablePool.Instance.Rent();
-        newTarget?.IsVisibleChanged.Subscribe(this, OnTargetVisibilityChanged, currentTargetLifetime);
-        newTarget?.Velocity.Group.Removed.Subscribe(this, OnPotentialTargetRemoved, currentTargetLifetime);
 
-        ProcessHighlightFiltering(newTarget);
-        Target = newTarget;
-        _targetChanged?.Fire(newTarget);
-        if (newTarget == null) return;
-        _targetAcquired?.Fire(newTarget);
-    }
-
-    private void ProcessHighlightFiltering(GameCollider? newTarget)
-    {
-        if (Options.HighlightTargets == false) return;
-
-        if (Target?.HasFilters == true)
+        // Remove highlight filter from old target if needed
+        if (Options.HighlightTargets && Target != null && Target.HasFilters)
         {
-            for (var i = 0; i < Target.Filters.Count; i++)
+            for (int i = 0; i < Target.Filters.Count; i++)
             {
                 if (ReferenceEquals(targetFilter, Target.Filters[i]))
                 {
@@ -191,26 +95,37 @@ public class Targeting : Recyclable
             }
         }
 
-        if (newTarget != null && (newTarget.HasFilters == false || newTarget.Filters.Contains(targetFilter) == false))
+        // Clean up previous
+        CurrentTargetLifetime?.TryDispose();
+
+        Target = newTarget;
+        CurrentTargetLifetime = newTarget == null ? null : DefaultRecyclablePool.Instance.Rent();
+
+        // Add highlight filter to new target if needed
+        if (Options.HighlightTargets && newTarget != null)
         {
-            newTarget.Filters.Add(targetFilter);
+            if (!newTarget.HasFilters || !newTarget.Filters.Contains(targetFilter))
+                newTarget.Filters.Add(targetFilter);
         }
+
+        _targetChanged?.Fire(newTarget);
+        if (newTarget != null)
+            _targetAcquired?.Fire(newTarget);
     }
 
-    private static void OnTargetVisibilityChanged(object me)
+    protected override void OnReturn()
     {
-        var _this = (Targeting)me;
-        if (_this.Target?.IsVisible == true) return;
-        _this.OnTargetChanged(null);
-    }
-
-    private static void OnPotentialTargetRemoved(object me, object colliderObj)
-    {
-
-        var collider = (GameCollider)colliderObj;
-        var _this = (me as Targeting)!;
-        if (ReferenceEquals(_this.Target, collider) == false) return;
-        _this.OnTargetChanged(null);
+        base.OnReturn();
+        _targetChanged?.TryDispose();
+        _targetAcquired?.TryDispose();
+        _targetChanged = null;
+        _targetAcquired = null;
+        Target = null;
+        Options = null!;
+        visionLease = 0;
+        colliderLease = 0;
+        CurrentTargetLifetime?.TryDispose();
+        CurrentTargetLifetime = null;
     }
 }
 

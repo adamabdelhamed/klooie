@@ -11,12 +11,12 @@ public class ProjectileRule : IRule
     private static ColliderGroup shrapnelGroup;
     public Task ExecuteAsync()
     {
-        Targeting.TargetingInitiated.Subscribe(OnTargetingInitiated, Game.Current);
+        Vision.VisionInitiated.Subscribe(OnVisionInitiated, Game.Current); // See below for this event
         Game.Current.MainColliderGroup.OnCollision.Subscribe(OnCollision, Game.Current);
         return Task.CompletedTask;
     }
 
-    private void OnCollision(Collision collision)
+    private static void OnCollision(Collision collision)
     {
         if (collision.MovingObject is Projectile == false || collision.ColliderHit is Projectile == false) return;
 
@@ -39,6 +39,22 @@ public class ProjectileRule : IRule
         SpawnShrapnel(b, bAngle.Add(-15 + random.Next(-10, 10)));
     }
 
+    public static void SimulateCollisionOnInitialPlacement(Projectile p, GameCollider obstacle)
+    {
+        var collision = CollisionPool.Instance.Rent();
+        var angle = p.Velocity.Angle;
+        var prediction = CollisionPredictionPool.Instance.Rent();
+        prediction.ObstacleHitBounds = obstacle.Bounds;
+        prediction.CollisionPredicted = true;
+        prediction.LKGD = p.CalculateDistanceTo(obstacle);
+        prediction.ColliderHit = obstacle;
+        prediction.Edge = obstacle.Bounds.LeftEdge; // todo - compute properly
+        collision.Bind(1, angle, p, obstacle, prediction);
+        p.Velocity.Group.OnCollision.Fire(collision);
+        collision.Dispose();
+        prediction.Dispose();
+    }
+
     private static ConsoleString pen = ".".ToYellow();
     private static Random random = new Random();
     private static void SpawnShrapnel(Projectile p, Angle angle)
@@ -55,16 +71,16 @@ public class ProjectileRule : IRule
     }
 
     private static void DisposeShrapnel(object obj) => ((Recyclable)obj).TryDispose();
-    
 
-    private void OnTargetingInitiated(Targeting targeting)
+
+    private void OnVisionInitiated(Vision vision)
     {
-        targeting.TargetBeingEvaluated.Subscribe(OnTargetBeingEvaluated, targeting);
+        vision.TargetBeingEvaluated.Subscribe(OnVisionTargetBeingEvaluated, vision);
     }
 
-    private void OnTargetBeingEvaluated(TargetFilterContext context)
+    private void OnVisionTargetBeingEvaluated(VisionFilterContext context)
     {
-        if (context.PotentialTarget is Projectile == true)
+        if (context.PotentialTarget is Projectile)
         {
             context.IgnoreTargeting();
         }
@@ -90,9 +106,11 @@ public class Projectile : WeaponElement
         CompositionMode = CompositionMode.BlendBackground;
         Velocity.Angle = angle;
         AddHolderSpeedToProjectileSpeedIfNeeded(speed, angle);
-        Place(w, angle);
-        Velocity.OnCollision.Subscribe(this, OnCollision, this);
-        BoundsChanged.Subscribe(this, EnforceRangeStatic, this);
+        if (TryPlace(w, angle))
+        {
+            Velocity.OnCollision.Subscribe(this, OnCollision, this);
+            BoundsChanged.Subscribe(this, EnforceRangeStatic, this);
+        }
     }
  
     private static void EnforceRangeStatic(object me)
@@ -104,13 +122,32 @@ public class Projectile : WeaponElement
         }
     }
 
-    private void Place(Weapon w, Angle angle)
+    private bool TryPlace(Weapon w, Angle angle)
     {
         this.ResizeTo(1, 1);
         this.MoveTo(w.Source.CenterX() - (Width / 2f), w.Source.CenterY() - (Height / 2f), w.Source.ZIndex);
         var offset = this.RadialOffset(angle, 1.5f, false);
         this.MoveTo(offset.Left, offset.Top);
         startLocation = this.Bounds;
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        try
+        {
+            this.GetObstacles(buffer);
+            for (int i = 0; i < buffer.WriteableBuffer.Count; i++)
+            {
+                if(this.Touches(buffer.WriteableBuffer[i]))
+                {
+                    ProjectileRule.SimulateCollisionOnInitialPlacement(this, buffer.WriteableBuffer[i]);
+                    this.TryDispose();
+                    return false;
+                }
+            }
+            return true;
+        }
+        finally
+        {
+            buffer.TryDispose();
+        }
     }
 
     private void AddHolderSpeedToProjectileSpeedIfNeeded(float speed, Angle angle)
