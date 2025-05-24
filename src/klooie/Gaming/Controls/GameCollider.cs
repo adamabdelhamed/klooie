@@ -55,7 +55,7 @@ public class GameCollider : ConsoleControl
     {
         if(base.CanCollideWith(other) == false) return false;
         if(IsVisible == false || ReferenceEquals(this, other)) return false;
-        if(other is GameCollider otherCollider && otherCollider.Velocity.Group != this.Velocity.Group) return false;
+        if(other is GameCollider otherCollider && otherCollider.Velocity?.Group != this.Velocity.Group) return false;
 
         return true;
     }
