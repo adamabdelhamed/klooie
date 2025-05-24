@@ -21,6 +21,7 @@ public class Charge : CombatMovement
                 await Mover.InvokeOrTimeout(this, Wander.Create(Velocity, Speed, new WanderOptions()
                 {
                     CuriousityPoint = () => Targeting.Target ?? defaultCuriosityPoint,
+                    CloseEnough = CloseEnough,
                 }), lt);
 
                 await StayOnTarget(CloseEnough);
