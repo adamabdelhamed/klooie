@@ -55,7 +55,7 @@ public sealed class Velocity : Recyclable
         }
     }
     public float MinEvalSeconds => this.lastEvalTime + EvalFrequencySeconds;
-    public float EvalFrequencySeconds =>  (this.Speed > ColliderGroup.HighestSpeedForEvalCalc? .025f : ColliderGroup.EvalFrequencySlope* this.speed + ColliderGroup.LeastFrequentEval);
+    public float EvalFrequencySeconds =>  (this.Speed > ColliderGroup.HighestSpeedForEvalCalc ? ColliderGroup.MostFrequentEval : ColliderGroup.EvalFrequencySlope * this.speed + ColliderGroup.LeastFrequentEval);
 
     public TimeSpan NextCollisionETA
     {

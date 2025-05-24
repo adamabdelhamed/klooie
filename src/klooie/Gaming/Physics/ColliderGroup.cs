@@ -19,11 +19,12 @@ public sealed class ColliderGroup
 
     // these properties model a linear progression that determines the appropriate min
     // evaluation time period for an object given it's current speed
-    public const float LeastFrequentEval = .05f; // y1
-    public const float LowestSpeedForEvalCalc = 0; // x1
-    public const float MostFrequentEval = .002f; // y2
-    public const float HighestSpeedForEvalCalc = 60; // x2
-    public const float EvalFrequencySlope = (MostFrequentEval - LeastFrequentEval) / (HighestSpeedForEvalCalc - LowestSpeedForEvalCalc);
+    public const float LeastFrequentEval = 0.25f;        // 250 ms (4 Hz) for slowest movers
+    public const float LowestSpeedForEvalCalc = 0f;      // x1
+    public const float MostFrequentEval = .006f;        
+    public const float HighestSpeedForEvalCalc = 60f;    // x2 (or higher, if needed)
+    public const float EvalFrequencySlope =
+        (MostFrequentEval - LeastFrequentEval) / (HighestSpeedForEvalCalc - LowestSpeedForEvalCalc);
     private ObstacleBuffer colliderBuffer;
     private CollisionPrediction hitPrediction;
     private ILifetime? lt;
@@ -147,7 +148,7 @@ public sealed class ColliderGroup
     {
         // Swept AABB: from where it is to where it’s going
         var from = item.Bounds;
-        var to = from.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false);
+        var to = from.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false); // todo: Investigate why we're using false for reverse
         var swept = from.SweptAABB(to).Grow(.01f);
 
         queryBuffer.WriteableBuffer.Clear();
@@ -423,6 +424,11 @@ public class ObstacleBuffer : Recyclable
     public List<GameCollider> WriteableBuffer => _buffer;
 
     protected override void OnInit()
+    {
+        _buffer.Clear();
+    }
+
+    protected override void OnReturn()
     {
         _buffer.Clear();
     }
