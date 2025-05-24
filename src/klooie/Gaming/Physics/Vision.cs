@@ -1,4 +1,6 @@
-﻿namespace klooie.Gaming;
+﻿using System.Runtime.CompilerServices;
+
+namespace klooie.Gaming;
 public class Vision : Recyclable
 {
     private static Event<Vision>? _visionInitiated;
@@ -8,11 +10,12 @@ public class Vision : Recyclable
     private Event? _visibleObjectsChanged;
     public Event VisibleObjectsChanged => _visibleObjectsChanged ??= EventPool.Instance.Rent();
 
-    private const float DelayMs = 333;
+    private const float DelayMs = 667;
     private int eyeLease = 0;
     private VisionFilterContext targetFilterContext = new VisionFilterContext();
     private Event<VisionFilterContext>? _targetBeingEvaluated;
-    public List<VisuallyTrackedObject> TrackedObjects { get; private set; } = new List<VisuallyTrackedObject>();
+    public List<VisuallyTrackedObject> TrackedObjectsList { get; private set; } = new List<VisuallyTrackedObject>();
+    public Dictionary<GameCollider, VisuallyTrackedObject> TrackedObjectsDictionary { get; private set; } = new Dictionary<GameCollider, VisuallyTrackedObject>();
     public Event<VisionFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = EventPool<VisionFilterContext>.Instance.Rent());
     public GameCollider Eye { get; private set; } = null!;
     public float Range { get; set; } = 100;
@@ -34,6 +37,7 @@ public class Vision : Recyclable
         return vision;
     }
 
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
     private static void ScanLoopBody(object obj)
     {
         var vision = (Vision)obj;
@@ -47,9 +51,10 @@ public class Vision : Recyclable
         Game.Current.InnerLoopAPIs.Delay(DelayMs + vision.ScanOffset, vision, ScanLoopBody);
     }
 
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
     private void Scan()
     {
-        TrackedObjects.Clear();
+        RemoveStaleTrackedObjects();
         if (Eye.IsVisible == false) return;
         var buffer = ObstacleBufferPool.Instance.Rent();
         Eye.GetObstacles(buffer);
@@ -61,7 +66,8 @@ public class Vision : Recyclable
                 GameCollider? element = buffer.WriteableBuffer[i];
                 var visibleObject = TryTrack(element, buffer);
                 if (visibleObject == null) continue;
-                TrackedObjects.Add(visibleObject);
+                TrackedObjectsDictionary.Add(element,visibleObject);
+                TrackedObjectsList.Add(visibleObject);
             }
         }
         finally
@@ -71,8 +77,39 @@ public class Vision : Recyclable
         _visibleObjectsChanged?.Fire();
     }
 
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
+    private void RemoveStaleTrackedObjects()
+    {
+        for (var i = TrackedObjectsList.Count - 1; i >= 0; i--)
+        {
+            var trackedObject = TrackedObjectsList[i];
+            if (trackedObject.IsTargetStillValid == false)
+            {
+                UnTrackAtIndex(i);
+                continue;
+            }
+
+            if (trackedObject.Age > TimeSpan.FromSeconds(2))
+            {
+                UnTrackAtIndex(i);
+                continue;
+            }
+        }
+    }
+
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
+    private void UnTrackAtIndex(int index)
+    {
+        var trackedObject = TrackedObjectsList[index];
+        TrackedObjectsDictionary.Remove(trackedObject.Target);
+        TrackedObjectsList.RemoveAt(index);
+        trackedObject.TryDispose();
+    }
+
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
     private VisuallyTrackedObject? TryTrack(GameCollider potentialTarget, ObstacleBuffer buffer)
     {
+        if(TrackedObjectsDictionary.ContainsKey(potentialTarget)) return null;
         if (potentialTarget.Velocity == null) return null;
         if (potentialTarget.CanCollideWith(Eye) == false && Eye.CanCollideWith(potentialTarget) == false) return null;
         if (potentialTarget.IsVisible == false) return null;
@@ -85,16 +122,31 @@ public class Vision : Recyclable
         return VisuallyTrackedObject.Create(potentialTarget, rayCastResult, distance, angle);
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private bool HasUnobstructedLineOfSight(GameCollider potentialTarget, Angle angle, ObstacleBuffer buffer, out CollisionPrediction rayCastResult)
     {
+        // 1. Fast path: cheap SingleRay test
+        var singleRay = CollisionPredictionPool.Instance.Rent();
+        CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Range * 2, CastingMode.SingleRay, buffer.WriteableBuffer.Count, singleRay);
+        var elementHit = singleRay.ColliderHit as GameCollider;
+        singleRay.Dispose();
+        if (elementHit != potentialTarget)
+        {
+            // Blocked by something else (fast fail)
+            rayCastResult = null!;
+            return false;
+        }
+        
+        // 2. Only if possibly visible, do the full (slow) test
         rayCastResult = CollisionPredictionPool.Instance.Rent();
         CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Range * 2, CastingMode.Precise, buffer.WriteableBuffer.Count, rayCastResult);
-        var elementHit = rayCastResult.ColliderHit as GameCollider;
-        var ret = elementHit == potentialTarget;
-        if(ret == false) rayCastResult.TryDispose();
+        var preciseHit = rayCastResult.ColliderHit as GameCollider;
+        var ret = preciseHit == potentialTarget;
+        if (!ret) rayCastResult.TryDispose();
         return ret;
     }
 
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
     private bool IsWithinFieldOfView(GameCollider potentialTarget, out Angle angle)
     {
         angle = Eye.CalculateAngleTo(potentialTarget.Bounds);
@@ -102,6 +154,7 @@ public class Vision : Recyclable
         return delta <= AngularVisibility;
     }
 
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
     private void FilterObstacles(ObstacleBuffer buffer)
     {
         for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
@@ -115,6 +168,7 @@ public class Vision : Recyclable
         }
     }
 
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
     private bool IsIgnoredByFilter(GameCollider potentialTarget)
     {
         targetFilterContext.Reset(potentialTarget);
@@ -131,7 +185,8 @@ public class Vision : Recyclable
         AngularVisibility = 60;
         _targetBeingEvaluated?.Dispose();
         _targetBeingEvaluated = null;
-        TrackedObjects.Clear();
+        TrackedObjectsDictionary.Clear();
+        TrackedObjectsList.Clear();
         _visibleObjectsChanged?.TryDispose();
         _visibleObjectsChanged = null;
     }
@@ -152,19 +207,25 @@ public class VisionFilterContext
 
 public class VisuallyTrackedObject : Recyclable
 {
+    private int targetLease;
     public GameCollider Target { get; private set; }
-    public TimeSpan LastSeenTime { get; private set; }
+    public TimeSpan CreatedTime { get; private set; }
     private CollisionPrediction RayCastResult { get; set; }
     public float Distance { get; set; }
     public Angle Angle { get; set; }
+
+    public TimeSpan Age => Game.Current.MainColliderGroup.Now - CreatedTime;
+
+    public bool IsTargetStillValid => Target.IsStillValid(targetLease);
 
     public VisuallyTrackedObject() { }
 
     public static VisuallyTrackedObject Create(GameCollider target, CollisionPrediction rayCastResult, float distance, Angle angle)
     {
         var trackedObject = VisuallyTrackedObjectPool.Instance.Rent();
+        trackedObject.targetLease = target.Lease;
         trackedObject.Target = target;
-        trackedObject.LastSeenTime = Game.Current.MainColliderGroup.Now;
+        trackedObject.CreatedTime = Game.Current.MainColliderGroup.Now;
         trackedObject.RayCastResult = rayCastResult;
         trackedObject.Distance = distance;
         trackedObject.Angle = angle;
@@ -175,8 +236,11 @@ public class VisuallyTrackedObject : Recyclable
     {
         base.OnReturn();
         Target = null;
-        LastSeenTime = TimeSpan.Zero;
+        CreatedTime = TimeSpan.Zero;
         RayCastResult?.TryDispose();
         RayCastResult = null!;
+        Distance = default;
+        Angle = default;
+        targetLease = default;
     }
 }

@@ -60,13 +60,12 @@ public class Targeting : Recyclable
 
         VisuallyTrackedObject? best = null;
         float closestDistance = float.MaxValue;
-        foreach (var tracked in Options.Vision.TrackedObjects)
+        for (int i = 0; i < Options.Vision.TrackedObjectsList.Count; i++)
         {
+            VisuallyTrackedObject? tracked = Options.Vision.TrackedObjectsList[i];
             var tgt = tracked.Target;
             if (Options.TargetTag != null && !tgt.HasSimpleTag(Options.TargetTag))
                 continue;
-
-            // Add more custom per-target logic here if needed
 
             if (tracked.Distance < closestDistance)
             {
