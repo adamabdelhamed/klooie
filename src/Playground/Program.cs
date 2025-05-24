@@ -37,9 +37,10 @@ public class Program
             var player = game.GamePanel.Add(new GameCollider() { Background = RGB.Green });
             player.MoveTo(game.GameBounds.Center.GetRounded());
 
-            var targetingQueue = TargetingQueuePool.Instance.Rent();
+            var vision = Vision.Create(player);
+
             var targeting = TargetingPool.Instance.Rent();
-            targeting.Bind(new TargetingOptions() { Source = player, HighlightTargets = true, Delay = 50 }, targetingQueue);
+            targeting.Bind(new TargetingOptions() { Vision = vision, Source = player, HighlightTargets = true  });
 
             var pistol = PistolPool.Instance.Rent();
             pistol.AmmoAmount = 1000;
