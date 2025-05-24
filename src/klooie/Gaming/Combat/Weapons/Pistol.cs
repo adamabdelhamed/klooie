@@ -9,9 +9,12 @@ public class Pistol : Weapon
     public override void FireInternal(bool alt)
     {
         LastFireAngle = CalculateAngleToTarget().Add(AngleVariation());
-        var bullet = ProjectilePool.Instance.Rent();
+        var bullet = ProjectilePool.Instance.Rent(out int lease);
         bullet.Bind(this, Speed, LastFireAngle);
         bullet.Pen = ProjectilePen;
-        Game.Current.GamePanel.Add(bullet);
+        if (bullet.IsStillValid(lease))
+        {
+            Game.Current.GamePanel.Add(bullet);
+        }
     }
 }
