@@ -89,8 +89,9 @@ public class Wander : Movement
                 force += Vector2.Normalize(toGoal) * GoalWeight;
         }
 
-        foreach (var ob in _obstacles.WriteableBuffer)
+        for (int i = 0; i < _obstacles.WriteableBuffer.Count; i++)
         {
+            GameCollider? ob = _obstacles.WriteableBuffer[i];
             var b = ob.Bounds;
             float cx = pos.X < b.Left ? b.Left : pos.X > b.Right ? b.Right : pos.X;
             float cy = pos.Y < b.Top ? b.Top : pos.Y > b.Bottom ? b.Bottom : pos.Y;
