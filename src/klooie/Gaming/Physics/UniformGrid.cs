@@ -104,7 +104,7 @@ public sealed class UniformGrid
                 if (list.WriteableBuffer.Count == 0)
                 {
                     _buckets.Remove(cell);
-                    list.Dispose();
+                    list.TryDispose();
                 }
             }
         }
@@ -126,7 +126,7 @@ public sealed class UniformGrid
                 if (list.WriteableBuffer.Count == 0)
                 {
                     _buckets.Remove(cell);
-                    list.Dispose();
+                    list.TryDispose();
                 }
             }
         }
