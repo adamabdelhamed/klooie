@@ -174,7 +174,7 @@ public static class WanderLogic
     {
         const float maxDeviation = 30f;
         const float angleStep = 10f;   
-        const float reactionTime = 0.7f;
+        const float reactionTimeInSeconds = 0.7f;
         const float inertiaPenalty = 2f; 
         const float forwardBonusFactor = 0.5f;
         const float minReward = -10000f;
@@ -211,13 +211,13 @@ public static class WanderLogic
 
         var candidateAngles = new List<Angle>();
         for (int i = -numSteps; i <= numSteps; i++)
+        {
             candidateAngles.Add(currentAngle.Add(i * angleStep));
-
+        }
     
 
         Angle bestAngle = currentAngle;
-        float bestScore = float.NegativeInfinity;
-
+ 
         for (int i = 0; i < candidateAngles.Count; i++)
         {
             Angle angle = candidateAngles[i];
@@ -231,9 +231,9 @@ public static class WanderLogic
                 curiosityDeviation = angle.DiffShortest(curiosityAngle.Value);
 
             float score;
-            if (timeToCollision < reactionTime)
+            if (timeToCollision < reactionTimeInSeconds)
             {
-                score = minReward + (timeToCollision - reactionTime) * 10f - inertiaDeviation * inertiaPenalty;
+                score = minReward + (timeToCollision - reactionTimeInSeconds) * 10f - inertiaDeviation * inertiaPenalty;
             }
             else
             {
@@ -254,16 +254,12 @@ public static class WanderLogic
         var velocity = options.Velocity;
         var currentSpeed = state.Wander.Options.Speed();
 
-        // If we have a curiosity point, check distance to it
-        if (options.CuriousityPoint != null)
+        ICollidable target;
+        if ((target = options.CuriousityPoint?.Invoke()) != null)
         {
-            var target = options.CuriousityPoint.Invoke();
-            if (target != null)
-            {
-                float distance = velocity.Collider.Bounds.CalculateDistanceTo(target.Bounds);
-                if (distance <= options.CloseEnough)
-                    return 0f; // Arrived at curiosity point
-            }
+            float distance = velocity.Collider.Bounds.CalculateDistanceTo(target.Bounds);
+            if (distance <= options.CloseEnough) return 0f; // Arrived at curiosity point
+
         }
         return currentSpeed;
     }
