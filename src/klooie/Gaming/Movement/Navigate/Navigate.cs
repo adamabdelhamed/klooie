@@ -1,11 +1,12 @@
 ﻿namespace klooie.Gaming;
-public class NavigateOptions
+public class NavigateOptions : MovementOptions
 {
     public float CloseEnough { get; set; } = Mover.DefaultCloseEnough;
     public bool TryForceDestination { get; set; } = true;
     public bool Show { get; set; }
     public Action OnDelay { get; set; }
     public Action OnSuccess { get; set; }
+    public required Func<ICollidable> Destination { get; set; } 
 }
 
 public class Navigate : Movement
@@ -15,8 +16,7 @@ public class Navigate : Movement
     public NavigationPath _CurrentPath { get; set; }
     public Recyclable _ResultLifetime { get; private set; }
 
-    private Func<ICollidable> destination;
-    public NavigateOptions Options { get; private set; }
+    public NavigateOptions NavigateOptions => (NavigateOptions)Options;
 
     public List<RectF> ObstaclesPadded
     {
@@ -25,7 +25,7 @@ public class Navigate : Movement
             var buffer = ObstacleBufferPool.Instance.Rent();
             try
             {
-                Velocity.GetObstacles(buffer);
+                Options.Velocity.GetObstacles(buffer);
                 var ret = buffer.ReadableBuffer
                     .Select(e => e.Bounds.Grow(.1f))
                     .ToList();
@@ -37,32 +37,34 @@ public class Navigate : Movement
             }
         }
     }
-    private void Bind(Velocity v, SpeedEval speed, Func<ICollidable> destination, NavigateOptions options)  
+    private void Bind(NavigateOptions options)  
     {
-        base.Bind(v, speed);
+        base.Bind(options);
         AssertSupported();
         _ResultLifetime = Game.Current.CreateChildRecyclable();
         _ResultLifetime.OnDisposed(() => _ResultLifetime = null);
-        this.Options = options ?? new NavigateOptions();
-        this.destination = destination;
     }
 
-    public static Movement Create(Velocity v, SpeedEval speed, Func<ICollidable> destination, NavigateOptions options = null)
+    public static Movement Create(NavigateOptions options)
     {
         var ret = NavigatePool.Instance.Rent();
-        ret.Bind(v, speed, destination, options);
+        ret.Bind(options);
         return ret;
     }
 
     protected override async Task Move()
     {
         ConfigureCleanup();
-        _LocalTarget = destination();
+        _LocalTarget = NavigateOptions.Destination();
 
-        await Mover.InvokeOrTimeout(this, Wander.Create(Velocity, Speed, new WanderOptions()
+        await Mover.InvokeOrTimeout(this, Wander.Create(new WanderOptions()
         {
             OnDelay = () => OnDelay(),
             CuriousityPoint = () => _LocalTarget,
+            CloseEnough = NavigateOptions.CloseEnough,
+            Speed = Options.Speed,
+            Velocity = Options.Velocity,
+            Vision = Options.Vision,
         }), EarliestOf(_ResultLifetime, this));
 
         /*
@@ -90,7 +92,7 @@ public class Navigate : Movement
     private void OnDelay()
     {
         EnsurePathUpdated();
-        Options.OnDelay?.Invoke();
+        NavigateOptions.OnDelay?.Invoke();
 
         if (_ResultLifetime == null)
         {
@@ -98,7 +100,7 @@ public class Navigate : Movement
         }
         else if (HasReachedDestination())
         {
-            Options.OnSuccess?.Invoke();
+            NavigateOptions.OnSuccess?.Invoke();
             _ResultLifetime.Dispose();
             return;
         }
@@ -116,7 +118,7 @@ public class Navigate : Movement
 
     private void EnsurePathUpdated()
     {
-        var dest = destination();
+        var dest = NavigateOptions.Destination();
         if (dest == null) return;
 
 
@@ -177,7 +179,7 @@ public class Navigate : Movement
     private bool HasReachedDestination()
     {
         bool ret;
-        var dest = destination();
+        var dest = NavigateOptions.Destination();
 
         if (dest == null)
         {
@@ -185,12 +187,12 @@ public class Navigate : Movement
             return false;
         }
 
-        if(Velocity.Collider.Bounds.CalculateNormalizedDistanceTo(dest.Bounds) <= Options.CloseEnough)
+        if(Options.Velocity.Collider.Bounds.CalculateNormalizedDistanceTo(dest.Bounds) <= NavigateOptions.CloseEnough)
         {
-            if (Options.TryForceDestination)
+            if (NavigateOptions.TryForceDestination)
             {
-                Velocity.Collider.TryMoveTo(effectiveDestination.Bounds.Left, effectiveDestination.Bounds.Top);
-                Velocity.Stop();
+                Options.Velocity.Collider.TryMoveTo(effectiveDestination.Bounds.Left, effectiveDestination.Bounds.Top);
+                Options.Velocity.Stop();
             }
             ret = true;
         }

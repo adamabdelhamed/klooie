@@ -119,7 +119,10 @@ public class Program
                 throw new Exception("overlaps detected");
             }
         }, cMover);
-        if(cMover.NudgeFree(maxSearch: 50)  == false) throw new Exception("Failed to nudge free");
+
+        var vision = Vision.Create(cMover);
+
+        if (cMover.NudgeFree(maxSearch: 50)  == false) throw new Exception("Failed to nudge free");
         cMover.Velocity.Angle = 45;
         var failed = false;
         var lastPosition = cMover.Center();
@@ -141,12 +144,12 @@ public class Program
         });
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
-        await Mover.InvokeWithShortCircuit(Wander.Create(cMover.Velocity, () => speed, new WanderOptions()
+        await Mover.InvokeWithShortCircuit(Wander.Create(new WanderOptions()
         {
-            CuriousityPoint = () =>
-            {
-                return extraTight ? new ColliderBox(Game.Current.GameBounds.Center.ToRect(1, 1)) : null;
-            },
+            Speed = ()=>speed,
+            Vision = vision,
+            Velocity = cMover.Velocity,
+            CuriousityPoint = () => extraTight ? new ColliderBox(Game.Current.GameBounds.Center.ToRect(1, 1)) : null,
         }));
         if (cMover.IsStillValid(cMoverLease)) throw new Exception("Failed to expire");
         if(failed) throw new Exception("Failed to keep moving");

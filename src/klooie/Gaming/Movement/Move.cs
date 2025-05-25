@@ -72,54 +72,44 @@ public delegate float SpeedEval();
 public abstract class Movement<T> : Movement
 {
     protected Movement() : base() { }
-
-    protected virtual void Bind(Velocity v, SpeedEval speed)
-    {
-        base.Bind(v, speed);
-    }
-
     public abstract T Result { get; protected set; }
+}
+
+public class MovementOptions
+{
+    public required Velocity Velocity { get; set; }
+    public required SpeedEval Speed { get; set; }
+    public required Vision Vision { get; set; }
 }
 
 public abstract class Movement : Recyclable
 {
-    protected float NowDisplay => ConsoleMath.Round(Velocity.Group.Now.TotalSeconds, 2);
-    public Velocity Velocity { get; private set; }
-    public SpeedEval Speed { get; set; }
-    public GameCollider Element => Velocity.Collider as GameCollider;
+    protected float NowDisplay => ConsoleMath.Round(Options.Velocity.Group.Now.TotalSeconds, 2);
+    public MovementOptions Options { get; private set; }
+    public GameCollider Element => Options.Velocity.Collider as GameCollider;
 
     private Movement parent;
 
-    private SpeedEval innerSpeedEval;
     protected Movement()
     {
 
     }
 
-    protected void Bind(Velocity v, SpeedEval innerSpeedVal)
+    protected void Bind(MovementOptions options)
     {
-        Velocity = v;
-        innerSpeedEval = innerSpeedVal;
-        Speed = CalculateEffectiveSpeed;
-        v.Collider.OnDisposed(() => TryDispose());
+        Options = options;
+        Options.Vision.OnDisposed(() => TryDispose());
+        Options.Velocity.OnDisposed(() => TryDispose());
     }
 
     protected override void OnReturn()
     {
         base.OnReturn();
-        Velocity = null;
-        innerSpeedEval = null;
-        Speed = null;
     }
 
 
 
-    public float CalculateEffectiveSpeed()
-    {
-        var desiredSpeed = innerSpeedEval != null ? innerSpeedEval() : 15;
-        return desiredSpeed;
-    }
-
+ 
     protected abstract Task Move();
 
     internal async Task InvokeInternal(Movement parent)

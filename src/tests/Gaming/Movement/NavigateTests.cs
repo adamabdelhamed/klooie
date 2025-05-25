@@ -37,13 +37,6 @@ public class NavigateTests
         }
     }
 
-    [TestMethod]
-    public void Puppet_Basic() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.RealTimeFYI, 120, 50, async (context) =>
-    {
-        Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-        await PuppetTest(30, false, null, false);
-        Game.Current.Stop();
-    });
 
     [TestMethod]
     public void Navigate_Camera()
@@ -103,6 +96,8 @@ public class NavigateTests
         bottom.MoveTo(0, Game.Current.GameBounds.Bottom - 1);
         bottom.ResizeTo(Game.Current.GameBounds.Width, 1);
 
+
+        var vision = Vision.Create(cMover);
         for (var i = 0; i < 50; i++)
         {
             var collider = Game.Current.GamePanel.Add(new TextCollider("O".ToRed()) { CompositionMode = CompositionMode.BlendBackground });
@@ -126,52 +121,27 @@ public class NavigateTests
 
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
-        bool success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => 25, () => new GameCollider(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)), new NavigateOptions()
+        bool success = await Mover.InvokeOrTimeout(Navigate.Create(new NavigateOptions()
         {
-            Show = true
+            Speed = () => 25,
+            Velocity = cMover.Velocity,
+            Destination = () => new GameCollider(Game.Current.GameBounds.BottomRight.Offset(-(4 + cMover.Width), -(2 + cMover.Height)).ToRect(cMover.Width, cMover.Height)),
+            Show = true,
+            Vision = vision,
         }), Task.Delay(10000).ToLifetime());
         Assert.IsTrue(success);
         Game.Current.Stop();
     });
-    [TestMethod]
-    public void Puppet_Camera()
-    {
-        var ev = new Event<LocF>();
-        GameCollider c = null;
-        var factory = () =>
-        {
-            c = new GameCollider();
-            c.BoundsChanged.Sync(() => ev.Fire(c.Center()), c);
-            return c;
-        };
-        GamingTest.Run(new GamingTestOptions()
-        {
-            Camera = true,
-            FocalPointChanged = ev,
-            Mode = UITestMode.RealTimeFYI,
-            TestId = TestContext.TestId(),
-            Test = async (c) =>
-            {
-                Game.Current.GamePanel.Background = new RGB(20, 20, 20);
-                await PuppetTest(100, true, factory, false);
-                Game.Current.Stop();
-            }
-        });
-    }
 
-    public Task PuppetTest(float speed, bool camera, Func<GameCollider> factory, bool extraTight)
-    {
-        return NavOrPuppetTest(false, speed, camera, factory, extraTight);
-    }
 
     public Task NavigateTest(float speed, bool camera, Func<GameCollider> factory, bool extraTight)
     {
-        return NavOrPuppetTest(true, speed, camera, factory, extraTight);
+        return NavOrPuppetTest(speed, camera, factory, extraTight);
     }
 
     private static float NowDisplay => ConsoleMath.Round(Game.Current.MainColliderGroup.Now.TotalSeconds, 2);
 
-    public async Task NavOrPuppetTest(bool nav, float speed, bool camera, Func<GameCollider> factory, bool extraTight)
+    public async Task NavOrPuppetTest(float speed, bool camera, Func<GameCollider> factory, bool extraTight)
     {
         bool success = false;
         if (extraTight)
@@ -258,19 +228,18 @@ public class NavigateTests
             }
         });
         
-        if (nav)
+    
+        success = await Mover.InvokeOrTimeout(Navigate.Create(new NavigateOptions()
         {
-            success = await Mover.InvokeOrTimeout(Navigate.Create(cMover.Velocity, () => speed, ()=> new ColliderBox(goal), new NavigateOptions()
-            {
-                CloseEnough = 5,
-                Show = true
-            }), Task.Delay(camera ? 25000 : 10000).ToLifetime());
-        }
-        else
-        {
-            
-            success = await Mover.InvokeOrTimeout(Puppet.Create(cMover.Velocity, () => speed, goal), Task.Delay(camera ? 60000 : 10000).ToLifetime());
-        }
+            Destination = () => new ColliderBox(goal),
+            Speed = () => speed,
+            Vision = Vision.Create(cMover),
+            CloseEnough = 5,
+            Show = true,
+            Velocity = cMover.Velocity,
+        }), Task.Delay(camera ? 25000 : 10000).ToLifetime());
+        
+
         Assert.IsTrue(success, $"{NowDisplay}:Failed to reach target");
         await Task.Delay(250);
         await Game.Current.RequestPaintAsync();

@@ -23,7 +23,7 @@ public class NavigationPath : Recyclable
         }
 
 #if DEBUG
-        if(options.Options.Show) ShowPath();
+        if(options.NavigateOptions.Show) ShowPath();
 #endif
     }
 
@@ -55,7 +55,7 @@ public class NavigationPath : Recyclable
                                 var y = tail[0].Top + (tail[0].Height - options.Element.Bounds.Height) / 2f;
                                 if (options.Element.TryMoveTo(x, y))
                                 {
-                                    options.Velocity.Angle = tail[0].CalculateAngleTo(tail[1]);
+                                    options.Options.Velocity.Angle = tail[0].CalculateAngleTo(tail[1]);
                                 }
                                 tail.RemoveAt(0);
                             }

@@ -75,8 +75,16 @@ public class NavigationAtScaleGame : Game
     {
         foreach(var character in characters)
         {
+            var vision = Vision.Create(character);
             var destination = new GameCollider(new RectF(goal.Left, goal.Top, 1, 1));
-            Invoke(()=>Mover.InvokeWithShortCircuit(Navigate.Create(character.Velocity, () => CharacterSpeed, () => destination)));
+            Invoke(()=>Mover.InvokeWithShortCircuit(Navigate.Create(new NavigateOptions()
+            {
+                Speed = ()=>CharacterSpeed,
+                Velocity = character.Velocity,
+                Vision = vision,
+                Destination = () => destination,
+
+            })));
         }
     }
 

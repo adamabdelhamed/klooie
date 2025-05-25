@@ -1,30 +1,41 @@
 ﻿namespace klooie.Gaming;
 
+public class ChargeOptions : CombatMovementOptions
+{
+    public required ICollidable DefaultCuriosityPoint { get; set; }
+    public float CloseEnough { get; set; } = 5;
+}
+
 public class Charge : CombatMovement
 {
-    public float CloseEnough { get; set; } = 5;
-    private ICollidable defaultCuriosityPoint;
-    private Charge(GameCollider c, Targeting targeting, SpeedEval speed, ICollidable defaultCuriosityPoint) : base(c, targeting, speed) 
+    public ChargeOptions ChargeOptions => (ChargeOptions)Options;
+
+    public Charge() { }
+    public static Movement Create(ChargeOptions options)
     {
-        this.defaultCuriosityPoint = defaultCuriosityPoint;
+        var c = ChargePool.Instance.Rent();
+        c.Bind(options);
+        return c;
     }
-    public static Movement Create(GameCollider c, Targeting targeting, SpeedEval speed, ICollidable defaultCuriosityPoint) => new Charge(c, targeting, speed, defaultCuriosityPoint);
     protected override async Task Move()
     {
         var lease = Lease;
-        var lt = UntilCloseToTargetLifetime.Create(Character, Targeting, CloseEnough);
+        var lt = UntilCloseToTargetLifetime.Create(Options.Velocity.Collider, ChargeOptions.Targeting, ChargeOptions.CloseEnough);
         Game.Current.OnDisposed(() => lt.TryDispose());
         try
         {
             while (this.IsStillValid(lease))
             {
-                await Mover.InvokeOrTimeout(this, Wander.Create(Velocity, Speed, new WanderOptions()
+                await Mover.InvokeOrTimeout(this, Wander.Create(new WanderOptions()
                 {
-                    CuriousityPoint = () => Targeting.Target ?? defaultCuriosityPoint,
-                    CloseEnough = CloseEnough,
+                    CuriousityPoint = () => ChargeOptions.Targeting.Target ?? ChargeOptions.DefaultCuriosityPoint,
+                    CloseEnough = ChargeOptions.CloseEnough,
+                    Speed = ChargeOptions.Speed,
+                    Velocity = Options.Velocity,
+                    Vision = ChargeOptions.Vision,
                 }), lt);
 
-                await StayOnTarget(CloseEnough);
+                await StayOnTarget(ChargeOptions.CloseEnough);
                 await Task.Yield();
             }
         }

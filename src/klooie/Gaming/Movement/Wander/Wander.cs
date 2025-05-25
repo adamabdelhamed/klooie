@@ -1,64 +1,69 @@
-﻿using System.Numerics;
-
-namespace klooie.Gaming;
-public class WanderOptions
+﻿namespace klooie.Gaming;
+public class WanderOptions : MovementOptions
 {
-    public float AnglePrecision { get; set; } = 45;
-    public float Visibility { get; set; } = 8;
-    public Func<ICollidable> CuriousityPoint { get; set; }
+    /// <summary>
+    /// Point of interest to wander towards, if any. If set, the wanderer will
+    /// try to move towards this point which may be an object or an empty space.
+    /// 
+    /// If not set, the wanderer will wander in the space, trying to avoid objects without
+    /// bumping into them. 
+    /// 
+    /// In all cases, the wanderer will try to avoid turning backwards to avoid obstacles.
+    /// Instead it will intelligently alter its trajectory to move around obstacles. That
+    /// intelligence is informed by the curiosity point, if set, or by common sense if not.
+    /// </summary>
+    public Func<ICollidable>? CuriousityPoint { get; set; }
+
+    /// <summary>
+    /// When CuriosityPoint is set, the wanderer will stop wandering if it gets within
+    /// this distance from the point. 
+    /// </summary>
     public float CloseEnough { get; set; } = Mover.DefaultCloseEnough;
+
+    /// <summary>
+    /// Optional code to run before the wanderer is delayed for its next adjustment.
+    /// </summary>
     public Action OnDelay { get; set; }
 }
 
 /// <summary>
-/// Potential-field wanderer: attraction to goal, inverse-linear obstacle repulsion,
-/// reduced inertia, plus optional jitter. Fully pooled, no per-angle scoring.
+/// A movement that wanders around the space, trying to avoid obstacles and
+/// optionally moving towards a point of interest.
 /// </summary>
 public class Wander : Movement
 {
     private const int DelayMs = 50;
-    private const float GoalWeight = 1.0f;
-    private const float ObstacleWeight = 2.5f;
-    private const float InertiaWeight = 0.5f;   // reduced from 1.2f
-
-    private WanderOptions _options;
-    private Vector2 _lastDir;
-    private ObstacleBuffer _obstacles;
     private TaskCompletionSource _tcs;
+    public WanderOptions WanderOptions => (WanderOptions)Options;
 
-    public static Movement Create(Velocity v, SpeedEval speed, WanderOptions opts = null)
+    public static Movement Create(WanderOptions options)
     {
         var w = WanderPool.Instance.Rent();
-        w.Bind(v, speed, opts ?? new WanderOptions());
+        w.Bind(options);
         return w;
     }
 
-    private void Bind(Velocity v, SpeedEval speed, WanderOptions opts)
+    private void Bind(WanderOptions opts)
     {
-        base.Bind(v, speed);
-        _options = opts;
-        _lastDir = Vector2.UnitX;
+        base.Bind(opts);
     }
 
     protected override void OnReturn()
     {
         base.OnReturn();
-        _obstacles?.TryDispose();
         _tcs?.TrySetResult();
         _tcs = null;
-        _options = null;
-        _lastDir = Vector2.Zero;
     }
 
     protected override Task Move()
     {
         _tcs = new TaskCompletionSource();
-        var state = WanderState.Create(this);
+        var state = WanderLoopState.Create(this);
         MoveOnce(state);
         return _tcs.Task;
     }
 
-    private void MoveOnce(WanderState state)
+    private void MoveOnce(WanderLoopState state)
     {
         if (!state.IsStillValid())
         {
@@ -66,20 +71,7 @@ public class Wander : Movement
             Finish();
             return;
         }
-
-        AcquireObstacleBuffer();
-        Vector2 position = GetCurrentPosition();
-
-        Vector2 force = Vector2.Zero;
-        force += ComputeGoalAttractionForce(position);
-        force += ComputeObstacleRepulsionForce(position);
-        force += ComputeInertiaForce();
-
-        Vector2 heading = ComputeHeading(force);
-
-        SetVelocityFromHeading(heading);
-
-        _obstacles.TryDispose();
+        WanderLogic.AdjustSpeedAndVelocity(state);
 
         if (!state.IsStillValid())
         {
@@ -91,114 +83,48 @@ public class Wander : Movement
         ScheduleNextMove(state);
     }
 
-    private void AcquireObstacleBuffer()
-    {
-        _obstacles = ObstacleBufferPool.Instance.Rent();
-        Velocity.GetObstacles(_obstacles);
-    }
+ 
 
-    private Vector2 GetCurrentPosition()
-    {
-        var center = Element.Bounds.Center;
-        return new Vector2(center.Left, center.Top);
-    }
-
-    private Vector2 ComputeGoalAttractionForce(Vector2 position)
-    {
-        var curiosity = _options.CuriousityPoint?.Invoke();
-        if (curiosity == null) return Vector2.Zero;
-
-        var center = curiosity.Bounds.Center;
-        var target = new Vector2(center.Left, center.Top);
-        var toGoal = target - position;
-        if (toGoal.LengthSquared() == 0f) return Vector2.Zero;
-        return Vector2.Normalize(toGoal) * GoalWeight;
-    }
-
-    private Vector2 ComputeObstacleRepulsionForce(Vector2 position)
-    {
-        float visibility = _options.Visibility;
-        float visSq = visibility * visibility;
-        Vector2 repulsion = Vector2.Zero;
-
-        for (int i = 0; i < _obstacles.WriteableBuffer.Count; i++)
-        {
-            var obstacle = _obstacles.WriteableBuffer[i];
-            var bounds = obstacle.Bounds;
-
-            float cx = position.X < bounds.Left ? bounds.Left : position.X > bounds.Right ? bounds.Right : position.X;
-            float cy = position.Y < bounds.Top ? bounds.Top : position.Y > bounds.Bottom ? bounds.Bottom : position.Y;
-            var closest = new Vector2(cx, cy);
-
-            var away = position - closest;
-            float d2 = away.LengthSquared();
-            if (d2 == 0f) continue;
-
-            float d = MathF.Sqrt(d2);
-            if (d > visibility) continue;
-
-            float strength = ObstacleWeight * (visibility - d) / d;
-            repulsion += Vector2.Normalize(away) * strength;
-        }
-
-        return repulsion;
-    }
-
-    private Vector2 ComputeInertiaForce()
-    {
-        return _lastDir * InertiaWeight;
-    }
-
-    private Vector2 ComputeHeading(Vector2 force)
-    {
-        return force.LengthSquared() < float.Epsilon ? _lastDir : Vector2.Normalize(force);
-    }
-
-    private void SetVelocityFromHeading(Vector2 heading)
-    {
-        float rad = MathF.Atan2(heading.Y, heading.X);
-        float deg = rad * (180f / MathF.PI);
-        float precision = _options.AnglePrecision;
-        float quantDeg = MathF.Round(deg / precision) * precision;
-
-        Velocity.Angle = (Angle)quantDeg;
-        Velocity.Speed = Speed();
-
-        float quantRad = quantDeg * (MathF.PI / 180f);
-        _lastDir = new Vector2(MathF.Cos(quantRad), MathF.Sin(quantRad));
-    }
-
-    private void ScheduleNextMove(WanderState state)
+    private void ScheduleNextMove(WanderLoopState state)
     {
         ConsoleApp.Current.InnerLoopAPIs.Delay(DelayMs, state, MoveOnceStatic);
     }
 
     private static void MoveOnceStatic(object o)
-        => ((WanderState)o).Wander.MoveOnce((WanderState)o);
+    {
+        var state = (WanderLoopState)o;
+        state.Wander.WanderOptions.OnDelay?.Invoke();
+        state.Wander.MoveOnce(state);
+    }
 
     private void Finish()
     {
         _tcs?.TrySetResult();
-        _obstacles.TryDispose();
     }
 }
 
-public class WanderState : Recyclable
+public class WanderLoopState : Recyclable
 {
     public Wander Wander { get; private set; } = null!;
     public int WanderLease { get; private set; }
     public int ElementLease { get; private set; }
 
+    /// <summary>
+    /// The last few angles the wanderer has taken. This is used to avoid
+    /// turning backwards over and over and to help the wanderer make intelligent decisions
+    /// </summary>
+    public List<Angle> LastFewAngles = new List<Angle>();
+
     public bool IsStillValid()
         => Wander.IsStillValid(WanderLease)
-        && Wander.Velocity?.Collider.IsStillValid(ElementLease) == true;
+        && Wander.Options.Velocity?.Collider.IsStillValid(ElementLease) == true;
 
-    public static WanderState Create(Wander w)
+    public static WanderLoopState Create(Wander w)
     {
-        var s = WanderStatePool.Instance.Rent();
+        var s = WanderLoopStatePool.Instance.Rent();
         s.Wander = w;
         s.WanderLease = w.Lease;
-        s.ElementLease = w.Velocity.Collider.Lease;
+        s.ElementLease = w.Options.Velocity.Collider.Lease;
         return s;
     }
 
@@ -208,6 +134,49 @@ public class WanderState : Recyclable
         Wander = null!;
         ElementLease = 0;
         WanderLease = 0;
+        LastFewAngles.Clear();
+    }
+}
+
+/// <summary>
+/// Logic for the Wander movement, including speed and velocity adjustments.
+/// 
+/// Requirements:
+/// - The wanderer intelligentlys avoid obstacles by altering its trajectory a few seconds before collision.
+/// - The wanderer strongly prefers to walk around obstacles rather than turning around and going back.
+/// - If a curiosity point is set, the wanderer should try to move towards it. Speed should be set to zero if the wanderer is close enough to the curiosity point.
+/// - If the curiosity point is not set, the wanderer should wander in the space, trying to avoid objects without bumping into them.
+/// - All code of non-trivial complexity should be isolated in its own method that accepts the WanderLoopState as a parameter.
+///     - All math of non-trivial complexity should have helpful variable names and comments.
+/// - Wanderers and obstacles are rectangles that can be any size. The code should never assume a specific size.
+/// </summary>
+public static class WanderLogic
+{
+    public static void AdjustSpeedAndVelocity(WanderLoopState currentState)
+    {
+        var options = currentState.Wander.WanderOptions;
+        var curiosityPoint = options.CuriousityPoint?.Invoke();
+        var newSpeed = currentState.Wander.Options.Speed(); // initially set to default speed, set to zero if close enough to curiosity point
+        var newAngle = currentState.Wander.Options.Velocity.Angle; // initially set to current angle, will be adjusted based on obstacles and curiosity point
+        var trackedObjects = currentState.Wander.Options.Vision.TrackedObjectsList;
+
+        // consider all of the objects that the wanderer can see
+        for (var i = 0; i < trackedObjects.Count; i++)
+        {
+            var trackedObject = trackedObjects[i];
+            var bounds = trackedObject.Target.Bounds; // a RectF with Top, Left, Width, Height, Center, TopEdge, BottomEdge, LeftEdge, RightEdge, etc.
+            var angle = trackedObject.Angle; // The angle from the wanderer's perspective to the tracked object
+            var distance = trackedObject.Distance; // The distance from the wanderer to the tracked object
+            var closestEdge = trackedObject.RayCastResult.Edge; // The edge of the tracked object that was hit by the ray cast with From (LocF) and To (LocF) properties
+
+            // TODO: Use the information from the tracked object to adjust the speed and angle of the wanderer
+        }
+
+        options.Velocity.Speed = newSpeed;
+        options.Velocity.Angle = newAngle;
+
+        currentState.LastFewAngles.Add(options.Velocity.Angle);
+        if (currentState.LastFewAngles.Count > 5) currentState.LastFewAngles.RemoveAt(0);
     }
 }
 

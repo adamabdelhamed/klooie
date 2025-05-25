@@ -210,7 +210,7 @@ public class VisuallyTrackedObject : Recyclable
     private int targetLease;
     public GameCollider Target { get; private set; }
     public TimeSpan CreatedTime { get; private set; }
-    private CollisionPrediction RayCastResult { get; set; }
+    public CollisionPrediction RayCastResult { get; set; }
     public float Distance { get; set; }
     public Angle Angle { get; set; }
 
