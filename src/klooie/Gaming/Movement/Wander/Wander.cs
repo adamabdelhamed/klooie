@@ -152,31 +152,143 @@ public class WanderLoopState : Recyclable
 /// </summary>
 public static class WanderLogic
 {
-    public static void AdjustSpeedAndVelocity(WanderLoopState currentState)
+    public static void AdjustSpeedAndVelocity(WanderLoopState state)
     {
-        var options = currentState.Wander.WanderOptions;
-        var curiosityPoint = options.CuriousityPoint?.Invoke();
-        var newSpeed = currentState.Wander.Options.Speed(); // initially set to default speed, set to zero if close enough to curiosity point
-        var newAngle = currentState.Wander.Options.Velocity.Angle; // initially set to current angle, will be adjusted based on obstacles and curiosity point
-        var trackedObjects = currentState.Wander.Options.Vision.TrackedObjectsList;
+        // 1. Select the best steering angle given current situation
+        var chosenAngle = SelectSteeringAngle(state);
 
-        // consider all of the objects that the wanderer can see
-        for (var i = 0; i < trackedObjects.Count; i++)
+        // 2. Evaluate the best speed (0 if blocked, full if clear)
+        var chosenSpeed = EvaluateSpeed(state, chosenAngle);
+
+        // 3. Apply to velocity
+        var velocity = state.Wander.WanderOptions.Velocity;
+        velocity.Angle = chosenAngle;
+        velocity.Speed = chosenSpeed;
+
+        // 4. Maintain angle history for inertia
+        state.LastFewAngles.Add(chosenAngle);
+        if (state.LastFewAngles.Count > 5) state.LastFewAngles.RemoveAt(0);
+    }
+
+    private static Angle SelectSteeringAngle(WanderLoopState state)
+    {
+        const float maxDeviation = 30f;
+        const float angleStep = 10f;   
+        const float reactionTime = 0.7f;
+        const float inertiaPenalty = 2f; 
+        const float forwardBonusFactor = 0.5f;
+        const float minReward = -10000f;
+        const float curiosityBias = 2.0f; 
+
+        var options = state.Wander.WanderOptions;
+        var velocity = options.Velocity;
+        var currentAngle = velocity.Angle;
+        var currentSpeed = velocity.Speed;
+
+        Angle? curiosityAngle = null;
+        if (options.CuriousityPoint != null)
         {
-            var trackedObject = trackedObjects[i];
-            var bounds = trackedObject.Target.Bounds; // a RectF with Top, Left, Width, Height, Center, TopEdge, BottomEdge, LeftEdge, RightEdge, etc.
-            var angle = trackedObject.Angle; // The angle from the wanderer's perspective to the tracked object
-            var distance = trackedObject.Distance; // The distance from the wanderer to the tracked object
-            var closestEdge = trackedObject.RayCastResult.Edge; // The edge of the tracked object that was hit by the ray cast with From (LocF) and To (LocF) properties
-
-            // TODO: Use the information from the tracked object to adjust the speed and angle of the wanderer
+            var target = options.CuriousityPoint.Invoke();
+            if (target != null)
+            {
+                curiosityAngle = velocity.Collider.Bounds.CalculateAngleTo(target.Bounds);
+            }
         }
 
-        options.Velocity.Speed = newSpeed;
-        options.Velocity.Angle = newAngle;
+        // Compute the "inertia angle" (average of recent angles)
+        Angle inertiaAngle = currentAngle;
+        if (state.LastFewAngles.Count > 0)
+        {
+            float sum = 0;
+            foreach (var angle in state.LastFewAngles)
+            {
+                sum += angle.Value;
+            }
+            inertiaAngle = new Angle(sum / state.LastFewAngles.Count);
+        }
+ 
+        var numSteps = (int)(maxDeviation / angleStep);
 
-        currentState.LastFewAngles.Add(options.Velocity.Angle);
-        if (currentState.LastFewAngles.Count > 5) currentState.LastFewAngles.RemoveAt(0);
+        var candidateAngles = new List<Angle>();
+        for (int i = -numSteps; i <= numSteps; i++)
+            candidateAngles.Add(currentAngle.Add(i * angleStep));
+
+    
+
+        Angle bestAngle = currentAngle;
+        float bestScore = float.NegativeInfinity;
+
+        for (int i = 0; i < candidateAngles.Count; i++)
+        {
+            Angle angle = candidateAngles[i];
+            float timeToCollision = PredictCollision(state, angle);
+
+            float inertiaDeviation = angle.DiffShortest(inertiaAngle);
+            float forwardDeviation = Math.Abs(angle.DiffShortest(currentAngle));
+
+            float curiosityDeviation = 0f;
+            if (curiosityAngle.HasValue)
+                curiosityDeviation = angle.DiffShortest(curiosityAngle.Value);
+
+            float score;
+            if (timeToCollision < reactionTime)
+            {
+                score = minReward + (timeToCollision - reactionTime) * 10f - inertiaDeviation * inertiaPenalty;
+            }
+            else
+            {
+                score = timeToCollision * 2f
+                        - inertiaDeviation * inertiaPenalty
+                        - forwardDeviation * forwardBonusFactor
+                        - curiosityDeviation * curiosityBias;
+            }
+        }
+
+        return bestAngle;
+    }
+
+
+    private static float EvaluateSpeed(WanderLoopState state, Angle chosenAngle)
+    {
+        var options = state.Wander.WanderOptions;
+        var velocity = options.Velocity;
+        var currentSpeed = state.Wander.Options.Speed();
+
+        // If we have a curiosity point, check distance to it
+        if (options.CuriousityPoint != null)
+        {
+            var target = options.CuriousityPoint.Invoke();
+            if (target != null)
+            {
+                float distance = velocity.Collider.Bounds.CalculateDistanceTo(target.Bounds);
+                if (distance <= options.CloseEnough)
+                    return 0f; // Arrived at curiosity point
+            }
+        }
+        return currentSpeed;
+    }
+
+    private static float PredictCollision(WanderLoopState state, Angle angle)
+    {
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        var prediction = CollisionPredictionPool.Instance.Rent();
+        try
+        {
+            for (var i = 0; i < state.Wander.Options.Vision.TrackedObjectsList.Count; i++)
+            {
+                buffer.WriteableBuffer.Add(state.Wander.Options.Vision.TrackedObjectsList[i].Target);
+            }
+
+            CollisionDetector.Predict(state.Wander.Options.Velocity.Collider, angle, buffer.WriteableBuffer, state.Wander.Options.Vision.Range, CastingMode.SingleRay, buffer.WriteableBuffer.Count, prediction);
+            if(prediction.CollisionPredicted == false) return float.MaxValue;
+            var timeToCollision = prediction.LKGD * state.Wander.Options.Velocity.Speed;
+            return timeToCollision;
+        }
+        finally
+        {
+            buffer.Dispose();
+            prediction.Dispose();
+        }
     }
 }
 
