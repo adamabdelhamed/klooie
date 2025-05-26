@@ -167,19 +167,19 @@ public static class WanderLogic
 
         // 4. Maintain angle history for inertia
         state.LastFewAngles.Add(chosenAngle);
-        if (state.LastFewAngles.Count > 5) state.LastFewAngles.RemoveAt(0);
+        if (state.LastFewAngles.Count > 10) state.LastFewAngles.RemoveAt(0);
     }
+
+    const float maxDeviation = 45f;
+    const float angleStep = 15f;
+    const float reactionTime = 0.8f;
+    const float inertiaPenalty = 4f;
+    const float forwardBonusFactor = 0.75f;
+    const float minReward = -10000f;
+    const float curiosityBias = 2.0f;
 
     private static Angle SelectSteeringAngle(WanderLoopState state)
     {
-        const float maxDeviation = 30f;
-        const float angleStep = 10f;   
-        const float reactionTimeInSeconds = 0.7f;
-        const float inertiaPenalty = 2f; 
-        const float forwardBonusFactor = 0.5f;
-        const float minReward = -10000f;
-        const float curiosityBias = 2.0f; 
-
         var options = state.Wander.WanderOptions;
         var velocity = options.Velocity;
         var currentAngle = velocity.Angle;
@@ -206,18 +206,18 @@ public static class WanderLogic
             }
             inertiaAngle = new Angle(sum / state.LastFewAngles.Count);
         }
- 
+
         var numSteps = (int)(maxDeviation / angleStep);
 
         var candidateAngles = new List<Angle>();
         for (int i = -numSteps; i <= numSteps; i++)
-        {
             candidateAngles.Add(currentAngle.Add(i * angleStep));
-        }
-    
+
+
 
         Angle bestAngle = currentAngle;
- 
+        float bestScore = float.NegativeInfinity;
+
         for (int i = 0; i < candidateAngles.Count; i++)
         {
             Angle angle = candidateAngles[i];
@@ -231,9 +231,9 @@ public static class WanderLogic
                 curiosityDeviation = angle.DiffShortest(curiosityAngle.Value);
 
             float score;
-            if (timeToCollision < reactionTimeInSeconds)
+            if (timeToCollision < reactionTime)
             {
-                score = minReward + (timeToCollision - reactionTimeInSeconds) * 10f - inertiaDeviation * inertiaPenalty;
+                score = minReward + (timeToCollision - reactionTime) * 10f - inertiaDeviation * inertiaPenalty;
             }
             else
             {
@@ -241,6 +241,12 @@ public static class WanderLogic
                         - inertiaDeviation * inertiaPenalty
                         - forwardDeviation * forwardBonusFactor
                         - curiosityDeviation * curiosityBias;
+            }
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestAngle = angle;
             }
         }
 
@@ -254,12 +260,16 @@ public static class WanderLogic
         var velocity = options.Velocity;
         var currentSpeed = state.Wander.Options.Speed();
 
-        ICollidable target;
-        if ((target = options.CuriousityPoint?.Invoke()) != null)
+        // If we have a curiosity point, check distance to it
+        if (options.CuriousityPoint != null)
         {
-            float distance = velocity.Collider.Bounds.CalculateDistanceTo(target.Bounds);
-            if (distance <= options.CloseEnough) return 0f; // Arrived at curiosity point
-
+            var target = options.CuriousityPoint.Invoke();
+            if (target != null)
+            {
+                float distance = velocity.Collider.Bounds.CalculateDistanceTo(target.Bounds);
+                if (distance <= options.CloseEnough)
+                    return 0f; // Arrived at curiosity point
+            }
         }
         return currentSpeed;
     }
@@ -276,7 +286,7 @@ public static class WanderLogic
             }
 
             CollisionDetector.Predict(state.Wander.Options.Velocity.Collider, angle, buffer.WriteableBuffer, state.Wander.Options.Vision.Range, CastingMode.SingleRay, buffer.WriteableBuffer.Count, prediction);
-            if(prediction.CollisionPredicted == false) return float.MaxValue;
+            if (prediction.CollisionPredicted == false) return float.MaxValue;
             var timeToCollision = prediction.LKGD * state.Wander.Options.Velocity.Speed;
             return timeToCollision;
         }
