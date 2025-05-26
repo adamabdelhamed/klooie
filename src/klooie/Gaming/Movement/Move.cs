@@ -98,8 +98,13 @@ public abstract class Movement : Recyclable
     protected void Bind(MovementOptions options)
     {
         Options = options;
-        Options.Vision.OnDisposed(() => TryDispose());
-        Options.Velocity.OnDisposed(() => TryDispose());
+        Options.Vision.OnDisposed(this, DisposeMeStatic);
+        Options.Velocity.OnDisposed(this, DisposeMeStatic);
+    }
+
+    private static void DisposeMeStatic(object movement)
+    {
+        ((Recyclable)movement).TryDispose();
     }
 
     protected override void OnReturn()
