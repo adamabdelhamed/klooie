@@ -526,90 +526,54 @@ public sealed class ConsoleBitmap
     /// <returns></returns>
     public static int DefineLineBuffered(int x1, int y1, int x2, int y2, Loc[] buffer = null)
     {
-        LineBuffer = buffer != null ? LineBuffer : LineBuffer ?? new Loc[10000];
-        buffer = buffer ?? LineBuffer;
-
-        var ret = 0;
-        if (x1 == x2)
+        // Use provided buffer, or use a static one, allocating if needed
+        if (buffer == null)
         {
-            int yMin = y1 >= y2 ? y2 : y1;
-            int yMax = y1 >= y2 ? y1 : y2;
-            for (int y = yMin; y < yMax; y++)
-            {
-                buffer[ret++] = new Loc(x1, y);
-            }
+            LineBuffer ??= new Loc[10000];
+            buffer = LineBuffer;
         }
-        else if (y1 == y2)
+
+        int ret = 0;
+
+        // Bresenham's Line Algorithm
+        int dx = Math.Abs(x2 - x1);
+        int dy = Math.Abs(y2 - y1);
+
+        int sx = (x1 < x2) ? 1 : -1;
+        int sy = (y1 < y2) ? 1 : -1;
+
+        int x = x1;
+        int y = y1;
+
+        bool steep = dy > dx;
+        int err = (steep ? dy : dx) / 2;
+
+        int n = (steep ? dy : dx) + 1; // Number of points (inclusive)
+        for (int i = 0; i < n; i++)
         {
-            int xMin = x1 >= x2 ? x2 : x1;
-            int xMax = x1 >= x2 ? x1 : x2;
-            for (int x = xMin; x < xMax; x++)
+            buffer[ret++] = new Loc(x, y);
+
+            if (x == x2 && y == y2)
+                break;
+
+            if (steep)
             {
-                buffer[ret++] = new Loc(x, y1);
-            }
-        }
-        else
-        {
-            float slope = ((float)y2 - y1) / ((float)x2 - x1);
-
-            int dx = Math.Abs(x1 - x2);
-            int dy = Math.Abs(y1 - y2);
-
-            var last = new Loc();
-            if (dy > dx)
-            {
-                for (float x = x1; x < x2; x += DrawPrecision)
+                y += sy;
+                err -= dx;
+                if (err < 0)
                 {
-                    float y = slope + (x - x1) + y1;
-                    int xInt = ConsoleMath.Round(x);
-                    int yInt = ConsoleMath.Round(y);
-                    var p = new Loc(xInt, yInt);
-                    if (p.Equals(last) == false)
-                    {
-                        buffer[ret++] = p;
-                        last = p;
-                    }
-                }
-
-                for (float x = x2; x < x1; x += DrawPrecision)
-                {
-                    float y = slope + (x - x1) + y1;
-                    int xInt = ConsoleMath.Round(x);
-                    int yInt = ConsoleMath.Round(y);
-                    var p = new Loc(xInt, yInt);
-                    if (p.Equals(last) == false)
-                    {
-                        buffer[ret++] = p;
-                        last = p;
-                    }
+                    x += sx;
+                    err += dy;
                 }
             }
             else
             {
-                for (float y = y1; y < y2; y += DrawPrecision)
+                x += sx;
+                err -= dy;
+                if (err < 0)
                 {
-                    float x = ((y - y1) / slope) + x1;
-                    int xInt = ConsoleMath.Round(x);
-                    int yInt = ConsoleMath.Round(y);
-                    var p = new Loc(xInt, yInt);
-                    if (p.Equals(last) == false)
-                    {
-                        buffer[ret++] = p;
-                        last = p;
-                    }
-                }
-
-                for (float y = y2; y < y1; y += DrawPrecision)
-                {
-                    float x = ((y - y1) / slope) + x1;
-                    int xInt = ConsoleMath.Round(x);
-                    int yInt = ConsoleMath.Round(y);
-                    var p = new Loc(xInt, yInt);
-                    if (p.Equals(last) == false)
-                    {
-                        buffer[ret++] = p;
-                        last = p;
-                    }
+                    y += sy;
+                    err += dx;
                 }
             }
         }
