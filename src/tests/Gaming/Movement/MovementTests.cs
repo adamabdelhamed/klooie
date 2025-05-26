@@ -95,7 +95,7 @@ public class MovementTests
         GameHeight = 40,
         Test = async (context) =>
         {
-            await WanderTest(20, 5000, false, null, false);
+            await WanderTest(40, 5000, false, null, false);
             await Game.Current.RequestPaintAsync();
             await Game.Current.Delay(500);
             Game.Current.Stop();
@@ -212,7 +212,7 @@ public class MovementTests
             }
         }, cMover);
         Assert.IsTrue(cMover.NudgeFree(maxSearch: 50));
-        cMover.Velocity.Angle = 45;
+        cMover.Velocity.Angle = 0;
         var failed = false;
         var lastPosition = cMover.Center();
         Game.Current.Invoke(async () =>
@@ -238,7 +238,6 @@ public class MovementTests
             Speed = () => speed,
             Velocity = cMover.Velocity,
             Vision = vision,
-            CuriousityPoint = ()=> extraTight ? new ColliderBox(Game.Current.GameBounds.Center.ToRect(1,1)) : null,
         }));
         Assert.IsTrue(cMover.IsStillValid(cMoverLease) == false);
         //Assert.IsFalse(failed, "Failed to keep moving");

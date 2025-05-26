@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 
 namespace klooie.Gaming;
-public class Vision : Recyclable
+public class Vision : Recyclable, IVision
 {
     private static Event<Vision>? _visionInitiated;
     public static Event<Vision> VisionInitiated => _visionInitiated ??= EventPool<Vision>.Instance.Rent();
@@ -243,4 +243,10 @@ public class VisuallyTrackedObject : Recyclable
         Angle = default;
         targetLease = default;
     }
+}
+
+public interface IVision : ILifetime
+{
+    List<VisuallyTrackedObject> TrackedObjectsList { get; }
+    float Range { get; }
 }

@@ -79,7 +79,7 @@ public class MovementOptions
 {
     public required Velocity Velocity { get; set; }
     public required SpeedEval Speed { get; set; }
-    public required Vision Vision { get; set; }
+    public required IVision Vision { get; set; }
 }
 
 public abstract class Movement : Recyclable
