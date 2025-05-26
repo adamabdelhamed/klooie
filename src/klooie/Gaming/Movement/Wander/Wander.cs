@@ -58,7 +58,7 @@ public class Wander : Movement
     protected override Task Move()
     {
         _tcs = new TaskCompletionSource();
-        var state = WanderLoopState.Create(this);
+        var state = WanderLoopState.Create(this, true);
         MoveOnce(state);
         return _tcs.Task;
     }
@@ -103,6 +103,59 @@ public class Wander : Movement
     }
 }
 
+ 
+
+
+
+/// <summary>
+/// Normalised component-by-component score for a single candidate steering angle.
+/// Every field is mapped to [0,1] where 1 = "best" and 0 = "worst".
+/// </summary>
+public readonly struct AngleScore
+{
+    public readonly Angle Angle;
+    public readonly float Collision;   // 1 means no imminent collision
+    public readonly float Inertia;     // 1 means perfectly aligned with recent direction
+    public readonly float Forward;     // 1 means continues roughly forward
+    public readonly float Curiosity;   // 1 means directly towards curiosity point (if any)
+    public readonly float Total;       // Weighted sum of the four components (already in [0,1] by design)
+
+    public AngleScore(Angle angle, float collision, float inertia, float forward, float curiosity, WanderWeights w)
+    {
+        Angle = angle;
+        Collision = collision;
+        Inertia = inertia;
+        Forward = forward;
+        Curiosity = curiosity;
+        Total = Collision * w.CollisionWeight +
+                    Inertia * w.InertiaWeight +
+                    Forward * w.ForwardWeight +
+                    Curiosity * w.CuriosityWeight;
+    }
+}
+
+/// <summary>
+/// Tunable weighting for <see cref="AngleScore"/> components.  The default keeps historical behaviour
+/// reasonably close to the original hand-tuned constants, but you can adjust in unit tests or
+/// Monte-Carlo search without touching implementation code.
+/// </summary>
+public struct WanderWeights
+{
+    public float CollisionWeight;
+    public float InertiaWeight;
+    public float ForwardWeight;
+    public float CuriosityWeight;
+
+    public static readonly WanderWeights Default = new WanderWeights
+    {
+        CollisionWeight = 1.00f,
+        InertiaWeight = 0.25f,
+        ForwardWeight = 0.15f,
+        CuriosityWeight = 0.35f
+    };
+}
+
+ 
 public class WanderLoopState : Recyclable
 {
     public Wander Wander { get; private set; } = null!;
@@ -115,16 +168,23 @@ public class WanderLoopState : Recyclable
     /// </summary>
     public List<Angle> LastFewAngles = new List<Angle>();
 
+    // --- New for testability/diagnostics ---
+    public WanderWeights Weights { get; set; } = WanderWeights.Default;
+    public RecyclableList<AngleScore> AngleScores { get; private set; }   
+
+
     public bool IsStillValid()
         => Wander.IsStillValid(WanderLease)
         && Wander.Options.Velocity?.Collider.IsStillValid(ElementLease) == true;
 
-    public static WanderLoopState Create(Wander w)
+    public static WanderLoopState Create(Wander w, bool autoDispose)
     {
         var s = WanderLoopStatePool.Instance.Rent();
         s.Wander = w;
         s.WanderLease = w.Lease;
         s.ElementLease = w.Options.Velocity.Collider.Lease;
+        s.Weights = WanderWeights.Default;
+        s.AngleScores = RecyclableListPool<AngleScore>.Instance.Rent();
         return s;
     }
 
@@ -135,6 +195,8 @@ public class WanderLoopState : Recyclable
         ElementLease = 0;
         WanderLease = 0;
         LastFewAngles.Clear();
+        AngleScores?.TryDispose(); 
+        AngleScores = null!; 
     }
 }
 
@@ -150,129 +212,111 @@ public class WanderLoopState : Recyclable
 ///     - All math of non-trivial complexity should have helpful variable names and comments.
 /// - Wanderers and obstacles are rectangles that can be any size. The code should never assume a specific size.
 /// </summary>
+// klooie.Gaming – Refactored WanderLogic for testability, prod/test control, and encapsulated weights/scores
 public static class WanderLogic
 {
-    public static void AdjustSpeedAndVelocity(WanderLoopState state)
+    // --- Public surface --------------------------------------------------------------------
+
+    /// <summary>
+    /// Top-level API used by <see cref="Wander"/>.  Returns the list of scores for every candidate.
+    /// If <see cref="WanderLoopState.AutoDispose"/> is true (default), scores are disposed immediately after use.
+    /// In unit tests, set <c>AutoDispose = false</c> to inspect and dispose later.
+    /// </summary>
+    public static RecyclableList<AngleScore>? AdjustSpeedAndVelocity(WanderLoopState state)
     {
-        // 1. Select the best steering angle given current situation
-        var chosenAngle = SelectSteeringAngle(state);
+        ComputeScores(state);
 
-        // 2. Evaluate the best speed (0 if blocked, full if clear)
-        var chosenSpeed = EvaluateSpeed(state, chosenAngle);
+        // pick best angle
+        AngleScore best = state.AngleScores[0];
+        for (int i = 1; i < state.AngleScores.Count; i++)
+        {
+            if (state.AngleScores[i].Total > best.Total)
+            {
+                best = state.AngleScores[i];
+            }
+        }
+        var angle = best.Angle;
+        var speed = EvaluateSpeed(state, angle);
 
-        // 3. Apply to velocity
         var velocity = state.Wander.WanderOptions.Velocity;
-        velocity.Angle = chosenAngle;
-        velocity.Speed = chosenSpeed;
+        velocity.Angle = angle;
+        velocity.Speed = speed;
 
-        // 4. Maintain angle history for inertia
-        state.LastFewAngles.Add(chosenAngle);
+        // Update inertia history
+        state.LastFewAngles.Add(angle);
         if (state.LastFewAngles.Count > 10) state.LastFewAngles.RemoveAt(0);
+
+        return state.AngleScores;
     }
 
-    const float maxDeviation = 45f;
-    const float angleStep = 15f;
-    const float reactionTime = 0.8f;
-    const float inertiaPenalty = 4f;
-    const float forwardBonusFactor = 0.75f;
-    const float minReward = -10000f;
-    const float curiosityBias = 2.0f;
+    // --- Private helpers -------------------------------------------------------------------
 
-    private static Angle SelectSteeringAngle(WanderLoopState state)
+    private const float MaxCollisionHorizon = 3f;   // seconds – > this long = perfectly safe
+    private const float MaxAngleDeviation = 180f; // degrees – used for normalisation
+
+    private static void ComputeScores(WanderLoopState state)
     {
-        var options = state.Wander.WanderOptions;
-        var velocity = options.Velocity;
-        var currentAngle = velocity.Angle;
-        var currentSpeed = velocity.Speed;
+        var opts = state.Wander.WanderOptions;
+        var velocity = opts.Velocity;
+        var curAngle = velocity.Angle;
+        var inertiaAngle = AverageAngle(state.LastFewAngles, curAngle);
 
         Angle? curiosityAngle = null;
-        if (options.CuriousityPoint != null)
+        if (opts.CuriousityPoint != null)
         {
-            var target = options.CuriousityPoint.Invoke();
+            var target = opts.CuriousityPoint();
             if (target != null)
-            {
                 curiosityAngle = velocity.Collider.Bounds.CalculateAngleTo(target.Bounds);
-            }
         }
 
-        // Compute the "inertia angle" (average of recent angles)
-        Angle inertiaAngle = currentAngle;
-        if (state.LastFewAngles.Count > 0)
-        {
-            float sum = 0;
-            foreach (var angle in state.LastFewAngles)
-            {
-                sum += angle.Value;
-            }
-            inertiaAngle = new Angle(sum / state.LastFewAngles.Count);
-        }
+        int steps = 15;
+        float stepSize = 15f;
+        int numSteps = (int)(MaxAngleDeviation / stepSize);
 
-        var numSteps = (int)(maxDeviation / angleStep);
-
-        var candidateAngles = new List<Angle>();
+        state.AngleScores.Items.Clear();
         for (int i = -numSteps; i <= numSteps; i++)
-            candidateAngles.Add(currentAngle.Add(i * angleStep));
-
-
-
-        Angle bestAngle = currentAngle;
-        float bestScore = float.NegativeInfinity;
-
-        for (int i = 0; i < candidateAngles.Count; i++)
         {
-            Angle angle = candidateAngles[i];
-            float timeToCollision = PredictCollision(state, angle);
+            var candidate = curAngle.Add(i * stepSize);
 
-            float inertiaDeviation = angle.DiffShortest(inertiaAngle);
-            float forwardDeviation = Math.Abs(angle.DiffShortest(currentAngle));
+            // Compute raw components
+            float rawCollision = PredictCollision(state, candidate);
+            float rawInertia = candidate.DiffShortest(inertiaAngle);
+            float rawForward = candidate.DiffShortest(curAngle);
+            float rawCuriosity = curiosityAngle.HasValue ? candidate.DiffShortest(curiosityAngle.Value) : MaxAngleDeviation;
 
-            float curiosityDeviation = 0f;
-            if (curiosityAngle.HasValue)
-                curiosityDeviation = angle.DiffShortest(curiosityAngle.Value);
+            // Normalise [0,1]
+            float normCollision = Clamp01(rawCollision / MaxCollisionHorizon);             // bigger time -> better
+            float normInertia = 1f - Clamp01(rawInertia / MaxAngleDeviation);            // smaller deviation -> better
+            float normForward = 1f - Clamp01(rawForward / MaxAngleDeviation);
+            float normCuriosity = 1f - Clamp01(rawCuriosity / MaxAngleDeviation);
 
-            float score;
-            if (timeToCollision < reactionTime)
-            {
-                score = minReward + (timeToCollision - reactionTime) * 10f - inertiaDeviation * inertiaPenalty;
-            }
-            else
-            {
-                score = timeToCollision * 2f
-                        - inertiaDeviation * inertiaPenalty
-                        - forwardDeviation * forwardBonusFactor
-                        - curiosityDeviation * curiosityBias;
-            }
-
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestAngle = angle;
-            }
+            var score = new AngleScore(candidate, normCollision, normInertia, normForward, normCuriosity, state.Weights);
+            state.AngleScores.Items.Add(score);
         }
-
-        return bestAngle;
     }
-
 
     private static float EvaluateSpeed(WanderLoopState state, Angle chosenAngle)
     {
-        var options = state.Wander.WanderOptions;
-        var velocity = options.Velocity;
+        var opts = state.Wander.WanderOptions;
+        var velocity = opts.Velocity;
         var currentSpeed = state.Wander.Options.Speed();
 
-        // If we have a curiosity point, check distance to it
-        if (options.CuriousityPoint != null)
+        if (opts.CuriousityPoint != null)
         {
-            var target = options.CuriousityPoint.Invoke();
+            var target = opts.CuriousityPoint();
             if (target != null)
             {
                 float distance = velocity.Collider.Bounds.CalculateDistanceTo(target.Bounds);
-                if (distance <= options.CloseEnough)
-                    return 0f; // Arrived at curiosity point
+                if (distance <= opts.CloseEnough)
+                    return 0f;
             }
         }
         return currentSpeed;
     }
+
+    // ----------------------------------------------------------------------------------------
+    // Individual component calculations -----------------------------------------------------
+    // ----------------------------------------------------------------------------------------
 
     private static float PredictCollision(WanderLoopState state, Angle angle)
     {
@@ -280,15 +324,24 @@ public static class WanderLogic
         var prediction = CollisionPredictionPool.Instance.Rent();
         try
         {
-            for (var i = 0; i < state.Wander.Options.Vision.TrackedObjectsList.Count; i++)
-            {
-                buffer.WriteableBuffer.Add(state.Wander.Options.Vision.TrackedObjectsList[i].Target);
-            }
+            // Gather nearby obstacles (already tracked by vision)
+            var tracked = state.Wander.Options.Vision.TrackedObjectsList;
+            for (int i = 0; i < tracked.Count; i++)
+                buffer.WriteableBuffer.Add(tracked[i].Target);
 
-            CollisionDetector.Predict(state.Wander.Options.Velocity.Collider, angle, buffer.WriteableBuffer, state.Wander.Options.Vision.Range, CastingMode.SingleRay, buffer.WriteableBuffer.Count, prediction);
-            if (prediction.CollisionPredicted == false) return float.MaxValue;
-            var timeToCollision = prediction.LKGD * state.Wander.Options.Velocity.Speed;
-            return timeToCollision;
+            CollisionDetector.Predict(
+                state.Wander.Options.Velocity.Collider,
+                angle,
+                buffer.WriteableBuffer,
+                state.Wander.Options.Vision.Range,
+                CastingMode.SingleRay,
+                buffer.WriteableBuffer.Count,
+                prediction);
+
+            if (!prediction.CollisionPredicted)
+                return MaxCollisionHorizon; // safe path
+
+            return prediction.LKGD * state.Wander.Options.Velocity.Speed;
         }
         finally
         {
@@ -296,5 +349,21 @@ public static class WanderLogic
             prediction.Dispose();
         }
     }
+
+    // ----------------------------------------------------------------------------------------
+    // Utility -------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------
+
+    private static Angle AverageAngle(List<Angle> list, Angle fallback)
+    {
+        if (list.Count == 0) return fallback;
+        float sum = 0f;
+        foreach (var a in list) sum += a.Value;
+        return new Angle(sum / list.Count);
+    }
+
+    private static float Clamp01(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
 }
+
+
 
