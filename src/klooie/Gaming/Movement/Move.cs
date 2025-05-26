@@ -1,79 +1,34 @@
 ﻿namespace klooie.Gaming;
 
-
-public class ShortCircuitException : Exception { }
 public class Mover
 {
     public const float DefaultCloseEnough = .8f;
 
-    public static async Task Invoke(Movement parent, Movement process) => await process.InvokeInternal(parent);
-    public static async Task<T> InvokeGet<T>(Movement parent, Movement<T> process) { await Invoke(parent, process); return process.Result; }
-    public static async Task<T> InvokeGetWithShortCircuit<T>(Movement<T> process) { await InvokeWithShortCircuit(process); return process.Result; }
-    public static async Task<T> InvokeGetOrTimeout<T>(Movement parent, Movement<T> process, ILifetime timeout) { await InvokeOrTimeout(parent, process, timeout); return process.Result; }
-    public static async Task<T> InvokeGetOrTimeout<T>(Movement parent, Movement<T> process, float timeout) { await InvokeOrTimeout(parent, process, timeout); return process.Result; }
+    public static async Task<bool> Invoke(Movement parent, Movement process) => await process.InvokeInternal(parent);
 
-    public static async Task InvokeWithShortCircuit(Movement process)
+    public static async Task<bool> Invoke(Movement process)
     {
-        try
-        {
-            await process.InvokeInternal(null);
-        }
-        catch (ShortCircuitException)
-        {
-            // The velocity expired
-        }
-    }
-
-    public static Task<bool> InvokeOrTimeout(Movement parent, Movement process, float timeout)
-    {
-        return InvokeOrTimeout(parent, process, Recyclable.EarliestOf(parent, process, Game.Current.Delay(timeout).ToLifetime()));
+        return await process.InvokeInternal(null);
     }
 
     public static async Task<bool> InvokeOrTimeout(Movement parent, Movement process, ILifetime maxLifetime)
     {
-        var lease = maxLifetime.Lease;
-        try
-        {
-            maxLifetime.OnDisposed(() => process.TryDispose());
-            await process.InvokeInternal(parent);
-            return true;
-        }
-        catch (ShortCircuitException)
-        {
-            if (maxLifetime.IsStillValid(lease) == false)
-            {
-                return false;
-            }
-            else
-            {
-                throw;
-            }
-        }
+        maxLifetime.OnDisposed(process, DisposeLifetime);
+        var result = await process.InvokeInternal(parent, maxLifetime);
+        return result;
     }
 
     public static async Task<bool> InvokeOrTimeout(Movement process, ILifetime maxLifetime)
     {
-        try
-        {
-            maxLifetime.OnDisposed(() => process.TryDispose());
-            await process.InvokeInternal(null);
-            return true;
-        }
-        catch (ShortCircuitException)
-        {
-            return false;
-        }
+        maxLifetime.OnDisposed(process, DisposeLifetime);
+        var result = await process.InvokeInternal(null, maxLifetime);   
+        return result;
     }
-}
 
+    private static void DisposeLifetime(object lifetime) => ((Recyclable)lifetime).TryDispose();
+}
 
 public delegate float SpeedEval();
-
-public abstract class Movement<T> : Movement
-{
-    protected Movement() : base() { }
-    public abstract T Result { get; protected set; }
-}
 
 public class MovementOptions
 {
@@ -86,15 +41,11 @@ public abstract class Movement : Recyclable
 {
     protected float NowDisplay => ConsoleMath.Round(Options.Velocity.Group.Now.TotalSeconds, 2);
     public MovementOptions Options { get; private set; }
-    public GameCollider Element => Options.Velocity.Collider as GameCollider;
+    public GameCollider Element => Options.Velocity.Collider;
 
     private Movement parent;
 
-    protected Movement()
-    {
-
-    }
-
+    protected Movement() { }
     protected void Bind(MovementOptions options)
     {
         Options = options;
@@ -102,67 +53,38 @@ public abstract class Movement : Recyclable
         Options.Velocity.OnDisposed(this, DisposeMeStatic);
     }
 
-    private static void DisposeMeStatic(object movement)
-    {
-        ((Recyclable)movement).TryDispose();
-    }
+    private static void DisposeMeStatic(object movement) => ((Recyclable)movement).TryDispose();
 
-    protected override void OnReturn()
-    {
-        base.OnReturn();
-    }
-
-
-
- 
     protected abstract Task Move();
 
-    internal async Task InvokeInternal(Movement parent)
+    /// <summary>
+    /// Returns false if short-circuited; true if completed normally.
+    /// </summary>
+    internal async Task<bool> InvokeInternal(Movement parent, ILifetime cancellationLifetime = null)
     {
         var lease = Lease;
         var parentLease = parent?.Lease;
+        var cancellationLease = cancellationLifetime?.Lease;
+        this.parent = parent;
+
+        bool IsAlive()
+        {
+            bool selfValid = IsStillValid(lease);
+            bool parentValid = parent == null || (parentLease.HasValue && parent.IsStillValid(parentLease.Value));
+            bool lifetimeValid = cancellationLifetime == null || cancellationLifetime.IsStillValid(cancellationLease.Value);
+            return selfValid && parentValid && lifetimeValid;
+        }
+
         try
         {
-            this.parent = parent;
-            AssertAlive(lease, parentLease);
+            if (!IsAlive()) return false;
             await Move();
-            AssertAlive(lease, parentLease);
+            if (!IsAlive()) return false;
+            return true;
         }
         finally
         {
             TryDispose();
         }
     }
-
-    public void AssertAlive(int lease, int? parentLease = null)
-    {
-        if (IsStillValid(lease) == false)
-        {
-            throw new ShortCircuitException();
-        }
-
-        if (parent != null && parentLease.HasValue)
-        {
-            parent.AssertAlive(parentLease.Value);
-        }
-    }
-
-  
-
-
-    protected async Task Delay(double ms)
-    {
-        await Game.Current.Delay(ms);
-    }
-
-    protected async Task Delay(TimeSpan timeout)
-    {
-        await Game.Current.Delay(timeout);
-    }
-
-    protected async Task DelayFuzzyAsync(float ms, float maxDeltaPercentage = 0.1f)
-    {
-        await Game.Current.DelayFuzzy(ms, maxDeltaPercentage);
-    }
-
 }

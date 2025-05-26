@@ -144,7 +144,7 @@ public class Program
         });
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
-        await Mover.InvokeWithShortCircuit(Wander.Create(new WanderOptions()
+        await Mover.Invoke(Wander.Create(new WanderOptions()
         {
             Speed = ()=>speed,
             Vision = vision,

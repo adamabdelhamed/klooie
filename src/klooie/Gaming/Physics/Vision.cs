@@ -108,7 +108,7 @@ public class Vision : Recyclable
                 continue;
             }
 
-            if (trackedObject.Age > TimeSpan.FromSeconds(2))
+            if (trackedObject.TimeSinceLastSeen > VisuallyTrackedObject.MaxMemoryTime)
             {
                 UnTrackAtIndex(i);
                 continue;
@@ -132,10 +132,16 @@ public class Vision : Recyclable
         CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Range, CastingMode.SingleRay, buffer.WriteableBuffer.Count, singleRay);
         var potentialTarget = singleRay.ColliderHit as GameCollider;
    
+        if (potentialTarget != null && TrackedObjectsDictionary.TryGetValue(potentialTarget, out var target))
+        {
+            target.LastSeenTime = Game.Current.MainColliderGroup.Now;
+            singleRay.TryDispose();
+            return null;
+        }
+
         if(potentialTarget == null || 
             potentialTarget?.Velocity == null ||
             potentialTarget.IsVisible == false || 
-            TrackedObjectsDictionary.ContainsKey(potentialTarget) || 
             potentialTarget.CanCollideWith(Eye) == false || 
             Eye.CanCollideWith(potentialTarget) == false)
         {
@@ -220,14 +226,15 @@ public class VisionFilterContext
 
 public class VisuallyTrackedObject : Recyclable
 {
+    public static readonly TimeSpan MaxMemoryTime = TimeSpan.FromSeconds(2);
     private int targetLease;
     public GameCollider Target { get; private set; }
-    public TimeSpan CreatedTime { get; private set; }
+    public TimeSpan LastSeenTime { get; set; }
     public CollisionPrediction RayCastResult { get; set; }
     public float Distance { get; set; }
     public Angle Angle { get; set; }
 
-    public TimeSpan Age => Game.Current.MainColliderGroup.Now - CreatedTime;
+    public TimeSpan TimeSinceLastSeen => Game.Current.MainColliderGroup.Now - LastSeenTime;
 
     public bool IsTargetStillValid => Target.IsStillValid(targetLease);
 
@@ -238,7 +245,7 @@ public class VisuallyTrackedObject : Recyclable
         var trackedObject = VisuallyTrackedObjectPool.Instance.Rent();
         trackedObject.targetLease = target.Lease;
         trackedObject.Target = target;
-        trackedObject.CreatedTime = Game.Current.MainColliderGroup.Now;
+        trackedObject.LastSeenTime = Game.Current.MainColliderGroup.Now;
         trackedObject.RayCastResult = rayCastResult;
         trackedObject.Distance = distance;
         trackedObject.Angle = angle;
@@ -249,7 +256,7 @@ public class VisuallyTrackedObject : Recyclable
     {
         base.OnReturn();
         Target = null;
-        CreatedTime = TimeSpan.Zero;
+        LastSeenTime = TimeSpan.Zero;
         RayCastResult?.TryDispose();
         RayCastResult = null!;
         Distance = default;
@@ -260,6 +267,8 @@ public class VisuallyTrackedObject : Recyclable
 
 public class VisionFilter : IConsoleControlFilter
 {
+    private static readonly RGB NotSeen = new RGB(30, 30, 30);
+    private static readonly RGB SeenNow = RGB.Green;
     public ConsoleControl Control { get; set; }
 
     public Vision Vision { get; set; } 
@@ -270,12 +279,15 @@ public class VisionFilter : IConsoleControlFilter
 
     public void Filter(ConsoleBitmap bitmap)
     {
-        if(Control is GameCollider collider == false || Vision.TrackedObjectsDictionary.ContainsKey(collider) == false)
+        if(Control is GameCollider collider == false || Vision.TrackedObjectsDictionary.TryGetValue(collider, out VisuallyTrackedObject vto) == false)
         {
-            bitmap.Fill(RGB.Gray);
+            bitmap.Fill(NotSeen);
             return;
         }
-                
-        bitmap.Fill(RGB.Green); 
+
+        var ageSeconds = (float)vto.TimeSinceLastSeen.TotalSeconds;
+        var staleness =  ageSeconds / (float)VisuallyTrackedObject.MaxMemoryTime.TotalSeconds;
+
+        bitmap.Fill(SeenNow.ToOther(NotSeen, staleness)); 
     }
 }
