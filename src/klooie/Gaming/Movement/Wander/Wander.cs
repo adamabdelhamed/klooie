@@ -32,20 +32,32 @@ public class WanderOptions : MovementOptions
 /// </summary>
 public class Wander : Movement
 {
-    private const int DelayMs = 50;
+    private const int DelayMs = 333;
+
+    private static Random random = new Random();
+    private float scanOffset;
     public WanderOptions WanderOptions => (WanderOptions)Options;
     public static Wander Create(WanderOptions options)
     {
         var w = WanderPool.Instance.Rent();
         w.Bind(options);
+        w.scanOffset = random.Next(0, DelayMs);
         return w;
     }
 
     protected override Task Move()
     {
         var state = WanderLoopState.Create(this);
-        Tick(state);
+        // Use the scanOffset only for the very first tick.
+        ConsoleApp.Current.InnerLoopAPIs.Delay(scanOffset, state, StaticTickFirst);
         return state.Task ?? Task.CompletedTask;
+    }
+
+    // Handles the very first tick, then hands off to the normal loop.
+    private static void StaticTickFirst(object o)
+    {
+        var state = (WanderLoopState)o;
+        state.Wander.Tick(state);
     }
 
     private void Tick(WanderLoopState state)
