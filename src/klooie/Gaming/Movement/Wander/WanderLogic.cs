@@ -53,14 +53,12 @@ public static class WanderLogic
     // --- Private helpers -------------------------------------------------------------------
 
     private const float MaxCollisionHorizon = 3f;   // seconds – > this long = perfectly safe
-    private const float MaxAngleDeviation = 180f; // degrees – used for normalisation
 
     private static void ComputeScores(WanderLoopState state)
     {
         var opts = state.WanderOptions;
         var velocity = opts.Velocity;
-        var curAngle = velocity.Angle;
-        var inertiaAngle = AverageAngle(state.LastFewAngles, curAngle);
+        var inertiaAngle = AverageAngle(state.LastFewAngles, state.WanderOptions.Velocity.Angle);
 
         Angle? curiosityAngle = null;
         if (opts.CuriousityPoint != null)
@@ -70,30 +68,38 @@ public static class WanderLogic
                 curiosityAngle = velocity.Collider.Bounds.CalculateAngleTo(target.Bounds);
         }
 
-        int steps = 15;
-        float stepSize = 15f;
-        int numSteps = (int)(MaxAngleDeviation / stepSize);
-
         state.AngleScores.Items.Clear();
-        for (int i = -numSteps; i <= numSteps; i++)
+        var totalAngularTravel = 180;
+        float travelCompleted = 0f;
+        var travelPerStep = 12f;
+        ScoreAngle(state, inertiaAngle, curiosityAngle, state.WanderOptions.Velocity.Angle); // score the current angle first
+        while (travelCompleted < totalAngularTravel)
         {
-            var candidate = curAngle.Add(i * stepSize);
+            var leftCandidate = state.WanderOptions.Velocity.Angle.Add(-(travelPerStep+travelCompleted));
+            var rightCandidate = state.WanderOptions.Velocity.Angle.Add(travelPerStep + travelCompleted);
+            travelCompleted += travelPerStep;
 
-            // Compute raw components
-            float rawCollision = PredictCollision(state, candidate);
-            float rawInertia = candidate.DiffShortest(inertiaAngle);
-            float rawForward = candidate.DiffShortest(curAngle);
-            float rawCuriosity = curiosityAngle.HasValue ? candidate.DiffShortest(curiosityAngle.Value) : MaxAngleDeviation;
-
-            // Normalise [0,1]
-            float normCollision = Clamp01(rawCollision / MaxCollisionHorizon);             // bigger time -> better
-            float normInertia = 1f - Clamp01(rawInertia / MaxAngleDeviation);            // smaller deviation -> better
-            float normForward = 1f - Clamp01(rawForward / MaxAngleDeviation);
-            float normCuriosity = 1f - Clamp01(rawCuriosity / MaxAngleDeviation);
-
-            var score = new AngleScore(candidate, normCollision, normInertia, normForward, normCuriosity, state.Weights);
-            state.AngleScores.Items.Add(score);
+            ScoreAngle(state, inertiaAngle, curiosityAngle,leftCandidate);
+            ScoreAngle(state, inertiaAngle, curiosityAngle, rightCandidate);
         }
+    }
+
+    private static void ScoreAngle(WanderLoopState state, Angle inertiaAngle, Angle? curiosityAngle, Angle candidate)
+    {
+        // Compute raw components
+        float rawCollision = PredictCollision(state, candidate);
+        float rawInertia = candidate.DiffShortest(inertiaAngle);
+        float rawForward = candidate.DiffShortest(state.WanderOptions.Velocity.Angle);
+        float rawCuriosity = curiosityAngle.HasValue ? candidate.DiffShortest(curiosityAngle.Value) : state.WanderOptions.Vision.AngularVisibility;
+
+        // Normalise [0,1]
+        float normCollision = Clamp01(rawCollision / MaxCollisionHorizon);             // bigger time -> better
+        float normInertia = 1f - Clamp01(rawInertia / state.WanderOptions.Vision.AngularVisibility);            // smaller deviation -> better
+        float normForward = 1f - Clamp01(rawForward / state.WanderOptions.Vision.AngularVisibility);
+        float normCuriosity = 1f - Clamp01(rawCuriosity / state.WanderOptions.Vision.AngularVisibility);
+
+        var score = new AngleScore(candidate, normCollision, normInertia, normForward, normCuriosity, state.Weights);
+        state.AngleScores.Items.Add(score);
     }
 
     private static float EvaluateSpeed(WanderLoopState state, Angle chosenAngle)
@@ -135,14 +141,16 @@ public static class WanderLogic
                 angle,
                 buffer.WriteableBuffer,
                 state.WanderOptions.Vision.Range,
-                CastingMode.SingleRay,
+                CastingMode.Rough,
                 buffer.WriteableBuffer.Count,
                 prediction);
 
             if (!prediction.CollisionPredicted)
                 return MaxCollisionHorizon; // safe path
 
-            return prediction.LKGD * state.WanderOptions.Velocity.Speed;
+            return (state.WanderOptions.Velocity.Speed > 0)
+             ? prediction.LKGD / state.WanderOptions.Velocity.Speed
+             : float.MaxValue;
         }
         finally
         {
@@ -186,10 +194,16 @@ public readonly struct AngleScore
         Inertia = inertia;
         Forward = forward;
         Curiosity = curiosity;
-        Total = Collision * w.CollisionWeight +
-                    Inertia * w.InertiaWeight +
-                    Forward * w.ForwardWeight +
-                    Curiosity * w.CuriosityWeight;
+
+        float sumWeights = w.CollisionWeight + w.InertiaWeight + w.ForwardWeight + w.CuriosityWeight;
+        if (sumWeights <= 0f) sumWeights = 1f; // avoid divide by zero
+
+        Total = (
+            Collision * w.CollisionWeight +
+            Inertia * w.InertiaWeight +
+            Forward * w.ForwardWeight +
+            Curiosity * w.CuriosityWeight
+        ) / sumWeights;
     }
 }
 
@@ -208,9 +222,9 @@ public struct WanderWeights
     public static readonly WanderWeights Default = new WanderWeights
     {
         CollisionWeight = 1.00f,
-        InertiaWeight = 0.25f,
-        ForwardWeight = 0.15f,
-        CuriosityWeight = 0.35f
+        InertiaWeight = 0.6f,
+        ForwardWeight = 0.3f,
+        CuriosityWeight = 0.45f
     };
 }
 
@@ -233,7 +247,7 @@ public class WanderLoopState : Recyclable
     public WanderWeights Weights { get; set; } = WanderWeights.Default;
     public RecyclableList<AngleScore> AngleScores { get; private set; }
 
-    public Task Task => _tcs.Task;
+    public Task? Task => _tcs?.Task;
 
     private TaskCompletionSource _tcs;
 

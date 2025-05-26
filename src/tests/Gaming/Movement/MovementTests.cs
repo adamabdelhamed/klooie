@@ -170,18 +170,6 @@ public class MovementTests
     {
         Console.WriteLine("Speed: " + speed);
 
-        if(extraTight)
-        {
-            AddTerrain(5f, 2, 1);
-        }
-        else if (camera)
-        {
-            AddTerrain(15, 60, 30);
-        }
-        else
-        {
-            AddTerrain(15, 6, 3);
-        }
         Game.Current.LayoutRoot.Background = new RGB(20, 20, 20);
         var cMover = Game.Current.GamePanel.Add(factory != null ? factory() : new GameCollider());
         var cMoverLease = cMover.Lease;
@@ -190,7 +178,20 @@ public class MovementTests
 
         var vision = Vision.Create(cMover);
 
-        if(extraTight)
+        if (extraTight)
+        {
+            AddTerrain(5f, 2, 1, vision);
+        }
+        else if (camera)
+        {
+            AddTerrain(15, 60, 30, vision);
+        }
+        else
+        {
+            AddTerrain(15, 6, 3, vision);
+        }
+
+        if (extraTight)
         {
             cMover.MoveTo(Game.Current.GameBounds.Left + 2, Game.Current.GameBounds.Top + 1) ;
         }
@@ -240,7 +241,7 @@ public class MovementTests
             Vision = vision,
         }));
         Assert.IsTrue(cMover.IsStillValid(cMoverLease) == false);
-        //Assert.IsFalse(failed, "Failed to keep moving");
+        Assert.IsFalse(failed, "Failed to keep moving");
 
         if(extraTight)
         {
@@ -251,7 +252,7 @@ public class MovementTests
         Console.WriteLine();
     }
 
-    public static void AddTerrain(float spacing, float w, float h)
+    public static void AddTerrain(float spacing, float w, float h, Vision vision = null)
     {
         var bounds = Game.Current.GameBounds;
 
@@ -259,21 +260,25 @@ public class MovementTests
         leftWall.MoveTo(bounds.Left, bounds.Top);
         leftWall.ResizeTo(2, bounds.Height);
         leftWall.GiveWiggleRoom();
-
+        if (vision != null) leftWall.Filters.Add(new VisionFilter(vision));
+     
         var rightWall = Game.Current.GamePanel.Add(new OuterWall() { Background = RGB.White });
         rightWall.MoveTo(bounds.Right - 2, bounds.Top);
         rightWall.ResizeTo(2, bounds.Height);
         rightWall.GiveWiggleRoom();
+        if (vision != null) rightWall.Filters.Add(new VisionFilter(vision));
 
         var topWall = Game.Current.GamePanel.Add(new OuterWall() { Background = RGB.White });
         topWall.MoveTo(bounds.Left, bounds.Top);
         topWall.ResizeTo(bounds.Width, 1);
         topWall.GiveWiggleRoom();
+        if (vision != null) topWall.Filters.Add(new VisionFilter(vision));
 
         var bottonWall = Game.Current.GamePanel.Add(new OuterWall() { Background = RGB.White });
         bottonWall.MoveTo(bounds.Left, bounds.Bottom - 1);
         bottonWall.ResizeTo(Game.Current.GameBounds.Width, 1);
         bottonWall.GiveWiggleRoom();
+        if (vision != null) bottonWall.Filters.Add(new VisionFilter(vision));
 
         var outerSpacing = Math.Max(5, spacing);
         for (var x = bounds.Left + outerSpacing; x < bounds.Right - outerSpacing; x += w + spacing)
@@ -285,7 +290,7 @@ public class MovementTests
                     var collider = Game.Current.GamePanel.Add(new Terrain());
                     collider.ResizeTo(w, h);
                     collider.MoveTo(x, y);
-                    collider.Background = RGB.DarkGreen;
+                    if (vision != null) collider.Filters.Add(new VisionFilter(vision));
                 }
             }
         }

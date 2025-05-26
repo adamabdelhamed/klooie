@@ -45,7 +45,7 @@ public class Wander : Movement
     {
         var state = WanderLoopState.Create(this);
         Tick(state);
-        return state.Task;
+        return state.Task ?? Task.CompletedTask;
     }
 
     private void Tick(WanderLoopState state)

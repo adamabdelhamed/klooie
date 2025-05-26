@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 
 namespace klooie.Gaming;
-public class Vision : Recyclable, IVision
+public class Vision : Recyclable
 {
     private static Event<Vision>? _visionInitiated;
     public static Event<Vision> VisionInitiated => _visionInitiated ??= EventPool<Vision>.Instance.Rent();
@@ -24,7 +24,7 @@ public class Vision : Recyclable, IVision
     public Vision() { }
 
     private static Random random = new Random();
-    public static Vision Create(GameCollider eye)
+    public static Vision Create(GameCollider eye, bool autoScan = true)
     {
         var vision = VisionPool.Instance.Rent();
         vision.Eye = eye;
@@ -33,9 +33,15 @@ public class Vision : Recyclable, IVision
         vision.ScanOffset = random.Next(0, (int)DelayMs);
 
         _visionInitiated?.Fire(vision);
-        Game.Current.InnerLoopAPIs.Delay(vision.ScanOffset, vision, ScanLoopBody);
+        if (autoScan)
+        {
+            Game.Current.InnerLoopAPIs.Delay(vision.ScanOffset, vision, ScanLoopBody);
+        }
         return vision;
     }
+
+    public Angle FieldOfViewStart => Eye.Velocity.Angle.Add(-AngularVisibility / 2f);
+    public Angle FieldOfViewEnd => Eye.Velocity.Angle.Add(AngularVisibility / 2f);
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     private static void ScanLoopBody(object obj)
@@ -52,7 +58,7 @@ public class Vision : Recyclable, IVision
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
-    private void Scan()
+    public void Scan()
     {
         RemoveStaleTrackedObjects();
         if (Eye.IsVisible == false) return;
@@ -61,13 +67,26 @@ public class Vision : Recyclable, IVision
         FilterObstacles(buffer);
         try
         {
-            for (int i = 0; i < buffer.WriteableBuffer.Count; i++)
+            var directlyAheadResult = Cast(Eye.Velocity.Angle, buffer);   
+            if (directlyAheadResult != null)
             {
-                GameCollider? element = buffer.WriteableBuffer[i];
-                var visibleObject = TryTrack(element, buffer);
-                if (visibleObject == null) continue;
-                TrackedObjectsDictionary.Add(element,visibleObject);
-                TrackedObjectsList.Add(visibleObject);
+                TrackedObjectsDictionary.Add(directlyAheadResult.Target, directlyAheadResult);
+                TrackedObjectsList.Add(directlyAheadResult);
+            }
+
+            var currentAngle = FieldOfViewStart;
+            var totalTravel = 0f;
+            var angleStep = 5f;
+            while(totalTravel <= AngularVisibility)
+            {
+                var visibleObject = Cast(currentAngle, buffer);
+                if (visibleObject != null)
+                {
+                    TrackedObjectsDictionary.Add(visibleObject.Target, visibleObject);
+                    TrackedObjectsList.Add(visibleObject);
+                }
+                totalTravel += angleStep;
+                currentAngle = currentAngle.Add(angleStep);
             }
         }
         finally
@@ -107,51 +126,45 @@ public class Vision : Recyclable, IVision
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
-    private VisuallyTrackedObject? TryTrack(GameCollider potentialTarget, ObstacleBuffer buffer)
+    private VisuallyTrackedObject? Cast(Angle angle, ObstacleBuffer buffer)
     {
-        if(TrackedObjectsDictionary.ContainsKey(potentialTarget)) return null;
-        if (potentialTarget.Velocity == null) return null;
-        if (potentialTarget.CanCollideWith(Eye) == false && Eye.CanCollideWith(potentialTarget) == false) return null;
-        if (potentialTarget.IsVisible == false) return null;
-
-        var distance = Eye.CalculateNormalizedDistanceTo(potentialTarget);
-        if (Range != float.MaxValue && distance > Range) return null;
-        if (IsWithinFieldOfView(potentialTarget, out Angle angle) == false) return null;
-        if (HasUnobstructedLineOfSight(potentialTarget, angle, buffer, out CollisionPrediction rayCastResult) == false) return null;
-
-        return VisuallyTrackedObject.Create(potentialTarget, rayCastResult, distance, angle);
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private bool HasUnobstructedLineOfSight(GameCollider potentialTarget, Angle angle, ObstacleBuffer buffer, out CollisionPrediction rayCastResult)
-    {
-        // 1. Fast path: cheap SingleRay test
         var singleRay = CollisionPredictionPool.Instance.Rent();
-        CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Range * 2, CastingMode.SingleRay, buffer.WriteableBuffer.Count, singleRay);
-        var elementHit = singleRay.ColliderHit as GameCollider;
-        singleRay.Dispose();
-        if (elementHit != potentialTarget)
+        CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Range, CastingMode.SingleRay, buffer.WriteableBuffer.Count, singleRay);
+        var potentialTarget = singleRay.ColliderHit as GameCollider;
+   
+        if(potentialTarget == null || 
+            potentialTarget?.Velocity == null ||
+            potentialTarget.IsVisible == false || 
+            TrackedObjectsDictionary.ContainsKey(potentialTarget) || 
+            potentialTarget.CanCollideWith(Eye) == false || 
+            Eye.CanCollideWith(potentialTarget) == false)
         {
-            // Blocked by something else (fast fail)
-            rayCastResult = null!;
-            return false;
+            singleRay.TryDispose();
+            return null;
         }
-        
-        // 2. Only if possibly visible, do the full (slow) test
-        rayCastResult = CollisionPredictionPool.Instance.Rent();
-        CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Range * 2, CastingMode.Precise, buffer.WriteableBuffer.Count, rayCastResult);
-        var preciseHit = rayCastResult.ColliderHit as GameCollider;
-        var ret = preciseHit == potentialTarget;
-        if (!ret) rayCastResult.TryDispose();
-        return ret;
+
+        return VisuallyTrackedObject.Create(potentialTarget,singleRay,singleRay.LKGD,angle);
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
-    private bool IsWithinFieldOfView(GameCollider potentialTarget, out Angle angle)
+    public static LocF ClosestPointOnRect(RectF rect, LocF point)
     {
-        angle = Eye.CalculateAngleTo(potentialTarget.Bounds);
-        var delta = Eye.Velocity.Angle.DiffShortest(angle);
-        return delta <= AngularVisibility;
+        // Clamp the point to the rectangle's bounds
+        float x = Math.Clamp(point.Left, rect.Left, rect.Right);
+        float y = Math.Clamp(point.Top, rect.Top, rect.Bottom);
+        return new LocF(x, y);
+    }
+
+    private IEnumerable<Edge> GetClosestEdges(RectF rect, LocF point, float epsilon = 0.01f)
+    {
+        if (Math.Abs(point.Left - rect.Left) < epsilon)
+            yield return rect.LeftEdge;
+        if (Math.Abs(point.Left - rect.Right) < epsilon)
+            yield return rect.RightEdge;
+        if (Math.Abs(point.Top - rect.Top) < epsilon)
+            yield return rect.TopEdge;
+        if (Math.Abs(point.Top - rect.Bottom) < epsilon)
+            yield return rect.BottomEdge;
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
@@ -245,8 +258,24 @@ public class VisuallyTrackedObject : Recyclable
     }
 }
 
-public interface IVision : ILifetime
+public class VisionFilter : IConsoleControlFilter
 {
-    List<VisuallyTrackedObject> TrackedObjectsList { get; }
-    float Range { get; }
+    public ConsoleControl Control { get; set; }
+
+    public Vision Vision { get; set; } 
+    public VisionFilter(Vision vision)
+    {
+        Vision = vision;
+    }
+
+    public void Filter(ConsoleBitmap bitmap)
+    {
+        if(Control is GameCollider collider == false || Vision.TrackedObjectsDictionary.ContainsKey(collider) == false)
+        {
+            bitmap.Fill(RGB.Gray);
+            return;
+        }
+                
+        bitmap.Fill(RGB.Green); 
+    }
 }
