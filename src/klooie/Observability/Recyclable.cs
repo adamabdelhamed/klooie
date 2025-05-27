@@ -1,10 +1,13 @@
-﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Text;
+﻿using System.Runtime.CompilerServices;
 namespace klooie;
 
 public class Recyclable : ILifetime
 {
+#if DEBUG
+    public static bool StackHuntingEnabled { get; set; } = true;
+#else
+    public static bool StackHuntingEnabled { get; set; } = false;
+#endif
     private static readonly Recyclable forever = new Recyclable();
     public static Recyclable Forever => forever;
 
@@ -13,7 +16,7 @@ public class Recyclable : ILifetime
 
     internal IObjectPool? Pool { get; set; }
 
-    private bool IsExpiring { get;  set; }
+    private bool IsExpiring { get; set; }
     private bool IsExpired { get; set; }
 
 
@@ -234,7 +237,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     {
 #if DEBUG
         Rented++;
-        var trace = StackHunter.RegisterCurrentStackTrace(2, 10);
+        var trace = Recyclable.StackHuntingEnabled == false ? null : StackHunter.RegisterCurrentStackTrace(2, 10);
 #endif
         T ret;
         if (_pool.Count > 0)

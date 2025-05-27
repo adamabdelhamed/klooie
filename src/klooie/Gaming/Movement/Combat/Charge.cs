@@ -19,29 +19,34 @@ public class Charge : CombatMovement
     }
     protected override async Task Move()
     {
-        var lease = Lease;
-        var lt = UntilCloseToTargetLifetime.Create(Options.Velocity.Collider, ChargeOptions.Targeting, ChargeOptions.CloseEnough);
-        Game.Current.OnDisposed(() => lt.TryDispose());
-        try
-        {
-            while (this.IsStillValid(lease))
-            {
-                await Mover.InvokeOrTimeout(this, Wander.Create(new WanderOptions()
-                {
-                    CuriousityPoint = () => ChargeOptions.Targeting.Target ?? ChargeOptions.DefaultCuriosityPoint,
-                    CloseEnough = ChargeOptions.CloseEnough,
-                    Speed = ChargeOptions.Speed,
-                    Velocity = Options.Velocity,
-                    Vision = ChargeOptions.Vision,
-                }), lt);
+        var myLease = Lease;
+        var targetingLease = ChargeOptions.Targeting.Lease;
+        var colliderLease = Options.Velocity.Collider.Lease;
+        var velocityLease = Options.Velocity.Lease;
+        var visionLease = ChargeOptions.Vision.Lease;
 
-                await StayOnTarget(ChargeOptions.CloseEnough);
-                await Task.Yield();
-            }
-        }
-        finally
+        bool IsAlive() => IsStillValid(myLease) &&
+                          ChargeOptions?.Targeting?.IsStillValid(targetingLease) == true &&
+                          Options?.Velocity?.IsStillValid(velocityLease) == true &&
+                          Options?.Velocity?.Collider?.IsStillValid(colliderLease) == true &&
+                          ChargeOptions?.Vision?.IsStillValid(visionLease) == true;
+
+        var wanderOptions = new WanderOptions()
         {
-            lt.TryDispose();
+            CuriousityPoint = () => ChargeOptions.Targeting.Target ?? ChargeOptions.DefaultCuriosityPoint,
+            CloseEnough = ChargeOptions.CloseEnough,
+            Speed = ChargeOptions.Speed,
+            Velocity = Options.Velocity,
+            Vision = ChargeOptions.Vision,
+        };
+
+        while (IsAlive())
+        {
+            var lt = UntilCloseToTargetLifetime.Create(Options.Velocity.Collider, ChargeOptions.Targeting, ChargeOptions.CloseEnough);
+            this.OnDisposed(() => lt.TryDispose());
+            await Mover.InvokeOrTimeout(this, Wander.Create(wanderOptions), lt);
+            await StayOnTarget(ChargeOptions.CloseEnough);
+            await Task.Yield();
         }
     }
 }

@@ -49,11 +49,7 @@ public abstract class Movement : Recyclable
     protected void Bind(MovementOptions options)
     {
         Options = options;
-        Options.Vision.OnDisposed(this, DisposeMeStatic);
-        Options.Velocity.OnDisposed(this, DisposeMeStatic);
     }
-
-    private static void DisposeMeStatic(object movement) => ((Recyclable)movement).TryDispose();
 
     protected abstract Task Move();
 
@@ -65,6 +61,9 @@ public abstract class Movement : Recyclable
         var lease = Lease;
         var parentLease = parent?.Lease;
         var cancellationLease = cancellationLifetime?.Lease;
+        var visionLease = Options.Vision?.Lease;
+        var velocityLease = Options.Velocity?.Lease;
+        var colliderLease = Options.Velocity?.Collider?.Lease;
         this.parent = parent;
 
         bool IsAlive()
@@ -72,7 +71,10 @@ public abstract class Movement : Recyclable
             bool selfValid = IsStillValid(lease);
             bool parentValid = parent == null || (parentLease.HasValue && parent.IsStillValid(parentLease.Value));
             bool lifetimeValid = cancellationLifetime == null || cancellationLifetime.IsStillValid(cancellationLease.Value);
-            return selfValid && parentValid && lifetimeValid;
+            bool visionValid = Options.Vision == null || (visionLease.HasValue && Options.Vision.IsStillValid(visionLease.Value));
+            bool velocityValid = Options.Velocity == null || (velocityLease.HasValue && Options.Velocity.IsStillValid(velocityLease.Value));
+            bool colliderValid = Options.Velocity?.Collider == null || (colliderLease.HasValue && Options.Velocity.Collider.IsStillValid(colliderLease.Value));
+            return selfValid && parentValid && lifetimeValid && visionValid && velocityValid && colliderValid;
         }
 
         try

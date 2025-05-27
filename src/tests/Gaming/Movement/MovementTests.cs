@@ -95,7 +95,7 @@ public class MovementTests
         GameHeight = 40,
         Test = async (context) =>
         {
-            await WanderTest(20, 15000, false, null, false);
+            await WanderTest(20, 60_000, false, null, false);
             await Game.Current.RequestPaintAsync();
             await Game.Current.Delay(500);
             Game.Current.Stop();
@@ -140,7 +140,7 @@ public class MovementTests
             Test = async (context) =>
             {
                 Game.Current.LayoutRoot.IsVisible = false;
-                await WanderTest(20, 8000, true, factory, false);
+                await WanderTest(20, 60_000, true, factory, false);
                 await Game.Current.RequestPaintAsync();
                 await Game.Current.Delay(500);
                 Game.Current.Stop();
@@ -234,12 +234,15 @@ public class MovementTests
         });
         await Game.Current.RequestPaintAsync();
         Game.Current.LayoutRoot.IsVisible = true;
-        await Mover.Invoke(Wander.Create(new WanderOptions()
+        var wander = Wander.Create(new WanderOptions()
         {
             Speed = () => speed,
             Velocity = cMover.Velocity,
             Vision = vision,
-        }));
+        });
+        var wanderEvaluator = new WanderEvaluator(wander);
+        var wonderVisualizer = new WanderVisualizer(wander, -10);
+        await Mover.Invoke(wander);
         Assert.IsTrue(cMover.IsStillValid(cMoverLease) == false);
         //Assert.IsFalse(failed, "Failed to keep moving");
 

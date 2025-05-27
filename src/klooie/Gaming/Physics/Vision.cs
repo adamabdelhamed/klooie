@@ -3,6 +3,8 @@
 namespace klooie.Gaming;
 public class Vision : Recyclable
 {
+    public const float DefaultRange = 20;
+    public const float DefaultAngularVisibility = 60;
     private static Event<Vision>? _visionInitiated;
     public static Event<Vision> VisionInitiated => _visionInitiated ??= EventPool<Vision>.Instance.Rent();
 
@@ -18,8 +20,8 @@ public class Vision : Recyclable
     public Dictionary<GameCollider, VisuallyTrackedObject> TrackedObjectsDictionary { get; private set; } = new Dictionary<GameCollider, VisuallyTrackedObject>();
     public Event<VisionFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = EventPool<VisionFilterContext>.Instance.Rent());
     public GameCollider Eye { get; private set; } = null!;
-    public float Range { get; set; } = 100;
-    public float AngularVisibility { get; set; } = 60;
+    public float Range { get; set; } 
+    public float AngularVisibility { get; set; } 
     public float ScanOffset { get; private set; }
     public Vision() { }
 
@@ -29,7 +31,6 @@ public class Vision : Recyclable
         var vision = VisionPool.Instance.Rent();
         vision.Eye = eye;
         vision.eyeLease = eye.Lease;
-
         vision.ScanOffset = random.Next(0, (int)DelayMs);
 
         _visionInitiated?.Fire(vision);
@@ -40,6 +41,13 @@ public class Vision : Recyclable
         return vision;
     }
 
+    protected override void OnInit()
+    {
+        base.OnInit();
+        Range = DefaultRange;
+        AngularVisibility = DefaultAngularVisibility;
+    }
+
     public Angle FieldOfViewStart => Eye.Velocity.Angle.Add(-AngularVisibility / 2f);
     public Angle FieldOfViewEnd => Eye.Velocity.Angle.Add(AngularVisibility / 2f);
 
@@ -47,7 +55,7 @@ public class Vision : Recyclable
     private static void ScanLoopBody(object obj)
     {
         var vision = (Vision)obj;
-        if(vision.Eye.IsStillValid(vision.eyeLease) == false)
+        if (vision.Eye.IsStillValid(vision.eyeLease) == false)
         {
             vision.TryDispose();
             return;
@@ -161,17 +169,6 @@ public class Vision : Recyclable
         return new LocF(x, y);
     }
 
-    private IEnumerable<Edge> GetClosestEdges(RectF rect, LocF point, float epsilon = 0.01f)
-    {
-        if (Math.Abs(point.Left - rect.Left) < epsilon)
-            yield return rect.LeftEdge;
-        if (Math.Abs(point.Left - rect.Right) < epsilon)
-            yield return rect.RightEdge;
-        if (Math.Abs(point.Top - rect.Top) < epsilon)
-            yield return rect.TopEdge;
-        if (Math.Abs(point.Top - rect.Bottom) < epsilon)
-            yield return rect.BottomEdge;
-    }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     private void FilterObstacles(ObstacleBuffer buffer)
@@ -200,8 +197,8 @@ public class Vision : Recyclable
         base.OnReturn();
         Eye = null!;
         eyeLease = 0;
-        Range = 100;
-        AngularVisibility = 60;
+        Range = DefaultRange;
+        AngularVisibility = DefaultAngularVisibility;
         _targetBeingEvaluated?.Dispose();
         _targetBeingEvaluated = null;
         TrackedObjectsDictionary.Clear();

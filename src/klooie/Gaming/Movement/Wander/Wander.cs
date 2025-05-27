@@ -37,6 +37,11 @@ public class Wander : Movement
     private static Random random = new Random();
     private float scanOffset;
     public WanderOptions WanderOptions => (WanderOptions)Options;
+
+    private Event<List<AngleScore>> onNewScoresAvailable;
+    public Event<List<AngleScore>> OnNewScoresAvailable =>
+        onNewScoresAvailable ??= EventPool<List<AngleScore>>.Instance.Rent();
+
     public static Wander Create(WanderOptions options)
     {
         var w = WanderPool.Instance.Rent();
@@ -67,7 +72,8 @@ public class Wander : Movement
             state.TryDispose();
             return;
         }
-        WanderLogic.AdjustSpeedAndVelocity(state);
+        var scores = WanderLogic.AdjustSpeedAndVelocity(state);
+        onNewScoresAvailable?.Fire(scores.Items);
 
         if (!IsStillValid(this, state))
         {
@@ -91,7 +97,15 @@ public class Wander : Movement
     public bool IsStillValid(Wander wander, WanderLoopState state) => 
         wander.IsStillValid(state.WanderLease)
         && wander.Options.Vision.IsStillValid(state.VisionLease)
+        && wander.Options.Velocity.IsStillValid(state.VelocityLease)
         && wander.Options.Velocity?.Collider.IsStillValid(state.ElementLease) == true;
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        onNewScoresAvailable?.TryDispose();
+        onNewScoresAvailable = null;
+    }
 }
 
 

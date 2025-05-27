@@ -20,10 +20,8 @@ public static class WanderLogic
 
     /// <summary>
     /// Top-level API used by <see cref="Wander"/>.  Returns the list of scores for every candidate.
-    /// If <see cref="WanderLoopState.AutoDispose"/> is true (default), scores are disposed immediately after use.
-    /// In unit tests, set <c>AutoDispose = false</c> to inspect and dispose later.
     /// </summary>
-    public static RecyclableList<AngleScore>? AdjustSpeedAndVelocity(WanderLoopState state)
+    public static RecyclableList<AngleScore> AdjustSpeedAndVelocity(WanderLoopState state)
     {
         ComputeScores(state);
 
@@ -273,6 +271,7 @@ public class WanderLoopState : Recyclable
     public int WanderLease { get; private set; }
     public int ElementLease { get; private set; }
     public int VisionLease { get; private set; }
+    public int VelocityLease { get; private set; }
 
     /// <summary>
     /// The last few angles the wanderer has taken. This is used to avoid
@@ -293,7 +292,10 @@ public class WanderLoopState : Recyclable
     {
         var s = Create(w.WanderOptions);
         s.Wander = w;
-        s.WanderLease = w.Lease; 
+        s.WanderLease = w.Lease;
+        s.VisionLease = w.WanderOptions.Vision.Lease;
+        s.ElementLease = w.WanderOptions.Velocity.Collider.Lease;
+        s.VelocityLease = w.WanderOptions.Velocity.Lease;
         s.LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
         return s;
     }
@@ -306,6 +308,7 @@ public class WanderLoopState : Recyclable
         s.VisionLease = o.Vision.Lease;
         s.WanderLease = 0;
         s.ElementLease = o.Velocity.Collider.Lease;
+        s.VelocityLease = o.Velocity.Lease;
         s.Weights = WanderWeights.Default;
         s.AngleScores = RecyclableListPool<AngleScore>.Instance.Rent();
         return s;
