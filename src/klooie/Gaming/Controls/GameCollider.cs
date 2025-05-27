@@ -7,6 +7,11 @@ public class GameCollider : ConsoleControl
     internal virtual bool AutoAddToColliderGroup => true;
     public virtual bool CanMoveTo(RectF bounds) => true;
 
+    // Only used by UniformGrid to avoid allocations in a callback. The grid
+    // passes a collider as the object to the callback, so we can use this
+    // to lookup the grid that the collider is in. This allows the callback
+    // to be static and avoid allocations.
+    internal UniformGrid? UniformGrid { get; set; }
 
     public GameCollider() : this(true)
     {
