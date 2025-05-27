@@ -73,12 +73,12 @@ public class ProjectileRule : IRule
     private static void DisposeShrapnel(object obj) => ((Recyclable)obj).TryDispose();
 
 
-    private void OnVisionInitiated(Vision vision)
+    private static void OnVisionInitiated(Vision vision)
     {
         vision.TargetBeingEvaluated.Subscribe(OnVisionTargetBeingEvaluated, vision);
     }
 
-    private void OnVisionTargetBeingEvaluated(VisionFilterContext context)
+    private static void OnVisionTargetBeingEvaluated(VisionFilterContext context)
     {
         if (context.PotentialTarget is Projectile)
         {
