@@ -61,7 +61,17 @@ public partial class ConsoleControl : Rectangular
     internal int ParentIndex { get; set; }
 
     internal ObservableCollection<IConsoleControlFilter> _filters;
-    public ObservableCollection<IConsoleControlFilter> Filters { get => _filters ?? (_filters = ObservableCollectionPool<IConsoleControlFilter>.Instance.Rent()); } 
+    public ObservableCollection<IConsoleControlFilter> Filters
+    {
+        get
+        {
+            if (_filters != null) return _filters;
+
+            _filters = ObservableCollectionPool<IConsoleControlFilter>.Instance.Rent();
+            Filters.Changed.Subscribe(this, OnAnyPropertyChangedPrivate, _filters);
+            return _filters;
+        }
+    }
     public bool HasFilters => _filters != null && _filters.Count > 0;
 
     /// <summary>
@@ -289,7 +299,6 @@ public partial class ConsoleControl : Rectangular
         CompositionMode = CompositionMode.PaintOver;
         
         SubscribeToAnyPropertyChange(this, OnAnyPropertyChangedPrivate, this);
-        Filters.Changed.Subscribe(this, OnAnyPropertyChangedPrivate, this);
         BoundsChanged.Subscribe(this, ResizeBitmapOnBoundsChanged, this);
         CanFocusChanged.Subscribe(this, HandleCanFocusChanged, this);
         OnDisposed(this, ReturnEvents);
