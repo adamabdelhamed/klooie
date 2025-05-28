@@ -413,6 +413,16 @@ public sealed class ColliderGroup
     public void GetObstacles(GameCollider owner, ObstacleBuffer buffer)
     {
         spatialIndex.QueryExcept(buffer, owner);
+
+        // backward loop to filter out obstacles that we can't collide with
+        for (int i = buffer.WriteableBuffer.Count - 1; i >= 0;i--)
+        {
+            var other = buffer.WriteableBuffer[i];
+            if(other.CanCollideWith(owner) == false || owner.CanCollideWith(other) == false)
+            {
+                buffer.WriteableBuffer.RemoveAt(i);
+            }
+        }
     }
 }
 
