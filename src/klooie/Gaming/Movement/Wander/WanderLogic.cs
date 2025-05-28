@@ -16,6 +16,7 @@
 // klooie.Gaming – Refactored WanderLogic for testability, prod/test control, and encapsulated weights/scores
 public static class WanderLogic
 {
+    private static readonly BackgroundColorFilter DebugModeEmergencyFilter = new BackgroundColorFilter(RGB.Orange);
     // --- Public surface --------------------------------------------------------------------
 
     /// <summary>
@@ -24,7 +25,7 @@ public static class WanderLogic
     public static RecyclableList<AngleScore> AdjustSpeedAndVelocity(WanderLoopState state)
     {
         ComputeScores(state);
-
+        ConsiderEmergencyMode(state);
         // pick best angle
         AngleScore best = state.AngleScores[0];
         for (int i = 1; i < state.AngleScores.Count; i++)
@@ -45,10 +46,44 @@ public static class WanderLogic
         state.LastFewAngles.Items.Add(angle);
         if (state.LastFewAngles.Count > 10) state.LastFewAngles.Items.RemoveAt(0);
 
+        var collider = state.WanderOptions.Velocity.Collider;
+        var rounded = collider.Bounds.Round();
+
+        state.LastFewRoundedBounds.Items.Add(rounded);
+        if (state.LastFewRoundedBounds.Count > 10)
+            state.LastFewRoundedBounds.Items.RemoveAt(0);
+
         return state.AngleScores;
     }
 
     // --- Private helpers -------------------------------------------------------------------
+
+    private static void ConsiderEmergencyMode(WanderLoopState state)
+    {
+        // Emergency mode if stuck
+        if (IsStuck(state))
+        {
+#if DEBUG
+            if(state.WanderOptions.Velocity.Collider.Filters.Contains(DebugModeEmergencyFilter) == false)
+            {
+                state.WanderOptions.Velocity.Collider.Filters.Add(DebugModeEmergencyFilter);
+            }
+#endif
+            var emergencyWeights = state.Weights;
+            emergencyWeights.InertiaWeight = -0.2f;
+            emergencyWeights.ForwardWeight = -0.2f;
+            RescoreAnglesWithWeights(state, emergencyWeights);
+        }
+        else
+        {
+#if DEBUG
+            if (state.WanderOptions.Velocity.Collider.Filters.Contains(DebugModeEmergencyFilter))
+            {
+                state.WanderOptions.Velocity.Collider.Filters.Remove(DebugModeEmergencyFilter);
+            }
+#endif
+        }
+    }
 
     private const float MaxCollisionHorizon = 1.25f;   // seconds – > this long = perfectly safe
 
@@ -67,7 +102,7 @@ public static class WanderLogic
         }
 
         state.AngleScores.Items.Clear();
-        var totalAngularTravel = 90;
+        var totalAngularTravel = 180f;
         float travelCompleted = 0f;
         var travelPerStep = 12f;
         ScoreAngle(state, inertiaAngle, curiosityAngle, state.WanderOptions.Velocity.Angle); // score the current angle first
@@ -129,6 +164,36 @@ public static class WanderLogic
         float t = (timeToCollision - DANGER) / (SAFE - DANGER); 
                                                            
         return t; 
+    }
+
+
+    private static void RescoreAnglesWithWeights(WanderLoopState state, WanderWeights weights)
+    {
+        for (int i = 0; i < state.AngleScores.Count; i++)
+        {
+            var prev = state.AngleScores[i];
+            state.AngleScores[i] = new AngleScore(
+                prev.Angle,
+                prev.Collision,
+                prev.Inertia,
+                prev.Forward,
+                prev.Curiosity,
+                weights
+            );
+        }
+    }
+
+    // We are single threaded so it's safe
+    private static HashSet<RectF> sharedUniqueModeHashSet = new HashSet<RectF>();
+    private static bool IsStuck(WanderLoopState state, int window = 3, int maxUnique = 2)
+    {
+        if (state.LastFewRoundedBounds.Count < window) return false;
+        sharedUniqueModeHashSet.Clear();
+        for (int i = state.LastFewRoundedBounds.Count - window; i < state.LastFewRoundedBounds.Count; i++)
+        {
+            sharedUniqueModeHashSet.Add(state.LastFewRoundedBounds[i]);
+        }
+        return sharedUniqueModeHashSet.Count <= maxUnique;  
     }
 
     private static float EvaluateSpeed(WanderLoopState state, Angle chosenAngle)
@@ -259,7 +324,7 @@ public struct WanderWeights
         CollisionWeight = 1.00f,
         InertiaWeight = 0.3f,
         ForwardWeight = 0.2f,
-        CuriosityWeight = 0.45f
+        CuriosityWeight = 0.6f
     };
 }
 
@@ -279,6 +344,8 @@ public class WanderLoopState : Recyclable
     /// </summary>
     public RecyclableList<Angle> LastFewAngles;
 
+    public RecyclableList<RectF> LastFewRoundedBounds;
+
     // --- New for testability/diagnostics ---
     public WanderWeights Weights { get; set; } = WanderWeights.Default;
     public RecyclableList<AngleScore> AngleScores { get; private set; }
@@ -297,6 +364,7 @@ public class WanderLoopState : Recyclable
         s.ElementLease = w.WanderOptions.Velocity.Collider.Lease;
         s.VelocityLease = w.WanderOptions.Velocity.Lease;
         s.LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
+        s.LastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent();
         return s;
     }
 
@@ -323,6 +391,9 @@ public class WanderLoopState : Recyclable
         WanderLease = 0;
         VisionLease = 0;
         LastFewAngles.TryDispose();
+        LastFewAngles = null!;
+        LastFewRoundedBounds.TryDispose();
+        LastFewRoundedBounds = null!;
         AngleScores?.TryDispose();
         AngleScores = null!;
         _tcs.TrySetResult();
