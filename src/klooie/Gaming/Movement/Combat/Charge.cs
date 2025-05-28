@@ -4,6 +4,10 @@ public class ChargeOptions : CombatMovementOptions
 {
     public required ICollidable DefaultCuriosityPoint { get; set; }
     public float CloseEnough { get; set; } = 5;
+    /// <summary>
+    /// Returns an enemy in the immediate area, if any. Returns null if none are found.
+    /// </summary>
+    public Func<ICollidable?>? NearbyEnemyProvider { get; set; }
 }
 
 public class Charge : CombatMovement
@@ -33,7 +37,10 @@ public class Charge : CombatMovement
 
         var wanderOptions = new WanderOptions()
         {
-            CuriousityPoint = () => ChargeOptions.Targeting.Target ?? ChargeOptions.DefaultCuriosityPoint,
+            CuriousityPoint = () =>
+                ChargeOptions.Targeting.Target
+                ?? ChargeOptions.NearbyEnemyProvider?.Invoke() 
+                ?? ChargeOptions.DefaultCuriosityPoint,
             CloseEnough = ChargeOptions.CloseEnough,
             Speed = ChargeOptions.Speed,
             Velocity = Options.Velocity,
