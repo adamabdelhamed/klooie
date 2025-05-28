@@ -64,8 +64,7 @@ public class Targeting : Recyclable
         {
             VisuallyTrackedObject? tracked = Options.Vision.TrackedObjectsList[i];
             var tgt = tracked.Target;
-            if (Options.TargetTag != null && !tgt.HasSimpleTag(Options.TargetTag))
-                continue;
+            if (!IsPotentialTarget(tgt)) continue;
 
             if (tracked.Distance < closestDistance)
             {
@@ -75,6 +74,14 @@ public class Targeting : Recyclable
         }
 
         OnTargetChanged(best?.Target);
+    }
+
+    public bool IsPotentialTarget(GameCollider candidate)
+    {
+        if (candidate == null) return false;
+        if (Options.TargetTag != null && !candidate.HasSimpleTag(Options.TargetTag)) return false;
+        // You might want to add "not self" or other checks here if needed.
+        return true;
     }
 
     private void OnTargetChanged(GameCollider? newTarget)
