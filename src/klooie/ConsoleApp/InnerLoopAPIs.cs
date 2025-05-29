@@ -95,6 +95,43 @@ public sealed class InnerLoopAPIs
         pausedTime = null;
     }
 
+    private List<DelayState>? delayStates;
+    public void DelayIfValid(double delayMs, DelayState statefulScope, Action<object> then)
+    {
+        statefulScope.InnerAction = then;
+
+        if(delayStates == null)
+        {
+            delayStates = new List<DelayState>();
+            ConsoleApp.Current.OnDisposed(this, DisposeStates);
+        }
+        delayStates.Add(statefulScope);
+        Delay(delayMs, (object)statefulScope, HandleDelayState);
+    }
+
+    private static void DisposeStates(object innerLoopObs)
+    {
+        var _this = (InnerLoopAPIs)innerLoopObs;
+        if (_this.delayStates == null) return;
+        foreach (var ds in _this.delayStates)
+        {
+            ds.TryDispose();
+        }
+        _this.delayStates.Clear();
+        _this.delayStates = null;
+    }
+
+    private static void HandleDelayState(object ds)
+    {
+        var state = (DelayState)ds;
+        if (state.IsStillValid == false)
+        {
+            state.TryDispose();
+            return;
+        }
+        state.InnerAction?.Invoke(ds);
+    }
+
     public void Delay(double delayMs, object scope, Action<object>? then = null) => For(1, delayMs, scope, null, then);
 
     public void Delay(double delayMs, Action? then = null) => For(1, delayMs, null, then);

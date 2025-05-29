@@ -2,6 +2,7 @@
 
 public class DelayState : Recyclable
 {
+    internal Action<object> InnerAction;
     private RecyclableList<ILifetime> Dependencies;
     private RecyclableList<int> Leases;
 
@@ -67,5 +68,6 @@ public class DelayState : Recyclable
         Dependencies = null;
         Leases?.Dispose();
         Leases = null;
+        InnerAction = null;
     }
 }
