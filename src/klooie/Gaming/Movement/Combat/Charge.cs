@@ -23,37 +23,39 @@ public class Charge : CombatMovement
     }
     protected override async Task Move()
     {
-        var myLease = Lease;
-        var targetingLease = ChargeOptions.Targeting.Lease;
-        var colliderLease = Options.Velocity.Collider.Lease;
-        var velocityLease = Options.Velocity.Lease;
-        var visionLease = ChargeOptions.Vision.Lease;
-
-        bool IsAlive() => IsStillValid(myLease) &&
-                          ChargeOptions?.Targeting?.IsStillValid(targetingLease) == true &&
-                          Options?.Velocity?.IsStillValid(velocityLease) == true &&
-                          Options?.Velocity?.Collider?.IsStillValid(colliderLease) == true &&
-                          ChargeOptions?.Vision?.IsStillValid(visionLease) == true;
-
-        var wanderOptions = new WanderOptions()
+        var delayState = DelayState.Create(this);
+        try
         {
-            CuriousityPoint = () =>
-                ChargeOptions.Targeting.Target
-                ?? ChargeOptions.NearbyEnemyProvider?.Invoke() 
-                ?? ChargeOptions.DefaultCuriosityPoint,
-            CloseEnough = ChargeOptions.CloseEnough,
-            Speed = ChargeOptions.Speed,
-            Velocity = Options.Velocity,
-            Vision = ChargeOptions.Vision,
-        };
+            delayState.AddDependency(ChargeOptions.Targeting);
+            delayState.AddDependency(Options.Velocity.Collider);
+            delayState.AddDependency(Options.Velocity);
+            delayState.AddDependency(ChargeOptions.Vision);
 
-        while (IsAlive())
+            var wanderOptions = new WanderOptions()
+            {
+                CuriousityPoint = () =>
+                    ChargeOptions.Targeting.Target
+                    ?? ChargeOptions.NearbyEnemyProvider?.Invoke()
+                    ?? ChargeOptions.DefaultCuriosityPoint,
+                CloseEnough = ChargeOptions.CloseEnough,
+                Speed = ChargeOptions.Speed,
+                Velocity = Options.Velocity,
+                Vision = ChargeOptions.Vision,
+            };
+
+            while (delayState.IsStillValid)
+            {
+                var lt = UntilCloseToTargetLifetime.Create(Options.Velocity.Collider, ChargeOptions.Targeting, ChargeOptions.CloseEnough);
+                this.OnDisposed(() => lt.TryDispose());
+                await Mover.InvokeOrTimeout(this, Wander.Create(wanderOptions), lt);
+                if (!delayState.IsStillValid) break;
+                await StayOnTarget(ChargeOptions.CloseEnough);
+                await Task.Yield();
+            }
+        }
+        finally
         {
-            var lt = UntilCloseToTargetLifetime.Create(Options.Velocity.Collider, ChargeOptions.Targeting, ChargeOptions.CloseEnough);
-            this.OnDisposed(() => lt.TryDispose());
-            await Mover.InvokeOrTimeout(this, Wander.Create(wanderOptions), lt);
-            await StayOnTarget(ChargeOptions.CloseEnough);
-            await Task.Yield();
+            delayState.TryDispose();
         }
     }
 }

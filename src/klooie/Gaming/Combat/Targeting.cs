@@ -38,7 +38,12 @@ public class Targeting : Recyclable
         options.Vision.VisibleObjectsChanged.Subscribe(this, OnVisionChanged, this);
     }
 
-    private static void DisposeMe(object me) => (me as Targeting)?.TryDispose();
+    private static void DisposeMe(object me)
+    {
+        var targeting = (Targeting)me;
+        targeting.ClearHighlightFilterFromCurrentTarget();
+        targeting.TryDispose();
+    }
 
     private static void OnVisionChanged(object me)
     {
@@ -89,17 +94,7 @@ public class Targeting : Recyclable
         if (newTarget == Target) return;
 
         // Remove highlight filter from old target if needed
-        if (Options.HighlightTargets && Target != null && Target.HasFilters)
-        {
-            for (int i = 0; i < Target.Filters.Count; i++)
-            {
-                if (ReferenceEquals(targetFilter, Target.Filters[i]))
-                {
-                    Target.Filters.RemoveAt(i);
-                    break;
-                }
-            }
-        }
+        ClearHighlightFilterFromCurrentTarget();
 
         // Clean up previous
         CurrentTargetLifetime?.TryDispose();
@@ -117,6 +112,21 @@ public class Targeting : Recyclable
         _targetChanged?.Fire(newTarget);
         if (newTarget != null)
             _targetAcquired?.Fire(newTarget);
+    }
+
+    private void ClearHighlightFilterFromCurrentTarget()
+    {
+        if (Target != null && Target.HasFilters)
+        {
+            for (int i = 0; i < Target.Filters.Count; i++)
+            {
+                if (ReferenceEquals(targetFilter, Target.Filters[i]))
+                {
+                    Target.Filters.RemoveAt(i);
+                    break;
+                }
+            }
+        }
     }
 
     protected override void OnReturn()

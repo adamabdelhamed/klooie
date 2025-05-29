@@ -321,10 +321,10 @@ public struct WanderWeights
 
     public static readonly WanderWeights Default = new WanderWeights
     {
-        CollisionWeight = 1.00f,
-        InertiaWeight = 0.3f,
-        ForwardWeight = 0.2f,
-        CuriosityWeight = 0.6f
+        CollisionWeight = 1.10f,
+        InertiaWeight = 0.2f,
+        ForwardWeight = 0.15f,
+        CuriosityWeight = 0.7f
     };
 }
 
