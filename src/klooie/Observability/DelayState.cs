@@ -22,11 +22,16 @@ public class DelayState : Recyclable
         }
     }
 
+    protected override void OnInit()
+    {
+        base.OnInit();
+        Dependencies = RecyclableListPool<ILifetime>.Instance.Rent();
+        Leases = RecyclableListPool<int>.Instance.Rent(1);
+    }
+
     public static DelayState Create(ILifetime dependency)
     {
         var ret = DelayStatePool.Instance.Rent();
-        ret.Dependencies = RecyclableListPool<ILifetime>.Instance.Rent(1);
-        ret.Leases = RecyclableListPool<int>.Instance.Rent(1);
         ret.Dependencies.Items.Add(dependency);
         ret.Leases.Items.Add(dependency.Lease);
         return ret;

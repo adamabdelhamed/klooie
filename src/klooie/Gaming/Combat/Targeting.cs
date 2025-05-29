@@ -5,7 +5,7 @@ public class TargetingOptions
     public bool HighlightTargets { get; set; }
     public required GameCollider Source { get; set; }
     public required Vision Vision { get; set; }
-    public string? TargetTag { get; set; }
+    public string[]? TargetTags { get; set; }
 }
 
 public class Targeting : Recyclable
@@ -84,7 +84,22 @@ public class Targeting : Recyclable
     public bool IsPotentialTarget(GameCollider candidate)
     {
         if (candidate == null) return false;
-        if (Options.TargetTag != null && !candidate.HasSimpleTag(Options.TargetTag)) return false;
+        if (candidate == Options.Source) return false; // Don't target self
+
+        if (Options.TargetTags != null && Options.TargetTags.Length > 0)
+        {
+            bool hasTag = false;
+            foreach (var tag in Options.TargetTags)
+            {
+                if (candidate.HasSimpleTag(tag))
+                {
+                    hasTag = true;
+                    break;
+                }
+            }
+            if (!hasTag) return false;
+        }
+
         // You might want to add "not self" or other checks here if needed.
         return true;
     }

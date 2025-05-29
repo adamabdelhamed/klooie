@@ -71,7 +71,7 @@ public partial class ConsoleStringRenderer : ConsoleControl
 {
     public partial ConsoleString Content { get; set; }
 
- 
+    public ConsoleStringRenderer() { }
     public ConsoleStringRenderer(ConsoleString? content = null)
     {
         this.Content = content ?? ConsoleString.Empty;

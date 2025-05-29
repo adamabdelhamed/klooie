@@ -25,7 +25,7 @@ public readonly struct UniformGridCell : IEquatable<UniformGridCell>
 public sealed class UniformGrid
 {  
     private List<UniformGridCell> cellBuffer = new List<UniformGridCell>();
-    private const float _cellSize = 30f;
+    private const float _cellSize = 100f;
     private readonly Dictionary<UniformGridCell, ObstacleBuffer> _buckets = new Dictionary<UniformGridCell, ObstacleBuffer>();
     private readonly Dictionary<GameCollider,int> leases = new Dictionary<GameCollider, int>();
     private readonly Dictionary<GameCollider, RectF> _previousBounds = new();
