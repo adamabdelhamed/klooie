@@ -13,9 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="PowerArgs">
-      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net9.0\PowerArgs.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj" />
     <ProjectReference Include="..\klooie\klooie.csproj" />
   </ItemGroup>
 

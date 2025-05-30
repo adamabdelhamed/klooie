@@ -10,12 +10,7 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
     <PackageReference Include="NAudio" Version="2.2.1" />
-    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Debug'">
-      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net9.0\PowerArgs.dll</HintPath>
-    </Reference>
-    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Release'">
-      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Release\net9.0\PowerArgs.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj" />
 
  
     

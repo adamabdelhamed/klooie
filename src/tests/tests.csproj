@@ -15,12 +15,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Debug'">
-      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net9.0\PowerArgs.dll</HintPath>
-    </Reference>
-    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Release'">
-      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Release\net9.0\PowerArgs.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
