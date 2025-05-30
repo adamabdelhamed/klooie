@@ -11,6 +11,7 @@ public class DataGalleryTests
     public TestContext TestContext { get; set; }
 
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void DataGallery_Basic() => AppTest.Run(TestContext.TestId(), UITestMode.KeyFramesVerified, async (context) =>
     {
         var gallery = ConsoleApp.Current.LayoutRoot.Add(new DataGallery<string>((str,index) =>

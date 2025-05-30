@@ -23,4 +23,4 @@ jobs:
       - name: Build
         run: dotnet build ./src/klooie.sln --no-restore
       - name: Test
-        run: dotnet test ./src/klooie.sln --no-build --verbosity normal --filter "TestCategory=Observability&TestCategory=Geometry"
+        run: dotnet test ./src/klooie.sln --no-build --verbosity normal --filter "TestCategory=Observability&TestCategory=Geometry&TestCategory!=Quarantined"

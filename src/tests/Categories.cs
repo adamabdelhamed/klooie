@@ -2,15 +2,16 @@
 {
     public static class Categories
     {
-        public const string ConsoleApp = "ConsoleApp tests";
+        public const string ConsoleApp = "ConsoleApp";
         public const string Theming = "Theming";
         public const string Geometry = "Geometry";
-        public const string Physics = "Physics tests";
-        public const string Drawing = "ConsoleBitmap and recording tests";
+        public const string Physics = "Physics";
+        public const string Drawing = "Drawing";
         public const string Gaming = "Gaming";
-        public const string Code = "Gaming.Code";
         public const string Observability = "Observability";
-        public const string MemoryManagement = "Memory Management";
+        public const string MemoryManagement = "Memory";
         public const string Slow = "Slow";
+        public const string Quarantined = "Quarantined";
+
     }
 }

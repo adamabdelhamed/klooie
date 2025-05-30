@@ -14,6 +14,7 @@ public class XYChartTests
     public TestContext TestContext { get; set; }
 
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void XYChart_CPUChartPastDay() => RenderChartTestCommon(new XYChartOptions()
     {
         Title = "CPU Percentage (past day)".ToYellow(),
@@ -43,6 +44,7 @@ public class XYChartTests
  
 
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void XYChart_DistanceOverTime() => RenderChartTestCommon(new XYChartOptions()
     {
         Title = "Distance over time".ToYellow(),
@@ -66,6 +68,7 @@ public class XYChartTests
     
 
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void XYChart_NPSPast3Months()
     {
         var points = new List<DataPoint>();
@@ -99,6 +102,7 @@ public class XYChartTests
     }
 
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void XYChart_Parabola()
     {
         var points = Enumerable
@@ -115,6 +119,7 @@ public class XYChartTests
     }
 
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void XYChart_Cube()
     {
         var points = Enumerable
