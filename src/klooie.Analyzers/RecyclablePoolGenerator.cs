@@ -1,47 +1,61 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace klooie
 {
     [Generator]
-    public class RecyclablePoolGenerator : ISourceGenerator
+    public class RecyclablePoolGenerator : IIncrementalGenerator
     {
-        private INamedTypeSymbol recyclableClassSymbol;
-
-        public void Initialize(GeneratorInitializationContext context) { }
-
-        public void Execute(GeneratorExecutionContext context)
+        public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            var compilation = context.Compilation;
 
-            recyclableClassSymbol = compilation.GetTypeByMetadataName("klooie.Recyclable");
+            // Find all class declarations
+            var classDeclarations = context.SyntaxProvider
+                .CreateSyntaxProvider(
+                    predicate: static (node, _) => node is ClassDeclarationSyntax,
+                    transform: static (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
+                .Where(static c => c != null);
 
-            var classes = compilation.SyntaxTrees
-                .SelectMany(st => st.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>())
-                .ToList();
+            // Combine with the compilation for semantic analysis
+            var compilationProvider = context.CompilationProvider;
 
-            foreach (var classDeclaration in classes)
+            var recyclableClassInfos = classDeclarations
+                .Combine(compilationProvider)
+                .Select((tuple, _) =>
+                {
+                    var (classDeclaration, compilation) = tuple;
+
+                    var semanticModel = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
+                    var classSymbol = semanticModel.GetDeclaredSymbol(classDeclaration) as INamedTypeSymbol;
+
+                    var recyclableClassSymbol = compilation.GetTypeByMetadataName("klooie.Recyclable");
+                    if (classSymbol == null || recyclableClassSymbol == null)
+                        return null;
+
+                    // Filtering logic as before
+                    if (classSymbol.IsAbstract) return null;
+                    if (classSymbol.DeclaredAccessibility != Accessibility.Public) return null;
+                    if (classSymbol.TypeParameters.Any()) return null;
+                    if (classSymbol.ContainingType != null) return null;
+                    if (!IsEqualsOrDerivesFromBaseType(classSymbol, recyclableClassSymbol)) return null;
+                    if (!classSymbol.Constructors.Any(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public)) return null;
+
+                    return classSymbol;
+                })
+                .Where(static s => s != null);
+
+            context.RegisterSourceOutput(recyclableClassInfos, (spc, classSymbol) =>
             {
-                var semanticModel = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
-                var classSymbol = semanticModel.GetDeclaredSymbol(classDeclaration) as INamedTypeSymbol;
-
-                // Ensure the type meets the criteria
-                if (classSymbol == null || classSymbol.IsAbstract) continue;
-                if (classSymbol.DeclaredAccessibility != Accessibility.Public) continue;
-                if (classSymbol.TypeParameters.Any()) continue; // Skip if it has generic arguments
-                if (classSymbol.ContainingType != null) continue; // Exclude nested types
-                if (!IsEqualsOrDerivesFromBaseType(classSymbol, recyclableClassSymbol)) continue;
-                if (!classSymbol.Constructors.Any(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public)) continue;
-
-                var source = GeneratePoolClass(classSymbol);
-                context.AddSource($"{classSymbol.Name}Pool.g.cs", SourceText.From(source, Encoding.UTF8));
-            }
+                var source = GeneratePoolClass(classSymbol!);
+                spc.AddSource($"{classSymbol!.Name}Pool.g.cs", SourceText.From(source, Encoding.UTF8));
+            });
         }
 
-        private bool IsEqualsOrDerivesFromBaseType(INamedTypeSymbol classSymbol, INamedTypeSymbol baseTypeSymbol)
+        private static bool IsEqualsOrDerivesFromBaseType(INamedTypeSymbol classSymbol, INamedTypeSymbol baseTypeSymbol)
         {
             var currentType = classSymbol;
             while (currentType != null)
@@ -54,7 +68,7 @@ namespace klooie
             return false;
         }
 
-        private string GeneratePoolClass(INamedTypeSymbol classSymbol)
+        private static string GeneratePoolClass(INamedTypeSymbol classSymbol)
         {
             var sb = new StringBuilder();
 

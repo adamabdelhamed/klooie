@@ -8,10 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.7.1" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.7.1" />
-    <PackageReference Include="coverlet.collector" Version="6.0.3">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.9.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.9.1" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -21,7 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\klooie\klooie.csproj" />
     <ProjectReference Include="..\klooie.Analyzers\klooie.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" GeneratePathProperty="true" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.12.0" GeneratePathProperty="true" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" GeneratePathProperty="true" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.13.0" GeneratePathProperty="true" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" GeneratePathProperty="true" PrivateAssets="all" />
   </ItemGroup>
 </Project>
