@@ -379,6 +379,8 @@ public class WanderLoopState : Recyclable
         s.VelocityLease = o.Velocity.Lease;
         s.Weights = WanderWeights.Default;
         s.AngleScores = RecyclableListPool<AngleScore>.Instance.Rent();
+        s.LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
+        s.LastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent();
         return s;
     }
 

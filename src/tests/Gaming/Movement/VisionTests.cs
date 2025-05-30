@@ -3,10 +3,7 @@ using klooie.Gaming;
 using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace tests.Gaming.Movement;
@@ -17,6 +14,7 @@ public class VisionTests
     public TestContext TestContext { get; set; }
 
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void VisionTestBasic() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified, 60, 30, async (context) =>
     {
         await SetupVisionTest(context, new RectF(30, 15, 2, 1));

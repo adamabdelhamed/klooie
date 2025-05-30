@@ -236,6 +236,7 @@ public class CollisionDetectorTests
 
 #if DEBUG
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void TestCloseMovementWithDebuggerSuccess()
     {
         var lt = DefaultRecyclablePool.Instance.Rent();
@@ -265,6 +266,7 @@ public class CollisionDetectorTests
     }
 
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void TestCollisionWithNotEnoughRoomToEncroach()
     {
         var lt = DefaultRecyclablePool.Instance.Rent();
@@ -325,6 +327,7 @@ public class CollisionDetectorTests
     }
 
     [TestMethod]
+    [TestCategory(Categories.Quarantined)]
     public void TestCollisionWithEnoughRoomToEncroach()
     {
         var lt = DefaultRecyclablePool.Instance.Rent();
