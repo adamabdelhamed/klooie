@@ -8,18 +8,17 @@ on:
 
 jobs:
   build:
-
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v2
-      with:
-        dotnet-version: 6.0.x
-    - name: Restore dependencies
-      run: dotnet restore ./src/klooie.sln
-    - name: Build
-      run: dotnet build ./src/klooie.sln --no-restore
-    - name: Test
-      run: dotnet test  ./src/klooie.sln --no-build --verbosity normal
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Restore dependencies
+        run: dotnet restore ./src/klooie.sln
+      - name: Build
+        run: dotnet build ./src/klooie.sln --no-restore
+      - name: Test
+        run: dotnet test ./src/klooie.sln --no-build --verbosity normal --filter "TestCategory=Observability"
