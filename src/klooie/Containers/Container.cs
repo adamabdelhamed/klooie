@@ -76,6 +76,13 @@ public abstract class Container : ConsoleControl
     public virtual bool IsInView(ConsoleControl c) => new RectF(0, 0, Width, Height).Touches(c.Bounds);
 
     /// <summary>
+    /// Determines if the rectangle is in view so that the caller can make decisions
+    /// </summary>
+    /// <param name="rect">the area to check</param>
+    /// <returns>true if the area is in view</returns>
+    public virtual bool IsInView(RectF rect) => new RectF(0, 0, Width, Height).Touches(rect);
+
+    /// <summary>
     /// Visits every control in the control tree, recursively, using the visit action provided
     /// </summary>
     /// <param name="visitAction">the visitor function that will be run for each child control, the function can return true if it wants to stop further visitation</param>

@@ -192,6 +192,9 @@ public sealed partial class Camera : ConsolePanel
     public override bool IsInView(ConsoleControl c) =>
         new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height).Touches(c.Bounds);
 
+    public override bool IsInView(RectF bounds) =>
+    new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height).Touches(bounds);
+
     /// <summary>
     /// When BigBounds is larger than the camera bounds then the camera is free to
     /// move inside of BigBounds. This method calculates the x and y pan coordinates
