@@ -43,12 +43,12 @@ public class Charge : CombatMovement
                 Vision = ChargeOptions.Vision,
             };
 
-            while (delayState.IsStillValid)
+            while (delayState.AreAllDependenciesValid)
             {
                 var lt = UntilCloseToTargetLifetime.Create(Options.Velocity.Collider, ChargeOptions.Targeting, ChargeOptions.CloseEnough);
                 this.OnDisposed(() => lt.TryDispose());
                 await Mover.InvokeOrTimeout(this, Wander.Create(wanderOptions), lt);
-                if (!delayState.IsStillValid) break;
+                if (!delayState.AreAllDependenciesValid) break;
                 await StayOnTarget(ChargeOptions.CloseEnough);
                 await Task.Yield();
             }
