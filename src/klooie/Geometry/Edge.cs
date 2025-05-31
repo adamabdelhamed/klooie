@@ -21,6 +21,7 @@ public readonly struct Edge
 
     public Edge(float x1, float y1, float x2, float y2)
     {
+        GeometryGuard.ValidateFloats(x1, y1, x2, y2);
         X1 = x1;
         Y1 = y1;
         X2 = x2;

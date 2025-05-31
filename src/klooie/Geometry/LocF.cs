@@ -10,6 +10,7 @@ public readonly struct LocF
 
     public LocF(float x, float y)
     {
+        GeometryGuard.ValidateFloats(x, y);
         this.Left = x;
         this.Top = y;
     }
