@@ -8,7 +8,7 @@ public class DelayState : Recyclable
 
     public ILifetime MainDependency => Dependencies.Items[0];
 
-    public bool IsStillValid
+    public bool AreAllDependenciesValid
     {
         get
         {
@@ -59,6 +59,19 @@ public class DelayState : Recyclable
             ret.Leases.Items.Add(dependencies[i].Lease);
         }
         return ret;
+    }
+
+    internal void DisposeAllValidDependencies()
+    {
+        if (Dependencies == null) return;
+        for (int i = 0; i < Dependencies.Count; i++)
+        {
+            if (Dependencies[i] == null || Dependencies[i].IsStillValid(Leases[i]) == false)
+            {
+                continue;
+            }
+            (Dependencies[i] as Recyclable)?.TryDispose();
+        }
     }
 
     protected override void OnReturn()
