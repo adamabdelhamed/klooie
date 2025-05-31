@@ -106,7 +106,25 @@ public sealed class InnerLoopAPIs
             ConsoleApp.Current.OnDisposed(this, DisposeStates);
         }
         delayStates.Add(statefulScope);
-        Delay(delayMs, (object)statefulScope, HandleDelayState);
+        Delay(delayMs, (object)statefulScope, InvokeDelayCallbackIfAllDependenciesAreValid);
+    }
+
+    public void DelayThenDisposeAllDependencies(double delayMs, DelayState statefulScope)
+    {
+        if (delayStates == null)
+        {
+            delayStates = new List<DelayState>();
+            ConsoleApp.Current.OnDisposed(this, DisposeStates);
+        }
+        delayStates.Add(statefulScope);
+        Delay(delayMs, (object)statefulScope, DisposeAllDependneciesFromDelayState);
+    }
+
+    private static void DisposeAllDependneciesFromDelayState(object ds)
+    {
+        var state = (DelayState)ds;
+        state.DisposeAllValidDependencies();
+        state.TryDispose();
     }
 
     private static void DisposeStates(object innerLoopObs)
@@ -121,10 +139,10 @@ public sealed class InnerLoopAPIs
         _this.delayStates = null;
     }
 
-    private static void HandleDelayState(object ds)
+    private static void InvokeDelayCallbackIfAllDependenciesAreValid(object ds)
     {
         var state = (DelayState)ds;
-        if (state.IsStillValid == false)
+        if (state.AreAllDependenciesValid == false)
         {
             state.TryDispose();
             return;
