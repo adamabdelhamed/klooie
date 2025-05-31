@@ -34,7 +34,7 @@ public abstract partial class Gallery : ProtectedConsolePanel
         var x = HMargin;
         var y = VMargin;
         var rowHeight = 0;
-        foreach (var child in Children)
+        foreach (var child in ProtectedPanel.Children)
         {
             var proposed = new RectF(x, y, child.Width, child.Height);
             if (new RectF(0,0,Width, Height).Contains(proposed))
