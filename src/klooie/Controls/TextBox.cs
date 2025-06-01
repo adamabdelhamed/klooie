@@ -121,12 +121,20 @@ public partial class TextBox : ConsoleControl
         else if (isAllSelected)
         {
             isAllSelected = false;
-            ConsoleCharacter? p = this.Value.Length == 0 ? null : this.Value[this.Value.Length - 1];
-            var c = new ConsoleCharacter(info.KeyChar,
-                p.HasValue ? p.Value.ForegroundColor : ConsoleString.DefaultForegroundColor,
-                p.HasValue ? p.Value.BackgroundColor : ConsoleString.DefaultBackgroundColor);
+            ConsoleCharacter? prototype = this.Value.Length == 0 ? null : this.Value[this.Value.Length - 1];
 
-            Value = RichTextCommandLineReader.IsWriteable(info) ? new ConsoleString(new ConsoleCharacter[] { c }) : ConsoleString.Empty;
+            Editor.CursorPosition = 0;
+            Editor.CurrentValue = ConsoleString.Empty;
+
+            // Only attempt to register key press if it's a writable character or a space.
+            // Other special keys like arrows, backspace are handled in earlier conditions.
+            if (RichTextCommandLineReader.IsWriteable(info) || info.Key == ConsoleKey.Spacebar)
+            {
+                Editor.RegisterKeyPress(info, prototype);
+            }
+            // If not writable and not space, CurrentValue remains Empty, effectively clearing the selection.
+
+            Value = Editor.CurrentValue; // Update Value from editor
             StartBlinking();
             return;
         }
