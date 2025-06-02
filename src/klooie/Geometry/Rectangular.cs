@@ -82,6 +82,7 @@ public partial class Rectangular :  Recyclable, IObservableObject, ICollidable
 
     public void MoveTo(float x, float y, int? z = null)
     {
+        GeometryGuard.ValidateFloats(x, y);
         Bounds = new RectF(x, y, Bounds.Width, Bounds.Height);
         if (z.HasValue)
         {
