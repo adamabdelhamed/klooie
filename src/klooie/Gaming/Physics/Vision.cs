@@ -13,7 +13,7 @@ public class Vision : Recyclable
     public Event VisibleObjectsChanged => _visibleObjectsChanged ??= EventPool.Instance.Rent();
 
     private const float DelayMs = 667;
-    private int eyeLease = 0;
+
     private VisionFilterContext targetFilterContext = new VisionFilterContext();
     private Event<VisionFilterContext>? _targetBeingEvaluated;
     public List<VisuallyTrackedObject> TrackedObjectsList { get; private set; } = new List<VisuallyTrackedObject>();
@@ -30,13 +30,12 @@ public class Vision : Recyclable
     {
         var vision = VisionPool.Instance.Rent();
         vision.Eye = eye;
-        vision.eyeLease = eye.Lease;
         vision.ScanOffset = random.Next(0, (int)DelayMs);
 
         _visionInitiated?.Fire(vision);
         if (autoScan)
         {
-            Game.Current.InnerLoopAPIs.Delay(vision.ScanOffset, vision, ScanLoopBody);
+            Game.Current.InnerLoopAPIs.Delay(vision.ScanOffset, VisionDependencyState.Create(vision), ScanLoopBody);
         }
         return vision;
     }
@@ -54,15 +53,15 @@ public class Vision : Recyclable
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     private static void ScanLoopBody(object obj)
     {
-        var vision = (Vision)obj;
-        if (vision.Eye.IsStillValid(vision.eyeLease) == false)
+        var state = (VisionDependencyState)obj;
+        if(state.AreAllDependenciesValid == false)
         {
-            vision.TryDispose();
+            state.Dispose();
             return;
         }
-        
-        vision.Scan();
-        Game.Current.InnerLoopAPIs.Delay(DelayMs + vision.ScanOffset, vision, ScanLoopBody);
+
+        state.Vision.Scan();
+        Game.Current.InnerLoopAPIs.Delay(DelayMs + state.Vision.ScanOffset, state, ScanLoopBody);
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
@@ -196,7 +195,6 @@ public class Vision : Recyclable
     {
         base.OnReturn();
         Eye = null!;
-        eyeLease = 0;
         Range = DefaultRange;
         AngularVisibility = DefaultAngularVisibility;
         _targetBeingEvaluated?.Dispose();
@@ -218,6 +216,27 @@ public class VisionFilterContext
     {
         Ignored = false;
         PotentialTarget = toBind;
+    }
+}
+
+public class VisionDependencyState : DelayState
+{
+    public Vision Vision { get; private set; }
+
+    public static VisionDependencyState Create(Vision v)
+    {
+        var state = VisionDependencyStatePool.Instance.Rent();
+        state.Vision = v;
+        state.AddDependency(v);
+        state.AddDependency(v.Eye);
+        state.AddDependency(v.Eye.Velocity);
+        return state;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Vision = null!;
     }
 }
 
