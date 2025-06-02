@@ -33,8 +33,7 @@ public class DelayState : Recyclable
     public static DelayState Create(ILifetime dependency)
     {
         var ret = DelayStatePool.Instance.Rent();
-        ret.Dependencies.Items.Add(dependency);
-        ret.Leases.Items.Add(dependency.Lease);
+        ret.AddDependency(dependency);
         return ret;
     }
 
