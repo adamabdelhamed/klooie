@@ -7,8 +7,6 @@ public class Collision : Recyclable
     public Angle Angle { get; private set; }
     public ICollidable MovingObject { get; private set; }
     public ICollidable ColliderHit { get; private set; }
-    public int MovingObjectLease { get; private set; }
-    public int ColliderHitLease { get; private set; }
     public CollisionPrediction Prediction { get; private set; }
     public override string ToString() => $"{Prediction.LKGX},{Prediction.LKGY} - {ColliderHit?.GetType().Name}";
 
@@ -24,8 +22,6 @@ public class Collision : Recyclable
         MovingObject = movingObject;
         ColliderHit = colliderHit;
         Prediction = prediction;
-        MovingObjectLease = movingObject is ILifetime lt ? lt.Lease : 0;
-        ColliderHitLease = colliderHit is ILifetime lt2 ? lt2.Lease : 0;
     }
 
     public void Reset()
