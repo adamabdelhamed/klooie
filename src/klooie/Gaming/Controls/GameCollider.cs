@@ -2,7 +2,7 @@
 
 public class GameCollider : ConsoleControl
 {
-    private bool connectToMainColliderGroup;
+    private bool connectToMainColliderGroup; // todo - remove this since I don't think there's any path where it can actually be set in time for OnInit
     public Velocity Velocity { get; private set; }
     internal virtual bool AutoAddToColliderGroup => true;
     public virtual bool CanMoveTo(RectF bounds) => true;
