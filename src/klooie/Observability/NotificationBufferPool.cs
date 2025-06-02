@@ -54,7 +54,7 @@ internal sealed class NotificationBufferPool
         pool.Add(buffer);
     }
 
-    public static void Notify(List<Subscription>? subscribers)
+    public static void Notify(List<Subscription>? subscribers, DelayState? dependencies = null)
     {
         if (subscribers == null || subscribers.Count == 0) return;
         var subscriberCount = subscribers.Count;
@@ -63,7 +63,7 @@ internal sealed class NotificationBufferPool
         // rent a buffer, or bother with a loop and lifetime checks.
         if (subscriberCount == 1)
         {
-            Notify(subscribers[0]);
+            Notify(subscribers[0], dependencies);
             return;
         }
 
@@ -83,7 +83,7 @@ internal sealed class NotificationBufferPool
             for (var i = 0; i < subscriberCount; i++)
             {
                 var sub = buffer[i];
-                Notify(sub);
+                Notify(sub, dependencies);
 
                 if (sub.ToAlsoDispose != null)
                 {
@@ -98,8 +98,13 @@ internal sealed class NotificationBufferPool
         }
     }
 
-    private static void Notify(Subscription sub)
+    private static void Notify(Subscription sub, DelayState? dependencies)
     {
+        if (dependencies?.AreAllDependenciesValid == false)
+        {
+            return;
+        }
+
         if (sub.ScopedCallback != null)
         {
             sub.ScopedCallback(sub.Scope);

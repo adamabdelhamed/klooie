@@ -16,6 +16,8 @@ public sealed class Event : Recyclable
     /// </summary>
     public void Fire() => NotificationBufferPool.Notify(eventSubscribers);
 
+    public void Fire(DelayState dependencies) => NotificationBufferPool.Notify(eventSubscribers, dependencies);
+
     /// <summary>
     /// Subscribes to this event such that the given handler will be called when the event fires. Notifications will stop
     /// when the lifetime associated with the given lifetime manager is disposed.
@@ -351,6 +353,20 @@ public class Event<T> : Recyclable, IEventT
         try
         {
             innerEvent.Fire();
+        }
+        finally
+        {
+            this.args.Pop();
+        }
+    }
+    public void Fire(T args, DelayState dependencies)
+    {
+        if (innerEvent == null) return;
+
+        this.args.Push(args);
+        try
+        {
+            innerEvent.Fire(dependencies);
         }
         finally
         {
