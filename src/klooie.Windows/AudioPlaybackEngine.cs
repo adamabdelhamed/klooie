@@ -312,7 +312,7 @@ internal sealed class LifetimeAwareSampleProvider : ISampleProvider
     }
 
     public WaveFormat WaveFormat => InnerSample.WaveFormat;
-    public int Read(float[] buffer, int offset, int count) => lt != null ? 0 : InnerSample.Read(buffer, offset, count);
+    public int Read(float[] buffer, int offset, int count) => lt != null ? InnerSample.Read(buffer, offset, count) : 0;
 }
 
 internal sealed class VolumeSampleProvider : ISampleProvider
