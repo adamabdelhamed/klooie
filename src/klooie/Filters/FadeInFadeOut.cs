@@ -68,6 +68,7 @@ internal sealed class FadeOutFilter : IConsoleControlFilter
 
     public void Filter(ConsoleBitmap bitmap)
     {
+        bool blendBackgroundFade = Control.Background == ConsoleString.DefaultBackgroundColor && Control.CompositionMode == CompositionMode.BlendBackground;
         for (var x = 0; x < bitmap.Width; x++)
         {
             for (var y = 0; y < bitmap.Height; y++)
@@ -75,7 +76,7 @@ internal sealed class FadeOutFilter : IConsoleControlFilter
                 var pixel = bitmap.GetPixel(x, y);
 
                 bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, pixel.ForegroundColor.ToOther(BackgroundColor, Percentage),
-                    pixel.BackgroundColor.ToOther(BackgroundColor, Percentage)));
+                    (blendBackgroundFade && pixel.BackgroundColor == ConsoleString.DefaultBackgroundColor) ? ConsoleString.DefaultBackgroundColor : pixel.BackgroundColor.ToOther(BackgroundColor, Percentage)));
 
             }
         }
