@@ -92,6 +92,7 @@ public sealed class Velocity : Recyclable
         _onVelocityEnforced = null;
         _onCollision?.Dispose();
         _onCollision = null;
+        Group = null;
     }
 
     internal void Init(GameCollider collider, ColliderGroup group)
@@ -102,7 +103,7 @@ public sealed class Velocity : Recyclable
         this.Group = group;
         this.Collider = collider;
 
-        collider.OnDisposed(this, RemoveMyselfFromGroup);
+        OnDisposed(this, RemoveMyselfFromGroup);
     }
 
     private static void RemoveMyselfFromGroup(object me)
