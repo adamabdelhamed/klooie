@@ -12,6 +12,7 @@ public class DelayState : Recyclable
     {
         get
         {
+            if (Leases == null ||Dependencies == null || Leases.Count == 0 || Dependencies.Count == 0) return false;
             for (int i = 0; i < Leases.Count; i++)
             {
                 if (Dependencies[i].IsStillValid(Leases[i]) == false)

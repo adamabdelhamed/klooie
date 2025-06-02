@@ -43,8 +43,6 @@ public abstract class Movement : Recyclable
     public MovementOptions Options { get; private set; }
     public GameCollider Element => Options.Velocity.Collider;
 
-    private Movement parent;
-
     protected Movement() { }
     protected void Bind(MovementOptions options)
     {
@@ -58,35 +56,23 @@ public abstract class Movement : Recyclable
     /// </summary>
     internal async Task<bool> InvokeInternal(Movement parent, ILifetime cancellationLifetime = null)
     {
-        var lease = Lease;
-        var parentLease = parent?.Lease;
-        var cancellationLease = cancellationLifetime?.Lease;
-        var visionLease = Options.Vision?.Lease;
-        var velocityLease = Options.Velocity?.Lease;
-        var colliderLease = Options.Velocity?.Collider?.Lease;
-        this.parent = parent;
-
-        bool IsAlive()
-        {
-            bool selfValid = IsStillValid(lease);
-            bool parentValid = parent == null || (parentLease.HasValue && parent.IsStillValid(parentLease.Value));
-            bool lifetimeValid = cancellationLifetime == null || cancellationLifetime.IsStillValid(cancellationLease.Value);
-            bool visionValid = Options.Vision == null || (visionLease.HasValue && Options.Vision.IsStillValid(visionLease.Value));
-            bool velocityValid = Options.Velocity == null || (velocityLease.HasValue && Options.Velocity.IsStillValid(velocityLease.Value));
-            bool colliderValid = Options.Velocity?.Collider == null || (colliderLease.HasValue && Options.Velocity.Collider.IsStillValid(colliderLease.Value));
-            return selfValid && parentValid && lifetimeValid && visionValid && velocityValid && colliderValid;
-        }
+        DelayState dependencyTracker = DelayState.Create(this);
+        if(parent != null) dependencyTracker.AddDependency(parent);
+        if (cancellationLifetime != null) dependencyTracker.AddDependency(cancellationLifetime);
+        dependencyTracker.AddDependency(Options.Vision);
+        dependencyTracker.AddDependency(Options.Velocity);
+        dependencyTracker.AddDependency(Options.Velocity.Collider);
 
         try
         {
-            if (!IsAlive()) return false;
             await Move();
-            if (!IsAlive()) return false;
+            if (dependencyTracker.AreAllDependenciesValid == false) return false;
             return true;
         }
         finally
         {
             TryDispose();
+            dependencyTracker.Dispose();
         }
     }
 }
