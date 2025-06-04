@@ -4,7 +4,11 @@ public sealed class RecyclableStruct<T> : Recyclable where T : struct
     public T Value { get; set; }
     private RecyclableStruct() { }
     public static RecyclableStruct<T> Create() => RecyclableStructPool.Instance.Rent();
-    protected override void OnReturn() => Value = default;
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Value = default;
+    }
 
     private sealed class RecyclableStructPool : RecycleablePool<RecyclableStruct<T>>
     {
