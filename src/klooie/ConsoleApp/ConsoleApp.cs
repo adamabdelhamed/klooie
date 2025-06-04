@@ -154,12 +154,23 @@ public class ConsoleApp : EventLoop
             OnDisposed(LayoutRoot.Dispose);
             focus = FocusManagerPool.Instance.Rent();
             OnDisposed(focus.Dispose);
+            Invoke(()=> OnReturnedToPool.Subscribe(ValidatePoolCleared, this));
             base.Run();
         }
         finally
         {
             TryDispose();
             _current = null;
+        }
+    }
+
+    private void ValidatePoolCleared(Recyclable control)
+    {
+        if (control is ConsoleControl c == false) return;
+
+        if(c.Parent != null)
+        {
+            throw new InvalidOperationException($"control did not have its parent cleared. Investigate and make sure you're managing lifetimes properly.");
         }
     }
 

@@ -103,6 +103,8 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         Returned++;
         PendingReturns.Remove(new PendingRecyclableTracker((T)rented, null));
 #endif
+        Recyclable.OnReturnedToPool?.Fire(rented);
+
         if (rented.Pool != this) throw new InvalidOperationException("Object returned to wrong pool");
         rented.Pool = null;
         _pool.Push((T)rented);

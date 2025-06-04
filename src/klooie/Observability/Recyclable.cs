@@ -3,6 +3,8 @@ namespace klooie;
 
 public class Recyclable : ILifetime
 {
+    private static Event<Recyclable> onReturnedToPool;
+    public static Event<Recyclable> OnReturnedToPool => onReturnedToPool ??= new Event<Recyclable>();
     public static bool PoolingEnabled { get; set; } = true;
 #if DEBUG
     public static StackHunterMode StackHunterMode { get; set; } = StackHunterMode.Slim;
