@@ -252,7 +252,7 @@ public class VisuallyTrackedObject : Recyclable
 
     public TimeSpan TimeSinceLastSeen => Game.Current.MainColliderGroup.Now - LastSeenTime;
 
-    public bool IsTargetStillValid => Target.IsStillValid(targetLease);
+    public bool IsTargetStillValid => Target != null && Target.IsStillValid(targetLease);
 
     public VisuallyTrackedObject() { }
 
