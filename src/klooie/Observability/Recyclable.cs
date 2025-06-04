@@ -3,6 +3,7 @@ namespace klooie;
 
 public class Recyclable : ILifetime
 {
+    public static bool PoolingEnabled { get; set; } = true;
 #if DEBUG
     public static StackHunterMode StackHunterMode { get; set; } = StackHunterMode.Slim;
 #else
@@ -77,9 +78,12 @@ public class Recyclable : ILifetime
         }
     }
 
-    protected virtual void OnInit() { }
+    protected virtual void OnInit() 
+    {
+        disposalSubscribers?.Clear();
+        disposalSubscribers = null;
+    }
     protected virtual void OnReturn() { }
-
     internal void Rent()
     {
         CurrentVersion++;
@@ -110,26 +114,32 @@ public class Recyclable : ILifetime
 
     public void OnDisposed(Action cleanupCode)
     {
+        if(IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         var subscription = SubscriptionPool.Instance.Rent(out int _);
         subscription.Callback = cleanupCode;
+        subscription.Subscribers = disposalSubscribers;
         DisposalSubscribers.Add(subscription);
     }
 
     public void OnDisposed(object scope, Action<object> cleanupCode)
     {
+        if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         if (scope == null) throw new ArgumentNullException(nameof(scope));
         var subscription = SubscriptionPool.Instance.Rent(out int _);
         subscription.Scope = scope;
         subscription.ScopedCallback = cleanupCode;
+        subscription.Subscribers = disposalSubscribers;
         DisposalSubscribers.Add(subscription);
     }
 
     public void OnDisposed(Recyclable obj)
     {
+        if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         var subscription = SubscriptionPool.Instance.Rent(out int _);
         subscription.ToAlsoDispose = obj;
         subscription.Scope = obj;
         subscription.ScopedCallback = Event.DisposeStatic;
+        subscription.Subscribers = disposalSubscribers;
         DisposalSubscribers.Add(subscription);
     }
 
