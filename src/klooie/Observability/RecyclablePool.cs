@@ -57,6 +57,14 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
     public T Rent(out int lease)
     {
+        if(Recyclable.PoolingEnabled == false)
+        {
+            var fresh = Factory();
+            fresh.Pool = this;
+            lease = fresh.CurrentVersion;
+            return fresh;
+        }
+
 #if DEBUG
         Rented++;
         var trace =  StackHunter.RegisterCurrentStackTrace(2, 10);
