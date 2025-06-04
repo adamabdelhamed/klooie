@@ -158,9 +158,39 @@ public class Projectile : WeaponElement
             Velocity.speed += Weapon.Source.Velocity.Speed;
         }
     }
-    private static void OnCollision(object me, object collision) => Game.Current.InvokeNextCycle(DisposeMe, me);
-    
+    private static void OnCollision(object me, object collision)
+        => Game.Current.InvokeNextCycle(DisposeMe, ProjectileDelayedDisposalState.Create((Projectile)me));
 
-    private static void DisposeMe(object me) => ((Recyclable)me).TryDispose();
+
+    private static void DisposeMe(object me)
+    {
+        var state = (ProjectileDelayedDisposalState)me;
+        if(state.AreAllDependenciesValid == false)
+        {
+            state.Dispose();
+            return;
+        }
+
+        state.Projectile.TryDispose();
+        state.Dispose();
+    }
     protected override void OnPaint(ConsoleBitmap context) => context.Fill(Pen);
+}
+
+public class ProjectileDelayedDisposalState : DelayState
+{
+    public Projectile Projectile { get; private set; }
+    public static ProjectileDelayedDisposalState Create(Projectile p)
+    {
+        var ret = ProjectileDelayedDisposalStatePool.Instance.Rent();
+        ret.AddDependency(p);
+        ret.Projectile = p;
+        return ret;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Projectile = null;
+    }
 }
