@@ -435,11 +435,13 @@ public class ObstacleBuffer : Recyclable
 
     protected override void OnInit()
     {
+        base.OnInit();
         _buffer.Clear();
     }
 
     protected override void OnReturn()
     {
+        base.OnReturn();
         _buffer.Clear();
     }
 }
