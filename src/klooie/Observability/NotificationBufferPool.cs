@@ -118,6 +118,10 @@ internal sealed class NotificationBufferPool
 
 public sealed class Subscription : Recyclable
 {
+#if DEBUG
+    public string? DebugCreationStack;
+#endif
+
     internal Action? Callback;
     internal object? Scope;
     internal object? TScope;
@@ -131,6 +135,9 @@ public sealed class Subscription : Recyclable
 
     protected override void OnInit()
     {
+#if DEBUG
+        DebugCreationStack = Environment.StackTrace;
+#endif
         base.OnInit();
         Reset();
     }
