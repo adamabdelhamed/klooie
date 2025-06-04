@@ -137,8 +137,16 @@ public sealed class Event : Recyclable
     public void SubscribeOnce(Action handler)
     {
         var lt = DefaultRecyclablePool.Instance.Rent();
-        Subscribe(handler, lt);
-        Subscribe(lt, DisposeStatic, lt);
+        bool fired = false;
+        Action wrappedHandler = null;
+        wrappedHandler = () =>
+        {
+            if (fired) return;
+            fired = true;
+            try { handler(); }
+            finally { lt.Dispose(); }
+        };
+        Subscribe(wrappedHandler, lt);
     }
 
     public static void DisposeStatic(object lt) => ((Recyclable)lt).TryDispose();
@@ -188,6 +196,7 @@ public sealed class Event : Recyclable
 
     protected override void OnReturn()
     {
+        base.OnReturn();
         if (eventSubscribers != null)
         {
             SubscriptionListPool.Return(eventSubscribers);
