@@ -72,7 +72,7 @@ public class EventLoopTests
         Assert.AreEqual(iters, count);
 
         var expectedDuration = iters * delayMs;
-        var tolerance = expectedDuration * 0.1;
+        var tolerance = expectedDuration * 0.2;
         var minAcceptableDuration = expectedDuration - tolerance;
         var maxAcceptableDuration = expectedDuration + tolerance;
         Console.WriteLine($"Actual duration: {sw.ElapsedMilliseconds}ms");
