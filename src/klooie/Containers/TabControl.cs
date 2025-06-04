@@ -88,6 +88,7 @@ public partial class TabControl : ProtectedConsolePanel
 
     private void RefreshFocus()
     {
+        if (this.IsStillValid(Lease) == false) return;
         var hasFocus = tabStack.Controls.Contains(ConsoleApp.Current.FocusedControl);
         if (hasFocus)
         {
