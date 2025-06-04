@@ -2,8 +2,8 @@
 
 public class UntilCloseToTargetLifetime : Recyclable
 {
-    private GameCollider mover;
-    private Targeting targeting;
+    public GameCollider mover;
+    public Targeting targeting;
     private float closeEnough;
 
     public UntilCloseToTargetLifetime() { }
@@ -14,27 +14,33 @@ public class UntilCloseToTargetLifetime : Recyclable
         instance.mover = mover;
         instance.targeting = targeting;
         instance.closeEnough = closeEnough;
-        Monitor(instance);
+        var state = UntilCloseToTargetLifetimeState.Create(instance);
+        Monitor(state);
         return instance;
     }
 
-    private static void Monitor(object me)
+    private static void Monitor(object stateObj)
     {
-        var _this = (UntilCloseToTargetLifetime)me;
-        var lease = _this.Lease;
-        var colliderLease = _this.mover.Lease;
-        var targetingLease = _this.targeting.Lease;
- 
-        if (_this.IsStillValid(lease) && _this.mover.IsStillValid(colliderLease))
+        var state = (UntilCloseToTargetLifetimeState)stateObj;
+        if (state.AreAllDependenciesValid == false)
         {
-            if (_this.targeting.Target == null)
-            {
-                Game.Current.InnerLoopAPIs.Delay(250, me, Monitor);
-                return;
-            }
-            if (_this.IsFinished()) return;
-            Game.Current.InnerLoopAPIs.Delay(250, me, Monitor);
+            state.Dispose();
+            return;
         }
+
+        var _this = state.Lifetime;
+
+        if (_this.targeting.Target == null)
+        {
+            Game.Current.InnerLoopAPIs.DelayIfValid(250, state, Monitor);
+            return;
+        }
+        if (_this.IsFinished())
+        {
+            state.Dispose();
+            return;
+        }
+        Game.Current.InnerLoopAPIs.DelayIfValid(250, state, Monitor);
     }
 
     private bool IsFinished()
@@ -54,5 +60,27 @@ public class UntilCloseToTargetLifetime : Recyclable
         {
             buffer.TryDispose();
         }
+    }
+}
+
+public class UntilCloseToTargetLifetimeState : DelayState
+{
+    public UntilCloseToTargetLifetime Lifetime { get; set; }
+    public static UntilCloseToTargetLifetimeState Create(UntilCloseToTargetLifetime lt)
+    {
+        var ret = UntilCloseToTargetLifetimeStatePool.Instance.Rent();
+        ret.Lifetime = lt;
+        ret.AddDependency(lt);
+        ret.AddDependency(lt.mover);
+        ret.AddDependency(lt.targeting);
+        ret.AddDependency(lt.mover.Velocity);
+        ret.AddDependency(lt.targeting.Options.Vision);
+        return ret;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Lifetime = null;
     }
 }
