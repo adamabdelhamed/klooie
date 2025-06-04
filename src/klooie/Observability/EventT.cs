@@ -23,7 +23,7 @@ public class Event<T> : Recyclable, IEventT
     public void Subscribe(Action<T> handler, ILifetime lt)
     {
         innerEvent = innerEvent ?? EventPool.Instance.Rent();
-        innerEvent.Subscribe(() => handler((T)args.Peek()), lt);
+        innerEvent.Subscribe(() => Execute(handler), lt);
     }
 
     // -----------------------------------------------
@@ -64,7 +64,7 @@ public class Event<T> : Recyclable, IEventT
     {
         if (args.TryPeek(out var arg) == false)
         {
-            return;
+            throw new InvalidOperationException("Event<T> is firing without args present.");
         }
 
         handler((T)arg);
@@ -110,8 +110,18 @@ public class Event<T> : Recyclable, IEventT
     /// <param name="handler">the callback</param>
     public void SubscribeOnce(Action<T> handler)
     {
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        bool fired = false;
+        Action wrappedHandler = null;
+        wrappedHandler = () =>
+        {
+            if (fired) return;
+            fired = true;
+            try { handler((T)args.Peek()); }
+            finally { lt.Dispose(); }
+        };
         innerEvent = innerEvent ?? EventPool.Instance.Rent();
-        innerEvent.SubscribeOnce(() => Execute(handler));
+        innerEvent.Subscribe(wrappedHandler, lt);
     }
 
     // -----------------------------------------------
@@ -123,10 +133,12 @@ public class Event<T> : Recyclable, IEventT
     public void SubscribeOnce<TScope>(TScope scope, Action<TScope, T> handler)
     {
         var lt = DefaultRecyclablePool.Instance.Rent();
-        // Wrap the callback so we can dispose once it's called
+        bool fired = false;
         Action wrappedAction = null;
         wrappedAction = () =>
         {
+            if (fired) return;
+            fired = true;
             try
             {
                 Execute(scope, handler);
@@ -137,7 +149,6 @@ public class Event<T> : Recyclable, IEventT
             }
         };
 
-        // Now subscribe our wrapped callback
         innerEvent = innerEvent ?? EventPool.Instance.Rent();
         innerEvent.Subscribe(wrappedAction, lt);
     }
