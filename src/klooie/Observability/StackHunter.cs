@@ -19,29 +19,29 @@ public class StackHunter
     /// </summary>
     public ComparableStackTrace? RegisterCurrentStackTrace(int skip, int take)
     {
-        if(Mode == StackHunterMode.Off) return null;
-        var trace = new StackTrace(true);
-        var frames = trace.GetFrames();
-        if (frames == null) return null;
+            if (Mode == StackHunterMode.Off) return null;
+            var trace = new StackTrace(true);
+            var frames = trace.GetFrames();
+            if (frames == null) return null;
 
-        // Skip the first few frames (e.g., the hunter's methods) and take the ones we care about.
-        frames = frames.Skip(skip).Take(take).ToArray();
-        var comparableTrace = new ComparableStackTrace(frames);
+            // Skip the first few frames (e.g., the hunter's methods) and take the ones we care about.
+            frames = frames.Skip(skip).Take(take).ToArray();
+            var comparableTrace = new ComparableStackTrace(frames);
 
-        // Record or update count
-        if (_stackTraces.TryGetValue(comparableTrace, out var count))
-        {
-            _stackTraces[comparableTrace] = count + 1;
-        }
-        else
-        {
-            if(Mode == StackHunterMode.Slim)
+            // Record or update count
+            if (_stackTraces.TryGetValue(comparableTrace, out var count))
             {
-                _stackTraces.Clear();
+                _stackTraces[comparableTrace] = count + 1;
             }
-            _stackTraces.Add(comparableTrace, 1);
-        }
-        return comparableTrace;
+            else
+            {
+                if (Mode == StackHunterMode.Slim)
+                {
+                    _stackTraces.Clear();
+                }
+                _stackTraces.Add(comparableTrace, 1);
+            }
+            return comparableTrace;
     }
 
 
