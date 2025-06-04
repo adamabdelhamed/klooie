@@ -163,9 +163,4 @@ public class Projectile : WeaponElement
 
     private static void DisposeMe(object me) => ((Recyclable)me).TryDispose();
     protected override void OnPaint(ConsoleBitmap context) => context.Fill(Pen);
-
-    protected override void OnReturn()
-    {
-        base.OnReturn();
-    }
 }
