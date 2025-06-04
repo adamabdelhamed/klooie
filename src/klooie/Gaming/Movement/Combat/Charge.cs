@@ -46,8 +46,15 @@ public class Charge : CombatMovement
             while (delayState.AreAllDependenciesValid)
             {
                 var lt = UntilCloseToTargetLifetime.Create(Options.Velocity.Collider, ChargeOptions.Targeting, ChargeOptions.CloseEnough);
-                this.OnDisposed(() => lt.TryDispose());
-                await Mover.InvokeOrTimeout(this, Wander.Create(wanderOptions), lt);
+                var ltLease = lt.Lease;
+                this.OnDisposed(() =>
+                {
+                    if (lt.IsStillValid(ltLease)) lt.TryDispose();
+                });
+                if (lt.IsStillValid(ltLease))
+                {
+                    await Mover.InvokeOrTimeout(this, Wander.Create(wanderOptions), lt);
+                }
                 if (!delayState.AreAllDependenciesValid) break;
                 await StayOnTarget(ChargeOptions.CloseEnough);
                 await Task.Yield();
