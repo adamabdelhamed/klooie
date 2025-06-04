@@ -34,12 +34,14 @@ public static class SubscriptionListPool
         return new List<Subscription>();
     }
 
-    internal static void Return(List<Subscription> subscriptions)
+    internal static void Return(List<Subscription>? subscriptions)
     {
+        if (subscriptions == null) return;
 #if DEBUG
         Returned++;
 #endif
-        for(var i = 0; i < subscriptions.Count; i++)
+        
+        for (var i = 0; i < subscriptions.Count; i++)
         {
             if (subscriptions[i].IsStillValid(subscriptions[i].CurrentVersion))
             {
