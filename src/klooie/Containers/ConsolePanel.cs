@@ -68,6 +68,11 @@ public class ConsolePanel : Container
     private Action _sortZDelegate;
     private void OnControlAddedInternal(ConsoleControl controlAddedDirectlyToThisConsolePanel)
     {
+        if(controlAddedDirectlyToThisConsolePanel.IsStillValid(controlAddedDirectlyToThisConsolePanel.Lease) == false)
+        {
+            throw new InvalidOperationException("The control being added is no longer valid. It has been disposed or its lifetime has ended.");
+        }
+
         if(controlAddedDirectlyToThisConsolePanel.Parent != null || controlAddedDirectlyToThisConsolePanel.HasBeenAddedToVisualTree)
         {
             throw new InvalidOperationException("The control has already been added to a visual tree");
