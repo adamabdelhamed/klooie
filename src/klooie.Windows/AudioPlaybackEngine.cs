@@ -300,19 +300,22 @@ internal sealed class LifetimeAwareSampleProvider : ISampleProvider
 {
     internal ISampleProvider InnerSample;
     private ILifetime lt;
+    private int lease;
     public LifetimeAwareSampleProvider(ISampleProvider inner, ILifetime lt)
     {
         this.InnerSample = inner;
         this.lt = lt;
+        this.lease = lt.Lease;
         lt.OnDisposed(() =>
         {
             lt = null;
+            lease = 0;
             InnerSample = null;
         });
     }
 
     public WaveFormat WaveFormat => InnerSample.WaveFormat;
-    public int Read(float[] buffer, int offset, int count) => lt != null ? InnerSample.Read(buffer, offset, count) : 0;
+    public int Read(float[] buffer, int offset, int count) => lt?.IsStillValid(lease) == true ? InnerSample.Read(buffer, offset, count) : 0;
 }
 
 internal sealed class VolumeSampleProvider : ISampleProvider
