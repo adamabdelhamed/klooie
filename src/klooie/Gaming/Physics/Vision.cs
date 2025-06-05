@@ -12,7 +12,7 @@ public class Vision : Recyclable
     private Event? _visibleObjectsChanged;
     public Event VisibleObjectsChanged => _visibleObjectsChanged ??= EventPool.Instance.Rent();
 
-    private const float DelayMs = 667;
+    private const float AutoScanFrequency = 667;
 
     private VisionFilterContext targetFilterContext = new VisionFilterContext();
     private Event<VisionFilterContext>? _targetBeingEvaluated;
@@ -22,7 +22,7 @@ public class Vision : Recyclable
     public GameCollider Eye { get; private set; } = null!;
     public float Range { get; set; } 
     public float AngularVisibility { get; set; } 
-    public float ScanOffset { get; private set; }
+    public float ScanOffset { get; set; }
     public Vision() { }
 
     private static Random random = new Random();
@@ -30,7 +30,7 @@ public class Vision : Recyclable
     {
         var vision = VisionPool.Instance.Rent();
         vision.Eye = eye;
-        vision.ScanOffset = random.Next(0, (int)DelayMs);
+        vision.ScanOffset = random.Next(0, (int)AutoScanFrequency);
 
         _visionInitiated?.Fire(vision);
         if (autoScan)
@@ -61,7 +61,7 @@ public class Vision : Recyclable
         }
 
         state.Vision.Scan();
-        Game.Current.InnerLoopAPIs.Delay(DelayMs + state.Vision.ScanOffset, state, ScanLoopBody);
+        Game.Current.InnerLoopAPIs.Delay(AutoScanFrequency + state.Vision.ScanOffset, state, ScanLoopBody);
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]

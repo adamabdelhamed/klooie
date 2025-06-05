@@ -49,7 +49,7 @@ public class ProjectileRule : IRule
         prediction.LKGD = p.CalculateDistanceTo(obstacle);
         prediction.ColliderHit = obstacle;
         prediction.Edge = obstacle.Bounds.LeftEdge; // todo - compute properly
-        collision.Bind(1, angle, p, obstacle, prediction);
+        collision.Bind(p.Velocity.Speed, angle, p, obstacle, prediction);
         p.Velocity.Group.OnCollision.Fire(collision);
         collision.Dispose();
         prediction.Dispose();

@@ -136,7 +136,7 @@ public sealed class Subscription : Recyclable
     protected override void OnInit()
     {
 #if DEBUG
-        DebugCreationStack = Environment.StackTrace;
+        //DebugCreationStack = Environment.StackTrace;
 #endif
         base.OnInit();
         Reset();

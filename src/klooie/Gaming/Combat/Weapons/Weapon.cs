@@ -121,7 +121,7 @@ public class WeaponElement : GameCollider
         if(this.Weapon == null) throw new InvalidOperationException("Weapon is null");
         if (base.CanCollideWith(other) == false) return false;
         if (other == Weapon.Source) return false;
-        if ((other as WeaponElement)?.Weapon?.Source == Weapon?.Source) return false;
+        if ((other as WeaponElement)?.Weapon?.Source == Weapon.Source) return false;
         return true;
     }
 }
