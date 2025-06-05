@@ -244,10 +244,11 @@ public partial class FocusManager : Recyclable,  IObservableObject
     {
 
         // Check if enough time has passed since the last key check
-        var delta = Stopwatch.GetTimestamp() - lastCycleThrottlerCheck;
+        var now = Stopwatch.GetTimestamp();
+        var delta = now - lastCycleThrottlerCheck;
         if (delta >= CycleThrottlerIntervalTicks)
         {
-            lastCycleThrottlerCheck = Stopwatch.GetTimestamp();
+            lastCycleThrottlerCheck = now;
 
             if (ConsoleProvider.Current.KeyAvailable)
             {
@@ -271,10 +272,10 @@ public partial class FocusManager : Recyclable,  IObservableObject
         if (sendKeys.Count > 0)
         {
             var request = sendKeys.Dequeue();
-            
+
             HandleKeyInput(request.Info);
             request.TaskSource.SetResult(true);
-            
+
         }
     }
 
