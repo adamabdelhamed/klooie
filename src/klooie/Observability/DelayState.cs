@@ -6,6 +6,8 @@ public class DelayState : Recyclable
     private RecyclableList<ILifetime> Dependencies;
     private RecyclableList<int> Leases;
 
+    private Event<Recyclable>? _beforeDisposeDependency;
+    public Event<Recyclable> BeforeDisposeDependency => _beforeDisposeDependency ??= EventPool<Recyclable>.Instance.Rent();
     public ILifetime MainDependency => Dependencies.Items[0];
 
     public bool AreAllDependenciesValid
@@ -70,7 +72,11 @@ public class DelayState : Recyclable
             {
                 continue;
             }
-            (Dependencies[i] as Recyclable)?.TryDispose();
+            if (Dependencies[i] is Recyclable r)
+            { 
+                _beforeDisposeDependency?.Fire(r);
+                r.TryDispose();
+            }
         }
     }
 
@@ -82,5 +88,7 @@ public class DelayState : Recyclable
         Leases?.Dispose();
         Leases = null;
         InnerAction = null;
+        _beforeDisposeDependency?.TryDispose();
+        _beforeDisposeDependency = null;
     }
 }
