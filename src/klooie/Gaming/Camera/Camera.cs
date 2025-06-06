@@ -18,14 +18,11 @@ public sealed partial class Camera : ConsolePanel
         get => cameraLocation;
         set
         {
-            var proposed = new RectF(ConsoleMath.Round(value.Left), ConsoleMath.Round(value.Top), Width, Height);
+            var proposed = new RectF(value.Left, value.Top, Width, Height);
             var final = EnsureWithinBigBounds(proposed).TopLeft;
-            if (cameraLocation != final)
-            {
-                cameraLocation = final;
-                CameraLocationChanged.Fire();
-                CameraBounds = new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height);
-            }
+            cameraLocation = final;
+            CameraLocationChanged.Fire();
+            CameraBounds = new RectF(cameraLocation.Left, cameraLocation.Top, Width, Height);
         }
     }
 
@@ -46,7 +43,7 @@ public sealed partial class Camera : ConsolePanel
         x = given.Right > bounds.Right ? bounds.Right - given.Width : x;
         y = given.Bottom > bounds.Bottom ? bounds.Bottom - given.Height : y;
 
-        var ret = new RectF(x, y, given.Width, given.Height).Round();
+        var ret = new RectF(x, y, given.Width, given.Height);
         return ret;
     }
 
@@ -64,7 +61,7 @@ public sealed partial class Camera : ConsolePanel
     /// Points the camera at the location so that it appears at the center of the panel
     /// </summary>
     /// <param name="location">the location to point to</param>
-    public void PointAt(LocF location) => CameraLocation = location.Offset(-Width / 2f, -Height / 2f);
+    public void PointAt(LocF location) => CameraLocation = location.Offset(-Bounds.Width / 2f, -Bounds.Height / 2f);
 
     /// <summary>
     /// Animates the camera to an offset that is relative to its current position
