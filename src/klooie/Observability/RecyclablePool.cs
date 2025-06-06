@@ -86,7 +86,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         lease = ret.CurrentVersion;
 
 #if DEBUG
-        if (trace != null) PendingReturns.Add(new PendingRecyclableTracker(ret, trace));
+        if (trace != null && Recyclable.StackHunterMode == StackHunterMode.Full) PendingReturns.Add(new PendingRecyclableTracker(ret, trace));
 #endif
 
         return ret;
