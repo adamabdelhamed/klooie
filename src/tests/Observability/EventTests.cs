@@ -11,9 +11,17 @@ public class EventTests
     [TestMethod]
     public void TestEvent()
     {
-        var ev = new Event();
-        var lt = new Recyclable();
-        TestEventMechanics(ev, lt);
+        var ev = EventPool.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            TestEventMechanics(ev, lt);
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
@@ -24,7 +32,8 @@ public class EventTests
         try
         {
             TestEventMechanicsT(ev, lt, new object());
-        }finally
+        }
+        finally
         {
             ev.TryDispose();
             lt.TryDispose();
@@ -57,7 +66,6 @@ public class EventTests
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
-
             TestEventMechanics(ev, lt, scope);
         }
         finally
@@ -75,8 +83,8 @@ public class EventTests
             var ev = EventPool.Instance.Rent();
             var lt = DefaultRecyclablePool.Instance.Rent();
             try
-            { 
-            TestEventMechanics(ev, lt);
+            {
+                TestEventMechanics(ev, lt);
             }
             finally
             {
@@ -110,7 +118,8 @@ public class EventTests
                 ev = EventPool.Instance.Rent();
                 lt = DefaultRecyclablePool.Instance.Rent();
             }
-        }finally
+        }
+        finally
         {
             ev.TryDispose();
             lt.TryDispose();
@@ -119,7 +128,7 @@ public class EventTests
 
     private static void TestEventMechanics(Event ev, Recyclable lt)
     {
-        var count = 0;;
+        var count = 0;
         Action subscriber = () => count++;
         ev.Subscribe(subscriber, lt);
         ev.Fire();
@@ -131,7 +140,7 @@ public class EventTests
 
     private static void TestEventMechanics(Event ev, Recyclable lt, object scope)
     {
-        var count = 0; ;
+        var count = 0;
         Action<object> subscriber = (sc) => count++;
         ev.Subscribe(scope, subscriber, lt);
         ev.Fire();
@@ -143,7 +152,7 @@ public class EventTests
 
     private static void TestEventMechanicsT<T>(Event<T> ev, Recyclable lt, T args)
     {
-        var count = 0; ;
+        var count = 0;
         Action<T> subscriber = (sc) =>
         {
             Assert.AreEqual(args, sc);
@@ -159,8 +168,8 @@ public class EventTests
 
     private static void TestEventMechanicsScoped<T>(Event<T> ev, Recyclable lt, T args, object scope)
     {
-        var count = 0; ;
-        Action<object,object> subscriber = (sc, ar) =>
+        var count = 0;
+        Action<object, object> subscriber = (sc, ar) =>
         {
             Assert.AreEqual(scope, sc);
             Assert.AreEqual(args, ar);
@@ -182,8 +191,6 @@ public class EventTests
         var ev = EventPool.Instance.Rent();
         try
         {
-            // No subscribers
-            // Just ensure we don't throw
             ev.Fire();
             Assert.IsFalse(ev.HasSubscriptions);
         }
@@ -329,10 +336,8 @@ public class EventTests
             int callCount = 0;
 
             ev.Sync(() => callCount++, lt);
-            // Sync should have called immediately
             Assert.AreEqual(1, callCount, "Sync should call the callback immediately.");
 
-            // Now fire event
             ev.Fire();
             Assert.AreEqual(2, callCount, "Sync subscription should also respond to Fire.");
         }
@@ -353,7 +358,6 @@ public class EventTests
             int callCount = 0;
 
             ev.SyncWithPriority(() => callCount++, lt);
-            // Called immediately
             Assert.AreEqual(1, callCount);
 
             ev.Fire();
@@ -382,10 +386,8 @@ public class EventTests
                 callCount++;
             }, lt);
 
-            // Immediately
             Assert.AreEqual(1, callCount);
 
-            // Next Fire
             ev.Fire();
             Assert.AreEqual(2, callCount);
         }
@@ -412,10 +414,8 @@ public class EventTests
                 callCount++;
             }, lt);
 
-            // Immediately
             Assert.AreEqual(1, callCount);
 
-            // Next Fire
             ev.Fire();
             Assert.AreEqual(2, callCount);
         }
@@ -435,7 +435,6 @@ public class EventTests
             int callCount = 0;
             object myScope = new object();
 
-            // SubscribeOnce overload that accepts scope 
             ev.SubscribeOnce(myScope, scope =>
             {
                 Assert.AreSame(myScope, scope);
@@ -444,7 +443,7 @@ public class EventTests
             Assert.IsTrue(ev.HasSubscriptions);
 
             ev.Fire();
-            ev.Fire(); // no effect second time
+            ev.Fire();  // no effect second time
             Assert.AreEqual(1, callCount);
             Assert.IsFalse(ev.HasSubscriptions, "After one call, subscription should be removed.");
         }
@@ -483,7 +482,7 @@ public class EventTests
             Assert.IsFalse(task.IsCompleted, "Task should not be completed until Fire is called.");
             ev.Fire();
 
-            await task; // should complete without exception
+            await task;
             Assert.IsTrue(task.IsCompleted, "Task should be completed after Fire.");
         }
         finally
@@ -576,150 +575,224 @@ public class EventTests
     [TestMethod]
     public void EventT_FireWithNoSubscribers_NoEffect()
     {
-        var ev = new Event<int>();
-        ev.Fire(42); // no subscribers
-                     // Just ensure no exceptions
+        var ev = EventPool<int>.Instance.Rent();
+        try
+        {
+            ev.Fire(42);
+        }
+        finally
+        {
+            ev.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventT_Subscribe_CalledWithCorrectArgument()
     {
-        var ev = new Event<string>();
-        var lt = new Recyclable();
-        string lastMessage = null;
+        var ev = EventPool<string>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            string lastMessage = null;
 
-        ev.Subscribe(arg => lastMessage = arg, lt);
-        ev.Fire("Hello");
+            ev.Subscribe(arg => lastMessage = arg, lt);
+            ev.Fire("Hello");
 
-        Assert.AreEqual("Hello", lastMessage);
+            Assert.AreEqual("Hello", lastMessage);
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventT_SubscribeWithPriority_CalledCorrectly()
     {
-        var ev = new Event<int>();
-        var lt = new Recyclable();
-        int lastValue = 0;
+        var ev = EventPool<int>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            int lastValue = 0;
 
-        ev.SubscribeWithPriority(arg => lastValue = arg, lt);
-        ev.Fire(5);
+            ev.SubscribeWithPriority(arg => lastValue = arg, lt);
+            ev.Fire(5);
 
-        Assert.AreEqual(5, lastValue);
+            Assert.AreEqual(5, lastValue);
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventT_SubscribeOnce_CalledOnce()
     {
-        var ev = new Event<int>();
-        int callCount = 0;
+        var ev = EventPool<int>.Instance.Rent();
+        try
+        {
+            int callCount = 0;
 
-        ev.SubscribeOnce(arg => callCount++);
-        ev.Fire(10);
-        ev.Fire(11);
+            ev.SubscribeOnce(arg => callCount++);
+            ev.Fire(10);
+            ev.Fire(11);
 
-        Assert.AreEqual(1, callCount, "SubscribeOnce for Event<T> should only be called once.");
+            Assert.AreEqual(1, callCount, "SubscribeOnce for Event<T> should only be called once.");
+        }
+        finally
+        {
+            ev.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventT_SubscribeWithScope_ReceivesScopeAndArgument()
     {
-        var ev = new Event<int>();
-        var lt = new Recyclable();
-        object scope = new object();
-        int callCount = 0;
-
-        ev.Subscribe(scope, (sc, arg) =>
+        var ev = EventPool<int>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
-            Assert.AreSame(scope, sc);
-            Assert.AreEqual(123, (int)arg);
-            callCount++;
-        }, lt);
+            object scope = new object();
+            int callCount = 0;
 
-        ev.Fire(123);
-        Assert.AreEqual(1, callCount);
+            ev.Subscribe(scope, (sc, arg) =>
+            {
+                Assert.AreSame(scope, sc);
+                Assert.AreEqual(123, (int)arg);
+                callCount++;
+            }, lt);
 
-        lt.Dispose();
-        ev.Fire(456);
-        Assert.AreEqual(1, callCount, "Disposed lifetime should not receive further notifications.");
+            ev.Fire(123);
+            Assert.AreEqual(1, callCount);
+
+            lt.Dispose();
+            ev.Fire(456);
+            Assert.AreEqual(1, callCount, "Disposed lifetime should not receive further notifications.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventT_SubscribeWithPriorityScope_ReceivesScopeAndArgument()
     {
-        var ev = new Event<int>();
-        var lt = new Recyclable();
-        object scope = new object();
-        int callCount = 0;
-
-        ev.SubscribeWithPriority(scope, (s, arg) =>
+        var ev = EventPool<int>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
-            Assert.AreSame(scope, s);
-            Assert.AreEqual(123, arg);
-            callCount++;
-        }, lt);
+            object scope = new object();
+            int callCount = 0;
 
-        ev.Fire(123);
-        Assert.AreEqual(1, callCount);
+            ev.SubscribeWithPriority(scope, (s, arg) =>
+            {
+                Assert.AreSame(scope, s);
+                Assert.AreEqual(123, arg);
+                callCount++;
+            }, lt);
+
+            ev.Fire(123);
+            Assert.AreEqual(1, callCount);
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventT_SubscribeOnceWithScope_CalledOnce()
     {
-        var ev = new Event<int>();
-        object scope = new object();
-        int callCount = 0;
-
-        ev.SubscribeOnce(scope, (sc, arg) =>
+        var ev = EventPool<int>.Instance.Rent();
+        try
         {
-            Assert.AreSame(scope, sc);
-            Assert.AreEqual(42, arg);
-            callCount++;
-        });
+            object scope = new object();
+            int callCount = 0;
 
-        ev.Fire(42);
-        ev.Fire(42);
-        Assert.AreEqual(1, callCount, "SubscribeOnce with scope for Event<T> should only be called once.");
+            ev.SubscribeOnce(scope, (sc, arg) =>
+            {
+                Assert.AreSame(scope, sc);
+                Assert.AreEqual(42, arg);
+                callCount++;
+            });
+
+            ev.Fire(42);
+            ev.Fire(42);
+            Assert.AreEqual(1, callCount, "SubscribeOnce with scope for Event<T> should only be called once.");
+        }
+        finally
+        {
+            ev.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventT_CreateNextFireLifetime_EndsAfterNextFire()
     {
-        var ev = new Event<int>();
-        var lifetime = ev.CreateNextFireLifetime();
-        var ltLease = lifetime.Lease;
-        Assert.IsTrue(lifetime.IsStillValid(ltLease));
-        ev.Fire(100);
-        Assert.IsFalse(lifetime.IsStillValid(ltLease), "Lifetime should end on next Fire.");
+        var ev = EventPool<int>.Instance.Rent();
+        try
+        {
+            var lifetime = ev.CreateNextFireLifetime();
+            var ltLease = lifetime.Lease;
+            Assert.IsTrue(lifetime.IsStillValid(ltLease));
+            ev.Fire(100);
+            Assert.IsFalse(lifetime.IsStillValid(ltLease), "Lifetime should end on next Fire.");
+        }
+        finally
+        {
+            ev.TryDispose();
+        }
     }
 
     [TestMethod]
     public async Task EventT_CreateNextFireTask_CompletesAfterNextFire()
     {
-        var ev = new Event<int>();
-        var task = ev.CreateNextFireTask();
+        var ev = EventPool<int>.Instance.Rent();
+        try
+        {
+            var task = ev.CreateNextFireTask();
 
-        Assert.IsFalse(task.IsCompleted, "Should not complete before Fire.");
-        ev.Fire(999);
+            Assert.IsFalse(task.IsCompleted, "Should not complete before Fire.");
+            ev.Fire(999);
 
-        var result = await task;
-        Assert.AreEqual(999, result, "Task should have completed with the last Fire argument.");
+            var result = await task;
+            Assert.AreEqual(999, result, "Task should have completed with the last Fire argument.");
+        }
+        finally
+        {
+            ev.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventT_MultipleFiresAndDispose_NoSideEffects()
     {
-        var ev = new Event<string>();
-        var lt = new Recyclable();
-        int callCount = 0;
+        var ev = EventPool<string>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            int callCount = 0;
 
-        ev.Subscribe(_ => callCount++, lt);
-        ev.Fire("A");
-        ev.Fire("B");
-        Assert.AreEqual(2, callCount);
+            ev.Subscribe(_ => callCount++, lt);
+            ev.Fire("A");
+            ev.Fire("B");
+            Assert.AreEqual(2, callCount);
 
-        lt.Dispose();
-        ev.Fire("C");
-        Assert.AreEqual(2, callCount);
+            lt.Dispose();
+            ev.Fire("C");
+            Assert.AreEqual(2, callCount);
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
@@ -729,38 +802,47 @@ public class EventTests
         {
             var ev = EventPool<string>.Instance.Rent();
             var lt = DefaultRecyclablePool.Instance.Rent();
-            int callCount = 0;
-
-            ev.Subscribe(_ => callCount++, lt);
-            ev.Fire("X");
-            Assert.AreEqual(1, callCount);
-            ev.TryDispose();
-            lt.TryDispose();
-
-            // If there's a memory leak or leftover subscription from prior usage,
-            // subsequent iterations might incorrectly increment callCount.
+            try
+            {
+                int callCount = 0;
+                ev.Subscribe(_ => callCount++, lt);
+                ev.Fire("X");
+                Assert.AreEqual(1, callCount);
+            }
+            finally
+            {
+                ev.TryDispose();
+                lt.TryDispose();
+            }
         }
     }
 
     [TestMethod]
     public void EventT_Reentrancy_FiringInsideCallback()
     {
-        var ev = new Event<int>();
-        var lt = new Recyclable();
-        int callCount = 0;
-
-        ev.Subscribe(arg =>
+        var ev = EventPool<int>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
-            callCount++;
-            if (callCount == 1)
-            {
-                ev.Fire(arg + 1); // re-fire
-            }
-        }, lt);
+            int callCount = 0;
 
-        ev.Fire(10);
-        // first call increments to 1, triggers re-fire, second call increments to 2
-        Assert.AreEqual(2, callCount);
+            ev.Subscribe(arg =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    ev.Fire(arg + 1);
+                }
+            }, lt);
+
+            ev.Fire(10);
+            Assert.AreEqual(2, callCount);
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     #endregion
@@ -770,203 +852,281 @@ public class EventTests
     [TestMethod]
     public void EventThrottle_Unscoped_BasicRateLimit()
     {
-        var ev = new Event();
-        var lt = new Recyclable();
-        int callCount = 0;
+        var ev = EventPool.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            int callCount = 0;
+            ev.SubscribeThrottled(() => callCount++, lt, maxHz: 10);
 
-        // 10 cycles / sec  ⇒  100 ms window
-        ev.SubscribeThrottled(() => callCount++, lt, maxHz: 10);
+            for (int i = 0; i < 5; i++) ev.Fire();
 
-        // Burst of 5 events inside the same tick → only 1 should pass
-        for (int i = 0; i < 5; i++) ev.Fire();
-
-        Assert.AreEqual(1, callCount, "Throttle should allow at most one event in the window.");
+            Assert.AreEqual(1, callCount, "Throttle should allow at most one event in the window.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public async Task EventThrottle_Unscoped_AllowsAfterWindow()
     {
-        var ev = new Event();
-        var lt = new Recyclable();
-        int callCount = 0;
+        var ev = EventPool.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            int callCount = 0;
 
-        ev.SubscribeThrottled(() => callCount++, lt, maxHz: 10); // 100 ms window
-        ev.Fire();                           // #1
-        await Task.Delay(120);               // wait > window
-        ev.Fire();                           // #2
+            ev.SubscribeThrottled(() => callCount++, lt, maxHz: 10);
+            ev.Fire();
+            await Task.Delay(120);
+            ev.Fire();
 
-        Assert.AreEqual(2, callCount, "Second event after window should be delivered.");
+            Assert.AreEqual(2, callCount, "Second event after window should be delivered.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventThrottle_Scoped_BasicRateLimit()
     {
-        var ev = new Event<int>();
-        var lt = new Recyclable();
-        object scope = new object();
-        int callCount = 0;
-
-        ev.SubscribeThrottled(scope, (sc, i) =>
+        var ev = EventPool<int>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
-            Assert.AreSame(scope, sc);
-            callCount++;
-        }, lt, maxCyclesPerSecond: 5);        // 200 ms window
+            object scope = new object();
+            int callCount = 0;
 
-        // rapid-fire
-        for (int i = 0; i < 3; i++) ev.Fire(123);
+            ev.SubscribeThrottled(scope, (sc, i) =>
+            {
+                Assert.AreSame(scope, sc);
+                callCount++;
+            }, lt, maxCyclesPerSecond: 5);
 
-        Assert.AreEqual(1, callCount, "Scoped throttle should limit to one call per window.");
+            for (int i = 0; i < 3; i++) ev.Fire(123);
+
+            Assert.AreEqual(1, callCount, "Scoped throttle should limit to one call per window.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventThrottle_Lifetime_DisposeStopsCallbacks()
     {
-        var ev = new Event();
-        var lt = new Recyclable();
-        int callCount = 0;
+        var ev = EventPool.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            int callCount = 0;
 
-        ev.SubscribeThrottled(() => callCount++, lt, maxHz: 50);
-        ev.Fire();                  // delivered
-        lt.Dispose();               // end subscription
-        ev.Fire();                  // ignored
+            ev.SubscribeThrottled(() => callCount++, lt, maxHz: 50);
+            ev.Fire();
+            lt.Dispose();
+            ev.Fire();
 
-        Assert.AreEqual(1, callCount, "Disposing lifetime should stop further callbacks.");
+            Assert.AreEqual(1, callCount, "Disposing lifetime should stop further callbacks.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventThrottle_ConcurrentFires_NoMoreThanOnePerWindow()
     {
-        var ev = new Event();
-        var lt = new Recyclable();
-        int callCount = 0;
+        var ev = EventPool.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            int callCount = 0;
 
-        ev.SubscribeThrottled(() => Interlocked.Increment(ref callCount), lt, maxHz: 5); // 200 ms
+            ev.SubscribeThrottled(() => Interlocked.Increment(ref callCount), lt, maxHz: 5);
 
-        Parallel.For(0, 20, _ => ev.Fire());   // many threads slam Fire()
+            Parallel.For(0, 20, _ => ev.Fire());
 
-        Assert.AreEqual(1, callCount,
-            "Even under concurrency, only one invocation should occur within the window.");
+            Assert.AreEqual(1, callCount, "Even under concurrency, only one invocation should occur within the window.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public async Task EventThrottle_RepeatedWindows_CorrectCadence()
     {
-        var ev = new Event();
-        var lt = new Recyclable();
-        int callCount = 0;
-
-        ev.SubscribeThrottled(() => callCount++, lt, maxHz: 4); // 250 ms
-
-        // Fire once every ~300 ms (should pass each time)
-        for (int i = 0; i < 4; i++)
+        var ev = EventPool.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
-            ev.Fire();
-            await Task.Delay(300);
-        }
+            int callCount = 0;
 
-        Assert.AreEqual(4, callCount, "One invocation should pass per window over multiple windows.");
+            ev.SubscribeThrottled(() => callCount++, lt, maxHz: 4);
+
+            for (int i = 0; i < 4; i++)
+            {
+                ev.Fire();
+                await Task.Delay(300);
+            }
+
+            Assert.AreEqual(4, callCount, "One invocation should pass per window over multiple windows.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventThrottle_Scoped_Untyped_PassesScopeAndThrottles()
     {
-        var ev = new Event();
-        var lt = new Recyclable();
-        object scope = new object();
-        int callCount = 0;
-
-        ev.SubscribeThrottled(scope, sc =>
+        var ev = EventPool.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
-            Assert.AreSame(scope, sc);
-            callCount++;
-        }, lt, maxCyclesPerSecond: 10);
+            object scope = new object();
+            int callCount = 0;
 
-        for (int i = 0; i < 5; i++) ev.Fire();
-        Assert.AreEqual(1, callCount, "Non-generic scoped throttle should limit to one call per window and pass correct scope.");
+            ev.SubscribeThrottled(scope, sc =>
+            {
+                Assert.AreSame(scope, sc);
+                callCount++;
+            }, lt, maxCyclesPerSecond: 10);
+
+            for (int i = 0; i < 5; i++) ev.Fire();
+            Assert.AreEqual(1, callCount, "Non-generic scoped throttle should limit to one call per window and pass correct scope.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public async Task EventThrottle_Scoped_Untyped_SecondFireAfterWindow()
     {
-        var ev = new Event();
-        var lt = new Recyclable();
-        object scope = new object();
-        int callCount = 0;
-
-        ev.SubscribeThrottled(scope, sc =>
+        var ev = EventPool.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
-            Assert.AreSame(scope, sc);
-            callCount++;
-        }, lt, maxCyclesPerSecond: 10); // 100 ms
+            object scope = new object();
+            int callCount = 0;
 
-        ev.Fire();              // first should pass
-        await Task.Delay(120);  // > window
-        ev.Fire();              // second should also pass
+            ev.SubscribeThrottled(scope, sc =>
+            {
+                Assert.AreSame(scope, sc);
+                callCount++;
+            }, lt, maxCyclesPerSecond: 10);
 
-        Assert.AreEqual(2, callCount, "Non-generic scoped throttle should allow calls after throttle window.");
+            ev.Fire();
+            await Task.Delay(120);
+            ev.Fire();
+
+            Assert.AreEqual(2, callCount, "Non-generic scoped throttle should allow calls after throttle window.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventThrottle_Scoped_Generic_PassesScopeAndArg()
     {
-        var ev = new Event<string>();
-        var lt = new Recyclable();
-        object scope = new object();
-        int callCount = 0;
-        string lastArg = null;
-
-        ev.SubscribeThrottled(scope, (sc, arg) =>
+        var ev = EventPool<string>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
         {
-            Assert.AreSame(scope, sc);
-            lastArg = arg;
-            callCount++;
-        }, lt, maxCyclesPerSecond: 20);
+            object scope = new object();
+            int callCount = 0;
+            string lastArg = null;
 
-        ev.Fire("alpha");
-        for (int i = 0; i < 4; i++) ev.Fire("beta");
+            ev.SubscribeThrottled(scope, (sc, arg) =>
+            {
+                Assert.AreSame(scope, sc);
+                lastArg = arg;
+                callCount++;
+            }, lt, maxCyclesPerSecond: 20);
 
-        Assert.AreEqual(1, callCount, "Generic scoped throttle should only allow one call per window.");
-        Assert.AreEqual("alpha", lastArg, "First argument should be delivered, not overwritten.");
+            ev.Fire("alpha");
+            for (int i = 0; i < 4; i++) ev.Fire("beta");
+
+            Assert.AreEqual(1, callCount, "Generic scoped throttle should only allow one call per window.");
+            Assert.AreEqual("alpha", lastArg, "First argument should be delivered, not overwritten.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public void EventThrottle_GenericUnscoped_BasicRateLimit()
     {
-        var ev = new Event<int>();
-        var lt = new Recyclable();
-        int callCount = 0;
-        int lastValue = 0;
+        var ev = EventPool<int>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            int callCount = 0;
+            int lastValue = 0;
 
-        // 10/sec => 100 ms window
-        ev.SubscribeThrottled(i => { callCount++; lastValue = i; }, lt, maxCyclesPerSecond: 10);
+            ev.SubscribeThrottled(i => { callCount++; lastValue = i; }, lt, maxCyclesPerSecond: 10);
 
-        // Burst of events, only one should get through
-        ev.Fire(5);
-        ev.Fire(6);
-        ev.Fire(7);
+            ev.Fire(5);
+            ev.Fire(6);
+            ev.Fire(7);
 
-        Assert.AreEqual(1, callCount, "Generic unscoped throttle should allow at most one event per window.");
-        Assert.AreEqual(5, lastValue, "First event's payload should be delivered.");
+            Assert.AreEqual(1, callCount, "Generic unscoped throttle should allow at most one event per window.");
+            Assert.AreEqual(5, lastValue, "First event's payload should be delivered.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
 
     [TestMethod]
     public async Task EventThrottle_GenericUnscoped_SecondFireAfterWindow()
     {
-        var ev = new Event<string>();
-        var lt = new Recyclable();
-        int callCount = 0;
-        string lastValue = null;
+        var ev = EventPool<string>.Instance.Rent();
+        var lt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            int callCount = 0;
+            string lastValue = null;
 
-        ev.SubscribeThrottled(val => { callCount++; lastValue = val; }, lt, maxCyclesPerSecond: 4); // 250 ms window
+            ev.SubscribeThrottled(val => { callCount++; lastValue = val; }, lt, maxCyclesPerSecond: 4);
 
-        ev.Fire("a");
-        await Task.Delay(260); // > window
-        ev.Fire("b");
+            ev.Fire("a");
+            await Task.Delay(260);
+            ev.Fire("b");
 
-        Assert.AreEqual(2, callCount, "Should get a callback for each event outside the throttle window.");
-        Assert.AreEqual("b", lastValue, "Payload of second event should be delivered after the window.");
+            Assert.AreEqual(2, callCount, "Should get a callback for each event outside the throttle window.");
+            Assert.AreEqual("b", lastValue, "Payload of second event should be delivered after the window.");
+        }
+        finally
+        {
+            ev.TryDispose();
+            lt.TryDispose();
+        }
     }
     #endregion
-
 }
-
