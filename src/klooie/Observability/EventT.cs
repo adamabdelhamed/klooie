@@ -15,6 +15,8 @@ public class Event<T> : Recyclable, IEventT
 
     public bool HasSubscriptions => innerEvent?.HasSubscriptions == true;
 
+    public int SubscriberCount => innerEvent?.SubscriberCount ?? 0; 
+
     /// <summary>
     /// Subscribes for the given lifetime.
     /// </summary>

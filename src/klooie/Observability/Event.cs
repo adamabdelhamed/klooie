@@ -11,6 +11,8 @@ public sealed class Event : Recyclable
     /// </summary>
     public bool HasSubscriptions => eventSubscribers?.Count > 0;
 
+    public int SubscriberCount => eventSubscribers?.Count ?? 0;
+
     /// <summary>
     /// Fires the event. All subscribers will be notified
     /// </summary>

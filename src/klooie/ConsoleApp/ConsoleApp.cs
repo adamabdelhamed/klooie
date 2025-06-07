@@ -144,7 +144,17 @@ public class ConsoleApp : EventLoop
             OnDisposed(LayoutRoot.Dispose);
             focus = FocusManagerPool.Instance.Rent();
             OnDisposed(focus.Dispose);
-            Invoke(()=> OnReturnedToPool.Subscribe(ValidatePoolCleared, this));
+            Invoke(()=>
+            {
+                OnReturnedToPool.Subscribe(ValidatePoolCleared, this);
+                OnDisposed(() =>
+                {
+                    if(OnReturnedToPool.SubscriberCount == 1)
+                    {
+                        OnReturnedToPool.TryDispose();
+                    }
+                });
+            });
             base.Run();
         }
         finally
