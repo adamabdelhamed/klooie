@@ -4,7 +4,21 @@ namespace klooie;
 public class Recyclable : ILifetime
 {
     private static Event<Recyclable>? onReturnedToPool;
-    public static Event<Recyclable> OnReturnedToPool => onReturnedToPool ??= new Event<Recyclable>();
+    public static Event<Recyclable> OnReturnedToPool
+    {
+        get
+        {
+            if(onReturnedToPool == null)
+            {
+                onReturnedToPool = EventPool<Recyclable>.Instance.Rent();
+                onReturnedToPool.OnDisposed(NullOnReturnedToPool);
+            }
+            return onReturnedToPool;
+        }
+    }
+
+    private static void NullOnReturnedToPool() => onReturnedToPool = null;
+
     public static bool PoolingEnabled { get; set; } = true;
     public static StackHunterMode StackHunterMode { get; set; } = StackHunterMode.Off;
     private static readonly Recyclable forever = new Recyclable();
