@@ -43,7 +43,8 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
     /// <summary>
     /// An event that fires when the player stops
     /// </summary>
-    public Event Stopped { get; private set; } = Event.Create();
+    private Event stopped;
+    public Event Stopped => stopped ??= Event.Create();
 
     /// <summary>
     /// An artificial delay that is added after each frame is loaded from the stream.  This can simulate
@@ -125,7 +126,8 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
         }
     }
 
-    public Event<TimeSpan> OnFramePlayed { get; private set; } = Event<TimeSpan>.Create();
+    private Event<TimeSpan> onFramePlayed;
+    public Event<TimeSpan> OnFramePlayed => onFramePlayed ??= Event<TimeSpan>.Create();
 
     /// <summary>
     /// Creates a console bitmap player control with no video loaded
@@ -483,5 +485,14 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
             }
         });
         return tcs.Task;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        stopped?.TryDispose();
+        stopped = null;
+        onFramePlayed?.TryDispose();
+        onFramePlayed = null;
     }
 }

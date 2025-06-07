@@ -88,7 +88,8 @@ public class DataGallery<T> : Gallery
     /// <summary>
     /// Called whenever a page of items is shown
     /// </summary>
-    public Event Shown { get; private set; } = Event.Create();
+    private Event shown;
+    public Event Shown => shown ??= Event.Create();
 
     /// <summary>
     /// Creates a data gallery
@@ -116,5 +117,12 @@ public class DataGallery<T> : Gallery
         }
         Refresh();
         Shown.Fire();
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        shown?.TryDispose();
+        shown = null;
     }
 }

@@ -15,12 +15,20 @@ public partial class FocusManager : Recyclable,  IObservableObject
 
     private Event<ConsoleKeyInfo> _globalKeyPressed;
     public Event<ConsoleKeyInfo> GlobalKeyPressed    { get => _globalKeyPressed ?? (_globalKeyPressed = Event<ConsoleKeyInfo>.Create()); }
+    private Event onKeyInputThrottled;
+    /// <summary>
+    /// An event that fires when key input has been throttled. Only fired
+    /// when KeyThrottlingEnabled is true.
+    /// </summary>
+    public Event OnKeyInputThrottled => onKeyInputThrottled ??= Event.Create();
 
     protected override void OnReturn()
     {
         base.OnReturn();
-        _globalKeyPressed?.Dispose();
+        _globalKeyPressed?.TryDispose();
         _globalKeyPressed = null;
+        onKeyInputThrottled?.TryDispose();
+        onKeyInputThrottled = null;
         sendKeys.Clear();
         lastKeyPressTime = DateTime.MinValue;
         lastKey = default;
@@ -217,12 +225,6 @@ public partial class FocusManager : Recyclable,  IObservableObject
     /// MinTimeBetweenKeyPresses property to suit your needs.
     /// </summary>
     public bool KeyThrottlingEnabled { get; set; } = true;
-
-    /// <summary>
-    /// An event that fires when key input has been throttled. Only fired
-    /// when KeyThrottlingEnabled is true.
-    /// </summary>
-    public Event OnKeyInputThrottled { get; private set; } = Event.Create();
 
     public FocusManager()
     {

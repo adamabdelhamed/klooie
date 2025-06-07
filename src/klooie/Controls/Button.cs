@@ -40,7 +40,8 @@ public partial class Button : ConsoleControl
     /// <summary>
     /// An event that fires when the button is clicked
     /// </summary>
-    public Event Pressed { get; private init; } = Event.Create();
+    private Event pressed;
+    public Event Pressed => pressed ??= Event.Create();
 
     /// <summary>
     /// Gets or sets the text that is displayed on the button
@@ -147,4 +148,11 @@ public partial class Button : ConsoleControl
     /// </summary>
     /// <param name="context">drawing context</param>
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(display, 0, 0);
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        pressed?.TryDispose();
+        pressed = null;
+    }
 }

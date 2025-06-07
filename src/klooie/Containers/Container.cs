@@ -202,9 +202,9 @@ public abstract class Container : ConsoleControl
     protected override void OnReturn()
     {
         base.OnReturn();
-        _descendentAdded?.Dispose();
+        _descendentAdded?.TryDispose();
         _descendentAdded = null;
-        _descendentRemoved?.Dispose();
+        _descendentRemoved?.TryDispose();
         _descendentRemoved = null;
     }
 }

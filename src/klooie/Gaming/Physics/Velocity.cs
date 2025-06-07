@@ -80,17 +80,17 @@ public sealed class Velocity : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        _onAngleChanged?.Dispose();
+        _onAngleChanged?.TryDispose();
         _onAngleChanged = null;
-        _onSpeedChanged?.Dispose();
+        _onSpeedChanged?.TryDispose();
         _onSpeedChanged = null;
-        _beforeEvaluate?.Dispose();
+        _beforeEvaluate?.TryDispose();
         _beforeEvaluate = null;
-        _beforeMove?.Dispose();
+        _beforeMove?.TryDispose();
         _beforeMove = null;
-        _onVelocityEnforced?.Dispose();
+        _onVelocityEnforced?.TryDispose();
         _onVelocityEnforced = null;
-        _onCollision?.Dispose();
+        _onCollision?.TryDispose();
         _onCollision = null;
         Group = null;
     }

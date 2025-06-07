@@ -40,5 +40,14 @@ internal sealed class EventBroadcaster
         if (events.TryGetValue(eventName, out Event<GameEvent> toFire) == false) return;
         toFire.Fire(new GameEvent() { Id = eventName, Args = args });
     }
+
+    public void Dispose()
+    {
+        foreach (var kv in events)
+        {
+            kv.Value.TryDispose();
+        }
+        events.Clear();
+    }
 }
 
