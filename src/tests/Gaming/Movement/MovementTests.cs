@@ -121,7 +121,7 @@ public class MovementTests
     [TestMethod]
     public void Movement_WanderCamera()
     {
-        var ev = new Event<LocF>();
+        var ev = Event<LocF>.Create();
         GameCollider c = null;
         var factory = () =>
         {

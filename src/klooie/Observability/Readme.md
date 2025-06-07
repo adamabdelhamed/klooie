@@ -33,7 +33,7 @@ This is how you define and trigger events.
 ```cs
     public class SomeCustomControl : CustomControl
     {
-        public Event SomethingCoolHappened { get; private init; } = new Event();
+        public Event SomethingCoolHappened { get; private init; } = Event.Create();
         public Event<string> SomethingCoolHappenedWithArgs { get; private init; } = new Event<string>();
 
         //...

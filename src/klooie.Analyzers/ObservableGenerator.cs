@@ -275,7 +275,7 @@ namespace klooie
                 sb.AppendLine(Indent(indent) + "}");
             }
 
-            sb.AppendLine($"{Indent(indent)}return EventPool.Instance.Rent();");
+            sb.AppendLine($"{Indent(indent)}return Event.Create();");
             indent -= standardIndent;
             sb.AppendLine(Indent(indent) + "}");
             sb.AppendLine();

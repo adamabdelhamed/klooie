@@ -27,9 +27,9 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
 {
     private List<T> wrapped;
     private Dictionary<T, Recyclable> membershipLifetimes;
-    private Event<object> _untypedAdded = EventPool<object>.Instance.Rent();
+    private Event<object> _untypedAdded = Event<object>.Create();
     Event<Object> IObservableCollection.Added => _untypedAdded;
-    private Event<object> _untypedRemove = EventPool<object>.Instance.Rent();
+    private Event<object> _untypedRemove = Event<object>.Create();
     Event<Object> IObservableCollection.Removed => _untypedRemove;
 
     private Event<T> _beforeAdded, added, beforeRemoved, removed;
@@ -38,28 +38,28 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     /// <summary>
     /// Called before an item is added to the list
     /// </summary>
-    public Event<T> BeforeAdded => _beforeAdded ?? (_beforeAdded = EventPool<T>.Instance.Rent());
+    public Event<T> BeforeAdded => _beforeAdded ?? (_beforeAdded = Event<T>.Create());
 
     /// <summary>
     /// Called after an item is removed from the list
     /// </summary>
-    public Event<T> BeforeRemoved => beforeRemoved ?? (beforeRemoved = EventPool<T>.Instance.Rent());
+    public Event<T> BeforeRemoved => beforeRemoved ?? (beforeRemoved = Event<T>.Create());
 
     /// <summary>
     /// Called when an element is added to this list
     /// </summary>
-    public Event<T> Added => added ?? (added = EventPool<T>.Instance.Rent());
+    public Event<T> Added => added ?? (added = Event<T>.Create());
 
     /// <summary>
     /// Called when an element is removed from this list
     /// </summary>
-    public Event<T> Removed  => removed ?? (removed = EventPool<T>.Instance.Rent());
+    public Event<T> Removed  => removed ?? (removed = Event<T>.Create());
 
     /// <summary>
     /// Called whenever this list changes.  You may receive one event for multiple changes
     /// if the changes were atomic (e.g. after calling Clear()).
     /// </summary>
-    public Event Changed => changed ?? (changed = EventPool.Instance.Rent());
+    public Event Changed => changed ?? (changed = Event.Create());
 
 
     /// <summary>

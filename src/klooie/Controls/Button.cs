@@ -40,7 +40,7 @@ public partial class Button : ConsoleControl
     /// <summary>
     /// An event that fires when the button is clicked
     /// </summary>
-    public Event Pressed { get; private init; } = new Event();
+    public Event Pressed { get; private init; } = Event.Create();
 
     /// <summary>
     /// Gets or sets the text that is displayed on the button

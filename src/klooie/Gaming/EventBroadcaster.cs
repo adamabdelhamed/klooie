@@ -17,7 +17,7 @@ internal sealed class EventBroadcaster
         {
             if(events.TryGetValue(variable, out Event<GameEvent> matchingEvent) == false)
             {
-                matchingEvent = new Event<GameEvent>();
+                matchingEvent = Event<GameEvent>.Create();
                 events.Add(variable, matchingEvent);
             }
             matchingEvent.Subscribe(handler, lt);

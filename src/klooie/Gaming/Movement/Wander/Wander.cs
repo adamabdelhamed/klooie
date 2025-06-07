@@ -39,8 +39,7 @@ public class Wander : Movement
     public WanderOptions WanderOptions => (WanderOptions)Options;
 
     private Event<List<AngleScore>> onNewScoresAvailable;
-    public Event<List<AngleScore>> OnNewScoresAvailable =>
-        onNewScoresAvailable ??= EventPool<List<AngleScore>>.Instance.Rent();
+    public Event<List<AngleScore>> OnNewScoresAvailable => onNewScoresAvailable ??= Event<List<AngleScore>>.Create();
 
     public static Wander Create(WanderOptions options)
     {

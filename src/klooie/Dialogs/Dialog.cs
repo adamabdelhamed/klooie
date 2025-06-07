@@ -61,7 +61,7 @@ public static class Dialog
     /// An event that fires when any dialog is shown. It is fired once the dialog has settled
     /// (i.e. the open animation is completed, the content is visible).
     /// </summary>
-    public static Event Shown { get; private set; } = new Event();
+    public static Event Shown { get; private set; } = Event.Create();
 
     /// <summary>
     /// Shows a dialog

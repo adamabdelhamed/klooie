@@ -11,7 +11,7 @@ public class EventTests
     [TestMethod]
     public void TestEvent()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -27,7 +27,7 @@ public class EventTests
     [TestMethod]
     public void TestEventT()
     {
-        var ev = EventPool<object>.Instance.Rent();
+        var ev = Event<object>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -45,7 +45,7 @@ public class EventTests
     {
         object scope = new object();
         int args = 1;
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -62,7 +62,7 @@ public class EventTests
     public void TestEventScoped()
     {
         object scope = new object();
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -80,7 +80,7 @@ public class EventTests
     {
         for (var i = 0; i < 10; i++)
         {
-            var ev = EventPool.Instance.Rent();
+            var ev = Event.Create();
             var lt = DefaultRecyclablePool.Instance.Rent();
             try
             {
@@ -98,7 +98,7 @@ public class EventTests
     public void TestEventReusabilityScopedAndUnscoped()
     {
         var scope = new object();
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -108,14 +108,14 @@ public class EventTests
 
                 ev.TryDispose();
                 lt.TryDispose();
-                ev = EventPool.Instance.Rent();
+                ev = Event.Create();
                 lt = DefaultRecyclablePool.Instance.Rent();
 
                 TestEventMechanics(ev, lt, scope);
 
                 ev.TryDispose();
                 lt.TryDispose();
-                ev = EventPool.Instance.Rent();
+                ev = Event.Create();
                 lt = DefaultRecyclablePool.Instance.Rent();
             }
         }
@@ -188,7 +188,7 @@ public class EventTests
     [TestMethod]
     public void Event_FireWithNoSubscribers_NoEffect()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         try
         {
             ev.Fire();
@@ -203,7 +203,7 @@ public class EventTests
     [TestMethod]
     public void Event_Subscribe_ReceivesNotification()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -224,7 +224,7 @@ public class EventTests
     [TestMethod]
     public void Event_SubscribeWithPriority_ReceivesNotification()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -245,7 +245,7 @@ public class EventTests
     [TestMethod]
     public void Event_SubscribeOnce_CalledOnlyOnce()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         try
         {
             int callCount = 0;
@@ -268,7 +268,7 @@ public class EventTests
     [TestMethod]
     public void Event_SubscribeWithScope_ScopeReceivesNotification()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -299,7 +299,7 @@ public class EventTests
     [TestMethod]
     public void Event_SubscribeWithScopeAndPriority_ScopeReceivesNotification()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -329,7 +329,7 @@ public class EventTests
     [TestMethod]
     public void Event_Sync_CallsImmediatelyAndOnFire()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -351,7 +351,7 @@ public class EventTests
     [TestMethod]
     public void Event_SyncWithPriority_CallsImmediatelyAndOnFire()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -373,7 +373,7 @@ public class EventTests
     [TestMethod]
     public void Event_SyncWithScope_CallsImmediatelyAndOnFire()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -401,7 +401,7 @@ public class EventTests
     [TestMethod]
     public void Event_SyncWithPriorityAndScope_CallsImmediatelyAndOnFire()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -429,7 +429,7 @@ public class EventTests
     [TestMethod]
     public void Event_SubscribeOnceWithScope_CalledOnceAndDisposed()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         try
         {
             int callCount = 0;
@@ -456,7 +456,7 @@ public class EventTests
     [TestMethod]
     public void Event_CreateNextFireLifetime_EndsAfterNextFire()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         try
         {
             var lifetime = ev.CreateNextFireLifetime();
@@ -474,7 +474,7 @@ public class EventTests
     [TestMethod]
     public async Task Event_CreateNextFireTask_CompletesAfterNextFire()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         try
         {
             var task = ev.CreateNextFireTask();
@@ -494,7 +494,7 @@ public class EventTests
     [TestMethod]
     public void Event_MultipleFires_NoSideEffectsIfLifetimeDisposed()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -521,7 +521,7 @@ public class EventTests
     {
         for (int i = 0; i < 5; i++)
         {
-            var ev = EventPool.Instance.Rent();
+            var ev = Event.Create();
             var lt = DefaultRecyclablePool.Instance.Rent();
             try
             {
@@ -544,7 +544,7 @@ public class EventTests
     [TestMethod]
     public void Event_Reentrancy_FiringInsideCallback()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -575,7 +575,7 @@ public class EventTests
     [TestMethod]
     public void EventT_FireWithNoSubscribers_NoEffect()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         try
         {
             ev.Fire(42);
@@ -589,7 +589,7 @@ public class EventTests
     [TestMethod]
     public void EventT_Subscribe_CalledWithCorrectArgument()
     {
-        var ev = EventPool<string>.Instance.Rent();
+        var ev = Event<string>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -610,7 +610,7 @@ public class EventTests
     [TestMethod]
     public void EventT_SubscribeWithPriority_CalledCorrectly()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -631,7 +631,7 @@ public class EventTests
     [TestMethod]
     public void EventT_SubscribeOnce_CalledOnce()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         try
         {
             int callCount = 0;
@@ -651,7 +651,7 @@ public class EventTests
     [TestMethod]
     public void EventT_SubscribeWithScope_ReceivesScopeAndArgument()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -682,7 +682,7 @@ public class EventTests
     [TestMethod]
     public void EventT_SubscribeWithPriorityScope_ReceivesScopeAndArgument()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -709,7 +709,7 @@ public class EventTests
     [TestMethod]
     public void EventT_SubscribeOnceWithScope_CalledOnce()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         try
         {
             object scope = new object();
@@ -735,7 +735,7 @@ public class EventTests
     [TestMethod]
     public void EventT_CreateNextFireLifetime_EndsAfterNextFire()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         try
         {
             var lifetime = ev.CreateNextFireLifetime();
@@ -753,7 +753,7 @@ public class EventTests
     [TestMethod]
     public async Task EventT_CreateNextFireTask_CompletesAfterNextFire()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         try
         {
             var task = ev.CreateNextFireTask();
@@ -773,7 +773,7 @@ public class EventTests
     [TestMethod]
     public void EventT_MultipleFiresAndDispose_NoSideEffects()
     {
-        var ev = EventPool<string>.Instance.Rent();
+        var ev = Event<string>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -800,7 +800,7 @@ public class EventTests
     {
         for (int i = 0; i < 5; i++)
         {
-            var ev = EventPool<string>.Instance.Rent();
+            var ev = Event<string>.Create();
             var lt = DefaultRecyclablePool.Instance.Rent();
             try
             {
@@ -820,7 +820,7 @@ public class EventTests
     [TestMethod]
     public void EventT_Reentrancy_FiringInsideCallback()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -852,7 +852,7 @@ public class EventTests
     [TestMethod]
     public void EventThrottle_Unscoped_BasicRateLimit()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -873,7 +873,7 @@ public class EventTests
     [TestMethod]
     public async Task EventThrottle_Unscoped_AllowsAfterWindow()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -896,7 +896,7 @@ public class EventTests
     [TestMethod]
     public void EventThrottle_Scoped_BasicRateLimit()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -923,7 +923,7 @@ public class EventTests
     [TestMethod]
     public void EventThrottle_Lifetime_DisposeStopsCallbacks()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -946,7 +946,7 @@ public class EventTests
     [TestMethod]
     public void EventThrottle_ConcurrentFires_NoMoreThanOnePerWindow()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -968,7 +968,7 @@ public class EventTests
     [TestMethod]
     public async Task EventThrottle_RepeatedWindows_CorrectCadence()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -994,7 +994,7 @@ public class EventTests
     [TestMethod]
     public void EventThrottle_Scoped_Untyped_PassesScopeAndThrottles()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -1020,7 +1020,7 @@ public class EventTests
     [TestMethod]
     public async Task EventThrottle_Scoped_Untyped_SecondFireAfterWindow()
     {
-        var ev = EventPool.Instance.Rent();
+        var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -1049,7 +1049,7 @@ public class EventTests
     [TestMethod]
     public void EventThrottle_Scoped_Generic_PassesScopeAndArg()
     {
-        var ev = EventPool<string>.Instance.Rent();
+        var ev = Event<string>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -1080,7 +1080,7 @@ public class EventTests
     [TestMethod]
     public void EventThrottle_GenericUnscoped_BasicRateLimit()
     {
-        var ev = EventPool<int>.Instance.Rent();
+        var ev = Event<int>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {
@@ -1106,7 +1106,7 @@ public class EventTests
     [TestMethod]
     public async Task EventThrottle_GenericUnscoped_SecondFireAfterWindow()
     {
-        var ev = EventPool<string>.Instance.Rent();
+        var ev = Event<string>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
         try
         {

@@ -154,10 +154,10 @@ public class EventLoop : Recyclable
 
     private SynchronizedEventPool pool = new SynchronizedEventPool();
 
-    public Event StartOfCycle { get; private set; } = new Event();
-    public Event EndOfCycle { get; private set; } = new Event();
-    public Event LoopStarted { get; private set; } = new Event();
-    public Event LoopStopped { get; private set; } = new Event();
+    public Event StartOfCycle { get; private set; } = Event.Create();
+    public Event EndOfCycle { get; private set; } = Event.Create();
+    public Event LoopStarted { get; private set; } = Event.Create();
+    public Event LoopStopped { get; private set; } = Event.Create();
     public Thread Thread { get; private set; }
     public long Posts => syncContext.Posts;
     public long Sends => syncContext.Sends;

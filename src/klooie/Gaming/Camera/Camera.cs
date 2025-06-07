@@ -5,7 +5,7 @@
 /// </summary>
 public sealed partial class Camera : ConsolePanel
 {
-    public Event CameraLocationChanged { get; } = new Event();
+    public Event CameraLocationChanged { get; } = Event.Create();
     private LocF cameraLocation;
 
     /// <summary>

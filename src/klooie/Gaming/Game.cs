@@ -166,7 +166,7 @@ public class SpecialReverseDictionary
     {
         if (dict.ContainsKey(key) == false)
         {
-            dict.Add(key, (null, new Event()));
+            dict.Add(key, (null, Event.Create()));
         }
 
         dict[key].Changed.Subscribe(handler, lifetime);
@@ -187,7 +187,7 @@ public class SpecialReverseDictionary
         }
         else
         {
-            dict.Add(key, (value, new Event()));
+            dict.Add(key, (value, Event.Create()));
         }
     }
 

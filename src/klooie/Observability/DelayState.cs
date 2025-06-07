@@ -7,7 +7,7 @@ public class DelayState : Recyclable
     private RecyclableList<int> Leases;
 
     private Event<Recyclable>? _beforeDisposeDependency;
-    public Event<Recyclable> BeforeDisposeDependency => _beforeDisposeDependency ??= EventPool<Recyclable>.Instance.Rent();
+    public Event<Recyclable> BeforeDisposeDependency => _beforeDisposeDependency ??= Event<Recyclable>.Create();
     public ILifetime MainDependency => Dependencies.Items[0];
 
     public bool AreAllDependenciesValid

@@ -17,7 +17,7 @@ public static class ColliderGroupDebugger
         ColliderGroupDebugger.group = group;
         if (VelocityEventOccurred != null) return false;
         lt.OnDisposed(() => VelocityEventOccurred = null);
-        VelocityEventOccurred = new Event<VelocityEvent>();
+        VelocityEventOccurred = Event<VelocityEvent>.Create();
         if (outputDir != null)
         {
             OutputDir = outputDir;

@@ -2,7 +2,7 @@
 public sealed class PauseManager : IDelayProvider
 {
     private Recyclable? pauseLifetime;
-    public Event<ILifetime> OnPaused { get; private set; } = new Event<ILifetime>();
+    public Event<ILifetime> OnPaused { get; private set; } = Event<ILifetime>.Create();
 
     public bool IsPaused
     {

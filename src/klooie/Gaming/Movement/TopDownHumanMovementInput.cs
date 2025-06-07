@@ -32,8 +32,8 @@
     private Event<MovementFilterContext>? _movementFilter;
     private static Event<MovementFilterContext>? _globalMovementFilter;
 
-    public Event<MovementFilterContext> GlobalMovementFilter => _globalMovementFilter ?? (_globalMovementFilter = EventPool<MovementFilterContext>.Instance.Rent());
-    public Event<MovementFilterContext> MovementFilter => _movementFilter ?? (_movementFilter = EventPool<MovementFilterContext>.Instance.Rent());
+    public Event<MovementFilterContext> GlobalMovementFilter => _globalMovementFilter ?? (_globalMovementFilter = Event<MovementFilterContext>.Create());
+    public Event<MovementFilterContext> MovementFilter => _movementFilter ?? (_movementFilter = Event<MovementFilterContext>.Create());
 
     public float Speed { get; set; } = 20;
 

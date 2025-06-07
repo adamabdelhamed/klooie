@@ -8,7 +8,7 @@ public partial class Weapon : Recyclable, IObservableObject
         {
             if (onFire == null)
             {
-                onFire = EventPool<Weapon>.Instance.Rent();
+                onFire = Event<Weapon>.Create();
                 Game.Current.OnDisposed(()=>
                 {
                     onFire.Dispose();

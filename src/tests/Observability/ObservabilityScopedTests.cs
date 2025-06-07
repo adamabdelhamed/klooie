@@ -8,8 +8,8 @@ namespace klooie.tests
     {
         public partial class SomeObservable2 : Recyclable, IObservableObject
         {
-            public Event SomeEvent { get; } = new Event();
-            public Event<string> SomeEventWithAString { get; } = new Event<string>();
+            public Event SomeEvent { get; } = Event.Create();
+            public Event<string> SomeEventWithAString { get; } = Event<string>.Create();
 
 
             public partial string Name { get; set; }

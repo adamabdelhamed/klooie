@@ -25,8 +25,8 @@ internal partial class ObservabilitySamples
 //#Sample -id EventBasicUsageDeclarer
     public class SomeCustomControl : CustomControl
     {
-        public Event SomethingCoolHappened { get; private init; } = new Event();
-        public Event<string> SomethingCoolHappenedWithArgs { get; private init; } = new Event<string>();
+        public Event SomethingCoolHappened { get; private init; } = Event.Create();
+        public Event<string> SomethingCoolHappenedWithArgs { get; private init; } = Event<string>.Create();
 
         //...
 

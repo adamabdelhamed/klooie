@@ -13,7 +13,7 @@ public abstract class CameraMovement : Recyclable
     /// An event that the movement should fire when it believes it should take over
     /// as the current movement. The event argument is the priority (lower is more important)
     /// </summary>
-    public Event<int> SituationDetected { get; private set; } = new Event<int>();
+    public Event<int> SituationDetected { get; private set; } = Event<int>.Create();
 
     /// <summary>
     /// A lifetime that will be set for you before Move is called. It will be

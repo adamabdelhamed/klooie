@@ -15,7 +15,18 @@ public class Event<T> : Recyclable, IEventT
 
     public bool HasSubscriptions => innerEvent?.HasSubscriptions == true;
 
-    public int SubscriberCount => innerEvent?.SubscriberCount ?? 0; 
+    public int SubscriberCount => innerEvent?.SubscriberCount ?? 0;
+
+    private Event() { }
+
+    public static Event<T> Create() => Pool.Instance.Rent();
+
+    private class Pool : RecycleablePool<Event<T>>
+    {
+        private static Pool? _instance;
+        public static Pool Instance => _instance ??= new Pool();
+        public override Event<T> Factory() => new Event<T>();
+    }
 
     /// <summary>
     /// Subscribes for the given lifetime.
@@ -24,7 +35,7 @@ public class Event<T> : Recyclable, IEventT
     /// <param name="lt">the lifetime</param>
     public void Subscribe(Action<T> handler, ILifetime lt)
     {
-        innerEvent = innerEvent ?? EventPool.Instance.Rent();
+        innerEvent = innerEvent ?? Event.Create();
         innerEvent.Subscribe(() => Execute(handler), lt);
     }
 
@@ -35,7 +46,7 @@ public class Event<T> : Recyclable, IEventT
     /// </summary>
     public void Subscribe<TScope>(TScope scope, Action<object, object> handler, ILifetime lt)
     {
-        innerEvent = innerEvent ?? EventPool.Instance.Rent();
+        innerEvent = innerEvent ?? Event.Create();
         innerEvent.eventSubscribers ??= SubscriptionListPool.Rent();
         var subscription = SubscriptionPool.Instance.Rent();
         subscription.Bind(lt);
@@ -90,7 +101,7 @@ public class Event<T> : Recyclable, IEventT
     /// <param name="lt">the lifetime</param>
     public void SubscribeWithPriority(Action<T> handler, ILifetime lt)
     {
-        innerEvent = innerEvent ?? EventPool.Instance.Rent();
+        innerEvent = innerEvent ?? Event.Create();
         innerEvent.SubscribeWithPriority(() => Execute(handler), lt);
     }
 
@@ -102,7 +113,7 @@ public class Event<T> : Recyclable, IEventT
     /// </summary>
     public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope, T> handler, ILifetime lt)
     {
-        innerEvent = innerEvent ?? EventPool.Instance.Rent();
+        innerEvent = innerEvent ?? Event.Create();
         innerEvent.SubscribeWithPriority(scope, s => Execute((TScope)s!, handler), lt);
     }
 
@@ -122,7 +133,7 @@ public class Event<T> : Recyclable, IEventT
             try { handler((T)args.Peek()); }
             finally { lt.Dispose(); }
         };
-        innerEvent = innerEvent ?? EventPool.Instance.Rent();
+        innerEvent = innerEvent ?? Event.Create();
         innerEvent.Subscribe(wrappedHandler, lt);
     }
 
@@ -151,7 +162,7 @@ public class Event<T> : Recyclable, IEventT
             }
         };
 
-        innerEvent = innerEvent ?? EventPool.Instance.Rent();
+        innerEvent = innerEvent ?? Event.Create();
         innerEvent.Subscribe(wrappedAction, lt);
     }
 
@@ -194,7 +205,7 @@ public class Event<T> : Recyclable, IEventT
     /// <returns>a lifetime that will end the next time this event fires</returns>
     public Recyclable CreateNextFireLifetime()
     {
-        innerEvent = innerEvent ?? EventPool.Instance.Rent();
+        innerEvent = innerEvent ?? Event.Create();
         return innerEvent.CreateNextFireLifetime();
     }
 
@@ -217,9 +228,3 @@ public class Event<T> : Recyclable, IEventT
     }
 }
 
-public class EventPool<T> : RecycleablePool<Event<T>>
-{
-    private static EventPool<T> instance;
-    public static EventPool<T> Instance => instance ??= new EventPool<T>();
-    public override Event<T> Factory() => new Event<T>();
-}

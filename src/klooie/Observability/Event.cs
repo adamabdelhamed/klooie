@@ -13,6 +13,18 @@ public sealed class Event : Recyclable
 
     public int SubscriberCount => eventSubscribers?.Count ?? 0;
 
+    private Event() { }
+
+    public static Event Create() => Pool.Instance.Rent();
+    public static Event Create(out int lease) => Pool.Instance.Rent(out lease);
+
+    private class Pool : RecycleablePool<Event>
+    {
+        private static Pool? _instance;
+        public static Pool Instance => _instance ??= new Pool();
+        public override Event Factory() => new Event();
+    }
+
     /// <summary>
     /// Fires the event. All subscribers will be notified
     /// </summary>

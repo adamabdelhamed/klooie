@@ -10,7 +10,7 @@ public class Recyclable : ILifetime
         {
             if(onReturnedToPool == null)
             {
-                onReturnedToPool = EventPool<Recyclable>.Instance.Rent();
+                onReturnedToPool = Event<Recyclable>.Create();
                 onReturnedToPool.OnDisposed(NullOnReturnedToPool);
             }
             return onReturnedToPool;

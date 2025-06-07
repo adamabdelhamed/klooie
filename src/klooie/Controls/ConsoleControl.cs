@@ -87,17 +87,17 @@ public partial class ConsoleControl : Rectangular
     /// <summary>
     /// An event that fires after this control gets focus
     /// </summary>
-    public Event Focused { get => _focused ?? (_focused = EventPool.Instance.Rent()); }
+    public Event Focused { get => _focused ?? (_focused = Event.Create()); }
 
     /// <summary>
     /// An event that fires after this control loses focus
     /// </summary>
-    public Event Unfocused { get => _unfocused ?? (_unfocused = EventPool.Instance.Rent()); }
+    public Event Unfocused { get => _unfocused ?? (_unfocused = Event.Create()); }
 
     /// <summary>
     /// An event that fires when this control is both added to an app and that app is running
     /// </summary>
-    public Event Ready { get => _ready ?? (_ready = EventPool.Instance.Rent()); }
+    public Event Ready { get => _ready ?? (_ready = Event.Create()); }
 
 
 
@@ -106,12 +106,12 @@ public partial class ConsoleControl : Rectangular
     /// An event that fires when a key is pressed while this control has focus and the control has decided not to process
     /// the key press internally.
     /// </summary>
-    public Event<ConsoleKeyInfo> KeyInputReceived { get => _keyInputReceived ?? (_keyInputReceived = EventPool<ConsoleKeyInfo>.Instance.Rent()); }
+    public Event<ConsoleKeyInfo> KeyInputReceived { get => _keyInputReceived ?? (_keyInputReceived = Event<ConsoleKeyInfo>.Create()); }
 
     /// <summary>
     /// An event that fires any time its tags changes
     /// </summary>
-    public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = EventPool.Instance.Rent(out int _)); }
+    public Event TagsChanged { get => _tagsChanged ?? (_tagsChanged = Event.Create(out int _)); }
 
     /// <summary>
     /// Gets a reference to this control's parent in the visual tree.  It will be null if this control is not in the visual tree 

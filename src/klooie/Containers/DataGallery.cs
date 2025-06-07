@@ -88,7 +88,7 @@ public class DataGallery<T> : Gallery
     /// <summary>
     /// Called whenever a page of items is shown
     /// </summary>
-    public Event Shown { get; private set; } = new Event();
+    public Event Shown { get; private set; } = Event.Create();
 
     /// <summary>
     /// Creates a data gallery

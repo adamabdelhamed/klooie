@@ -6,11 +6,11 @@ public class Vision : Recyclable
     public const float DefaultRange = 20;
     public const float DefaultAngularVisibility = 60;
     private static Event<Vision>? _visionInitiated;
-    public static Event<Vision> VisionInitiated => _visionInitiated ??= EventPool<Vision>.Instance.Rent();
+    public static Event<Vision> VisionInitiated => _visionInitiated ??= Event<Vision>.Create();
 
 
     private Event? _visibleObjectsChanged;
-    public Event VisibleObjectsChanged => _visibleObjectsChanged ??= EventPool.Instance.Rent();
+    public Event VisibleObjectsChanged => _visibleObjectsChanged ??= Event.Create();
 
     private const float AutoScanFrequency = 667;
 
@@ -18,7 +18,7 @@ public class Vision : Recyclable
     private Event<VisionFilterContext>? _targetBeingEvaluated;
     public List<VisuallyTrackedObject> TrackedObjectsList { get; private set; } = new List<VisuallyTrackedObject>();
     public Dictionary<GameCollider, VisuallyTrackedObject> TrackedObjectsDictionary { get; private set; } = new Dictionary<GameCollider, VisuallyTrackedObject>();
-    public Event<VisionFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = EventPool<VisionFilterContext>.Instance.Rent());
+    public Event<VisionFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = Event<VisionFilterContext>.Create());
     public GameCollider Eye { get; private set; } = null!;
     public float Range { get; set; } 
     public float AngularVisibility { get; set; } 

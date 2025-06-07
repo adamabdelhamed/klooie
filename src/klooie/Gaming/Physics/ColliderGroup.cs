@@ -9,7 +9,7 @@ public sealed class ColliderGroup
     public int FramesPerSecond => frameRateMeter.CurrentFPS;
 
     private Event<Collision>? onCollision;
-    public Event<Collision> OnCollision => onCollision ?? (onCollision = EventPool<Collision>.Instance.Rent());
+    public Event<Collision> OnCollision => onCollision ?? (onCollision = Event<Collision>.Create());
     public int Count { get; private set; }
 
     private UniformGrid spatialIndex;
@@ -32,10 +32,10 @@ public sealed class ColliderGroup
     private float now;
     
     private Event<GameCollider> _added;
-    public Event<GameCollider> Added { get => _added ?? (_added = EventPool<GameCollider>.Instance.Rent()); }
+    public Event<GameCollider> Added { get => _added ?? (_added = Event<GameCollider>.Create()); }
 
     private Event<GameCollider> _removed;
-    public Event<GameCollider> Removed { get => _removed ?? (_removed = EventPool<GameCollider>.Instance.Rent()); }
+    public Event<GameCollider> Removed { get => _removed ?? (_removed = Event<GameCollider>.Create()); }
     
     public float SpeedRatio { get; set; } = 1;
 

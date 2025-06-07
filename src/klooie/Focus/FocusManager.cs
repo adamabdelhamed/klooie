@@ -14,7 +14,7 @@ public partial class FocusManager : Recyclable,  IObservableObject
     private ConsoleKey lastKey;
 
     private Event<ConsoleKeyInfo> _globalKeyPressed;
-    public Event<ConsoleKeyInfo> GlobalKeyPressed    { get => _globalKeyPressed ?? (_globalKeyPressed = EventPool<ConsoleKeyInfo>.Instance.Rent()); }
+    public Event<ConsoleKeyInfo> GlobalKeyPressed    { get => _globalKeyPressed ?? (_globalKeyPressed = Event<ConsoleKeyInfo>.Create()); }
 
     protected override void OnReturn()
     {
@@ -222,7 +222,7 @@ public partial class FocusManager : Recyclable,  IObservableObject
     /// An event that fires when key input has been throttled. Only fired
     /// when KeyThrottlingEnabled is true.
     /// </summary>
-    public Event OnKeyInputThrottled { get; private set; } = new Event();
+    public Event OnKeyInputThrottled { get; private set; } = Event.Create();
 
     public FocusManager()
     {

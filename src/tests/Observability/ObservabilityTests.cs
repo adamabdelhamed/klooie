@@ -14,8 +14,8 @@ public partial class ObservabilityTests
 
     public partial class SomeObservable : Recyclable, IObservableObject
     {
-        public Event SomeEvent { get; private set; } = new Event();
-        public Event<string> SomeEventWithAString { get; private set; } = new Event<string>();
+        public Event SomeEvent { get; private set; } = Event.Create();
+        public Event<string> SomeEventWithAString { get; private set; } = Event<string>.Create();
 
         public ObservableCollection<string> Strings { get; private set; } = new ObservableCollection<string>();
 
@@ -308,7 +308,7 @@ public partial class ObservabilityTests
     [TestMethod]
     public void TestSubscribeOnce()
     {
-        var ev = new Event();
+        var ev = Event.Create();
         var counter = 0;
         var count = () =>
         {

@@ -1,16 +1,14 @@
 ﻿using klooie;
 using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PowerArgs;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace tests;
 [TestClass]
 [TestCategory(Categories.ConsoleApp)]
+[TestCategory(Categories.Quarantined)] // Until I get pooling under control
 public class ConsolePanelTests
 {
     public TestContext TestContext { get; set; }

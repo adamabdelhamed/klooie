@@ -20,10 +20,7 @@ public class Program
     public static void GameEx()
     {
         var poolManager = PoolManager.Instance;
-        poolManager.Get<EventPool>().Fill(10_000);
         poolManager.Get<SubscriptionPool>().Fill(10_000);
-        poolManager.Get<EventPool<Collision>>().Fill(10_000);
-        poolManager.Get<EventPool<ConsoleKeyInfo>>().Fill(100);
         poolManager.Get<DefaultRecyclablePool>().Fill(10_000);
         poolManager.Get<ObservableCollectionPool<IConsoleControlFilter>>().Fill(100);
         poolManager.Get<ObservableCollectionPool<ConsoleControl>>().Fill(100);
@@ -209,7 +206,7 @@ public class Program
     {
         for (var i = 0; i < 1_000_000; i++)
         {
-            var ev = EventPool.Instance.Rent();
+            var ev = Event.Create();
             var r = DefaultRecyclablePool.Instance.Rent();
             ev.Subscribe(StaticDispose, r);
             ev.Fire();

@@ -20,8 +20,8 @@ public class Targeting : Recyclable
     private int visionLease = 0; // Lease for the Vision instance at subscription time.
     private int colliderLease = 0; // Lease for the Source GameCollider at subscription time.
 
-    public Event<GameCollider?> TargetChanged => _targetChanged ??= EventPool<GameCollider?>.Instance.Rent();
-    public Event<GameCollider> TargetAcquired => _targetAcquired ??= EventPool<GameCollider>.Instance.Rent();
+    public Event<GameCollider?> TargetChanged => _targetChanged ??= Event<GameCollider?>.Create();
+    public Event<GameCollider> TargetAcquired => _targetAcquired ??= Event<GameCollider>.Create();
 
     public GameCollider? Target { get; private set; }
     public TargetingOptions Options { get; private set; } = null!;

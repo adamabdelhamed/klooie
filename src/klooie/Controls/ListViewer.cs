@@ -38,7 +38,7 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
     private List<ConsoleControl> highlightedControls;
     private List<Recyclable> highlightLifetimes = new List<Recyclable>();
 
-    public Event SelectionChanged { get; private init; } = new Event();
+    public Event SelectionChanged { get; private init; } = Event.Create();
     public partial int SelectedRowIndex { get; set; }
     public partial int SelectedColumnIndex { get; set; }
     public int PageIndex => (int)Math.Floor(topOfPageDataIndex / (double)presenter.MaxRowsThatCanBePresented);
@@ -350,12 +350,12 @@ internal class ListViewerPanel : ProtectedConsolePanel
     private bool firstButtonFocused, previousButtonFocused, nextButtonFocused, lastButtonFocused;
     public ListViewerPanelOptions Options { get; private set; }
     public Dictionary<int, List<ConsoleControl>> ControlsByRow { get; private set; } = new Dictionary<int, List<ConsoleControl>>();
-    public Event FirstPageClicked { get; private set; } = new Event();
-    public Event PreviousPageClicked { get; private set; } = new Event();
-    public Event NextPageClicked { get; private set; } = new Event();
-    public Event LastPageClicked { get; private set; } = new Event();
-    public Event BeforeRecompose { get; private set; } = new Event();
-    public Event AfterRecompose { get; private set; } = new Event();
+    public Event FirstPageClicked { get; private set; } = Event.Create();
+    public Event PreviousPageClicked { get; private set; } = Event.Create();
+    public Event NextPageClicked { get; private set; } = Event.Create();
+    public Event LastPageClicked { get; private set; } = Event.Create();
+    public Event BeforeRecompose { get; private set; } = Event.Create();
+    public Event AfterRecompose { get; private set; } = Event.Create();
     public int MaxRowsThatCanBePresented => Options.ShowColumnHeaders ? Math.Max(0, Height - 2) : Math.Max(0, Height - 1);
 
     public ListViewerPanel(ListViewerPanelOptions options)

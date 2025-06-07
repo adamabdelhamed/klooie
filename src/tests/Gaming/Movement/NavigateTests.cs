@@ -46,7 +46,7 @@ public class NavigateTests
 
     public void NavigateCamera(bool headless)
     {
-        var ev = new Event<LocF>();
+        var ev = Event<LocF>.Create();
         GameCollider c = null;
         var factory = () =>
         {

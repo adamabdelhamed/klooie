@@ -16,12 +16,12 @@ public sealed class Velocity : Recyclable
     internal Event<Collision> _onCollision;
  
     public ColliderGroup Group { get; private set; }
-    public Event OnAngleChanged { get => _onAngleChanged ?? (_onAngleChanged = EventPool.Instance.Rent()); }
-    public Event OnSpeedChanged { get => _onSpeedChanged ?? (_onSpeedChanged = EventPool.Instance.Rent()); }
-    public Event BeforeEvaluate { get => _beforeEvaluate ?? (_beforeEvaluate = EventPool.Instance.Rent()); }
-    public Event BeforeMove { get => _beforeMove ?? (_beforeMove = EventPool.Instance.Rent()); }
-    public Event OnVelocityEnforced { get => _onVelocityEnforced ?? (_onVelocityEnforced = EventPool.Instance.Rent()); }
-    public Event<Collision> OnCollision { get => _onCollision ?? (_onCollision = EventPool<Collision>.Instance.Rent()); }
+    public Event OnAngleChanged { get => _onAngleChanged ?? (_onAngleChanged = Event.Create()); }
+    public Event OnSpeedChanged { get => _onSpeedChanged ?? (_onSpeedChanged = Event.Create()); }
+    public Event BeforeEvaluate { get => _beforeEvaluate ?? (_beforeEvaluate = Event.Create()); }
+    public Event BeforeMove { get => _beforeMove ?? (_beforeMove = Event.Create()); }
+    public Event OnVelocityEnforced { get => _onVelocityEnforced ?? (_onVelocityEnforced = Event.Create()); }
+    public Event<Collision> OnCollision { get => _onCollision ?? (_onCollision = Event<Collision>.Create()); }
     public CollisionBehaviorMode CollisionBehavior { get; set; } = CollisionBehaviorMode.Stop;
     public CollisionPrediction NextCollision { get; internal set; }
     public GameCollider Collider { get; private set; }
