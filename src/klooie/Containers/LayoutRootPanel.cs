@@ -29,7 +29,7 @@ public partial class LayoutRootPanel : ConsolePanel
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
         ResizeTo(lastConsoleWidth, lastConsoleHeight);
         ConsoleApp.Current!.EndOfCycle.Subscribe(DebounceResize, this);
-        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(DrainPaints, this, 33);
+        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(DrainPaints, this, 70);
         DescendentAdded.Subscribe(OnDescendentAdded, this);
         OnDisposed(RestoreConsoleState);
         FocusStackDepth = 1;
