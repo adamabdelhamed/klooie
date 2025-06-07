@@ -161,11 +161,8 @@ public class Game : ConsoleApp, IDelayProvider
         base.OnReturn();
         eventBroadcaster?.Dispose();
         eventBroadcaster = null;
-        ruleManager?.TryDispose();
         ruleManager = null;
-        pauseManager?.TryDispose();
         pauseManager = null;
-        mainColliderGroup?.TryDispose();
         mainColliderGroup = null;
         RuleVariables = null;
     }
