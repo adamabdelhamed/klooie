@@ -13,7 +13,8 @@ public abstract class CameraMovement : Recyclable
     /// An event that the movement should fire when it believes it should take over
     /// as the current movement. The event argument is the priority (lower is more important)
     /// </summary>
-    public Event<int> SituationDetected { get; private set; } = Event<int>.Create();
+    private Event<int> situationDetected;
+    public Event<int> SituationDetected => situationDetected ??= Event<int>.Create();
 
     /// <summary>
     /// A lifetime that will be set for you before Move is called. It will be
@@ -61,5 +62,17 @@ public abstract class CameraMovement : Recyclable
     /// Initialized your movement. It is not safe to operate the camera during this call.
     /// </summary>
     public virtual void Init() { }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        situationDetected?.TryDispose();
+        situationDetected = null;
+        MovementLifetime = null;
+        FocalElement = null;
+        FocalVelocity = null;
+        DelayProvider = null;
+        Camera = null;
+    }
 }
 

@@ -27,10 +27,10 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
 {
     private List<T> wrapped;
     private Dictionary<T, Recyclable> membershipLifetimes;
-    private Event<object> _untypedAdded = Event<object>.Create();
-    Event<Object> IObservableCollection.Added => _untypedAdded;
-    private Event<object> _untypedRemove = Event<object>.Create();
-    Event<Object> IObservableCollection.Removed => _untypedRemove;
+    private Event<object> _untypedAdded;
+    Event<object> IObservableCollection.Added => _untypedAdded ??= Event<object>.Create();
+    private Event<object> _untypedRemove;
+    Event<object> IObservableCollection.Removed => _untypedRemove ??= Event<object>.Create();
 
     private Event<T> _beforeAdded, added, beforeRemoved, removed;
     private Event changed;
@@ -80,19 +80,19 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     protected override void OnReturn()
     {
         base.OnReturn();
-        _untypedAdded?.Dispose();
+        _untypedAdded?.TryDispose();
         _untypedAdded = null;
-        _untypedRemove?.Dispose();
+        _untypedRemove?.TryDispose();
         _untypedRemove = null;
-        _beforeAdded?.Dispose();
+        _beforeAdded?.TryDispose();
         _beforeAdded = null;
-        added?.Dispose();
+        added?.TryDispose();
         added = null;
-        beforeRemoved?.Dispose();
+        beforeRemoved?.TryDispose();
         beforeRemoved = null;
-        removed?.Dispose();
+        removed?.TryDispose();
         removed = null;
-        changed?.Dispose();
+        changed?.TryDispose();
         changed = null;
         Clear();
     }

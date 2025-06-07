@@ -5,7 +5,8 @@
 /// </summary>
 public sealed partial class Camera : ConsolePanel
 {
-    public Event CameraLocationChanged { get; } = Event.Create();
+    private Event cameraLocationChanged;
+    public Event CameraLocationChanged => cameraLocationChanged ??= Event.Create();
     private LocF cameraLocation;
 
     /// <summary>
@@ -212,5 +213,12 @@ public sealed partial class Camera : ConsolePanel
 
         xPer = cameraRangeX == 0 ? .5f : xDelta / cameraRangeX;
         yPer = cameraRangeY == 0 ? .5f : yDelta / cameraRangeY;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        cameraLocationChanged?.TryDispose();
+        cameraLocationChanged = null;
     }
 }

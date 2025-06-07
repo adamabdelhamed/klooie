@@ -155,6 +155,20 @@ public class Game : ConsoleApp, IDelayProvider
     /// <param name="timeout">the amount of time to delay</param>
     /// <returns>a task</returns>
     public Task Delay(TimeSpan timeout) => pauseManager.Delay(timeout);
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        eventBroadcaster?.Dispose();
+        eventBroadcaster = null;
+        ruleManager?.TryDispose();
+        ruleManager = null;
+        pauseManager?.TryDispose();
+        pauseManager = null;
+        mainColliderGroup?.TryDispose();
+        mainColliderGroup = null;
+        RuleVariables = null;
+    }
 }
 
 public class SpecialReverseDictionary

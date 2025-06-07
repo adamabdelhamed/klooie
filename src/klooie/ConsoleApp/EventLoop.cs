@@ -154,10 +154,14 @@ public class EventLoop : Recyclable
 
     private SynchronizedEventPool pool = new SynchronizedEventPool();
 
-    public Event StartOfCycle { get; private set; } = Event.Create();
-    public Event EndOfCycle { get; private set; } = Event.Create();
-    public Event LoopStarted { get; private set; } = Event.Create();
-    public Event LoopStopped { get; private set; } = Event.Create();
+    private Event startOfCycle;
+    private Event endOfCycle;
+    private Event loopStarted;
+    private Event loopStopped;
+    public Event StartOfCycle => startOfCycle ??= Event.Create();
+    public Event EndOfCycle => endOfCycle ??= Event.Create();
+    public Event LoopStarted => loopStarted ??= Event.Create();
+    public Event LoopStopped => loopStopped ??= Event.Create();
     public Thread Thread { get; private set; }
     public long Posts => syncContext.Posts;
     public long Sends => syncContext.Sends;
@@ -554,5 +558,18 @@ public class EventLoop : Recyclable
 
         if (IsDrainingOrDrained) return EventLoopExceptionHandling.Swallow;
         return EventLoopExceptionHandling.Throw;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        startOfCycle?.TryDispose();
+        startOfCycle = null;
+        endOfCycle?.TryDispose();
+        endOfCycle = null;
+        loopStarted?.TryDispose();
+        loopStarted = null;
+        loopStopped?.TryDispose();
+        loopStopped = null;
     }
 }

@@ -197,7 +197,7 @@ public class Vision : Recyclable
         Eye = null!;
         Range = DefaultRange;
         AngularVisibility = DefaultAngularVisibility;
-        _targetBeingEvaluated?.Dispose();
+        _targetBeingEvaluated?.TryDispose();
         _targetBeingEvaluated = null;
         TrackedObjectsDictionary.Clear();
         TrackedObjectsList.Clear();

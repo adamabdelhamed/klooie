@@ -15,7 +15,7 @@ public partial class ForLoopLifetime : Recyclable
         base.OnReturn();
         foreach (var loopState in forLoopStates)
         {
-            loopState.Dispose();
+            loopState.TryDispose();
         }
         forLoopStates.Clear();
     }
@@ -35,7 +35,7 @@ public partial class DoLoopLifetime : Recyclable
         base.OnReturn();
         foreach (var loopState in doLoopStates)
         {
-            loopState.Dispose();
+            loopState.TryDispose();
         }
         doLoopStates.Clear();
     }

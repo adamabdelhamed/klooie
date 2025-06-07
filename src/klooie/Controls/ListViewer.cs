@@ -38,7 +38,8 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
     private List<ConsoleControl> highlightedControls;
     private List<Recyclable> highlightLifetimes = new List<Recyclable>();
 
-    public Event SelectionChanged { get; private init; } = Event.Create();
+    private Event selectionChanged;
+    public Event SelectionChanged => selectionChanged ??= Event.Create();
     public partial int SelectedRowIndex { get; set; }
     public partial int SelectedColumnIndex { get; set; }
     public int PageIndex => (int)Math.Floor(topOfPageDataIndex / (double)presenter.MaxRowsThatCanBePresented);
@@ -315,6 +316,22 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
             }
         }
     }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        selectionChanged?.TryDispose();
+        selectionChanged = null;
+        while (highlightLifetimes.Count > 0)
+        {
+            var toDispose = highlightLifetimes[0];
+            highlightLifetimes.RemoveAt(0);
+            toDispose.TryDispose();
+        }
+        presenter?.TryDispose();
+        presenter = null;
+        highlightedControls?.Clear();
+    }
 }
 
 
@@ -350,12 +367,18 @@ internal class ListViewerPanel : ProtectedConsolePanel
     private bool firstButtonFocused, previousButtonFocused, nextButtonFocused, lastButtonFocused;
     public ListViewerPanelOptions Options { get; private set; }
     public Dictionary<int, List<ConsoleControl>> ControlsByRow { get; private set; } = new Dictionary<int, List<ConsoleControl>>();
-    public Event FirstPageClicked { get; private set; } = Event.Create();
-    public Event PreviousPageClicked { get; private set; } = Event.Create();
-    public Event NextPageClicked { get; private set; } = Event.Create();
-    public Event LastPageClicked { get; private set; } = Event.Create();
-    public Event BeforeRecompose { get; private set; } = Event.Create();
-    public Event AfterRecompose { get; private set; } = Event.Create();
+    private Event firstPageClicked;
+    private Event previousPageClicked;
+    private Event nextPageClicked;
+    private Event lastPageClicked;
+    private Event beforeRecompose;
+    private Event afterRecompose;
+    public Event FirstPageClicked => firstPageClicked ??= Event.Create();
+    public Event PreviousPageClicked => previousPageClicked ??= Event.Create();
+    public Event NextPageClicked => nextPageClicked ??= Event.Create();
+    public Event LastPageClicked => lastPageClicked ??= Event.Create();
+    public Event BeforeRecompose => beforeRecompose ??= Event.Create();
+    public Event AfterRecompose => afterRecompose ??= Event.Create();
     public int MaxRowsThatCanBePresented => Options.ShowColumnHeaders ? Math.Max(0, Height - 2) : Math.Max(0, Height - 1);
 
     public ListViewerPanel(ListViewerPanelOptions options)
@@ -454,7 +477,31 @@ internal class ListViewerPanel : ProtectedConsolePanel
         else if (previousButtonFocused && FocusManager.CanReceiveFocusNow(pager.PreviousPageButton)) pager.PreviousPageButton.Focus();
         else if (nextButtonFocused && FocusManager.CanReceiveFocusNow(pager.NextPageButton)) pager.NextPageButton.Focus();
         else if (lastButtonFocused && FocusManager.CanReceiveFocusNow(pager.LastPageButton)) pager.LastPageButton.Focus();
-        
+
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        firstPageClicked?.TryDispose();
+        firstPageClicked = null;
+        previousPageClicked?.TryDispose();
+        previousPageClicked = null;
+        nextPageClicked?.TryDispose();
+        nextPageClicked = null;
+        lastPageClicked?.TryDispose();
+        lastPageClicked = null;
+        beforeRecompose?.TryDispose();
+        beforeRecompose = null;
+        afterRecompose?.TryDispose();
+        afterRecompose = null;
+        pager?.TryDispose();
+        pager = null;
+        gridLayout?.TryDispose();
+        gridLayout = null;
+        pagerContainer?.TryDispose();
+        pagerContainer = null;
+        ControlsByRow.Clear();
     }
 
     private class RandomAccessPager : StackPanel
