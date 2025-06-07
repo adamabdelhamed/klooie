@@ -87,16 +87,6 @@ public class ConsoleApp : EventLoop
     public bool ClearOnExit  {get => layoutRoot.ClearOnExit; set => layoutRoot.ClearOnExit = value; } 
 
     /// <summary>
-    /// Gets the total number of event loop cycles that have run
-    /// </summary>
-    public int TotalCycles => layoutRoot.TotalCycles;
-
-    /// <summary>
-    /// Gets the current frame rate for the app
-    /// </summary>
-    public int CyclesPerSecond => layoutRoot.CyclesPerSecond;
-
-    /// <summary>
     /// Gets the current paint rate for the app
     /// </summary>
     public int FramesPerSecond => layoutRoot.FramesPerSecond;

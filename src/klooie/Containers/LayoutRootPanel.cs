@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace klooie;
+﻿namespace klooie;
 
 public partial class LayoutRootPanel : ConsolePanel
 {
@@ -10,11 +8,7 @@ public partial class LayoutRootPanel : ConsolePanel
     private FrameRateMeter paintRateMeter;
     private bool paintRequested;
     private ConsoleCharacter defaultPen;
-    private FrameRateMeter cycleRateMeter;
-
     internal Event OnWindowResized { get => _onWindowResized ?? (_onWindowResized = EventPool.Instance.Rent()); }
-    internal int TotalCycles => cycleRateMeter.TotalFrames;
-    internal int CyclesPerSecond => cycleRateMeter.CurrentFPS;
     internal int FramesPerSecond => paintRateMeter.CurrentFPS;
     internal int TotalPaints => paintRateMeter.TotalFrames;
     internal bool PaintEnabled { get; set; } = true;
@@ -33,9 +27,9 @@ public partial class LayoutRootPanel : ConsolePanel
         paintRateMeter = new FrameRateMeter();
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
-        cycleRateMeter = new FrameRateMeter();
         ResizeTo(lastConsoleWidth, lastConsoleHeight);
-        ConsoleApp.Current!.EndOfCycle.Subscribe(OnEndOfCycle, this);
+        ConsoleApp.Current!.EndOfCycle.Subscribe(DebounceResize, this);
+        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(DrainPaints, this, 33);
         DescendentAdded.Subscribe(OnDescendentAdded, this);
         OnDisposed(RestoreConsoleState);
         FocusStackDepth = 1;
@@ -46,13 +40,6 @@ public partial class LayoutRootPanel : ConsolePanel
         base.OnReturn();
         _onWindowResized?.TryDispose();
         _onWindowResized = null;
-    }
-
-    private void OnEndOfCycle()
-    {
-        cycleRateMeter.Increment();
-        DebounceResize();
-        DrainPaints();
     }
 
     private void OnDescendentAdded(ConsoleControl control) => control.AddedToVisualTreeInternal();
@@ -85,16 +72,10 @@ public partial class LayoutRootPanel : ConsolePanel
         paintRequested = true;
     }
 
-    private long lastPaintTime = Stopwatch.GetTimestamp();
-    private const double MaxFramesPerSecond = 31;
-    private const double minMillisecondsBetweenPaints = 1000.0 / MaxFramesPerSecond;
     private void DrainPaints()
     {
         if (paintRequests.None() && paintRequested == false) return;
 
-        var elapsed = Stopwatch.GetElapsedTime(lastPaintTime);
-        if (elapsed.TotalMilliseconds < minMillisecondsBetweenPaints) return;
-        lastPaintTime = Stopwatch.GetTimestamp();
 
         paintRequested = false;
         Bitmap.Fill(defaultPen);

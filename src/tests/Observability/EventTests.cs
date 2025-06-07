@@ -1,9 +1,11 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace klooie.tests;
 [TestClass]
+[TestCategory(Categories.Observability)]
 public class EventTests
 {
     [TestMethod]
@@ -601,5 +603,209 @@ public class EventTests
     }
 
     #endregion
+
+    #region Throttling Tests
+
+    [TestMethod]
+    public void EventThrottle_Unscoped_BasicRateLimit()
+    {
+        var ev = new Event();
+        var lt = new Recyclable();
+        int callCount = 0;
+
+        // 10 cycles / sec  ⇒  100 ms window
+        ev.SubscribeThrottled(() => callCount++, lt, maxHz: 10);
+
+        // Burst of 5 events inside the same tick → only 1 should pass
+        for (int i = 0; i < 5; i++) ev.Fire();
+
+        Assert.AreEqual(1, callCount, "Throttle should allow at most one event in the window.");
+    }
+
+    [TestMethod]
+    public async Task EventThrottle_Unscoped_AllowsAfterWindow()
+    {
+        var ev = new Event();
+        var lt = new Recyclable();
+        int callCount = 0;
+
+        ev.SubscribeThrottled(() => callCount++, lt, maxHz: 10); // 100 ms window
+        ev.Fire();                           // #1
+        await Task.Delay(120);               // wait > window
+        ev.Fire();                           // #2
+
+        Assert.AreEqual(2, callCount, "Second event after window should be delivered.");
+    }
+
+    [TestMethod]
+    public void EventThrottle_Scoped_BasicRateLimit()
+    {
+        var ev = new Event<int>();
+        var lt = new Recyclable();
+        object scope = new object();
+        int callCount = 0;
+
+        ev.SubscribeThrottled(scope, (sc, i) =>
+        {
+            Assert.AreSame(scope, sc);
+            callCount++;
+        }, lt, maxCyclesPerSecond: 5);        // 200 ms window
+
+        // rapid-fire
+        for (int i = 0; i < 3; i++) ev.Fire(123);
+
+        Assert.AreEqual(1, callCount, "Scoped throttle should limit to one call per window.");
+    }
+
+    [TestMethod]
+    public void EventThrottle_Lifetime_DisposeStopsCallbacks()
+    {
+        var ev = new Event();
+        var lt = new Recyclable();
+        int callCount = 0;
+
+        ev.SubscribeThrottled(() => callCount++, lt, maxHz: 50);
+        ev.Fire();                  // delivered
+        lt.Dispose();               // end subscription
+        ev.Fire();                  // ignored
+
+        Assert.AreEqual(1, callCount, "Disposing lifetime should stop further callbacks.");
+    }
+
+    [TestMethod]
+    public void EventThrottle_ConcurrentFires_NoMoreThanOnePerWindow()
+    {
+        var ev = new Event();
+        var lt = new Recyclable();
+        int callCount = 0;
+
+        ev.SubscribeThrottled(() => Interlocked.Increment(ref callCount), lt, maxHz: 5); // 200 ms
+
+        Parallel.For(0, 20, _ => ev.Fire());   // many threads slam Fire()
+
+        Assert.AreEqual(1, callCount,
+            "Even under concurrency, only one invocation should occur within the window.");
+    }
+
+    [TestMethod]
+    public async Task EventThrottle_RepeatedWindows_CorrectCadence()
+    {
+        var ev = new Event();
+        var lt = new Recyclable();
+        int callCount = 0;
+
+        ev.SubscribeThrottled(() => callCount++, lt, maxHz: 4); // 250 ms
+
+        // Fire once every ~300 ms (should pass each time)
+        for (int i = 0; i < 4; i++)
+        {
+            ev.Fire();
+            await Task.Delay(300);
+        }
+
+        Assert.AreEqual(4, callCount, "One invocation should pass per window over multiple windows.");
+    }
+
+    [TestMethod]
+    public void EventThrottle_Scoped_Untyped_PassesScopeAndThrottles()
+    {
+        var ev = new Event();
+        var lt = new Recyclable();
+        object scope = new object();
+        int callCount = 0;
+
+        ev.SubscribeThrottled(scope, sc =>
+        {
+            Assert.AreSame(scope, sc);
+            callCount++;
+        }, lt, maxCyclesPerSecond: 10);
+
+        for (int i = 0; i < 5; i++) ev.Fire();
+        Assert.AreEqual(1, callCount, "Non-generic scoped throttle should limit to one call per window and pass correct scope.");
+    }
+
+    [TestMethod]
+    public async Task EventThrottle_Scoped_Untyped_SecondFireAfterWindow()
+    {
+        var ev = new Event();
+        var lt = new Recyclable();
+        object scope = new object();
+        int callCount = 0;
+
+        ev.SubscribeThrottled(scope, sc =>
+        {
+            Assert.AreSame(scope, sc);
+            callCount++;
+        }, lt, maxCyclesPerSecond: 10); // 100 ms
+
+        ev.Fire();              // first should pass
+        await Task.Delay(120);  // > window
+        ev.Fire();              // second should also pass
+
+        Assert.AreEqual(2, callCount, "Non-generic scoped throttle should allow calls after throttle window.");
+    }
+
+    [TestMethod]
+    public void EventThrottle_Scoped_Generic_PassesScopeAndArg()
+    {
+        var ev = new Event<string>();
+        var lt = new Recyclable();
+        object scope = new object();
+        int callCount = 0;
+        string lastArg = null;
+
+        ev.SubscribeThrottled(scope, (sc, arg) =>
+        {
+            Assert.AreSame(scope, sc);
+            lastArg = arg;
+            callCount++;
+        }, lt, maxCyclesPerSecond: 20);
+
+        ev.Fire("alpha");
+        for (int i = 0; i < 4; i++) ev.Fire("beta");
+
+        Assert.AreEqual(1, callCount, "Generic scoped throttle should only allow one call per window.");
+        Assert.AreEqual("alpha", lastArg, "First argument should be delivered, not overwritten.");
+    }
+
+    [TestMethod]
+    public void EventThrottle_GenericUnscoped_BasicRateLimit()
+    {
+        var ev = new Event<int>();
+        var lt = new Recyclable();
+        int callCount = 0;
+        int lastValue = 0;
+
+        // 10/sec => 100 ms window
+        ev.SubscribeThrottled(i => { callCount++; lastValue = i; }, lt, maxCyclesPerSecond: 10);
+
+        // Burst of events, only one should get through
+        ev.Fire(5);
+        ev.Fire(6);
+        ev.Fire(7);
+
+        Assert.AreEqual(1, callCount, "Generic unscoped throttle should allow at most one event per window.");
+        Assert.AreEqual(5, lastValue, "First event's payload should be delivered.");
+    }
+
+    [TestMethod]
+    public async Task EventThrottle_GenericUnscoped_SecondFireAfterWindow()
+    {
+        var ev = new Event<string>();
+        var lt = new Recyclable();
+        int callCount = 0;
+        string lastValue = null;
+
+        ev.SubscribeThrottled(val => { callCount++; lastValue = val; }, lt, maxCyclesPerSecond: 4); // 250 ms window
+
+        ev.Fire("a");
+        await Task.Delay(260); // > window
+        ev.Fire("b");
+
+        Assert.AreEqual(2, callCount, "Should get a callback for each event outside the throttle window.");
+        Assert.AreEqual("b", lastValue, "Payload of second event should be delivered after the window.");
+    }
+    #endregion
+
 }
- 
+
