@@ -15,6 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples", "Samples\Samples.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{C19CCBD6-DE58-455D-AB02-9452CE6EC6AA}"
 	ProjectSection(SolutionItems) = preProject
+		agents.md = agents.md
 		..\ReadmeTemplate.md = ..\ReadmeTemplate.md
 	EndProjectSection
 EndProject
