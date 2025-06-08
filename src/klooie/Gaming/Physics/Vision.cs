@@ -84,9 +84,10 @@ public class Vision : Recyclable
             var currentAngle = FieldOfViewStart;
             var totalTravel = 0f;
             var angleStep = 5f;
+            var angleFuzz = 2;
             while(totalTravel <= AngularVisibility)
             {
-                var visibleObject = Cast(currentAngle, buffer);
+                var visibleObject = Cast(currentAngle.Add(Random.Shared.Next(-angleFuzz, angleFuzz)), buffer);
                 if (visibleObject != null)
                 {
                     TrackedObjectsDictionary.Add(visibleObject.Target, visibleObject);
