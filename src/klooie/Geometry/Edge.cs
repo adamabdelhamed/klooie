@@ -34,7 +34,9 @@ public readonly struct Edge
         float dx = X2 - X1;
         float dy = Y2 - Y1;
 
-        float t = ((x - X1) * dx + (y - Y1) * dy) / (dx * dx + dy * dy);
+        float denom = dx * dx + dy * dy;
+        if (denom == 0) return LocF.CalculateDistanceTo(x, y, X1, Y1); // Edge is a point
+        float t = ((x - X1) * dx + (y - Y1) * dy) / denom;
         t = Math.Clamp(t, 0, 1); // Clamp to edge segment
 
         float closestX = X1 + t * dx;
