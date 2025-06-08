@@ -4,7 +4,7 @@ internal static class GeometryGuard
 
     public static void ValidateFloat(float value)
     {
-        if (float.IsNaN(value) || float.IsInfinity(value)) throw new ArgumentException($"Invalid float value: {value}");
+        if (float.IsNaN(value) || float.IsInfinity(value) || float.IsSubnormal(value)) throw new ArgumentException($"Invalid float value: {value}");
     }
 
     public static void ValidateFloats(float a, float b)
