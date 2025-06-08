@@ -3,8 +3,8 @@
 public class DelayState : Recyclable
 {
     internal Action<object> InnerAction;
-    private RecyclableList<ILifetime> Dependencies;
-    private RecyclableList<int> Leases;
+    protected RecyclableList<ILifetime> Dependencies;
+    protected RecyclableList<int> Leases;
 
     private Event<Recyclable>? _beforeDisposeDependency;
     public Event<Recyclable> BeforeDisposeDependency => _beforeDisposeDependency ??= Event<Recyclable>.Create();
