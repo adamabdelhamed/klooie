@@ -38,9 +38,9 @@ public static class WanderLogic
         var angle = best.Angle;
         var speed = EvaluateSpeed(state, angle);
 
-        var velocity = state.WanderOptions.Velocity;
-        velocity.Angle = angle;
-        velocity.Speed = speed;
+       
+        state.Influence.Angle = angle;
+        state.Influence.DeltaSpeed = speed;
 
         // Update inertia history
         state.LastFewAngles.Items.Add(angle);
@@ -338,6 +338,8 @@ public class WanderLoopState : Recyclable
     public int VisionLease { get; private set; }
     public int VelocityLease { get; private set; }
 
+    public MotionInfluence Influence { get;private set; }
+
     /// <summary>
     /// The last few angles the wanderer has taken. This is used to avoid
     /// turning backwards over and over and to help the wanderer make intelligent decisions
@@ -365,6 +367,9 @@ public class WanderLoopState : Recyclable
         s.VelocityLease = w.WanderOptions.Velocity.Lease;
         s.LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
         s.LastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent();
+        s.Influence = new MotionInfluence();
+        w.WanderOptions.Velocity.AddInfluence(s.Influence);
+        s.OnDisposed(() => w.WanderOptions.Velocity.RemoveInfluence(s.Influence));
         return s;
     }
 
@@ -400,5 +405,6 @@ public class WanderLoopState : Recyclable
         AngleScores = null!;
         _tcs.TrySetResult();
         _tcs = null!;
+        Influence = null!; 
     }
 }

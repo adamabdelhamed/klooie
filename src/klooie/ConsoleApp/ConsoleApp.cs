@@ -141,9 +141,9 @@ public class ConsoleApp : EventLoop
             _current = this;
             Name = GetType().Name;
             layoutRoot = LayoutRootPanelPool.Instance.Rent();
-            OnDisposed(LayoutRoot.Dispose);
+            OnDisposed(LayoutRoot, TryDisposeMe);
             focus = FocusManagerPool.Instance.Rent();
-            OnDisposed(focus.Dispose);
+            OnDisposed(focus, TryDisposeMe);
             Invoke(()=>
             {
                 OnDisposed(() =>
@@ -166,11 +166,12 @@ public class ConsoleApp : EventLoop
 
     private void ValidatePoolCleared(Recyclable control)
     {
+        if (IsDrainingOrDrained) return;
         if (control is ConsoleControl c == false) return;
 
         if(c.Parent != null)
         {
-            throw new InvalidOperationException($"control did not have its parent cleared. Investigate and make sure you're managing lifetimes properly.");
+            throw new InvalidOperationException($"control of type {control.GetType().Name} did not have its parent cleared. Investigate and make sure you're managing lifetimes properly.: {control.DisposalReason}");
         }
     }
 

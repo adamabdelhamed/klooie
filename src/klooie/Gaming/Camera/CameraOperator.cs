@@ -29,7 +29,7 @@ public sealed class CameraOperator : Recyclable
         {
             m.DelayProvider = delayProvider;
             m.SituationDetected.Subscribe(async (p) => await OnSituationDetected(m, p), this);
-            OnDisposed(m.Dispose);
+            OnDisposed(m, TryDisposeMe);
             m.Camera = camera;
             m.FocalElement = focalElement;
             m.FocalVelocity = focalVelocity;

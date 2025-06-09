@@ -146,7 +146,7 @@ public partial class Dropdown : ProtectedConsolePanel
                 popup.Dispose();
             }, popup);
 
-             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, popup.Dispose, popup);
+             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, ()=> popup.TryDispose("Escape"), popup);
 
             Action up = () =>
             {

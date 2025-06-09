@@ -14,7 +14,10 @@ public sealed class Velocity : Recyclable
     internal float lastEvalTime;
     internal Event _onAngleChanged, _onSpeedChanged, _beforeMove, _onVelocityEnforced, _beforeEvaluate;
     internal Event<Collision> _onCollision;
- 
+
+    private readonly List<MotionInfluence> _influences = new();
+    private Recyclable influenceSubscriptionLifetime;
+
     public ColliderGroup Group { get; private set; }
     public Event OnAngleChanged { get => _onAngleChanged ?? (_onAngleChanged = Event.Create()); }
     public Event OnSpeedChanged { get => _onSpeedChanged ?? (_onSpeedChanged = Event.Create()); }
@@ -92,6 +95,8 @@ public sealed class Velocity : Recyclable
         _onVelocityEnforced = null;
         _onCollision?.TryDispose();
         _onCollision = null;
+        Group?.Remove(Collider);
+        Collider = null;
         Group = null;
     }
 
@@ -102,15 +107,6 @@ public sealed class Velocity : Recyclable
         group.Add(collider);
         this.Group = group;
         this.Collider = collider;
-
-        OnDisposed(this, RemoveMyselfFromGroup);
-    }
-
-    private static void RemoveMyselfFromGroup(object me)
-    {
-        var _this = me as Velocity;
-        _this.Group.Remove(_this.Collider);
-        _this.Group = null;
     }
 
     public void GetObstacles(ObstacleBuffer buffer) => Group.GetObstacles(Collider, buffer);
@@ -130,6 +126,49 @@ public sealed class Velocity : Recyclable
     }
 
     public void Stop() => Speed = 0;
+
+    public void AddInfluence(MotionInfluence influence)
+    {
+        _influences.Add(influence);
+        EnsureInfluenceSubscribed();
+    }
+
+    public void RemoveInfluence(MotionInfluence influence)
+    {
+        _influences.Remove(influence);
+        if (_influences.Count == 0 && influenceSubscriptionLifetime != null)
+        {
+            influenceSubscriptionLifetime.Dispose();
+            influenceSubscriptionLifetime = null;
+        }
+    }
+
+    private void EnsureInfluenceSubscribed()
+    {
+        if (influenceSubscriptionLifetime == null)
+        {
+            influenceSubscriptionLifetime = DefaultRecyclablePool.Instance.Rent();
+            this.BeforeEvaluate.Subscribe(ApplyInfluences, influenceSubscriptionLifetime);
+        }
+    }
+
+    private void ApplyInfluences()
+    {
+        if (_influences.Count == 0) return;
+        float x = 0, y = 0;
+        for (int index = 0; index < _influences.Count; index++)
+        {
+            var influence = _influences[index];
+            x += influence.DeltaSpeed * (float)Math.Cos(influence.Angle.ToRadians());
+            y += influence.DeltaSpeed * (float)Math.Sin(influence.Angle.ToRadians());
+        }
+        Speed = MathF.Sqrt(x * x + y * y);
+        Angle = Angle.FromRadians(MathF.Atan2(y, x));
+    }
 }
 
- 
+public class MotionInfluence
+{
+    public float DeltaSpeed;
+    public Angle Angle;
+}

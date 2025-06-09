@@ -35,17 +35,8 @@ public class GameCollider : ConsoleControl
         {
             ConnectToGroup(Game.Current?.MainColliderGroup);
         }
-
-        this.OnDisposed(this, ReturnVelocity);
     }
-
-    private static void ReturnVelocity(object colliderObj)
-    {
-        var c = (colliderObj as GameCollider);
-        c.Velocity.Dispose();
-        c.Velocity = null;
-    }
-
+ 
     public void ConnectToGroup(ColliderGroup group)
     {
         if(group == null) throw new ArgumentNullException(nameof(group));
@@ -152,6 +143,13 @@ public class GameCollider : ConsoleControl
             }
 
         }
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Velocity?.TryDispose("By owning collider");
+        Velocity = null;
     }
 }
 

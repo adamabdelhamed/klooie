@@ -18,7 +18,7 @@ public class Recyclable : ILifetime
     }
 
     private static void NullOnReturnedToPool() => onReturnedToPool = null;
-
+    public string DisposalReason { get; set; } 
     public static bool PoolingEnabled { get; set; } = true;
     public static StackHunterMode StackHunterMode { get; set; } = StackHunterMode.Off;
     private static readonly Recyclable forever = new Recyclable();
@@ -51,24 +51,25 @@ public class Recyclable : ILifetime
 
     public Task AsTask() => endedTaskCompletionSource?.Task ?? (endedTaskCompletionSource = new TaskCompletionSource()).Task;
 
-    public static void TryDisposeMe(object me) => ((Recyclable)me).TryDispose();
+    public static void TryDisposeMe(object me) => ((Recyclable)me).TryDispose("Recyclable.TryDisposeMe");
 
-    public bool TryDispose(int lease)
+    public bool TryDispose(int lease, string? reason = null)
     {
         if (Lease != lease) return false;
-        return TryDispose();
+        return TryDispose(reason);
     }
 
-    public bool TryDispose()
+    public bool TryDispose(string? reason = null)
     {
         if (IsExpired || IsExpiring) return false;
-        Dispose();
+        Dispose(reason);
         return true;
     }
 
-    public void Dispose()
+    public void Dispose(string? reason = null)
     {
         if (IsExpiring || IsExpired) throw new InvalidOperationException("Cannot dispose an object that is already being disposed or has been disposed");
+        DisposalReason = reason;
         IsExpiring = true;
         try
         {

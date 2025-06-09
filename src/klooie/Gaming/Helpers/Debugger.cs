@@ -7,6 +7,6 @@ public static class Debugger
         pen = pen.HasValue ? pen.Value : new ConsoleCharacter('H', RGB.Black, RGB.White);
         var el = Game.Current.GamePanel.Add(new TextCollider(new ConsoleString(new ConsoleCharacter[] { pen.Value })));
         el.MoveTo(x, y, z);
-        duration.OnDisposed(el.Dispose);
+        duration.OnDisposed(el, Recyclable.TryDisposeMe);
     }
 }

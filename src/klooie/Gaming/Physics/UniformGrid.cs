@@ -59,6 +59,10 @@ public sealed class UniformGrid
 
     public void Insert(GameCollider obj)
     {
+        if(leases.ContainsKey(obj))
+        {
+            throw new InvalidOperationException($"This collider of type {obj.GetType().Name} is already registered in the grid. Disposal Reason: {obj.DisposalReason}");
+        }
         leases.Add(obj, obj.Lease);
         _previousBounds[obj] = obj.Bounds;
 

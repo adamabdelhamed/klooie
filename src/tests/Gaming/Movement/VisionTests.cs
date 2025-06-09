@@ -72,7 +72,7 @@ public class VisionTests
             if (seen.Contains(point)) continue;
             seen.Add(point);
             var lineObject = Game.Current.GamePanel.Add(new ConsoleStringRenderer("o".ToConsoleString(lineColor)) { ZIndex = z, Foreground = lineColor, Bounds = new RectF(point.Left, point.Top, 1, 1) });
-            lt.OnDisposed(lineObject.Dispose);
+            lt.OnDisposed(lineObject, Recyclable.TryDisposeMe);
         }
     }
 }

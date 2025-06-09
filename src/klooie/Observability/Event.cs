@@ -193,7 +193,7 @@ public sealed class Event : Recyclable
     public Recyclable CreateNextFireLifetime()
     {
         var lifetime = DefaultRecyclablePool.Instance.Rent();
-        this.SubscribeOnce(lifetime.Dispose);
+        this.SubscribeOnce(lifetime, TryDisposeMe);
         return lifetime;
     }
 
