@@ -144,6 +144,17 @@ public class Targeting : Recyclable
         }
     }
 
+    public void RemoveNonTargets(ObstacleBuffer buffer)
+    {
+        for (var i = buffer.WriteableBuffer.Count - 1; i >= 0; i--)
+        {
+            if (IsPotentialTarget(buffer.WriteableBuffer[i]) == false)
+            {
+                buffer.WriteableBuffer.RemoveAt(i);
+            }
+        }
+    }
+
     protected override void OnReturn()
     {
         base.OnReturn();

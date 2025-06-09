@@ -6,7 +6,7 @@ namespace klooie;
 /// </summary>
 public static class Animator
 {
-    internal const int DeafultTargetFramesPerSecond = 60;
+    internal const int DeafultTargetFramesPerSecond = 20;
 
     /// <summary>
     /// Performs the animation specified in the options

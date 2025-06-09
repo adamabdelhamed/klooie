@@ -97,8 +97,8 @@ public static class WanderLogic
         if (opts.CuriousityPoint != null)
         {
             var target = opts.CuriousityPoint();
-            if (target != null)
-                curiosityAngle = velocity.Collider.Bounds.CalculateAngleTo(target.Bounds);
+            if (target.HasValue)
+                curiosityAngle = velocity.Collider.Bounds.CalculateAngleTo(target.Value);
         }
 
         state.AngleScores.Items.Clear();
@@ -205,9 +205,9 @@ public static class WanderLogic
         if (opts.CuriousityPoint != null)
         {
             var target = opts.CuriousityPoint();
-            if (target != null)
+            if (target.HasValue)
             {
-                float distance = velocity.Collider.Bounds.CalculateDistanceTo(target.Bounds);
+                float distance = velocity.Collider.Bounds.CalculateDistanceTo(target.Value);
                 if (distance <= opts.CloseEnough)
                     return 0f;
             }

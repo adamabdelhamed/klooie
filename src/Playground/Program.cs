@@ -146,7 +146,7 @@ public class Program
             Speed = ()=>speed,
             Vision = vision,
             Velocity = cMover.Velocity,
-            CuriousityPoint = () => extraTight ? new ColliderBox(Game.Current.GameBounds.Center.ToRect(1, 1)) : null,
+            CuriousityPoint = () => extraTight ? Game.Current.GameBounds.Center.ToRect(1, 1) : null,
         }));
         if (cMover.IsStillValid(cMoverLease)) throw new Exception("Failed to expire");
         if(failed) throw new Exception("Failed to keep moving");

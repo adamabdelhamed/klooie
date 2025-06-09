@@ -444,6 +444,17 @@ public class ObstacleBuffer : Recyclable
         base.OnReturn();
         _buffer.Clear();
     }
+
+    public void FilterNonTouching(RectF testBounds, float tolerance = 0)
+    {
+        for (var i = _buffer.Count - 1; i >= 0; i--)
+        {
+            if (_buffer[i].CalculateNormalizedDistanceTo(testBounds) > tolerance)
+            {
+                _buffer.RemoveAt(i);
+            }
+        }
+    }
 }
 
 internal static class CollidableFast

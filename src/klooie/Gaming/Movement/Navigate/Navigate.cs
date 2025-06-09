@@ -60,7 +60,7 @@ public class Navigate : Movement
         await Mover.InvokeOrTimeout(this, Wander.Create(new WanderOptions()
         {
             OnDelay = () => OnDelay(),
-            CuriousityPoint = () => _LocalTarget,
+            CuriousityPoint = () => _LocalTarget?.Bounds,
             CloseEnough = NavigateOptions.CloseEnough,
             Speed = Options.Speed,
             Velocity = Options.Velocity,

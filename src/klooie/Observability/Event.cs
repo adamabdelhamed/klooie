@@ -218,6 +218,5 @@ public sealed class Event : Recyclable
         }
     }
 
-    private static void TryDisposeMe(object me) => ((Recyclable)me).TryDispose();
 }
 

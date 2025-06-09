@@ -12,7 +12,7 @@ public class WanderOptions : MovementOptions
     /// Instead it will intelligently alter its trajectory to move around obstacles. That
     /// intelligence is informed by the curiosity point, if set, or by common sense if not.
     /// </summary>
-    public Func<ICollidable>? CuriousityPoint { get; set; }
+    public Func<RectF?>? CuriousityPoint { get; set; }
 
     /// <summary>
     /// When CuriosityPoint is set, the wanderer will stop wandering if it gets within

@@ -2,12 +2,12 @@
 
 public class ChargeOptions : CombatMovementOptions
 {
-    public required ICollidable DefaultCuriosityPoint { get; set; }
+    public RectF? DefaultCuriosityPoint { get; set; }
     public float CloseEnough { get; set; } = 5;
     /// <summary>
     /// Returns an enemy in the immediate area, if any. Returns null if none are found.
     /// </summary>
-    public Func<ICollidable?>? NearbyEnemyProvider { get; set; }
+    public Func<RectF?>? PrioritizedPointOfInterest { get; set; }
 }
 
 public class Charge : CombatMovement
@@ -33,10 +33,7 @@ public class Charge : CombatMovement
 
             var wanderOptions = new WanderOptions()
             {
-                CuriousityPoint = () =>
-                    ChargeOptions.Targeting.Target
-                    ?? ChargeOptions.NearbyEnemyProvider?.Invoke()
-                    ?? ChargeOptions.DefaultCuriosityPoint,
+                CuriousityPoint = CalculateCuriosityPoint,
                 CloseEnough = ChargeOptions.CloseEnough,
                 Speed = ChargeOptions.Speed,
                 Velocity = Options.Velocity,
@@ -64,5 +61,22 @@ public class Charge : CombatMovement
         {
             delayState.TryDispose();
         }
+    }
+
+    private RectF? CalculateCuriosityPoint()
+    {
+        var pri0 = ChargeOptions.Targeting.Target?.Bounds;
+        if(pri0.HasValue) return pri0.Value;
+
+        var pri1 = ChargeOptions.PrioritizedPointOfInterest?.Invoke();
+        if(pri1.HasValue) return pri1.Value;
+
+        var pri2 = ChargeOptions.DefaultCuriosityPoint;
+        if (pri2.HasValue) return pri2.Value;
+
+        var pri3 = Game.Current?.GameBounds.Center.ToRect(10, 5);
+        if (pri3.HasValue) return pri3.Value;
+
+        return null;
     }
 }
