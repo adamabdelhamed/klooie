@@ -2,7 +2,7 @@
 /// <summary>
 /// A lifetime aware event
 /// </summary>
-public sealed class Event : Recyclable
+public class Event : Recyclable
 {
     internal List<Subscription>? eventSubscribers;
 
@@ -15,15 +15,9 @@ public sealed class Event : Recyclable
 
     private Event() { }
 
-    public static Event Create() => Pool.Instance.Rent();
-    public static Event Create(out int lease) => Pool.Instance.Rent(out lease);
-
-    private class Pool : RecycleablePool<Event>
-    {
-        private static Pool? _instance;
-        public static Pool Instance => _instance ??= new Pool();
-        public override Event Factory() => new Event();
-    }
+    private static readonly Lazy<FuncPool<Event>> EventPool = new Lazy<FuncPool<Event>>(() => new FuncPool<Event>(() => new Event()));
+    public static Event Create() => EventPool.Value.Rent();
+    public static Event Create(out int lease) => EventPool.Value.Rent(out lease);
 
     /// <summary>
     /// Fires the event. All subscribers will be notified

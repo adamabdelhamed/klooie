@@ -23,6 +23,8 @@ Example of a Recyclable class that follows the pattern:
 ```csharp
 public class MyRecyclable : Recyclable
 {
+    private static readonly Lazy<FuncPool<MyRecyclable>> MyRecyclablePool = new Lazy<FuncPool<MyRecyclable>>(() => new FuncPool<MyRecyclable>(() => new MyRecyclable()));
+
     private Event innerEvent; // Event is itself Recyclable so we want to lazily initialize it and manage its lifecycle.
     public Event InnerEvent => innerEvent ??= Event.Create();
 
@@ -32,7 +34,7 @@ public class MyRecyclable : Recyclable
 
     public static MyRecyclable Create(int someFieldToInitialize)
     {
-        var ret = Pool.Instance.Rent();
+        var ret = MyRecyclablePool.Value.Rent();
         ret.Construct(someFieldToInitialize);
         return ret;
     }
@@ -45,13 +47,6 @@ public class MyRecyclable : Recyclable
     protected void Construct(int someFieldToInitialize)
     {
         someField = someFieldToInitialize;
-    }
-
-    private class Pool : RecycleablePool<MyRecyclable>
-    {
-        private static Pool? instance;
-        public static Pool Instance => instance ??= new Pool();
-        protected override MyRecyclable Factory() => new MyRecyclable();
     }
 
     protected override void OnReturn()

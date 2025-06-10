@@ -158,3 +158,10 @@ public class PendingRecyclableTracker
         return Rented.GetHashCode();
     }
 }
+
+public sealed class FuncPool<T> : RecycleablePool<T> where T : Recyclable
+{
+    private Func<T> factory;
+    public FuncPool(Func<T> factory) => this.factory = factory ?? throw new ArgumentNullException(nameof(factory));
+    public override T Factory() => factory();
+}

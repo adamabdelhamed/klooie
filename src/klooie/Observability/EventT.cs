@@ -8,7 +8,7 @@ public interface IEventT
 /// An event that has an argument of the given type
 /// </summary>
 /// <typeparam name="T">the argument type</typeparam>
-public class Event<T> : Recyclable, IEventT
+public sealed class Event<T> : Recyclable, IEventT
 {
     private Event? innerEvent;
     public Stack<object> args { get; } = new Stack<object>(); // because notifications can be re-entrant
@@ -19,14 +19,9 @@ public class Event<T> : Recyclable, IEventT
 
     private Event() { }
 
-    public static Event<T> Create() => Pool.Instance.Rent();
-
-    private class Pool : RecycleablePool<Event<T>>
-    {
-        private static Pool? _instance;
-        public static Pool Instance => _instance ??= new Pool();
-        public override Event<T> Factory() => new Event<T>();
-    }
+    private static readonly Lazy<FuncPool<Event<T>>> EventPool = new Lazy<FuncPool<Event<T>>>(() => new FuncPool<Event<T>>(() => new Event<T>()));
+    public static Event<T> Create() => EventPool.Value.Rent();
+    public static Event<T> Create(out int lease) => EventPool.Value.Rent(out lease);
 
     /// <summary>
     /// Subscribes for the given lifetime.
