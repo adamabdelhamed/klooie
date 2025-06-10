@@ -42,6 +42,7 @@ public class DelayState : Recyclable
 
     public void AddDependency(ILifetime dependency)
     {
+        if(dependency == null) throw new ArgumentNullException(nameof(dependency), "Dependency cannot be null");
         if (Dependencies == null)
         {
             Dependencies = RecyclableListPool<ILifetime>.Instance.Rent();
