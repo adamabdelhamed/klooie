@@ -67,27 +67,21 @@ public partial class Label : ConsoleControl
     }
 }
 
-public partial class ConsoleStringRenderer : ConsoleControl
+public class ConsoleStringRenderer : ConsoleControl
 {
-    public partial ConsoleString Content { get; set; }
+    private ConsoleString content = ConsoleString.Empty;
+    public ConsoleString Content
+    {
+        get => content;
+        set
+        {
+            content = value ?? ConsoleString.Empty;
+            ResizeTo(content?.Length ?? 0, 1);
+        }
+    }
 
     public ConsoleStringRenderer() { }
-    public ConsoleStringRenderer(ConsoleString? content = null)
-    {
-        this.Content = content ?? ConsoleString.Empty;
-    }
-
-    protected override void OnInit()
-    {
-        base.OnInit();
-        ContentChanged.Sync(this, SyncContent, this);
-    }
-
-    private static void SyncContent(object me)
-    {
-        var _this = (ConsoleStringRenderer)me;
-        _this.ResizeTo(_this.Content?.Length ?? 0, 1);
-    }
+    public ConsoleStringRenderer(ConsoleString? content = null) => this.Content = content ?? ConsoleString.Empty;
 
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);
 }
