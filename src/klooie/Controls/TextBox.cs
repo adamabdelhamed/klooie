@@ -74,15 +74,12 @@ public partial class TextBox : ConsoleControl
         ConsoleApp.Current.Invoke(async () =>
         {
             blinkTimerHandle = this.CreateChildRecyclable(out blinkTimerHandleLease);
-            blinkTimerHandle.OnDisposed(() => ConsoleApp.Current.RequestPaint());
             while (blinkTimerHandle?.IsStillValid(blinkTimerHandleLease) == true && HasFocus)
             {
-                ConsoleApp.Current.RequestPaint();
                 await Task.Delay(BlinkInterval);
                 isBlinking = !isBlinking;
             }
             isBlinking = false;
-            ConsoleApp.Current.RequestPaint();
         });
     }
 

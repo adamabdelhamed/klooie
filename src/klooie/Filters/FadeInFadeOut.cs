@@ -11,7 +11,6 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        ConsoleApp.Current!.RequestPaint();
         await Animator.AnimateAsync(new FloatAnimationOptions()
         {
             From = 0,
@@ -22,7 +21,6 @@ public static class FadeEx
             Setter = p =>
             {
                 filter.Percentage = p;
-                ConsoleApp.Current!.RequestPaint();
             }
         });
         return filter;
@@ -37,7 +35,6 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        ConsoleApp.Current!.RequestPaint();
         await Animator.AnimateAsync(new FloatAnimationOptions()
         {
             From = 0,
@@ -48,7 +45,6 @@ public static class FadeEx
             Setter = p =>
             {
                 filter.Percentage = p;
-                ConsoleApp.Current?.RequestPaint();
             }
         });
         return filter;

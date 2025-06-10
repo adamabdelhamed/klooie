@@ -17,7 +17,6 @@ public static class AnimateEx
             Setter = p =>
             {
                 filter.Percentage = p;
-                ConsoleApp.Current.RequestPaint();
             }
         });
         return filter;

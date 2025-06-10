@@ -241,7 +241,6 @@ public static class Animator
         var scheduledTimeAfterThisFrame = TimeSpan.FromMilliseconds(state.TimeBetweenFrames.TotalMilliseconds * state.I);
         var newValue = state.InitialValue+ (state.Delta* percentageDone);
         state.Options.Setter(newValue);
-        ConsoleApp.Current?.RequestPaint();
 
         var delayTime = state.Options.DelayProvider is WallClockDelayProvider ? TimeSpan.FromMilliseconds(Math.Max(0, scheduledTimeAfterThisFrame.TotalMilliseconds - Stopwatch.GetElapsedTime(state.StartTime).TotalMilliseconds)) : state.TimeBetweenFrames;
 

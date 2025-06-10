@@ -187,6 +187,5 @@ public class ConsolePanel : Container
             sortedControls[i].ParentIndex = i;
         }
         sortedControls.Sort(CompareZ);
-        ConsoleApp.Current?.RequestPaint();
     }
 }

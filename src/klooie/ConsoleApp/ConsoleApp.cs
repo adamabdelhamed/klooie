@@ -157,7 +157,6 @@ public class ConsoleApp : EventLoop
     protected virtual Task Startup() => Task.CompletedTask;
 
     public Task RequestPaintAsync() => layoutRoot == null ? Task.CompletedTask : layoutRoot.RequestPaintAsync();
-    public void RequestPaint() => layoutRoot?.RequestPaint();
 
 
     public void MoveFocus(bool forward = true) => focus.MoveFocus(forward);

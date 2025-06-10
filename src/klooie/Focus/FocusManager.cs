@@ -308,7 +308,6 @@ public partial class FocusManager : Recyclable,  IObservableObject
         {
             // not handled
         }
-        ConsoleApp.Current.RequestPaint();
     }
 
 

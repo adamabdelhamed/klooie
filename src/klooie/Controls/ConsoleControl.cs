@@ -68,7 +68,6 @@ public partial class ConsoleControl : Rectangular
             if (_filters != null) return _filters;
 
             _filters = ObservableCollectionPool<IConsoleControlFilter>.Instance.Rent();
-            Filters.Changed.Subscribe(this, OnAnyPropertyChangedPrivate, _filters);
             return _filters;
         }
     }
@@ -298,17 +297,9 @@ public partial class ConsoleControl : Rectangular
         FocusContrastColor = DefaultColors.FocusContrastColor;
         CompositionMode = CompositionMode.PaintOver;
         
-        SubscribeToAnyPropertyChange(this, OnAnyPropertyChangedPrivate, this);
         BoundsChanged.Subscribe(this, ResizeBitmapOnBoundsChanged, this);
         CanFocusChanged.Subscribe(this, HandleCanFocusChanged, this);
         OnDisposed(this, ReturnEvents);
-    }
-
-    private static void OnAnyPropertyChangedPrivate(object me)
-    {
-        var _this = me as ConsoleControl;
-        ConsoleApp.Current?.RequestPaint();
-        _this.OnAnyPropertyChanged();
     }
      
 

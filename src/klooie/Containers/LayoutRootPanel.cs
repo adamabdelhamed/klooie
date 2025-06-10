@@ -6,7 +6,6 @@ public partial class LayoutRootPanel : ConsolePanel
     private int lastConsoleWidth, lastConsoleHeight;
     private List<TaskCompletionSource> paintRequests;
     private FrameRateMeter paintRateMeter;
-    private bool paintRequested;
     private ConsoleCharacter defaultPen;
     internal Event OnWindowResized { get => _onWindowResized ?? (_onWindowResized = Event.Create()); }
     internal int FramesPerSecond => paintRateMeter.CurrentFPS;
@@ -67,17 +66,8 @@ public partial class LayoutRootPanel : ConsolePanel
         return d.Task;
     }
 
-    internal void RequestPaint()
-    {
-        paintRequested = true;
-    }
-
     private void DrainPaints()
     {
-        if (paintRequests.None() && paintRequested == false) return;
-
-
-        paintRequested = false;
         Bitmap.Fill(defaultPen);
         Paint();// ConsoleControl.Paint() is called here
 
@@ -122,7 +112,6 @@ public partial class LayoutRootPanel : ConsolePanel
 
         Width = Bitmap.Console.BufferWidth;
         Height = Bitmap.Console.WindowHeight - 1;
-        RequestPaint();
         OnWindowResized.Fire();
     }
 }
