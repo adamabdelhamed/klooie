@@ -75,7 +75,7 @@ public class Wander : Movement
         var scores = WanderLogic.AdjustSpeedAndVelocity(state);
         onNewScoresAvailable?.Fire(scores.Items);
 
-        if (state.AreAllDependenciesValid)
+        if (state.AreAllDependenciesValid == false)
         {
             state.TryDispose(lease);
             return;
