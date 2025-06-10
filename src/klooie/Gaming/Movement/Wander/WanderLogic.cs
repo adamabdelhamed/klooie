@@ -329,14 +329,10 @@ public struct WanderWeights
 }
 
 
-public class WanderLoopState : Recyclable
+public class WanderLoopState : DelayState
 {
     internal Wander Wander { get; private set; }
     public WanderOptions WanderOptions { get; private set; }
-    public int WanderLease { get; private set; }
-    public int ElementLease { get; private set; }
-    public int VisionLease { get; private set; }
-    public int VelocityLease { get; private set; }
 
     public MotionInfluence Influence { get;private set; }
 
@@ -360,14 +356,11 @@ public class WanderLoopState : Recyclable
     public static WanderLoopState Create(Wander w)
     {
         var s = Create(w.WanderOptions);
+        s.AddDependency(w);
         s.Wander = w;
-        s.WanderLease = w.Lease;
-        s.VisionLease = w.WanderOptions.Vision.Lease;
-        s.ElementLease = w.WanderOptions.Velocity.Collider.Lease;
-        s.VelocityLease = w.WanderOptions.Velocity.Lease;
         s.LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
         s.LastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent();
-        s.Influence = new MotionInfluence();
+
         w.WanderOptions.Velocity.AddInfluence(s.Influence);
         s.OnDisposed(() => w.WanderOptions.Velocity.RemoveInfluence(s.Influence));
         return s;
@@ -376,12 +369,12 @@ public class WanderLoopState : Recyclable
     public static WanderLoopState Create(WanderOptions o)
     {
         var s = WanderLoopStatePool.Instance.Rent();
+        s.AddDependency(o.Velocity);
+        s.AddDependency(o.Velocity.Collider);
+        s.AddDependency(o.Vision);
         s._tcs = new TaskCompletionSource();
         s.WanderOptions = o;
-        s.VisionLease = o.Vision.Lease;
-        s.WanderLease = 0;
-        s.ElementLease = o.Velocity.Collider.Lease;
-        s.VelocityLease = o.Velocity.Lease;
+        s.Influence = new MotionInfluence();
         s.Weights = WanderWeights.Default;
         s.AngleScores = RecyclableListPool<AngleScore>.Instance.Rent();
         s.LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
@@ -394,9 +387,6 @@ public class WanderLoopState : Recyclable
         base.OnReturn();
         WanderOptions = null;
         Wander = null;
-        ElementLease = 0;
-        WanderLease = 0;
-        VisionLease = 0;
         LastFewAngles.TryDispose();
         LastFewAngles = null!;
         LastFewRoundedBounds.TryDispose();

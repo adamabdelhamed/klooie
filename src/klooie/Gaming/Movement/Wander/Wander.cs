@@ -66,17 +66,18 @@ public class Wander : Movement
 
     private void Tick(WanderLoopState state)
     {
-        if (!IsStillValid(this, state))
+        var lease = state.Lease;
+        if (state.AreAllDependenciesValid == false)
         {            
-            state.TryDispose();
+            state.TryDispose(lease);
             return;
         }
         var scores = WanderLogic.AdjustSpeedAndVelocity(state);
         onNewScoresAvailable?.Fire(scores.Items);
 
-        if (!IsStillValid(this, state))
+        if (state.AreAllDependenciesValid)
         {
-            state.TryDispose();
+            state.TryDispose(lease);
             return;
         }
 
@@ -92,12 +93,7 @@ public class Wander : Movement
         state.Wander.WanderOptions.OnDelay?.Invoke();
         state.Wander.Tick(state);
     }
-
-    public bool IsStillValid(Wander wander, WanderLoopState state) => 
-        wander.IsStillValid(state.WanderLease)
-        && wander.Options.Vision.IsStillValid(state.VisionLease)
-        && wander.Options.Velocity.IsStillValid(state.VelocityLease)
-        && wander.Options.Velocity?.Collider.IsStillValid(state.ElementLease) == true;
+ 
 
     protected override void OnReturn()
     {
