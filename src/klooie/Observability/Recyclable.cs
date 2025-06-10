@@ -9,7 +9,8 @@ public class Recyclable : ILifetime
     private static readonly Recyclable forever = new Recyclable();
     public static Recyclable Forever => forever;
 
-    private readonly SubscriberCollection disposalSubscribers = SubscriberCollection.Create();
+    private SubscriberCollection? disposalSubscribers;
+    private SubscriberCollection DisposalSubscribers => disposalSubscribers ??= SubscriberCollection.Create();
 
     internal IObjectPool? Pool { get; set; }
 
@@ -57,10 +58,11 @@ public class Recyclable : ILifetime
         IsExpiring = true;
         try
         {
-            if (disposalSubscribers.Count > 0)
+            if (disposalSubscribers?.Count > 0)
             {
                 disposalSubscribers.Notify();
-                disposalSubscribers?.UntrackAll();
+                disposalSubscribers?.Dispose();
+                disposalSubscribers = null;
             }
 
             if (endedTaskCompletionSource != null)
@@ -118,7 +120,7 @@ public class Recyclable : ILifetime
     {
         if(IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         var subscription = ActionSubscription.Create(cleanupCode);
-        disposalSubscribers.Track(subscription);
+        DisposalSubscribers.Track(subscription);
     }
 
     public void OnDisposed<T>(T scope, Action<T> cleanupCode)
@@ -126,7 +128,7 @@ public class Recyclable : ILifetime
         if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         if (scope == null) throw new ArgumentNullException(nameof(scope));
         var subscription = ScopedSubscription<T>.Create(scope, cleanupCode);
-        disposalSubscribers.Track(subscription);
+        DisposalSubscribers.Track(subscription);
     }
 
     private class EarliestOfTracker : Recyclable

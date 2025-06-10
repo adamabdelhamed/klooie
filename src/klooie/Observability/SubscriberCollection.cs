@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 namespace klooie;
 internal class SubscriberCollection
 {
+    private static Stack<SubscriberCollection> pool = new Stack<SubscriberCollection>();
     private List<(ISubscription Subscription, int Lease)> entries = new List<(ISubscription Subscription, int Lease)>();
-
     public int Count => RefreshAndCountActiveEntries();
-    public static SubscriberCollection Create() => new SubscriberCollection();
+    public static SubscriberCollection Create() => pool.Count > 0 ? pool.Pop() : new SubscriberCollection();
     private SubscriberCollection() { }
 
     public void Track(ISubscription subscription) => entries.Add((subscription, subscription.Lease));
@@ -28,7 +28,7 @@ internal class SubscriberCollection
         return entries.Count;
     }
 
-    public void UntrackAll()
+    public void Dispose()
     {
         while (entries.Count > 0)
         {
@@ -39,6 +39,7 @@ internal class SubscriberCollection
             }
             entries.RemoveAt(0);
         }
+        pool.Push(this);
     }
 
     public void Notify<T>(T arg, DelayState? dependencies = null)

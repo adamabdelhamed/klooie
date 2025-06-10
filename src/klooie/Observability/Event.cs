@@ -4,14 +4,15 @@
 /// </summary>
 public class Event : Recyclable
 {
-    private readonly SubscriberCollection subscribers = SubscriberCollection.Create();
+    private SubscriberCollection? subscribers;
+    private SubscriberCollection Subscribers => subscribers ??= SubscriberCollection.Create();
 
     /// <summary>
     /// returns true if there is at least one subscriber
     /// </summary>
-    public bool HasSubscriptions => subscribers.Count > 0;
+    public bool HasSubscriptions => subscribers == null ? false : subscribers.Count > 0;
 
-    public int SubscriberCount => subscribers.Count;
+    public int SubscriberCount => Subscribers?.Count ?? 0;
 
     private Event() { }
 
@@ -22,9 +23,9 @@ public class Event : Recyclable
     /// <summary>
     /// Fires the event. All subscribers will be notified
     /// </summary>
-    public void Fire() => subscribers.Notify();
+    public void Fire() => Subscribers.Notify();
 
-    public void Fire(DelayState dependencies) => subscribers.Notify(dependencies);
+    public void Fire(DelayState dependencies) => subscribers?.Notify(dependencies);
 
     /// <summary>
     /// Subscribes to this event such that the given handler will be called when the event fires. Notifications will stop
@@ -35,7 +36,7 @@ public class Event : Recyclable
     public void Subscribe(Action handler, ILifetime lifetimeManager)
     {
         var subscription = ActionSubscription.Create(handler);
-        subscribers.Track(subscription);
+        Subscribers.Track(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
 
     }
@@ -51,7 +52,7 @@ public class Event : Recyclable
     public void Subscribe<TScope>(TScope scope, Action<TScope> handler, ILifetime lifetimeManager)
     {
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
-        subscribers.Track(subscription);
+        Subscribers.Track(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
@@ -64,7 +65,7 @@ public class Event : Recyclable
     public void SubscribeWithPriority(Action handler, ILifetime lifetimeManager)
     {
         var subscription = ActionSubscription.Create(handler);
-        subscribers.TrackWithPriority(subscription);
+        Subscribers.TrackWithPriority(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
@@ -74,7 +75,7 @@ public class Event : Recyclable
     public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope> handler, ILifetime lifetimeManager)
     {
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
-        subscribers.TrackWithPriority(subscription);
+        Subscribers.TrackWithPriority(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
@@ -184,8 +185,8 @@ public class Event : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        subscribers.UntrackAll();
+        subscribers?.Dispose();
+        subscribers = null;
     }
-
 }
 
