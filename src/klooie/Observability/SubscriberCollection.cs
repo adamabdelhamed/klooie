@@ -6,14 +6,40 @@ using System.Threading.Tasks;
 namespace klooie;
 internal class SubscriberCollection
 {
-    private static Stack<SubscriberCollection> pool = new Stack<SubscriberCollection>();
-    private List<(ISubscription Subscription, int Lease)> entries = new List<(ISubscription Subscription, int Lease)>();
+    private static Stack<SubscriberCollection> collectionLightPool = new Stack<SubscriberCollection>();
+    private static Stack<SubscriberEntry> entryLightPool = new Stack<SubscriberEntry>();
+
+    private List<SubscriberEntry> entries = new List<SubscriberEntry>();
     public int Count => RefreshAndCountActiveEntries();
-    public static SubscriberCollection Create() => pool.Count > 0 ? pool.Pop() : new SubscriberCollection();
+    public static SubscriberCollection Create() => collectionLightPool.Count > 0 ? collectionLightPool.Pop() : new SubscriberCollection();
+
+    private static SubscriberEntry GetEntry() => entryLightPool.Count > 0 ? entryLightPool.Pop() : new SubscriberEntry();
+
     private SubscriberCollection() { }
 
-    public void Track(ISubscription subscription) => entries.Add((subscription, subscription.Lease));
-    public void TrackWithPriority(ISubscription subscription) => entries.Insert(0, (subscription, subscription.Lease));
+    public void Track(ISubscription subscription)
+    {
+        var entry = GetEntry();
+        entry.Subscription = subscription;
+        entry.Lease = subscription.Lease;
+        entries.Add(entry);
+    }
+    public void TrackWithPriority(ISubscription subscription)
+    {
+        var entry = GetEntry();
+        entry.Subscription = subscription;
+        entry.Lease = subscription.Lease;
+        entries.Insert(0, entry); 
+    }
+
+    private void DisposeEntryAt(int i)
+    {
+        var entry = entries[i];
+        entry.Subscription = null;
+        entry.Lease = 0; 
+        entries.RemoveAt(i);
+        entryLightPool.Push(entry);
+    }
 
     private int RefreshAndCountActiveEntries()
     {
@@ -22,7 +48,7 @@ internal class SubscriberCollection
             var entry = entries[i];
             if (entry.Subscription.IsStillValid(entry.Lease) == false)
             {
-                entries.RemoveAt(i);
+                DisposeEntryAt(i);
             }
         }
         return entries.Count;
@@ -37,9 +63,9 @@ internal class SubscriberCollection
             {
                 entry.Subscription.Dispose();
             }
-            entries.RemoveAt(0);
+            DisposeEntryAt(0);
         }
-        pool.Push(this);
+        collectionLightPool.Push(this);
     }
 
     public void Notify<T>(T arg, DelayState? dependencies = null)
@@ -96,6 +122,12 @@ internal class SubscriberCollection
     {
         if (dependencies?.AreAllDependenciesValid == false) return;
         sub.Notify();
+    }
+
+    private class SubscriberEntry
+    {
+        public ISubscription Subscription { get; set; }
+        public int Lease { get; set; }
     }
 }
 
