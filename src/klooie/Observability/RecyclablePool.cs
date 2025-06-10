@@ -162,6 +162,11 @@ public class PendingRecyclableTracker
 public sealed class FuncPool<T> : RecycleablePool<T> where T : Recyclable
 {
     private Func<T> factory;
-    public FuncPool(Func<T> factory) => this.factory = factory ?? throw new ArgumentNullException(nameof(factory));
+    internal FuncPool(Func<T> factory) => this.factory = factory ?? throw new ArgumentNullException(nameof(factory));
     public override T Factory() => factory();
+}
+
+public sealed class LazyPool<T> : Lazy<FuncPool<T>> where T : Recyclable
+{
+    public LazyPool(Func<T> factory) : base(() => new FuncPool<T>(factory)) { }
 }

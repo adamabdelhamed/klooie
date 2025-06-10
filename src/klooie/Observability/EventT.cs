@@ -19,7 +19,7 @@ public sealed class Event<T> : Recyclable, IEventT
 
     private Event() { }
 
-    private static readonly Lazy<FuncPool<Event<T>>> Pool = new Lazy<FuncPool<Event<T>>>(static () => new FuncPool<Event<T>>(static () => new Event<T>()));
+    private static readonly LazyPool<Event<T>> Pool = new LazyPool<Event<T>>(static () => new Event<T>());
     public static Event<T> Create() => Pool.Value.Rent();
     public static Event<T> Create(out int lease) => Pool.Value.Rent(out lease);
 
