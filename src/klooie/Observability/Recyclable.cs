@@ -24,8 +24,8 @@ public class Recyclable : ILifetime
     private static readonly Recyclable forever = new Recyclable();
     public static Recyclable Forever => forever;
 
-    private List<Subscription>? disposalSubscribers;
-    private List<Subscription> DisposalSubscribers => disposalSubscribers ?? (disposalSubscribers = SubscriptionListPool.Rent());
+    internal SubscriberCollection? disposalSubscribers;
+    internal SubscriberCollection DisposalSubscribers => disposalSubscribers ??= SubscriberCollection.Create();
 
     internal IObjectPool? Pool { get; set; }
 
@@ -76,7 +76,7 @@ public class Recyclable : ILifetime
             if (disposalSubscribers != null && disposalSubscribers.Count > 0)
             {
                 NotificationBufferPool.Notify(disposalSubscribers);
-                SubscriptionListPool.Return(disposalSubscribers);
+                disposalSubscribers?.Clear();
                 disposalSubscribers = null;
             }
 
@@ -101,7 +101,6 @@ public class Recyclable : ILifetime
 
     protected virtual void OnInit() 
     {
-        disposalSubscribers?.Clear();
         disposalSubscribers = null;
     }
     protected virtual void OnReturn() { }
@@ -138,8 +137,7 @@ public class Recyclable : ILifetime
         if(IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         var subscription = SubscriptionPool.Instance.Rent(out int _);
         subscription.Callback = cleanupCode;
-        subscription.Subscribers = disposalSubscribers;
-        DisposalSubscribers.Add(subscription);
+        DisposalSubscribers.Track(subscription);
     }
 
     public void OnDisposed(object scope, Action<object> cleanupCode)
@@ -149,8 +147,7 @@ public class Recyclable : ILifetime
         var subscription = SubscriptionPool.Instance.Rent(out int _);
         subscription.Scope = scope;
         subscription.ScopedCallback = cleanupCode;
-        subscription.Subscribers = disposalSubscribers;
-        DisposalSubscribers.Add(subscription);
+        DisposalSubscribers.Track(subscription);
     }
 
     public void OnDisposed(Recyclable obj)
@@ -160,8 +157,7 @@ public class Recyclable : ILifetime
         subscription.ToAlsoDispose = obj;
         subscription.Scope = obj;
         subscription.ScopedCallback = Event.DisposeStatic;
-        subscription.Subscribers = disposalSubscribers;
-        DisposalSubscribers.Add(subscription);
+        DisposalSubscribers.Track(subscription);
     }
 
     private class EarliestOfTracker : Recyclable

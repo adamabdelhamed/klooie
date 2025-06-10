@@ -4,7 +4,8 @@
 /// </summary>
 public class Event : Recyclable
 {
-    internal List<Subscription>? eventSubscribers;
+    internal SubscriberCollection? eventSubscribers;
+    internal SubscriberCollection EventSubscribers => eventSubscribers ??= SubscriberCollection.Create();
 
     /// <summary>
     /// returns true if there is at least one subscriber
@@ -34,13 +35,11 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
     public void Subscribe(Action handler, ILifetime lifetimeManager)
     {
-        eventSubscribers ??= SubscriptionListPool.Rent();
         var subscription = SubscriptionPool.Instance.Rent();
+        EventSubscribers.Track(subscription);
         subscription.Callback = handler;
-        subscription.Bind(lifetimeManager);
-        subscription.Subscribers = eventSubscribers;
-        eventSubscribers.Add(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+
     }
 
     // NEW OR MODIFIED CODE: Overload that accepts a scope object
@@ -53,13 +52,10 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">The lifetime manager</param>
     public void Subscribe<TScope>(TScope scope, Action<object> handler, ILifetime lifetimeManager)
     {
-        eventSubscribers ??= SubscriptionListPool.Rent();
         var subscription = SubscriptionPool.Instance.Rent();
+        EventSubscribers.Track(subscription);
         subscription.Scope = scope;
         subscription.ScopedCallback = handler;
-        subscription.Bind(lifetimeManager);
-        subscription.Subscribers = eventSubscribers;
-        eventSubscribers.Add(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
@@ -71,12 +67,9 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">the lifetime manager</param>
     public void SubscribeWithPriority(Action handler, ILifetime lifetimeManager)
     {
-        eventSubscribers ??= SubscriptionListPool.Rent();
         var subscription = SubscriptionPool.Instance.Rent();
+        EventSubscribers.TrackWithPriority(subscription);
         subscription.Callback = handler;
-        subscription.Bind(lifetimeManager);
-        subscription.Subscribers = eventSubscribers;
-        eventSubscribers.Insert(0, subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
@@ -85,13 +78,10 @@ public class Event : Recyclable
     /// </summary>
     public void SubscribeWithPriority<TScope>(TScope scope, Action<object> handler, ILifetime lifetimeManager)
     {
-        eventSubscribers ??= SubscriptionListPool.Rent();
         var subscription = SubscriptionPool.Instance.Rent();
+        EventSubscribers.TrackWithPriority(subscription);
         subscription.Scope = scope;
         subscription.ScopedCallback = handler;
-        subscription.Bind(lifetimeManager);
-        subscription.Subscribers = eventSubscribers;
-        eventSubscribers.Insert(0, subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
@@ -205,11 +195,8 @@ public class Event : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        if (eventSubscribers != null)
-        {
-            SubscriptionListPool.Return(eventSubscribers);
-            eventSubscribers = null;
-        }
+        eventSubscribers?.Clear();
+        eventSubscribers = null;
     }
 
 }

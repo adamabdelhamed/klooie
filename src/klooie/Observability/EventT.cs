@@ -42,18 +42,14 @@ public sealed class Event<T> : Recyclable, IEventT
     public void Subscribe<TScope>(TScope scope, Action<object, object> handler, ILifetime lt)
     {
         innerEvent = innerEvent ?? Event.Create();
-        innerEvent.eventSubscribers ??= SubscriptionListPool.Rent();
         var subscription = SubscriptionPool.Instance.Rent();
-        subscription.Bind(lt);
+        innerEvent.EventSubscribers.Track(subscription);
         subscription.ScopedCallback = StaticCallback;
         subscription.TScopedCallback = handler;
         subscription.Scope = subscription;
         subscription.TScope = scope;
         subscription.eventT = this;
-        subscription.Subscribers = innerEvent.eventSubscribers;
-        innerEvent.eventSubscribers.Add(subscription);
         lt.OnDisposed(subscription, TryDisposeMe);
-
     }
 
     private static void TryDisposeMe(object me) => ((Recyclable)me).TryDispose();

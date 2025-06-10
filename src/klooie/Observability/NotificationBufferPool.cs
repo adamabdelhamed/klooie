@@ -54,7 +54,7 @@ internal sealed class NotificationBufferPool
         pool.Add(buffer);
     }
 
-    public static void Notify(List<Subscription>? subscribers, DelayState? dependencies = null)
+    public static void Notify(SubscriberCollection? subscribers, DelayState? dependencies = null)
     {
         if (subscribers == null || subscribers.Count == 0) return;
         var subscriberCount = subscribers.Count;

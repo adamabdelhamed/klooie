@@ -20,16 +20,8 @@ public sealed class Subscription : Recyclable
 
     internal ILifetime? Lifetime { get; private set; }
     internal Recyclable? ToAlsoDispose;
-    internal List<Subscription>? Subscribers;
 
-    protected override void OnInit()
-    {
-#if DEBUG
-        //DebugCreationStack = Environment.StackTrace;
-#endif
-        base.OnInit();
-        Reset();
-    }
+
 
     protected override void OnReturn()
     {
@@ -52,8 +44,6 @@ public sealed class Subscription : Recyclable
         TScopedCallback = null;
         Scope = null;
         Lifetime = null;
-        Subscribers?.Remove(this);
-        Subscribers = null;
         eventT = null;
         TScope = null;
         ToAlsoDispose = null;
