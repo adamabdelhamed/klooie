@@ -129,7 +129,7 @@ namespace klooie.tests
             var lifetime = DefaultRecyclablePool.Instance.Rent();
             try
             {
-                observable.SomeEventWithAString.Subscribe<MyScope, string>(scope, OnStringEventFired, lifetime);
+                observable.SomeEventWithAString.Subscribe(scope, OnStringEventFired, lifetime);
 
                 Assert.AreEqual(0, scope.FiredCount);
 

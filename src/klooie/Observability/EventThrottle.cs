@@ -113,7 +113,7 @@ public static class EventThrottleExtensions
             var inst = Pool.Instance.Rent();
             inst.Bind(maxCyclesPerSecond);
             inst.handler = handler;
-            e.Subscribe<ArgEventThrottle<TArg>,TArg>(inst, Throttle, lifetime);
+            e.Subscribe<ArgEventThrottle<TArg>>(inst, Throttle, lifetime);
             lifetime.OnDisposed(inst, DisposeMe);
             return inst;
         }
@@ -186,7 +186,7 @@ public static class EventThrottleExtensions
             inst.Bind(maxCyclesPerSecond);
             inst.scopedHandler = handler;
             inst.scope = scope;
-            e.Subscribe<ScopedAndArgEventThrottle<TScope, TArg>, TArg>(inst, ThrottleScoped, lifetime);
+            e.Subscribe<ScopedAndArgEventThrottle<TScope, TArg>>(inst, ThrottleScoped, lifetime);
             lifetime.OnDisposed(inst, DisposeMe);
             return inst;
         }

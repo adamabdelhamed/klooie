@@ -1,99 +1,100 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-
-internal interface ISubscription
-{
-    int Lease { get; }
-    bool IsStillValid(int lease);
-    void Notify();
-}
 internal class SubscriberCollection
 {
+    private List<(ISubscription Subscription, int Lease)> entries = new List<(ISubscription Subscription, int Lease)>();
+
+    public int Count => RefreshAndCountActiveEntries();
     public static SubscriberCollection Create() => new SubscriberCollection();
+    private SubscriberCollection() { }
 
-    private List<SubscriptionEntry> subscriptions = new List<SubscriptionEntry>();
-    public int Count
+    public void Track(ISubscription subscription) => entries.Add((subscription, subscription.Lease));
+    public void TrackWithPriority(ISubscription subscription) => entries.Insert(0, (subscription, subscription.Lease));
+
+    private int RefreshAndCountActiveEntries()
     {
-        get
+        for(var i = entries.Count - 1; i >= 0; i--)
         {
-            UpdateList();
-            return subscriptions.Count;
-        }
-    }
-    public void Track(ISubscription subscription)
-    {
-        if (subscription == null) throw new ArgumentNullException(nameof(subscription));
-        var state = SubscriptionEntry.Create(subscriptions, subscription);
-        subscriptions.Add(state);
-    }
-
-    public void TrackWithPriority(ISubscription subscription)
-    {
-        if (subscription == null) throw new ArgumentNullException(nameof(subscription));
-        var state = SubscriptionEntry.Create(subscriptions, subscription);
-        subscriptions.Insert(0, state);
-    }
-
-    // implement indexer
-    public ISubscription this[int index]
-    {
-        get => subscriptions[index].ToTrack;
-    }
-
-    private void Untrack(object obj)
-    {
-        var state = (SubscriptionEntry)obj;
-        state.List.Remove(state);
-        state.Clear();
-    }
-
-    public void UpdateList()
-    {
-        for(var i = subscriptions.Count - 1; i >= 0; i--)
-        {
-            var entry = subscriptions[i];
-            if (entry.ToTrack.IsStillValid(entry.Lease) == false)
+            var entry = entries[i];
+            if (entry.Subscription.IsStillValid(entry.Lease) == false)
             {
-                Untrack(entry);
+                entries.RemoveAt(i);
             }
         }
+        return entries.Count;
     }
 
-    public void Clear()
+    public void UntrackAll()
     {
-        while (subscriptions.Count > 0)
+        while (entries.Count > 0)
         {
-            Untrack(subscriptions[0]);
+            var entry = entries[0];
+            if(entry.Subscription.IsStillValid(entry.Lease))
+            {
+                entry.Subscription.Dispose();
+            }
+            entries.RemoveAt(0);
         }
     }
 
-    private class SubscriptionEntry
+    public void Notify<T>(T arg, DelayState? dependencies = null)
     {
-        public List<SubscriptionEntry> List { get; private set; }
-        public ISubscription ToTrack { get; private set; }
-        public int Lease { get; private set; }
-
-        public static SubscriptionEntry Create(List<SubscriptionEntry> list, ISubscription toTrack)
+        for (var i = 0; i < entries.Count; i++)
         {
-            var ret = new SubscriptionEntry();
-            ret.List = list;
-            ret.ToTrack = toTrack;
-            ret.Lease = toTrack.Lease;
-            return ret;
+            if (entries[i].Subscription is ArgsSubscription<T> sub)
+            {
+                sub.Args = arg;
+            }
+        }
+        Notify(dependencies);
+    }
+
+    public void Notify(DelayState? dependencies = null)
+    {
+        RefreshAndCountActiveEntries();
+        if (entries.Count == 0) return;
+        var subscriberCount = entries.Count;
+
+        // Perf optimization for the very common 1 subscriber case since there's no need to copy the list,
+        // rent a buffer, or bother with a loop and lifetime checks.
+        if (subscriberCount == 1)
+        {
+            Notify(entries[0].Subscription, dependencies);
+            return;
         }
 
-        public void Clear()
+        // buffer used to allow concurrent modification to subscribers during notification
+        // buffer also reduces memory allocations insead of doing a ToArray() on the list
+        var buffer = ArrayPool<ISubscription>.Shared.Rent(subscriberCount);
+        try
         {
-            List = null!;
-            ToTrack = null!;
-            Lease = default;
+            // copy the current subscribers into the buffer
+            for (var i = 0; i < subscriberCount; i++)
+            {
+                buffer[i] = entries[i].Subscription;
+            }
+
+            // now notify
+            for (var i = 0; i < subscriberCount; i++)
+            {
+                var sub = buffer[i];
+                Notify(sub, dependencies);
+            }
         }
+        finally
+        {
+            ArrayPool<ISubscription>.Shared.Return(buffer);
+        }
+    }
+
+    private static void Notify(ISubscription sub, DelayState? dependencies)
+    {
+        if (dependencies?.AreAllDependenciesValid == false) return;
+        sub.Notify();
     }
 }
 

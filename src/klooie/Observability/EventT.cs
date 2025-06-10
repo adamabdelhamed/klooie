@@ -1,21 +1,16 @@
 ﻿namespace klooie;
-public interface IEventT
+
+
+public class Event<T> : Recyclable
 {
-    public Stack<object> args { get; }
-}
+    private readonly SubscriberCollection subscribers = SubscriberCollection.Create();
 
-/// <summary>
-/// An event that has an argument of the given type
-/// </summary>
-/// <typeparam name="T">the argument type</typeparam>
-public sealed class Event<T> : Recyclable, IEventT
-{
-    private Event? innerEvent;
-    public Stack<object> args { get; } = new Stack<object>(); // because notifications can be re-entrant
+    /// <summary>
+    /// returns true if there is at least one subscriber
+    /// </summary>
+    public bool HasSubscriptions => subscribers.Count > 0;
 
-    public bool HasSubscriptions => innerEvent?.HasSubscriptions == true;
-
-    public int SubscriberCount => innerEvent?.SubscriberCount ?? 0;
+    public int SubscriberCount => subscribers.Count;
 
     private Event() { }
 
@@ -24,113 +19,79 @@ public sealed class Event<T> : Recyclable, IEventT
     public static Event<T> Create(out int lease) => Pool.Value.Rent(out lease);
 
     /// <summary>
-    /// Subscribes for the given lifetime.
+    /// Fires the event. All subscribers will be notified
     /// </summary>
-    /// <param name="handler">the callback</param>
-    /// <param name="lt">the lifetime</param>
-    public void Subscribe(Action<T> handler, ILifetime lt)
+    public void Fire(T arg) => subscribers.Notify(arg);
+
+    public void Fire(T arg, DelayState dependencies) => subscribers.Notify(arg, dependencies);
+
+
+    public void Subscribe(Action<T> handler, ILifetime lifetimeManager)
     {
-        innerEvent = innerEvent ?? Event.Create();
-        innerEvent.Subscribe(() => Execute(handler), lt);
+        var subscription = ArgsSubscription<T>.Create(handler);
+        subscribers.Track(subscription);
+        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+
     }
-
-    // -----------------------------------------------
-    /// <summary>
-    /// Subscribes for the given lifetime, passing both a scope and the event argument.
-    /// This avoids capturing local variables if you use a static method.
-    /// </summary>
-    public void Subscribe<TScope, TArgs>(TScope scope, Action<TScope, TArgs> handler, ILifetime lt)
+    public void Subscribe<TScope>(TScope scope, Action<TScope,T> handler, ILifetime lifetimeManager)
     {
-        innerEvent = innerEvent ?? Event.Create();
-        var subscription = new ScopedArgsSubscription<TScope, TArgs>();
-        innerEvent.EventSubscribers.Track(subscription);
-        subscription.ScopedCallback = (s,a) => Execute(s, handler);
-        subscription.Scope = scope;
-        lt.OnDisposed(subscription, TryDisposeMe);
-    }
-
-    private void Execute(Action<T> handler)
-    {
-        if (args.TryPeek(out var arg) == false)
-        {
-            throw new InvalidOperationException("Event<T> is firing without args present.");
-        }
-
-        handler((T)arg);
-    }
-
-    private void Execute<TScope,TArg>(TScope scope, Action<TScope, TArg> handler)
-    {
-        if (args.TryPeek(out var arg) == false)
-        {
-            throw new InvalidOperationException("Event<T> is firing without args present.");
-        }
-
-        handler(scope, (TArg)arg);
-    }
-
-
-    /// <summary>
-    /// Subscribes with priority for the given lifetime.
-    /// </summary>
-    /// <param name="handler">the callback</param>
-    /// <param name="lt">the lifetime</param>
-    public void SubscribeWithPriority(Action<T> handler, ILifetime lt)
-    {
-        innerEvent = innerEvent ?? Event.Create();
-        innerEvent.SubscribeWithPriority(() => Execute(handler), lt);
-    }
-
-    // -----------------------------------------------
-    //  NEW: Overload that accepts a scope object
-    // -----------------------------------------------
-    /// <summary>
-    /// Subscribes with priority for the given lifetime, passing both a scope and the event argument.
-    /// </summary>
-    public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope, T> handler, ILifetime lt)
-    {
-        innerEvent = innerEvent ?? Event.Create();
-        innerEvent.SubscribeWithPriority(scope, s => Execute((TScope)s!, handler), lt);
+        var subscription = ScopedArgsSubscription<TScope, T>.Create(scope, handler);
+        subscribers.Track(subscription);
+        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
     /// <summary>
-    /// Subscribes once for the given callback.
+    /// Subscribes to this event such that the given handler will be called when the event fires. 
+    /// This subscription will be notified before all other subscriptions.
     /// </summary>
-    /// <param name="handler">the callback</param>
+    /// <param name="handler">the action to run when the event fires</param>
+    /// <param name="lifetimeManager">the lifetime manager</param>
+    public void SubscribeWithPriority(Action<T> handler, ILifetime lifetimeManager)
+    {
+        var subscription = ArgsSubscription<T>.Create(handler);
+        subscribers.TrackWithPriority(subscription);
+        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+    }
+
+    /// <summary>
+    /// Subscribes to this event with a scope object and callback, notified before other subscriptions.
+    /// </summary>
+    public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope,T> handler, ILifetime lifetimeManager)
+    {
+        var subscription = ScopedArgsSubscription<TScope, T>.Create(scope, handler);
+        subscribers.TrackWithPriority(subscription);
+        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+    }
+
+
+   
+    /// <summary>
+    /// Subscribes to the event for one notification and then immediately unsubscribes so your callback will only be called at most once
+    /// </summary>
+    /// <param name="handler">The action to run when the event fires</param>
     public void SubscribeOnce(Action<T> handler)
     {
         var lt = DefaultRecyclablePool.Instance.Rent();
         bool fired = false;
-        Action wrappedHandler = null;
-        wrappedHandler = () =>
+        Action<T> wrappedHandler = null;
+        wrappedHandler = (arg) =>
         {
             if (fired) return;
             fired = true;
-            try { handler((T)args.Peek()); }
+            try { handler(arg); }
             finally { lt.Dispose(); }
         };
-        innerEvent = innerEvent ?? Event.Create();
-        innerEvent.Subscribe(wrappedHandler, lt);
+        Subscribe(wrappedHandler, lt);
     }
-
-    // -----------------------------------------------
-    //  NEW: Overload that accepts a scope object
-    // -----------------------------------------------
-    /// <summary>
-    /// Subscribes once with the given scope and callback, then unsubscribes immediately.
-    /// </summary>
-    public void SubscribeOnce<TScope>(TScope scope, Action<TScope, T> handler)
+    public void SubscribeOnce<TScope>(TScope scope, Action<TScope,T> handler)
     {
+        Action<T> wrappedAction = null;
         var lt = DefaultRecyclablePool.Instance.Rent();
-        bool fired = false;
-        Action wrappedAction = null;
-        wrappedAction = () =>
+        wrappedAction = (arg) =>
         {
-            if (fired) return;
-            fired = true;
             try
             {
-                Execute(scope, handler);
+                handler(scope, arg);
             }
             finally
             {
@@ -138,69 +99,34 @@ public sealed class Event<T> : Recyclable, IEventT
             }
         };
 
-        innerEvent = innerEvent ?? Event.Create();
-        innerEvent.Subscribe(wrappedAction, lt);
+        Subscribe(wrappedAction, lt);
     }
 
-    /// <summary>
-    /// Fires the event and passes the given args to subscribers.
-    /// </summary>
-    /// <param name="args">The event argument</param>
-    public void Fire(T args)
-    {
-        if (innerEvent == null) return;
-
-        this.args.Push(args);
-        try
-        {
-            innerEvent.Fire();
-        }
-        finally
-        {
-            this.args.Pop();
-        }
-    }
-    public void Fire(T args, DelayState dependencies)
-    {
-        if (innerEvent == null) return;
-
-        this.args.Push(args);
-        try
-        {
-            innerEvent.Fire(dependencies);
-        }
-        finally
-        {
-            this.args.Pop();
-        }
-    }
-
-    /// <summary>
-    /// Creates a lifetime that will end the next time this event fires
-    /// </summary>
-    /// <returns>a lifetime that will end the next time this event fires</returns>
     public Recyclable CreateNextFireLifetime()
     {
-        innerEvent = innerEvent ?? Event.Create();
-        return innerEvent.CreateNextFireLifetime();
+        var lifetime = DefaultRecyclablePool.Instance.Rent();
+        this.SubscribeOnce(lifetime, TryDisposeMe);
+        return lifetime;
     }
 
+    private static void TryDisposeMe(Recyclable lt, T _) => Recyclable.TryDisposeMe(lt);
+
     /// <summary>
-    /// Creates a task that completes the next time this event fires
+    /// Creates a task that will complete the next time this event fires
     /// </summary>
     /// <returns>a task</returns>
     public Task<T> CreateNextFireTask()
     {
         var tcs = new TaskCompletionSource<T>();
-        this.SubscribeOnce(tcs.SetResult);
+        this.SubscribeOnce<TaskCompletionSource<T>>(tcs, static (TaskCompletionSource<T> tcsObj, T t) => (tcsObj as TaskCompletionSource<T>).SetResult(t));
         return tcs.Task;
     }
 
     protected override void OnReturn()
     {
         base.OnReturn();
-        innerEvent?.Dispose();
-        innerEvent = null;
+        subscribers.UntrackAll();
     }
+
 }
 

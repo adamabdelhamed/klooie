@@ -3,29 +3,13 @@ namespace klooie;
 
 public class Recyclable : ILifetime
 {
-    private static Event<Recyclable>? onReturnedToPool;
-    public static Event<Recyclable> OnReturnedToPool
-    {
-        get
-        {
-            if(onReturnedToPool == null)
-            {
-                onReturnedToPool = Event<Recyclable>.Create();
-                onReturnedToPool.OnDisposed(NullOnReturnedToPool);
-            }
-            return onReturnedToPool;
-        }
-    }
-
-    private static void NullOnReturnedToPool() => onReturnedToPool = null;
     public string DisposalReason { get; set; } 
     public static bool PoolingEnabled { get; set; } = true;
     public static StackHunterMode StackHunterMode { get; set; } = StackHunterMode.Off;
     private static readonly Recyclable forever = new Recyclable();
     public static Recyclable Forever => forever;
 
-    internal SubscriberCollection? disposalSubscribers;
-    internal SubscriberCollection DisposalSubscribers => disposalSubscribers ??= SubscriberCollection.Create();
+    private readonly SubscriberCollection disposalSubscribers = SubscriberCollection.Create();
 
     internal IObjectPool? Pool { get; set; }
 
@@ -73,11 +57,10 @@ public class Recyclable : ILifetime
         IsExpiring = true;
         try
         {
-            if (disposalSubscribers != null && disposalSubscribers.Count > 0)
+            if (disposalSubscribers.Count > 0)
             {
-                NotificationBufferPool.Notify(disposalSubscribers);
-                disposalSubscribers?.Clear();
-                disposalSubscribers = null;
+                disposalSubscribers.Notify();
+                disposalSubscribers?.UntrackAll();
             }
 
             if (endedTaskCompletionSource != null)
@@ -101,7 +84,7 @@ public class Recyclable : ILifetime
 
     protected virtual void OnInit() 
     {
-        disposalSubscribers = null;
+
     }
     protected virtual void OnReturn() { }
     internal void Rent()
@@ -109,7 +92,6 @@ public class Recyclable : ILifetime
         CurrentVersion++;
         IsExpiring = false;
         IsExpired = false;
-        disposalSubscribers = null;
         endedTaskCompletionSource = null;
         OnInit();
     }
@@ -135,19 +117,16 @@ public class Recyclable : ILifetime
     public void OnDisposed(Action cleanupCode)
     {
         if(IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
-        var subscription = new ActionSubscription();
-        subscription.Callback = cleanupCode;
-        DisposalSubscribers.Track(subscription);
+        var subscription = ActionSubscription.Create(cleanupCode);
+        disposalSubscribers.Track(subscription);
     }
 
     public void OnDisposed<T>(T scope, Action<T> cleanupCode)
     {
         if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         if (scope == null) throw new ArgumentNullException(nameof(scope));
-        var subscription = new ScopedSubscription<T>();
-        subscription.Scope = scope;
-        subscription.ScopedCallback = cleanupCode;
-        DisposalSubscribers.Track(subscription);
+        var subscription = ScopedSubscription<T>.Create(scope, cleanupCode);
+        disposalSubscribers.Track(subscription);
     }
 
     private class EarliestOfTracker : Recyclable

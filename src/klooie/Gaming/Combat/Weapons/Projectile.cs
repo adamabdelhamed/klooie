@@ -108,7 +108,7 @@ public class Projectile : WeaponElement
         AddHolderSpeedToProjectileSpeedIfNeeded(speed, angle);
         if (TryPlace(w, angle))
         {
-            Velocity.OnCollision.Subscribe<Projectile, Collision>(this, OnCollision, this);
+            Velocity.OnCollision.Subscribe(this, OnCollision, this);
             BoundsChanged.Subscribe(this, EnforceRangeStatic, this);
         }
     }

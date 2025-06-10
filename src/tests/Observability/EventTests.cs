@@ -658,7 +658,7 @@ public class EventTests
             object scope = new object();
             int callCount = 0;
 
-            ev.Subscribe<object,int>(scope, (sc, arg) =>
+            ev.Subscribe(scope, (sc, arg) =>
             {
                 Assert.AreSame(scope, sc);
                 Assert.AreEqual(123, arg);

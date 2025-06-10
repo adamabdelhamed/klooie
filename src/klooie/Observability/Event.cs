@@ -4,15 +4,14 @@
 /// </summary>
 public class Event : Recyclable
 {
-    internal SubscriberCollection? eventSubscribers;
-    internal SubscriberCollection EventSubscribers => eventSubscribers ??= SubscriberCollection.Create();
+    private readonly SubscriberCollection subscribers = SubscriberCollection.Create();
 
     /// <summary>
     /// returns true if there is at least one subscriber
     /// </summary>
-    public bool HasSubscriptions => eventSubscribers?.Count > 0;
+    public bool HasSubscriptions => subscribers.Count > 0;
 
-    public int SubscriberCount => eventSubscribers?.Count ?? 0;
+    public int SubscriberCount => subscribers.Count;
 
     private Event() { }
 
@@ -23,9 +22,9 @@ public class Event : Recyclable
     /// <summary>
     /// Fires the event. All subscribers will be notified
     /// </summary>
-    public void Fire() => NotificationBufferPool.Notify(eventSubscribers);
+    public void Fire() => subscribers.Notify();
 
-    public void Fire(DelayState dependencies) => NotificationBufferPool.Notify(eventSubscribers, dependencies);
+    public void Fire(DelayState dependencies) => subscribers.Notify(dependencies);
 
     /// <summary>
     /// Subscribes to this event such that the given handler will be called when the event fires. Notifications will stop
@@ -35,9 +34,8 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
     public void Subscribe(Action handler, ILifetime lifetimeManager)
     {
-        var subscription = new ActionSubscription();
-        EventSubscribers.Track(subscription);
-        subscription.Callback = handler;
+        var subscription = ActionSubscription.Create(handler);
+        subscribers.Track(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
 
     }
@@ -52,10 +50,8 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">The lifetime manager</param>
     public void Subscribe<TScope>(TScope scope, Action<TScope> handler, ILifetime lifetimeManager)
     {
-        var subscription = new ScopedSubscription<TScope>();
-        EventSubscribers.Track(subscription);
-        subscription.Scope = scope;
-        subscription.ScopedCallback = handler;
+        var subscription = ScopedSubscription<TScope>.Create(scope, handler);
+        subscribers.Track(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
@@ -67,9 +63,8 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">the lifetime manager</param>
     public void SubscribeWithPriority(Action handler, ILifetime lifetimeManager)
     {
-        var subscription = new ActionSubscription();
-        EventSubscribers.TrackWithPriority(subscription);
-        subscription.Callback = handler;
+        var subscription = ActionSubscription.Create(handler);
+        subscribers.TrackWithPriority(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
@@ -78,10 +73,8 @@ public class Event : Recyclable
     /// </summary>
     public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope> handler, ILifetime lifetimeManager)
     {
-        var subscription = new ScopedSubscription<TScope>();
-        EventSubscribers.TrackWithPriority(subscription);
-        subscription.Scope = scope;
-        subscription.ScopedCallback = handler;
+        var subscription = ScopedSubscription<TScope>.Create(scope, handler);
+        subscribers.TrackWithPriority(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
     }
 
@@ -146,10 +139,6 @@ public class Event : Recyclable
         };
         Subscribe(wrappedHandler, lt);
     }
-
-    public static void DisposeStatic(object lt) => ((Recyclable)lt).TryDispose();
-
-    // NEW OR MODIFIED CODE: Overload that accepts a scope object for one notification
     public void SubscribeOnce<TScope>(TScope scope, Action<TScope> handler)
     {
         Action wrappedAction = null;
@@ -195,8 +184,7 @@ public class Event : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        eventSubscribers?.Clear();
-        eventSubscribers = null;
+        subscribers.UntrackAll();
     }
 
 }

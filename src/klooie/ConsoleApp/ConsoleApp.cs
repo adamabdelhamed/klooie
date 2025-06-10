@@ -144,17 +144,6 @@ public class ConsoleApp : EventLoop
             OnDisposed(LayoutRoot, TryDisposeMe);
             focus = FocusManagerPool.Instance.Rent();
             OnDisposed(focus, TryDisposeMe);
-            Invoke(()=>
-            {
-                OnDisposed(() =>
-                {
-                    if(OnReturnedToPool.SubscriberCount == 1)
-                    {
-                        OnReturnedToPool.TryDispose();
-                    }
-                });
-                OnReturnedToPool.Subscribe(ValidatePoolCleared, this);
-            });
             base.Run();
         }
         finally
@@ -164,17 +153,7 @@ public class ConsoleApp : EventLoop
         }
     }
 
-    private void ValidatePoolCleared(Recyclable control)
-    {
-        if (IsDrainingOrDrained) return;
-        if (control is ConsoleControl c == false) return;
-
-        if(c.Parent != null)
-        {
-            throw new InvalidOperationException($"control of type {control.GetType().Name} did not have its parent cleared. Investigate and make sure you're managing lifetimes properly.: {control.DisposalReason}");
-        }
-    }
-
+ 
     protected virtual Task Startup() => Task.CompletedTask;
 
     public Task RequestPaintAsync() => layoutRoot == null ? Task.CompletedTask : layoutRoot.RequestPaintAsync();
