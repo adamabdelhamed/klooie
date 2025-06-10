@@ -39,29 +39,14 @@ public sealed class Event<T> : Recyclable, IEventT
     /// Subscribes for the given lifetime, passing both a scope and the event argument.
     /// This avoids capturing local variables if you use a static method.
     /// </summary>
-    public void Subscribe<TScope>(TScope scope, Action<object, object> handler, ILifetime lt)
+    public void Subscribe<TScope, TArgs>(TScope scope, Action<TScope, TArgs> handler, ILifetime lt)
     {
         innerEvent = innerEvent ?? Event.Create();
-        var subscription = SubscriptionPool.Instance.Rent();
+        var subscription = new ScopedArgsSubscription<TScope, TArgs>();
         innerEvent.EventSubscribers.Track(subscription);
-        subscription.ScopedCallback = StaticCallback;
-        subscription.TScopedCallback = handler;
-        subscription.Scope = subscription;
-        subscription.TScope = scope;
-        subscription.eventT = this;
+        subscription.ScopedCallback = (s,a) => Execute(s, handler);
+        subscription.Scope = scope;
         lt.OnDisposed(subscription, TryDisposeMe);
-    }
-
-    private static void TryDisposeMe(object me) => ((Recyclable)me).TryDispose();
-
-    private static void StaticCallback(object me)
-    {
-        var sub = (Subscription)me;
-        if (sub.eventT.args.TryPeek(out var arg) == false)
-        {
-            throw new InvalidOperationException("Event<T> is firing without args in the stack");
-        }
-        sub.TScopedCallback.Invoke(sub.TScope, arg);
     }
 
     private void Execute(Action<T> handler)
@@ -74,14 +59,14 @@ public sealed class Event<T> : Recyclable, IEventT
         handler((T)arg);
     }
 
-    private void Execute<TScope>(TScope scope, Action<TScope, T> handler)
+    private void Execute<TScope,TArg>(TScope scope, Action<TScope, TArg> handler)
     {
         if (args.TryPeek(out var arg) == false)
         {
             throw new InvalidOperationException("Event<T> is firing without args present.");
         }
 
-        handler(scope, (T)arg);
+        handler(scope, (TArg)arg);
     }
 
 

@@ -108,7 +108,7 @@ public class Projectile : WeaponElement
         AddHolderSpeedToProjectileSpeedIfNeeded(speed, angle);
         if (TryPlace(w, angle))
         {
-            Velocity.OnCollision.Subscribe(this, OnCollision, this);
+            Velocity.OnCollision.Subscribe<Projectile, Collision>(this, OnCollision, this);
             BoundsChanged.Subscribe(this, EnforceRangeStatic, this);
         }
     }
@@ -158,8 +158,8 @@ public class Projectile : WeaponElement
             Velocity.speed += Weapon.Source.Velocity.Speed;
         }
     }
-    private static void OnCollision(object me, object collision)
-        => Game.Current.InvokeNextCycle(DisposeMe, ProjectileDelayedDisposalState.Create((Projectile)me));
+    private static void OnCollision(Projectile me, Collision collision)
+        => Game.Current.InvokeNextCycle(DisposeMe, ProjectileDelayedDisposalState.Create(me));
 
 
     private static void DisposeMe(object me)

@@ -15,5 +15,5 @@ public interface ILifetime
     int Lease { get; }
     bool IsStillValid(int lease);
     public void OnDisposed(Action cleanupCode);
-    public void OnDisposed(object scope, Action<object> cleanupCode);
+    public void OnDisposed<T>(T scope, Action<T> cleanupCode);
 }

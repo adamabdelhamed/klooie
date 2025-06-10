@@ -35,7 +35,7 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
     public void Subscribe(Action handler, ILifetime lifetimeManager)
     {
-        var subscription = SubscriptionPool.Instance.Rent();
+        var subscription = new ActionSubscription();
         EventSubscribers.Track(subscription);
         subscription.Callback = handler;
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
@@ -50,9 +50,9 @@ public class Event : Recyclable
     /// <param name="scope">A scope object that the handler can use as its state</param>
     /// <param name="handler">A callback that accepts the scope object</param>
     /// <param name="lifetimeManager">The lifetime manager</param>
-    public void Subscribe<TScope>(TScope scope, Action<object> handler, ILifetime lifetimeManager)
+    public void Subscribe<TScope>(TScope scope, Action<TScope> handler, ILifetime lifetimeManager)
     {
-        var subscription = SubscriptionPool.Instance.Rent();
+        var subscription = new ScopedSubscription<TScope>();
         EventSubscribers.Track(subscription);
         subscription.Scope = scope;
         subscription.ScopedCallback = handler;
@@ -67,7 +67,7 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">the lifetime manager</param>
     public void SubscribeWithPriority(Action handler, ILifetime lifetimeManager)
     {
-        var subscription = SubscriptionPool.Instance.Rent();
+        var subscription = new ActionSubscription();
         EventSubscribers.TrackWithPriority(subscription);
         subscription.Callback = handler;
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
@@ -76,9 +76,9 @@ public class Event : Recyclable
     /// <summary>
     /// Subscribes to this event with a scope object and callback, notified before other subscriptions.
     /// </summary>
-    public void SubscribeWithPriority<TScope>(TScope scope, Action<object> handler, ILifetime lifetimeManager)
+    public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope> handler, ILifetime lifetimeManager)
     {
-        var subscription = SubscriptionPool.Instance.Rent();
+        var subscription = new ScopedSubscription<TScope>();
         EventSubscribers.TrackWithPriority(subscription);
         subscription.Scope = scope;
         subscription.ScopedCallback = handler;
@@ -150,7 +150,7 @@ public class Event : Recyclable
     public static void DisposeStatic(object lt) => ((Recyclable)lt).TryDispose();
 
     // NEW OR MODIFIED CODE: Overload that accepts a scope object for one notification
-    public void SubscribeOnce<TScope>(TScope scope, Action<object> handler)
+    public void SubscribeOnce<TScope>(TScope scope, Action<TScope> handler)
     {
         Action wrappedAction = null;
         var lt = DefaultRecyclablePool.Instance.Rent();

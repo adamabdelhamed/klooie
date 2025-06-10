@@ -24,15 +24,15 @@ namespace klooie.tests
         }
 
         // Static handler (no captures). For Event (no generic argument).
-        private static void OnEventFired(object scope)
+        private static void OnEventFired(MyScope scope)
         {
-            ((MyScope)scope).FiredCount++;
+            scope.FiredCount++;
         }
 
         // Static handler (no captures). For Event<T>.
-        private static void OnStringEventFired(object scope, object str)
+        private static void OnStringEventFired(MyScope scope, string str)
         {
-            ((MyScope)scope).FiredCount++;
+            scope.FiredCount++;
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace klooie.tests
             var lifetime = DefaultRecyclablePool.Instance.Rent();
             try
             {
-                observable.SomeEventWithAString.Subscribe(scope, OnStringEventFired, lifetime);
+                observable.SomeEventWithAString.Subscribe<MyScope, string>(scope, OnStringEventFired, lifetime);
 
                 Assert.AreEqual(0, scope.FiredCount);
 

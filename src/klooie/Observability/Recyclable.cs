@@ -135,16 +135,16 @@ public class Recyclable : ILifetime
     public void OnDisposed(Action cleanupCode)
     {
         if(IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
-        var subscription = SubscriptionPool.Instance.Rent(out int _);
+        var subscription = new ActionSubscription();
         subscription.Callback = cleanupCode;
         DisposalSubscribers.Track(subscription);
     }
 
-    public void OnDisposed(object scope, Action<object> cleanupCode)
+    public void OnDisposed<T>(T scope, Action<T> cleanupCode)
     {
         if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         if (scope == null) throw new ArgumentNullException(nameof(scope));
-        var subscription = SubscriptionPool.Instance.Rent(out int _);
+        var subscription = new ScopedSubscription<T>();
         subscription.Scope = scope;
         subscription.ScopedCallback = cleanupCode;
         DisposalSubscribers.Track(subscription);

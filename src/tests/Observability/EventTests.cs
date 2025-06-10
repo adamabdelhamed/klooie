@@ -166,10 +166,10 @@ public class EventTests
         Assert.AreEqual(1, count);
     }
 
-    private static void TestEventMechanicsScoped<T>(Event<T> ev, Recyclable lt, T args, object scope)
+    private static void TestEventMechanicsScoped<TScope,TArg>(Event<TArg> ev, Recyclable lt, TArg args, TScope scope)
     {
         var count = 0;
-        Action<object, object> subscriber = (sc, ar) =>
+        Action<TScope, TArg> subscriber = (sc, ar) =>
         {
             Assert.AreEqual(scope, sc);
             Assert.AreEqual(args, ar);
@@ -658,10 +658,10 @@ public class EventTests
             object scope = new object();
             int callCount = 0;
 
-            ev.Subscribe(scope, (sc, arg) =>
+            ev.Subscribe<object,int>(scope, (sc, arg) =>
             {
                 Assert.AreSame(scope, sc);
-                Assert.AreEqual(123, (int)arg);
+                Assert.AreEqual(123, arg);
                 callCount++;
             }, lt);
 

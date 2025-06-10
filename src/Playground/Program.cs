@@ -20,7 +20,6 @@ public class Program
     public static void GameEx()
     {
         var poolManager = PoolManager.Instance;
-        poolManager.Get<SubscriptionPool>().Fill(10_000);
         poolManager.Get<DefaultRecyclablePool>().Fill(10_000);
         poolManager.Get<ObservableCollectionPool<IConsoleControlFilter>>().Fill(100);
         poolManager.Get<ObservableCollectionPool<ConsoleControl>>().Fill(100);
