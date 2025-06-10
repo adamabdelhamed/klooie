@@ -15,9 +15,9 @@ public class Event : Recyclable
 
     private Event() { }
 
-    private static readonly Lazy<FuncPool<Event>> EventPool = new Lazy<FuncPool<Event>>(() => new FuncPool<Event>(() => new Event()));
-    public static Event Create() => EventPool.Value.Rent();
-    public static Event Create(out int lease) => EventPool.Value.Rent(out lease);
+    private static readonly Lazy<FuncPool<Event>> Pool = new Lazy<FuncPool<Event>>(static () => new FuncPool<Event>(static () => new Event()));
+    public static Event Create() => Pool.Value.Rent();
+    public static Event Create(out int lease) => Pool.Value.Rent(out lease);
 
     /// <summary>
     /// Fires the event. All subscribers will be notified
