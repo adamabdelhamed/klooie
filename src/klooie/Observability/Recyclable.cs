@@ -150,16 +150,6 @@ public class Recyclable : ILifetime
         DisposalSubscribers.Track(subscription);
     }
 
-    public void OnDisposed(Recyclable obj)
-    {
-        if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
-        var subscription = SubscriptionPool.Instance.Rent(out int _);
-        subscription.ToAlsoDispose = obj;
-        subscription.Scope = obj;
-        subscription.ScopedCallback = Event.DisposeStatic;
-        DisposalSubscribers.Track(subscription);
-    }
-
     private class EarliestOfTracker : Recyclable
     {
         public EarliestOfTracker(ILifetime[] lts)

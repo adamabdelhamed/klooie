@@ -173,7 +173,8 @@ public partial class FocusManager : Recyclable,  IObservableObject
 
         public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, object scope, Action<object, ConsoleKeyInfo> handler, ILifetime manager)
         {
-            manager.OnDisposed(PushUnmanaged(key, modifier, scope, handler));
+            var toDispose = PushUnmanaged(key, modifier, scope, handler);
+            manager.OnDisposed(toDispose, TryDisposeMe);
         }
 
         /// <summary>
@@ -185,7 +186,8 @@ public partial class FocusManager : Recyclable,  IObservableObject
         /// <param name="manager">the lifetime of the handlers registration</param>
         public void PushForLifetime(ConsoleKey key, ConsoleModifiers? modifier, Action<ConsoleKeyInfo> handler, ILifetime manager)
         {
-            manager.OnDisposed(PushUnmanaged(key, modifier, handler));
+            var toDispose = PushUnmanaged(key, modifier, handler);
+            manager.OnDisposed(toDispose, TryDisposeMe);
         }
 
         /// <summary>

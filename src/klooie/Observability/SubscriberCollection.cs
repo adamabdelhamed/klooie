@@ -6,6 +6,13 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+
+internal interface ISubscription
+{
+    int Lease { get; }
+    bool IsStillValid(int lease);
+    void Notify();
+}
 internal class SubscriberCollection
 {
     public static SubscriberCollection Create() => new SubscriberCollection();
@@ -19,14 +26,14 @@ internal class SubscriberCollection
             return subscriptions.Count;
         }
     }
-    public void Track(Subscription subscription)
+    public void Track(ISubscription subscription)
     {
         if (subscription == null) throw new ArgumentNullException(nameof(subscription));
         var state = SubscriptionEntry.Create(subscriptions, subscription);
         subscriptions.Add(state);
     }
 
-    public void TrackWithPriority(Subscription subscription)
+    public void TrackWithPriority(ISubscription subscription)
     {
         if (subscription == null) throw new ArgumentNullException(nameof(subscription));
         var state = SubscriptionEntry.Create(subscriptions, subscription);
@@ -34,7 +41,7 @@ internal class SubscriberCollection
     }
 
     // implement indexer
-    public Subscription this[int index]
+    public ISubscription this[int index]
     {
         get => subscriptions[index].ToTrack;
     }
@@ -69,10 +76,10 @@ internal class SubscriberCollection
     private class SubscriptionEntry
     {
         public List<SubscriptionEntry> List { get; private set; }
-        public Subscription ToTrack { get; private set; }
+        public ISubscription ToTrack { get; private set; }
         public int Lease { get; private set; }
 
-        public static SubscriptionEntry Create(List<SubscriptionEntry> list, Subscription toTrack)
+        public static SubscriptionEntry Create(List<SubscriptionEntry> list, ISubscription toTrack)
         {
             var ret = new SubscriptionEntry();
             ret.List = list;

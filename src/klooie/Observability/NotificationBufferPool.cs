@@ -6,12 +6,12 @@ internal sealed class NotificationBufferPool
     internal static int MissCount = 0;
     internal static int PartialHitCount = 0;
 #endif
-    private List<Subscription[]> pool = new List<Subscription[]>();
+    private List<ISubscription[]> pool = new List<ISubscription[]>();
     private static readonly NotificationBufferPool Instance = new NotificationBufferPool();
   
     private NotificationBufferPool() { }
 
-    public Subscription[] Get(int mainSize)
+    public ISubscription[] Get(int mainSize)
     {
 
         mainSize = mainSize < 10 ? 10 : mainSize;
@@ -21,7 +21,7 @@ internal sealed class NotificationBufferPool
 #if DEBUG
             MissCount++;
 #endif
-            return new Subscription[mainSize * 2];
+            return new ISubscription[mainSize * 2];
         }
 
         // try to find an existing buffer that is big enough
@@ -48,7 +48,7 @@ internal sealed class NotificationBufferPool
         return resized;
     }
 
-    public void Return(Subscription[] buffer)
+    public void Return(ISubscription[] buffer)
     {
         Array.Clear(buffer, 0, buffer.Length);
         pool.Add(buffer);
@@ -85,11 +85,6 @@ internal sealed class NotificationBufferPool
                 var sub = buffer[i];
                 Notify(sub, dependencies);
 
-                if (sub.ToAlsoDispose != null)
-                {
-                    sub.ToAlsoDispose.TryDispose();
-                    sub.ToAlsoDispose = null;
-                }
             }
         }
         finally
@@ -98,21 +93,11 @@ internal sealed class NotificationBufferPool
         }
     }
 
-    private static void Notify(Subscription sub, DelayState? dependencies)
+    private static void Notify(ISubscription sub, DelayState? dependencies)
     {
-        if (dependencies?.AreAllDependenciesValid == false)
-        {
-            return;
-        }
+        if (dependencies?.AreAllDependenciesValid == false) return;
 
-        if (sub.ScopedCallback != null)
-        {
-            sub.ScopedCallback(sub.Scope);
-        }
-        else
-        {
-            sub.Callback?.Invoke();
-        }
+        sub.Notify();
     }
 }
 

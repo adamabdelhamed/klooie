@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public sealed class Subscription : Recyclable
+public sealed class Subscription : Recyclable, ISubscription
 {
 #if DEBUG
     public string? DebugCreationStack;
@@ -19,7 +19,6 @@ public sealed class Subscription : Recyclable
     internal IEventT? eventT;
 
     internal ILifetime? Lifetime { get; private set; }
-    internal Recyclable? ToAlsoDispose;
 
 
 
@@ -46,6 +45,17 @@ public sealed class Subscription : Recyclable
         Lifetime = null;
         eventT = null;
         TScope = null;
-        ToAlsoDispose = null;
+    }
+
+    public void Notify()
+    {
+        if (ScopedCallback != null)
+        {
+            ScopedCallback(Scope);
+        }
+        else
+        {
+            Callback?.Invoke();
+        }
     }
 }
