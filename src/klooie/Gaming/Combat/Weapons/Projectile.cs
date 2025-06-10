@@ -30,8 +30,8 @@ public class ProjectileRule : IRule
         var aAngle = ColliderGroup.ComputeBounceAngle(a.Velocity, b.Bounds, collision.Prediction);
         var bAngle = aAngle.Opposite();
 
-        a.TryDispose();
-        b.TryDispose();
+        a.TryDispose("ProjectileRule.OnCollision - Auto Dispose w Shrapnel");
+        b.TryDispose("ProjectileRule.OnCollision - Auto Dispose w Shrapnel");
 
         SpawnShrapnel(a, aAngle.Add(15+random.Next(-10,10)));
         SpawnShrapnel(a, aAngle.Add(-15 + random.Next(-10, 10)));
@@ -70,7 +70,7 @@ public class ProjectileRule : IRule
         Game.Current.InnerLoopAPIs.Delay(random.Next(200,500), shrapnel, DisposeShrapnel);
     }
 
-    private static void DisposeShrapnel(object obj) => ((Recyclable)obj).TryDispose();
+    private static void DisposeShrapnel(object obj) => ((Recyclable)obj).TryDispose("Delay Disposal");
 
 
     private static void OnVisionInitiated(Vision vision)
@@ -118,7 +118,7 @@ public class Projectile : WeaponElement
         var _this = (me as Projectile)!;
         if (_this.Range > 0 && _this.CalculateDistanceTo(_this.startLocation) > _this.Range)
         {
-            _this.TryDispose();
+            _this.TryDispose(nameof(EnforceRangeStatic));
         }
     }
 
@@ -138,7 +138,7 @@ public class Projectile : WeaponElement
                 if(this.Touches(buffer.WriteableBuffer[i]))
                 {
                     ProjectileRule.SimulateCollisionOnInitialPlacement(this, buffer.WriteableBuffer[i]);
-                    this.TryDispose();
+                    this.TryDispose(nameof(TryPlace));
                     return false;
                 }
             }
@@ -171,7 +171,7 @@ public class Projectile : WeaponElement
             return;
         }
 
-        state.Projectile.TryDispose();
+        state.Projectile.TryDispose("OnCollisionInvokeNextCycleDisposeMe");
         state.Dispose();
     }
     protected override void OnPaint(ConsoleBitmap context) => context.Fill(Pen);
