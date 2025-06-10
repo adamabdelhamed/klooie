@@ -227,6 +227,7 @@ public class VisionDependencyState : DelayState
     public static VisionDependencyState Create(Vision v)
     {
         var state = VisionDependencyStatePool.Instance.Rent();
+        v.Eye.OnDisposed(v,Recyclable.TryDisposeMe);
         state.Vision = v;
         state.AddDependency(v);
         state.AddDependency(v.Eye);
