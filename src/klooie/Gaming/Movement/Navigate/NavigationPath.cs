@@ -81,7 +81,7 @@ public class NavigationPath : Recyclable
             var display = Game.Current.GamePanel.Add(new ConsoleControl() { Background = RGB.Green });
             display.MoveTo(el.Left, el.Top, int.MaxValue);
             display.ResizeTo(el.Width, el.Height);
-            EarliestOf(this, tail.GetMembershipLifetime(el)).OnDisposed(display.Dispose);
+            EarliestOf(this, tail.GetMembershipLifetime(el)).OnDisposed(()=>display.Dispose());
         }
 #endif
     }

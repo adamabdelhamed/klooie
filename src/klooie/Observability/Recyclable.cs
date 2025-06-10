@@ -86,9 +86,9 @@ public class Recyclable : ILifetime
                 endedTaskCompletionSource = null;
             }
 
+            OnReturn();
             if (Pool != null)
             {
-                OnReturn();
                 Pool.ReturnThatShouldOnlyBeCalledInternally(this);
             }
         }
