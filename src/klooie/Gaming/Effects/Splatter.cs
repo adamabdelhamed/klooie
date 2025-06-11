@@ -204,7 +204,7 @@ public static class Splatter
             velocity.Angle = velocity.Angle.Add(angleDiff);
             velocity.Speed = options.Speed;
             var friction = FrictionPool.Instance.Rent();
-            friction.Bind(velocity);
+            friction.Bind(splatterEl);
             var state = FinishSplatterStatePool.Instance.Rent();
             state.Options = options;
             state.SplatterElement = splatterEl;

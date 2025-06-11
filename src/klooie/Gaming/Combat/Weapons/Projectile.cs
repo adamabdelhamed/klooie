@@ -50,7 +50,7 @@ public class ProjectileRule : IRule
         prediction.ColliderHit = obstacle;
         prediction.Edge = obstacle.Bounds.LeftEdge; // todo - compute properly
         collision.Bind(p.Velocity.Speed, angle, p, obstacle, prediction);
-        p.Velocity.Group.OnCollision.Fire(collision);
+        p.ColliderGroup.OnCollision.Fire(collision);
         collision.Dispose();
         prediction.Dispose();
     }

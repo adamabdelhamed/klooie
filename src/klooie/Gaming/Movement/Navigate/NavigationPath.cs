@@ -1,4 +1,5 @@
 ﻿namespace klooie.Gaming;
+/*
 public class NavigationPath : Recyclable
 {
 #if DEBUG
@@ -86,3 +87,4 @@ public class NavigationPath : Recyclable
 #endif
     }
 }
+*/

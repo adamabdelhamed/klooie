@@ -9,25 +9,38 @@ public sealed class Velocity : Recyclable
         Stop
     }
 
+    public enum MoveEvalResult
+    {
+        Moved,
+        Collision
+    }
+    public readonly struct MoveEval
+    {
+        public readonly MoveEvalResult Result;
+        public readonly float DistanceMoved;
+        public MoveEval(MoveEvalResult result, float distanceMoved)
+        {
+            Result = result;
+            DistanceMoved = distanceMoved;
+        }
+    }
+
     internal Angle angle;
     internal float speed;
-    internal float lastEvalTime;
-    internal Event _onAngleChanged, _onSpeedChanged, _beforeMove, _onVelocityEnforced, _beforeEvaluate;
+    internal Event _onAngleChanged, _onSpeedChanged, _beforeEvaluate;
+    internal Event<MoveEval> _afterEvaluate;
     internal Event<Collision> _onCollision;
 
     private readonly List<MotionInfluence> _influences = new();
     private Recyclable influenceSubscriptionLifetime;
 
-    public ColliderGroup Group { get; private set; }
     public Event OnAngleChanged { get => _onAngleChanged ?? (_onAngleChanged = Event.Create()); }
     public Event OnSpeedChanged { get => _onSpeedChanged ?? (_onSpeedChanged = Event.Create()); }
     public Event BeforeEvaluate { get => _beforeEvaluate ?? (_beforeEvaluate = Event.Create()); }
-    public Event BeforeMove { get => _beforeMove ?? (_beforeMove = Event.Create()); }
-    public Event OnVelocityEnforced { get => _onVelocityEnforced ?? (_onVelocityEnforced = Event.Create()); }
+    public Event<MoveEval> AfterEvaluate { get => _afterEvaluate ?? (_afterEvaluate = Event<MoveEval>.Create()); }
     public Event<Collision> OnCollision { get => _onCollision ?? (_onCollision = Event<Collision>.Create()); }
     public CollisionBehaviorMode CollisionBehavior { get; set; } = CollisionBehaviorMode.Stop;
     public CollisionPrediction NextCollision { get; internal set; }
-    public GameCollider Collider { get; private set; }
     public float SpeedRatio { get; set; } = 1;
     public Angle Angle
     {
@@ -52,12 +65,10 @@ public sealed class Velocity : Recyclable
         set
         {
             if (value == speed) return;
-            lastEvalTime = (float)Group.Now.TotalSeconds;
             speed = value;
             _onSpeedChanged?.Fire();
         }
     }
-    public float MinEvalSeconds => this.lastEvalTime + EvalFrequencySeconds;
     public float EvalFrequencySeconds =>  (this.Speed > ColliderGroup.HighestSpeedForEvalCalc ? ColliderGroup.MostFrequentEval : ColliderGroup.EvalFrequencySlope * this.speed + ColliderGroup.LeastFrequentEval);
 
     public TimeSpan NextCollisionETA
@@ -89,41 +100,11 @@ public sealed class Velocity : Recyclable
         _onSpeedChanged = null;
         _beforeEvaluate?.TryDispose();
         _beforeEvaluate = null;
-        _beforeMove?.TryDispose();
-        _beforeMove = null;
-        _onVelocityEnforced?.TryDispose();
-        _onVelocityEnforced = null;
         _onCollision?.TryDispose();
         _onCollision = null;
-        Group?.Remove(Collider);
-        Collider = null;
-        Group = null;
     }
 
-    internal void Init(GameCollider collider, ColliderGroup group)
-    {
-        this.Group = group;
-        this.Collider = collider;
-        group.Add(collider);
-        this.Group = group;
-        this.Collider = collider;
-    }
 
-    public void GetObstacles(ObstacleBuffer buffer) => Group.GetObstacles(Collider, buffer);
-
-    public IEnumerable<GameCollider> GetObstacles()
-    {
-        var buffer = ObstacleBufferPool.Instance.Rent();
-        try
-        {
-            GetObstacles(buffer);
-            return buffer.ReadableBuffer.ToArray();
-        }
-        finally
-        {
-            buffer.Dispose();
-        }
-    }
 
     public void Stop() => Speed = 0;
 
@@ -131,6 +112,11 @@ public sealed class Velocity : Recyclable
     {
         _influences.Add(influence);
         EnsureInfluenceSubscribed();
+    }
+
+    public bool ContainsInfluence(MotionInfluence influence)
+    {
+        return _influences.Contains(influence);
     }
 
     public void RemoveInfluence(MotionInfluence influence)

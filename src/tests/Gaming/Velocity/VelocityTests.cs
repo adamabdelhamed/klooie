@@ -167,7 +167,6 @@ public class VelocityTests
                     }
                 };
 
-                collider.Velocity.BeforeMove.Subscribe(checkBounds, collider);
                 collider.BoundsChanged.Sync(checkBounds, collider);
             }
 

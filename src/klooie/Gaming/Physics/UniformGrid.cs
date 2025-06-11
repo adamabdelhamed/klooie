@@ -27,8 +27,7 @@ public sealed class UniformGrid
     private List<UniformGridCell> cellBuffer = new List<UniformGridCell>();
     private const float _cellSize = 100f;
     private readonly Dictionary<UniformGridCell, ObstacleBuffer> _buckets = new Dictionary<UniformGridCell, ObstacleBuffer>();
-    private readonly Dictionary<GameCollider,int> leases = new Dictionary<GameCollider, int>();
-    private readonly Dictionary<GameCollider, RectF> _previousBounds = new();
+    private readonly Dictionary<GameCollider,UniformGridMembershipState> membershipStates = new Dictionary<GameCollider, UniformGridMembershipState>();
  
     private uint _stamp;
     private void LoadCells(RectF b)
@@ -51,20 +50,12 @@ public sealed class UniformGrid
         }
     }
 
-    public bool IsExpired(GameCollider c)
-    {
-        if (leases.TryGetValue(c, out var lease) == false) return true;
-        return c.IsStillValid(lease) == false;
-    }
+    public bool IsExpired(GameCollider c) => membershipStates.TryGetValue(c, out var state) == false;
 
     public void Insert(GameCollider obj)
     {
-        if(leases.ContainsKey(obj))
-        {
-            throw new InvalidOperationException($"This collider of type {obj.GetType().Name} is already registered in the grid. Disposal Reason: {obj.DisposalReason}");
-        }
-        leases.Add(obj, obj.Lease);
-        _previousBounds[obj] = obj.Bounds;
+        if(membershipStates.ContainsKey(obj)) throw new InvalidOperationException($"This collider of type {obj.GetType().Name} is already registered in the grid. Disposal Reason: {obj.DisposalReason}");
+        membershipStates.Add(obj, UniformGridMembershipState.Create(obj, this));
 
         // Subscribe UniformGrid to the collider's bounds changes.
         // Note that we subscribe for the lifetime of the collider.
@@ -91,13 +82,14 @@ public sealed class UniformGrid
     private static void HandleBoundsChanged(object state)
     {
         var obj = (GameCollider)state;
-        obj.UniformGrid?.Update(obj);
+        obj.UniformGrid.Update(obj);
     }
 
-    public void Remove(GameCollider obj)
+    private void Remove(GameCollider obj)
     {
-        leases.Remove(obj);
-        _previousBounds.Remove(obj); // Clean up
+        var state = membershipStates[obj];
+        membershipStates.Remove(obj);
+        state.Dispose();
 
         LoadCells(obj.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)
@@ -113,16 +105,14 @@ public sealed class UniformGrid
                 }
             }
         }
-        obj.UniformGrid = null; 
     }
 
     public void Update(GameCollider obj)
     {
-        if (!_previousBounds.TryGetValue(obj, out var oldBounds))
-            oldBounds = obj.Bounds; // fallback, shouldn't happen for registered colliders
+        var membershipState = membershipStates[obj];
 
         // Remove from old cells
-        LoadCells(oldBounds);
+        LoadCells(membershipState.PreviousBounds);
         for (int i = 0; i < cellBuffer.Count; i++)
         {
             UniformGridCell cell = cellBuffer[i];
@@ -149,8 +139,7 @@ public sealed class UniformGrid
             list.WriteableBuffer.Add(obj);
         }
 
-        // Update previous bounds
-        _previousBounds[obj] = obj.Bounds;
+        membershipState.PreviousBounds = obj.Bounds;
     }
 
     public void Query(in RectF area, ObstacleBuffer outputBuffer)
@@ -212,6 +201,34 @@ public sealed class UniformGrid
                     obj.QueryStamp = _stamp;
                 }
             }
+        }
+    }
+
+    private class UniformGridMembershipState : Recyclable
+    {
+        public GameCollider Collider { get; set; }
+        public UniformGrid Grid { get; set; }
+        public RectF PreviousBounds { get; set; }
+        private static LazyPool<UniformGridMembershipState> pool = new LazyPool<UniformGridMembershipState>(() => new UniformGridMembershipState());
+        public static UniformGridMembershipState Create(GameCollider collider, UniformGrid grid)
+        {
+            var ret = pool.Value.Rent();
+            ret.Collider = collider;
+            ret.Grid = grid;
+            ret.PreviousBounds = collider.Bounds;
+            collider.OnDisposed(ret, RemoveFromGrid);
+            return ret;
+        }
+
+        private static void RemoveFromGrid(UniformGridMembershipState state) => state.Grid.Remove(state.Collider);
+
+        protected override void OnReturn()
+        {
+            base.OnReturn();
+            Collider.UniformGrid = null; // Clear the grid reference
+            Collider = null; // Clear the collider reference
+            Grid = null; // Clear the grid reference
+            PreviousBounds = default; // Clear the previous bounds
         }
     }
 }

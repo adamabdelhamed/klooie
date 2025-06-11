@@ -1,4 +1,5 @@
 ﻿namespace klooie.Gaming;
+/*
 public class NavigateOptions : MovementOptions
 {
     public float CloseEnough { get; set; } = Mover.DefaultCloseEnough;
@@ -67,7 +68,7 @@ public class Navigate : Movement
             Vision = Options.Vision,
         }), EarliestOf(_ResultLifetime, this));
 
-        /*
+        
         Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.DoNothing;
         while(ShouldContinue && _ResultLifetime.ShouldContinue)
         {
@@ -79,7 +80,7 @@ public class Navigate : Movement
             await Delay();
         }
         Velocity.Stop();
-        */
+        
     }
 
     private void ConfigureCleanup()
@@ -211,3 +212,4 @@ public class Navigate : Movement
         }
     }
 }
+*/

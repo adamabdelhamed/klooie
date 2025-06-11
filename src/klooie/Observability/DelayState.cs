@@ -26,6 +26,9 @@ public class DelayState : Recyclable
         }
     }
 
+    public ILifetime[] ValidDependencies =>
+        Dependencies?.Items.Where((d, i) => d != null && d.IsStillValid(Leases[i])).ToArray() ?? Array.Empty<Recyclable>();
+
     protected override void OnInit()
     {
         base.OnInit();

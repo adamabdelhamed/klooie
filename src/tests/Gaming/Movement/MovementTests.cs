@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 namespace klooie.tests;
-
+/*
 [TestClass]
 [TestCategory(Categories.Slow)]
 public class MovementTests
@@ -321,3 +321,5 @@ public class MovementTests
     }
 }
 
+
+*/

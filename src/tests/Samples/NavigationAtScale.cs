@@ -5,7 +5,7 @@ using System;
 using System.Threading.Tasks;
 
 namespace klooie.tests;
-
+/*
 public class NavigationAtScaleGame : Game
 {
     private const int Margin = 6;
@@ -91,3 +91,4 @@ public class NavigationAtScaleGame : Game
     public override ConsolePanel GamePanel => camera;
     public override RectF GameBounds => camera.BigBounds;
 }
+*/

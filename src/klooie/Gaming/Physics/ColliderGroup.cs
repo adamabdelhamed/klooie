@@ -10,7 +10,6 @@ public sealed class ColliderGroup
 
     private Event<Collision>? onCollision;
     public Event<Collision> OnCollision => onCollision ?? (onCollision = Event<Collision>.Create());
-    public int Count { get; private set; }
 
     private UniformGrid spatialIndex;
     public UniformGrid SpacialIndex => spatialIndex;
@@ -31,12 +30,8 @@ public sealed class ColliderGroup
     private TimeSpan lastExecuteTime;
     private float now;
     
-    private Event<GameCollider> _added;
-    public Event<GameCollider> Added { get => _added ?? (_added = Event<GameCollider>.Create()); }
 
-    private Event<GameCollider> _removed;
-    public Event<GameCollider> Removed { get => _removed ?? (_removed = Event<GameCollider>.Create()); }
-    
+  
     public float SpeedRatio { get; set; } = 1;
 
     internal PauseManager? PauseManager { get; set; }
@@ -62,29 +57,16 @@ public sealed class ColliderGroup
 
         colliderBuffer = null;
         queryBuffer = null;
-        _added?.Dispose();
-        _removed?.Dispose();
         onCollision?.Dispose();
-        _added = null;
-        _removed = null;
         onCollision = null;
     }
 
-    internal void Add(GameCollider c)
+    internal void Register(GameCollider c)
     {
-        c.Velocity.lastEvalTime = (float)lastExecuteTime.TotalSeconds; 
-        Count++;
-        _added?.Fire(c);
-
+        c.lastEvalTime = (float)lastExecuteTime.TotalSeconds; 
         spatialIndex.Insert(c);
     }
 
-    internal void Remove(GameCollider c)
-    {
-        spatialIndex.Remove(c);
-        _removed?.Fire(c);
-        Count--;
-    }
 
     public TimeSpan Now => stopwatch.Elapsed;
     private IStopwatch stopwatch;
@@ -132,16 +114,17 @@ public sealed class ColliderGroup
         if (spatialIndex.IsExpired(item)) return;
         if (IsReadyToMove(item) == false) return;
 
-        var expectedTravelDistance = CalculateExpectedTravelDistance(item.Velocity);
+        var expectedTravelDistance = CalculateExpectedTravelDistance(item);
         if(TryDetectCollision(item, expectedTravelDistance))
         {
             ProcessCollision(item, expectedTravelDistance);
+            item.Velocity?._afterEvaluate?.Fire(new Velocity.MoveEval(Velocity.MoveEvalResult.Collision, 0));
         }
         else
         {
             MoveColliderWithoutCollision(item, expectedTravelDistance);
+            item.Velocity?._afterEvaluate?.Fire(new Velocity.MoveEval(Velocity.MoveEvalResult.Moved, expectedTravelDistance)); // could have expired during move
         }
-        item.Velocity?._onVelocityEnforced?.Fire();
     }
 
     private bool TryDetectCollision(GameCollider item, float expectedTravelDistance)
@@ -232,7 +215,7 @@ public sealed class ColliderGroup
         Angle newAngleDegrees = ComputeBounceAngle(item.Velocity, otherBounds, hitPrediction);
         item.Velocity.Angle = newAngleDegrees;
 
-        var adjustedBounds = item.Velocity.Collider.Bounds.RadialOffset(item.Velocity.Angle, encroachment == 0 ? expectedTravelDistance : encroachment * 2, false);
+        var adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, encroachment == 0 ? expectedTravelDistance : encroachment * 2, false);
         if (TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange) == false)
         {
             adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
@@ -265,7 +248,7 @@ public sealed class ColliderGroup
 #endif
                     collider2.Velocity.Angle = otherAngle;
                 }
-                adjustedBounds = item.Velocity.Collider.Bounds.RadialOffset(item.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
+                adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
                 TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange.Darker);
             }
         }
@@ -317,12 +300,12 @@ public sealed class ColliderGroup
         */
     }
 
-    private float CalculateExpectedTravelDistance(Velocity velocity)
+    private float CalculateExpectedTravelDistance(GameCollider collider)
     {
-        var initialDt = (now - velocity.lastEvalTime) * SpeedRatio * velocity.SpeedRatio;
-        velocity.lastEvalTime = now;
-        var timeElapsedSinceLastEval = stopwatch.SupportsMaxDT ? Math.Min(MaxDTSeconds * SpeedRatio * velocity.SpeedRatio, initialDt) : initialDt;
-        var expectedTravelDistance = ConsoleMath.NormalizeQuantity(velocity.Speed * timeElapsedSinceLastEval, velocity.Angle);
+        var initialDt = (now - collider.lastEvalTime) * SpeedRatio * collider.Velocity.SpeedRatio;
+        collider.lastEvalTime = now;
+        var timeElapsedSinceLastEval = stopwatch.SupportsMaxDT ? Math.Min(MaxDTSeconds * SpeedRatio * collider.Velocity.SpeedRatio, initialDt) : initialDt;
+        var expectedTravelDistance = ConsoleMath.NormalizeQuantity(collider.Velocity.Speed * timeElapsedSinceLastEval, collider.Velocity.Angle);
         return expectedTravelDistance;
     }
 
@@ -331,13 +314,7 @@ public sealed class ColliderGroup
         if (spatialIndex.IsExpired(item)) return false;
         var velocity = item.Velocity;
         velocity._beforeEvaluate?.Fire();
-        var isReadyToMove = !(spatialIndex.IsExpired(item) || velocity.Speed == 0 || now < velocity.MinEvalSeconds);
-
-        if(isReadyToMove)
-        {
-            velocity._beforeMove?.Fire();
-            if (spatialIndex.IsExpired(item)) isReadyToMove = false;
-        }
+        var isReadyToMove = !(spatialIndex.IsExpired(item) || velocity.Speed == 0 || now < item.MinEvalSeconds);
         return isReadyToMove;
     }
     

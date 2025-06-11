@@ -18,7 +18,7 @@ public class GameColliderTests
         Test = async (context) =>
         {
             var c = new GameCollider();
-            Assert.AreEqual(Game.Current.MainColliderGroup, c.Velocity.Group);
+            Assert.AreEqual(Game.Current.MainColliderGroup, c.ColliderGroup);
             Game.Current.Stop();
         },
         Mode = UITestMode.Headless,

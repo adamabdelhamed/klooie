@@ -2,8 +2,13 @@
 
 public class GameCollider : ConsoleControl
 {
+    internal float lastEvalTime;
+    public float MinEvalSeconds => this.lastEvalTime + EvalFrequencySeconds;
+    public float EvalFrequencySeconds => (Velocity.Speed > ColliderGroup.HighestSpeedForEvalCalc ? ColliderGroup.MostFrequentEval : ColliderGroup.EvalFrequencySlope * Velocity.speed + ColliderGroup.LeastFrequentEval);
+
     private bool connectToMainColliderGroup; // todo - remove this since I don't think there's any path where it can actually be set in time for OnInit
     public Velocity Velocity { get; private set; }
+    public ColliderGroup ColliderGroup { get; private set; }
     internal virtual bool AutoAddToColliderGroup => true;
     public virtual bool CanMoveTo(RectF bounds) => true;
 
@@ -40,9 +45,16 @@ public class GameCollider : ConsoleControl
     public void ConnectToGroup(ColliderGroup group)
     {
         if(group == null) throw new ArgumentNullException(nameof(group));
-        if (Velocity?.Group != null) throw new ArgumentException("This collider is already connected to a group");
+        if (ColliderGroup != null) throw new ArgumentException("This collider is already connected to a group");
         Velocity = VelocityPool.Instance.Rent();
-        Velocity.Init(this, group);
+        Velocity.OnDisposed(this, AssertVelocityDisposedByMe);
+        this.ColliderGroup = group;
+        group.Register(this);
+    }
+
+    private static void AssertVelocityDisposedByMe(GameCollider collider)
+    {
+        if(collider.Velocity != null) throw new InvalidOperationException("Velocity was not disposed by the collider that owns it.");
     }
 
     public GameCollider(RectF bounds, bool connectToMainColliderGroup = true) : this(connectToMainColliderGroup) => this.Bounds = bounds;
@@ -51,11 +63,10 @@ public class GameCollider : ConsoleControl
     {
         if(base.CanCollideWith(other) == false) return false;
         if(IsVisible == false || ReferenceEquals(this, other)) return false;
-        if(other is GameCollider otherCollider && otherCollider.Velocity?.Group != this.Velocity?.Group) return false;
 
         return true;
     }
-    public void GetObstacles(ObstacleBuffer buffer) => Velocity.Group.GetObstacles(this, buffer);
+    public void GetObstacles(ObstacleBuffer buffer) => ColliderGroup.GetObstacles(this, buffer);
 
     public GameCollider[] GetObstacles()
     {
@@ -148,8 +159,10 @@ public class GameCollider : ConsoleControl
     protected override void OnReturn()
     {
         base.OnReturn();
-        Velocity?.TryDispose("By owning collider");
+        var temp = Velocity;
         Velocity = null;
+        Velocity?.TryDispose("By owning collider");
+        ColliderGroup = null;
     }
 }
 

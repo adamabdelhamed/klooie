@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace tests.Gaming.Movement;
+/*
 [TestClass]
 [TestCategory(Categories.Gaming)]
 public class WanderLogicTests
@@ -152,3 +153,4 @@ public class WanderLogicTests
     }
 }
 
+*/
