@@ -18,7 +18,7 @@ public class Wander
         //onNewScoresAvailable?.Fire(scores.Items);
 
 
-        ConsoleApp.Current.InnerLoopAPIs.Delay(state.DelayMs, state, StaticTick);
+        ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.DelayMs, state, StaticTick);
     }
 }
 
