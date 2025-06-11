@@ -35,6 +35,7 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">the lifetime manager that determines when to stop being notified</param>
     public void Subscribe(Action handler, ILifetime lifetimeManager)
     {
+        if(lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ActionSubscription.Create(handler);
         Subscribers.Track(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
@@ -51,6 +52,7 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">The lifetime manager</param>
     public void Subscribe<TScope>(TScope scope, Action<TScope> handler, ILifetime lifetimeManager)
     {
+        if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
         Subscribers.Track(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
@@ -64,6 +66,7 @@ public class Event : Recyclable
     /// <param name="lifetimeManager">the lifetime manager</param>
     public void SubscribeWithPriority(Action handler, ILifetime lifetimeManager)
     {
+        if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ActionSubscription.Create(handler);
         Subscribers.TrackWithPriority(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
@@ -74,6 +77,7 @@ public class Event : Recyclable
     /// </summary>
     public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope> handler, ILifetime lifetimeManager)
     {
+        if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
         Subscribers.TrackWithPriority(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);

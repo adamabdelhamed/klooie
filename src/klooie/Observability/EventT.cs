@@ -30,6 +30,7 @@ public class Event<T> : Recyclable
 
     public void Subscribe(Action<T> handler, ILifetime lifetimeManager)
     {
+        if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ArgsSubscription<T>.Create(handler);
         Subscribers.Track(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
@@ -37,6 +38,7 @@ public class Event<T> : Recyclable
     }
     public void Subscribe<TScope>(TScope scope, Action<TScope,T> handler, ILifetime lifetimeManager)
     {
+        if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedArgsSubscription<TScope, T>.Create(scope, handler);
         Subscribers.Track(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
@@ -50,6 +52,7 @@ public class Event<T> : Recyclable
     /// <param name="lifetimeManager">the lifetime manager</param>
     public void SubscribeWithPriority(Action<T> handler, ILifetime lifetimeManager)
     {
+        if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ArgsSubscription<T>.Create(handler);
         Subscribers.TrackWithPriority(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
@@ -60,6 +63,7 @@ public class Event<T> : Recyclable
     /// </summary>
     public void SubscribeWithPriority<TScope>(TScope scope, Action<TScope,T> handler, ILifetime lifetimeManager)
     {
+        if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedArgsSubscription<TScope, T>.Create(scope, handler);
         Subscribers.TrackWithPriority(subscription);
         lifetimeManager.OnDisposed(subscription, TryDisposeMe);
@@ -85,6 +89,7 @@ public class Event<T> : Recyclable
         };
         Subscribe(wrappedHandler, lt);
     }
+
     public void SubscribeOnce<TScope>(TScope scope, Action<TScope,T> handler)
     {
         Action<T> wrappedAction = null;
@@ -130,6 +135,5 @@ public class Event<T> : Recyclable
         subscribers?.Dispose();
         subscribers = null;
     }
-
 }
 
