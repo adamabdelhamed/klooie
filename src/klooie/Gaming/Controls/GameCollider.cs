@@ -47,8 +47,14 @@ public class GameCollider : ConsoleControl
         if(group == null) throw new ArgumentNullException(nameof(group));
         if (ColliderGroup != null) throw new ArgumentException("This collider is already connected to a group");
         Velocity = VelocityPool.Instance.Rent();
+        Velocity.OnSpeedChanged.Subscribe(this, UpdateLastEvalTime, this);
         this.ColliderGroup = group;
         group.Register(this);
+    }
+
+    private static void UpdateLastEvalTime(GameCollider collider)
+    {
+        collider.lastEvalTime = (float)collider.ColliderGroup.Now.TotalSeconds;
     }
 
     public GameCollider(RectF bounds, bool connectToMainColliderGroup = true) : this(connectToMainColliderGroup) => this.Bounds = bounds;
