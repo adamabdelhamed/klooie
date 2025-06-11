@@ -47,14 +47,8 @@ public class GameCollider : ConsoleControl
         if(group == null) throw new ArgumentNullException(nameof(group));
         if (ColliderGroup != null) throw new ArgumentException("This collider is already connected to a group");
         Velocity = VelocityPool.Instance.Rent();
-        Velocity.OnDisposed(this, AssertVelocityDisposedByMe);
         this.ColliderGroup = group;
         group.Register(this);
-    }
-
-    private static void AssertVelocityDisposedByMe(GameCollider collider)
-    {
-        if(collider.Velocity != null) throw new InvalidOperationException("Velocity was not disposed by the collider that owns it.");
     }
 
     public GameCollider(RectF bounds, bool connectToMainColliderGroup = true) : this(connectToMainColliderGroup) => this.Bounds = bounds;
@@ -160,8 +154,8 @@ public class GameCollider : ConsoleControl
     {
         base.OnReturn();
         var temp = Velocity;
-        Velocity = null;
         Velocity?.TryDispose("By owning collider");
+        Velocity = null;
         ColliderGroup = null;
     }
 }
