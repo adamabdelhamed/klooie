@@ -25,7 +25,8 @@ internal interface IObservableCollection : IEnumerable
 /// <typeparam name="T">the type of elements this collection will contain</typeparam>
 public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableCollection, IReadOnlyList<T>
 {
-    private List<T> wrapped;
+    private RecyclableList<T> wrappedRecyclable;
+    private List<T> wrapped => (wrappedRecyclable ??= RecyclableListPool<T>.Instance.Rent()).Items;
     private Dictionary<T, Recyclable> membershipLifetimes;
     private Event<object> _untypedAdded;
     Event<object> IObservableCollection.Added => _untypedAdded ??= Event<object>.Create();
@@ -73,7 +74,6 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     protected override void OnInit()
     {
         base.OnInit();
-        wrapped = new List<T>();
         membershipLifetimes = new Dictionary<T, Recyclable>();
     }
 
@@ -94,6 +94,8 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
         removed = null;
         changed?.TryDispose();
         changed = null;
+        wrappedRecyclable?.TryDispose();
+        wrappedRecyclable = null;
         Clear();
     }
 
