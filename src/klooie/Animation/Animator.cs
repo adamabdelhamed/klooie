@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Threading.Tasks;
 namespace klooie;
 
 /// <summary>
@@ -13,47 +14,17 @@ public static class Animator
     /// </summary>
     /// <param name="options">animation options</param>
     /// <returns>an async task</returns>
-    public static async Task AnimateAsync(FloatAnimationOptions options)
+    public static Task AnimateAsync(FloatAnimationOptions options)
     {
-        options.DelayProvider = options.DelayProvider ?? new WallClockDelayProvider();
-        var loopLease = options.Loop?.Lease;
-        var originalFrom = options.From;
-        var originalTo = options.To;
-        try
-        {
-            var i = 0;
-            while (i == 0 || (options.Loop != null && options.Loop?.IsStillValid(loopLease.Value) == true))
-            {
-                i++;
-                await AnimateAsyncInternal(options);
-
-                if (options.AutoReverse)
-                {
-                    if (options.AutoReverseDelay > 0)
-                    {
-                        await options.DelayAsync(TimeSpan.FromMilliseconds(options.AutoReverseDelay));
-                    }
-
-                    var temp = options.From;
-                    options.From = options.To;
-                    options.To = temp;
-                    await AnimateAsyncInternal(options);
-
-                    if (options.AutoReverseDelay > 0)
-                    {
-                        await options.DelayAsync(TimeSpan.FromMilliseconds(options.AutoReverseDelay));
-                    }
-
-                    options.From = originalFrom;
-                    options.To = originalTo;
-                }
-            }
-        }
-        finally
-        {
-            options.From = originalFrom;
-            options.To = originalTo;
-        }
+        options.DelayProvider ??= new WallClockDelayProvider();
+        var state = FloatAnimationState.Create();
+        state.Options = options;
+        state.OriginalFrom = options.From;
+        state.OriginalTo = options.To;
+        state.LoopLease = options.Loop?.Lease ?? 0;
+        state.Tcs = new TaskCompletionSource();
+        StartForwardAnimation(state);
+        return state.Tcs.Task;
     }
 
     public static Task AnimateAsync(RGBAnimationOptions options)
@@ -186,14 +157,19 @@ public static class Animator
         });
     }
 
-    private static Task AnimateAsyncInternal(FloatAnimationOptions options)
+    private static void AnimateInternal(FloatAnimationOptions options, object scope, Action<object> onDone)
     {
-        if (options.IsCancelled != null && options.IsCancelled()) return Task.CompletedTask;
+        if (options.IsCancelled != null && options.IsCancelled())
+        {
+            onDone?.Invoke(scope);
+            return;
+        }
         var animationTime = TimeSpan.FromMilliseconds(options.Duration);
         if (animationTime == TimeSpan.Zero)
         {
             options.Setter(options.To);
-            return Task.CompletedTask;
+            onDone?.Invoke(scope);
+            return;
         }
 
         var numberOfFrames = (float)(ConsoleMath.Round(animationTime.TotalSeconds * options.TargetFramesPerSecond));
@@ -206,7 +182,6 @@ public static class Animator
 
         var delta = options.To - initialValue;
 
-        var tcs = new TaskCompletionSource();
         var frame = AnimationFrameState.Create();
         frame.Options = options;
         frame.NumberOfFrames = numberOfFrames;
@@ -215,13 +190,9 @@ public static class Animator
         frame.Delta = delta;
         frame.StartTime = Stopwatch.GetTimestamp();
         frame.I = -1;
-        frame.OnDisposed(tcs, StaticSetResult);
-        ProcessAnimationFrame(frame); 
-        return tcs.Task;
+        frame.OnDisposed(scope, onDone);
+        ProcessAnimationFrame(frame);
     }
-
-    private static void StaticSetResult(object obj) => ((TaskCompletionSource)obj).SetResult();
-    
 
     private static void ProcessAnimationFrame(object stateObj)
     {
@@ -285,6 +256,116 @@ public class AnimationFrameState : DelayState
         Delta = 0;
         StartTime = 0;
         I = 0;
+    }
+}
+
+public class FloatAnimationState : DelayState
+{
+    public FloatAnimationOptions Options { get; set; }
+    public float OriginalFrom { get; set; }
+    public float OriginalTo { get; set; }
+    public int LoopLease { get; set; }
+    public TaskCompletionSource Tcs { get; set; }
+
+    private FloatAnimationState() { }
+    private static LazyPool<FloatAnimationState> pool = new LazyPool<FloatAnimationState>(() => new FloatAnimationState());
+    public static FloatAnimationState Create()
+    {
+        var ret = pool.Value.Rent();
+        ret.AddDependency(ret);
+        return ret;
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
+        Options = null;
+        OriginalFrom = 0;
+        OriginalTo = 0;
+        LoopLease = 0;
+        Tcs = null;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Options = null;
+        OriginalFrom = 0;
+        OriginalTo = 0;
+        LoopLease = 0;
+        Tcs = null;
+    }
+}
+
+// --- Animation sequence helpers ---
+private static void StartForwardAnimation(object stateObj) => StartForwardAnimation((FloatAnimationState)stateObj);
+private static void StartForwardAnimation(FloatAnimationState state)
+{
+    AnimateInternal(state.Options, state, AfterForward);
+}
+
+private static void AfterForward(object o)
+{
+    var state = (FloatAnimationState)o;
+    if (state.Options.AutoReverse)
+    {
+        if (state.Options.AutoReverseDelay > 0)
+        {
+            ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.Options.AutoReverseDelay, state, StartReverse);
+        }
+        else
+        {
+            StartReverse(state);
+        }
+    }
+    else
+    {
+        CompleteOrLoop(state);
+    }
+}
+
+private static void StartReverse(object o)
+{
+    var state = (FloatAnimationState)o;
+    var temp = state.Options.From;
+    state.Options.From = state.Options.To;
+    state.Options.To = temp;
+    AnimateInternal(state.Options, state, AfterReverse);
+}
+
+private static void AfterReverse(object o)
+{
+    var state = (FloatAnimationState)o;
+    if (state.Options.AutoReverseDelay > 0)
+    {
+        ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.Options.AutoReverseDelay, state, FinishReverse);
+    }
+    else
+    {
+        FinishReverse(state);
+    }
+}
+
+private static void FinishReverse(object o)
+{
+    var state = (FloatAnimationState)o;
+    state.Options.From = state.OriginalFrom;
+    state.Options.To = state.OriginalTo;
+    CompleteOrLoop(state);
+}
+
+private static void CompleteOrLoop(FloatAnimationState state)
+{
+    if (state.Options.Loop != null && state.Options.Loop.IsStillValid(state.LoopLease))
+    {
+        StartForwardAnimation(state);
+    }
+    else
+    {
+        state.Options.From = state.OriginalFrom;
+        state.Options.To = state.OriginalTo;
+        state.Tcs.SetResult();
+        state.Dispose();
     }
 }
 
