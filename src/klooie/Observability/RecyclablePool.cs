@@ -45,6 +45,12 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
     public static string GetFriendlyName(Type type)
     {
+        // Special-case: If this is FuncPool<T>, just return T's friendly name
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(FuncPool<>))
+        {
+            return GetFriendlyName(type.GetGenericArguments()[0]);
+        }
+
         if (type.IsGenericType)
         {
             var baseName = type.Name.Substring(0, type.Name.IndexOf('`'));
@@ -52,6 +58,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
             var formattedArgs = string.Join(", ", Array.ConvertAll(genericArgs, GetFriendlyName));
             return $"{baseName}<{formattedArgs}>";
         }
+
         return type.Name;
     }
 
