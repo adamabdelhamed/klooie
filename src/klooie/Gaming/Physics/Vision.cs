@@ -35,7 +35,7 @@ public class Vision : Recyclable
         _visionInitiated?.Fire(vision);
         if (autoScan)
         {
-            Game.Current.InnerLoopAPIs.Delay(vision.ScanOffset, VisionDependencyState.Create(vision), ScanLoopBody);
+            Game.Current.InnerLoopAPIs.DelayIfValid(vision.ScanOffset, VisionDependencyState.Create(vision), ScanLoopBody);
         }
         return vision;
     }
@@ -201,6 +201,12 @@ public class Vision : Recyclable
         _targetBeingEvaluated?.TryDispose();
         _targetBeingEvaluated = null;
         TrackedObjectsDictionary.Clear();
+
+        for (var i = TrackedObjectsList.Count - 1; i >= 0; i--)
+        {
+            UnTrackAtIndex(i);
+        }
+
         TrackedObjectsList.Clear();
         _visibleObjectsChanged?.TryDispose();
         _visibleObjectsChanged = null;
