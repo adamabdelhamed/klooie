@@ -21,14 +21,26 @@ public readonly struct UniformGridCell : IEquatable<UniformGridCell>
     {
         return HashCode.Combine(X, Y);
     }
+
+    public RectF Bounds
+    {
+        get
+        {
+            float left = X * UniformGrid._cellSize;
+            float top = Y * UniformGrid._cellSize;
+            return new RectF(left, top, UniformGrid._cellSize, UniformGrid._cellSize);
+        }
+    }
 }
 public sealed class UniformGrid
 {  
     private List<UniformGridCell> cellBuffer = new List<UniformGridCell>();
-    private const float _cellSize = 100f;
+    public const float _cellSize = 100f;
     private readonly Dictionary<UniformGridCell, ObstacleBuffer> _buckets = new Dictionary<UniformGridCell, ObstacleBuffer>();
-    private readonly Dictionary<GameCollider,UniformGridMembershipState> membershipStates = new Dictionary<GameCollider, UniformGridMembershipState>();
- 
+    private readonly Dictionary<GameCollider, UniformGridMembershipState> membershipStates = new Dictionary<GameCollider, UniformGridMembershipState>();
+
+    public IEnumerable<KeyValuePair<UniformGridCell, ObstacleBuffer>> Buckets => _buckets;
+
     private uint _stamp;
     private void LoadCells(RectF b)
     {
