@@ -20,12 +20,12 @@ public class StackHunter
     public ComparableStackTrace? RegisterCurrentStackTrace(int skip, int take)
     {
             if (Mode == StackHunterMode.Off) return null;
-            var trace = new StackTrace(true);
+            var trace = new StackTrace(skip, true);
             var frames = trace.GetFrames();
             if (frames == null) return null;
 
             // Skip the first few frames (e.g., the hunter's methods) and take the ones we care about.
-            frames = frames.Skip(skip).Take(take).ToArray();
+            frames = frames.Take(take).ToArray();
             var comparableTrace = new ComparableStackTrace(frames);
 
             // Record or update count
