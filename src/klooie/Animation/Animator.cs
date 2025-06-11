@@ -207,7 +207,7 @@ public static class Animator
         var delta = options.To - initialValue;
 
         var tcs = new TaskCompletionSource();
-        var frame = AnimationFrameStatePool.Instance.Rent();
+        var frame = AnimationFrameState.Create();
         frame.Options = options;
         frame.NumberOfFrames = numberOfFrames;
         frame.TimeBetweenFrames = timeBetweenFrames;
@@ -251,11 +251,11 @@ public static class Animator
         }
 
 
-        ConsoleApp.Current.InnerLoopAPIs.Delay(ConsoleMath.Round(delayTime.TotalMilliseconds),state, ProcessAnimationFrame);
+        ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(ConsoleMath.Round(delayTime.TotalMilliseconds),state, ProcessAnimationFrame);
     }
 }
 
-public class AnimationFrameState : Recyclable
+public class AnimationFrameState : DelayState
 {
     // FloatAnimationOptions options, float numberOfFrames, TimeSpan timeBetweenFrames, float initialValue, float delta, long startTime, float i
     public FloatAnimationOptions Options { get; set; }
@@ -265,6 +265,15 @@ public class AnimationFrameState : Recyclable
     public float Delta { get; set; }
     public long StartTime { get; set; }
     public float I { get; set; }
+
+    private AnimationFrameState() { }
+    private static LazyPool<AnimationFrameState> pool = new LazyPool<AnimationFrameState>(() => new AnimationFrameState());
+    public static AnimationFrameState Create()
+    {
+        var ret = pool.Value.Rent();
+        ret.AddDependency(ret);
+        return ret;
+    }
 
     protected override void OnInit()
     {
