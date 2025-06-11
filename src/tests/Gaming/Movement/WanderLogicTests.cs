@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace tests.Gaming.Movement;
-/*
+
 [TestClass]
 [TestCategory(Categories.Gaming)]
 public class WanderLogicTests
@@ -38,6 +38,8 @@ public class WanderLogicTests
         Game.Current.GamePanel.Background = new RGB(50, 50, 50);
         var mover = AddMoverAndObstacles(moverPosition, curiosityPoint, obstaclePositions);
         var vision = Vision.Create(mover, autoScan: false);
+        var targeting = TargetingPool.Instance.Rent();
+        targeting.Bind(new TargetingOptions() { Source = mover, Vision = vision });
         vision.Range = 15;
         vision.Scan();
         var visionFilter = new VisionFilter(vision);
@@ -45,8 +47,7 @@ public class WanderLogicTests
 
         await context.PaintAndRecordKeyFrameAsync();
 
-        var wanderOptions = new WanderOptions() { Speed = () => 1, Velocity = mover.Velocity, Vision = vision, CloseEnough = 5, CuriousityPoint = ()=> curiosityPoint };
-        WanderLoopState state = WanderLoopState.Create(wanderOptions);
+        var state = WanderMovementState.Create(targeting, (s) => curiosityPoint, () => 1);
         mover.Velocity.Speed = 20;
         var scores = WanderLogic.AdjustSpeedAndVelocity(state);
         mover.Velocity.Speed = 0;
@@ -152,5 +153,3 @@ public class WanderLogicTests
         return mover;
     }
 }
-
-*/
