@@ -92,11 +92,14 @@ public sealed class ColliderGroup
     public void Tick()
     {
         UpdateTime();
-        FillColliderBuffer();
+        colliderBuffer.WriteableBuffer.Clear();
+        spatialIndex.EnumerateAll(colliderBuffer);
         frameRateMeter.Increment();
         for (var i = 0; i < colliderBuffer.WriteableBuffer.Count; i++)
         {
-            Tick(colliderBuffer.WriteableBuffer[i]);
+            var item = colliderBuffer.WriteableBuffer[i];
+            if(item == null) throw new InvalidOperationException($"Collider at index {i} is null. This should never happen, please report this issue.");
+            Tick(item);
         }
     }
 
@@ -380,13 +383,8 @@ public sealed class ColliderGroup
         preventer = null;
         return false;
     }
-    private void FillColliderBuffer()
-    {
-        colliderBuffer.WriteableBuffer.Clear();
-        spatialIndex.EnumerateAll(colliderBuffer);
-    }
-
  
+
     public void GetObstacles(GameCollider owner, ObstacleBuffer buffer)
     {
         spatialIndex.QueryExcept(buffer, owner);
