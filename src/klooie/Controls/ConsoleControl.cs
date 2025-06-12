@@ -60,15 +60,15 @@ public partial class ConsoleControl : Rectangular
     /// </summary>
     internal int ParentIndex { get; set; }
 
-    internal ObservableCollection<IConsoleControlFilter> _filters;
-    public ObservableCollection<IConsoleControlFilter> Filters
+    internal RecyclableList<IConsoleControlFilter> _filters;
+    public List<IConsoleControlFilter> Filters
     {
         get
         {
-            if (_filters != null) return _filters;
+            if (_filters != null) return _filters.Items;
 
-            _filters = ObservableCollectionPool<IConsoleControlFilter>.Instance.Rent();
-            return _filters;
+            _filters = RecyclableListPool<IConsoleControlFilter>.Instance.Rent();
+            return _filters.Items;
         }
     }
     public bool HasFilters => _filters != null && _filters.Count > 0;
