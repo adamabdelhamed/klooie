@@ -40,14 +40,14 @@ public static class WanderLogic
 {
 
 
-    
+
 
 
 
 
     // --- Public surface --------------------------------------------------------------------
 
-    /// <summary>
+     /// <summary>
     /// Top-level API used by <see cref="Wander"/>.  Returns the list of scores for every candidate.
     /// </summary>
     public static RecyclableList<AngleScore> AdjustSpeedAndVelocity(WanderMovementState state)
@@ -233,23 +233,10 @@ public static class WanderLogic
 
     private static float EvaluateSpeed(WanderMovementState state, Angle chosenAngle)
     {
-        var currentSpeed = state.Speed();
-
-        if (state.CuriosityPoint != null)
-        {
-            var target = state.CuriosityPoint(state);
-            if (target.HasValue)
-            {
-                float distance = state.Eye.Bounds.CalculateDistanceTo(target.Value);
-                if (distance <= state.CloseEnough)
-                {
-                    state.IsCurrentlyCloseEnoughToPointOfInterest = true;
-                    return 0f;
-                }
-            }
-        }
-        state.IsCurrentlyCloseEnoughToPointOfInterest = false;
-        return currentSpeed;
+        if (state.Speed() == 0) throw new Exception("Zero Speed Yo");
+        var pointOfInterest = state.CuriosityPoint == null ? null : state.CuriosityPoint.Invoke(state);
+        state.IsCurrentlyCloseEnoughToPointOfInterest = pointOfInterest.HasValue && state.Eye.Bounds.CalculateNormalizedDistanceTo(pointOfInterest.Value) <= state.CloseEnough;
+        return state.IsCurrentlyCloseEnoughToPointOfInterest ? 0 : state.Speed();
     }
 
     // ----------------------------------------------------------------------------------------

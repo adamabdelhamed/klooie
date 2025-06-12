@@ -314,7 +314,7 @@ public sealed class ColliderGroup
         if (spatialIndex.IsExpired(item)) return false;
         var velocity = item.Velocity;
         velocity._beforeEvaluate?.Fire();
-        var isReadyToMove = !(spatialIndex.IsExpired(item) || velocity.Speed == 0 || now < item.MinEvalSeconds);
+        var isReadyToMove = !(spatialIndex.IsExpired(item) || velocity.Speed == 0 || now < item.MinNextEvalTime);
         return isReadyToMove;
     }
     

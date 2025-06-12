@@ -3,7 +3,7 @@
 public class GameCollider : ConsoleControl
 {
     internal float lastEvalTime;
-    public float MinEvalSeconds => this.lastEvalTime + EvalFrequencySeconds;
+    public float MinNextEvalTime => this.lastEvalTime + EvalFrequencySeconds;
     public float EvalFrequencySeconds => (Velocity.Speed > ColliderGroup.HighestSpeedForEvalCalc ? ColliderGroup.MostFrequentEval : ColliderGroup.EvalFrequencySlope * Velocity.speed + ColliderGroup.LeastFrequentEval);
 
     private bool connectToMainColliderGroup; // todo - remove this since I don't think there's any path where it can actually be set in time for OnInit

@@ -20,11 +20,12 @@ public class VelocityTests
     {
         Test = async (context) =>
         {
-            var v = new GameCollider().Velocity;
+            var gc = new GameCollider();
+            var v = gc.Velocity;
             for (var s = 0; s < 200; s += 5)
             {
                 v.Speed = s;
-                Console.WriteLine($"Speed = {s}, EvalFrequency = {v.EvalFrequencySeconds} s");
+                Console.WriteLine($"Speed = {s}, EvalFrequency = {gc.EvalFrequencySeconds} s");
             }
             Game.Current.Stop();
         },

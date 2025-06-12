@@ -131,7 +131,7 @@ public static class Animator
         });
     }
 
-    public static void Animate(RGBAnimationOptions options)
+    public static void AnimateSync(RGBAnimationOptions options)
     {
         var deltaBufferR = new float[options.Transitions.Count];
         var deltaBufferG = new float[options.Transitions.Count];

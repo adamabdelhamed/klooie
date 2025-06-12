@@ -54,7 +54,7 @@ public class WanderDebuggerState : WanderMovementState
         SetOrClearFilter(HasCollidedInPastSecond, HasCollidedRecentlyFilter);
         SetOrClearFilter(IsCurrentlyCloseEnoughToPointOfInterest, IsAtPointOfInterestFilter);
         SetOrClearFilter(HasMovedInPastSecond, HasMovedRecentlyFilter);
-        SetOrClearFilter(HasBeenEvaluatedInPastSecond == false, StaleEvaluationFilter);
+        SetOrClearFilter(HasBeenEvaluatedInPastSecond == false && IsCurrentlyCloseEnoughToPointOfInterest == false, StaleEvaluationFilter);
     }
 
     public void RefreshLoopRunningFilter()
