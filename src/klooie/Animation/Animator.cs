@@ -307,7 +307,7 @@ public static class Animator
         var animationTime = TimeSpan.FromMilliseconds(options.Duration);
         if (animationTime == TimeSpan.Zero)
         {
-            options.Setter(options.To);
+            options.Set(options.To);
             onDone?.Invoke(scope);
             return;
         }
@@ -318,7 +318,7 @@ public static class Animator
         var timeBetweenFrames = TimeSpan.FromMilliseconds(ConsoleMath.Round(animationTime.TotalMilliseconds / numberOfFrames));
 
         var initialValue = options.From;
-        options.Setter(initialValue);
+        options.Set(initialValue);
 
         var delta = options.To - initialValue;
 
@@ -351,7 +351,7 @@ public static class Animator
 
         var scheduledTimeAfterThisFrame = TimeSpan.FromMilliseconds(state.TimeBetweenFrames.TotalMilliseconds * state.I);
         var newValue = state.InitialValue + (state.Delta * percentageDone);
-        state.Options.Setter(newValue);
+        state.Options.Set(newValue);
 
         var delayTime = state.Options.DelayProvider is WallClockDelayProvider ? TimeSpan.FromMilliseconds(Math.Max(0, scheduledTimeAfterThisFrame.TotalMilliseconds - Stopwatch.GetElapsedTime(state.StartTime).TotalMilliseconds)) : state.TimeBetweenFrames;
 

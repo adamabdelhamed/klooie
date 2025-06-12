@@ -11,17 +11,15 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        await Animator.AnimateAsync(new FloatAnimationOptions()
+        await Animator.AnimateAsync(new FloatAnimationOptions<FadeInFilter>()
         {
             From = 0,
             To = percentage,
             Duration = duration,
             DelayProvider = delayProvider,
-            EasingFunction = (p) => easingFunction(p),
-            Setter = p =>
-            {
-                filter.Percentage = p;
-            }
+            EasingFunction = easingFunction,
+            Setter = static (state, percentage) => { state.Percentage = percentage; },
+            Target = filter,
         });
         return filter;
     }
@@ -34,17 +32,15 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        Animator.AnimateSync(new FloatAnimationOptions()
+        Animator.AnimateSync(new FloatAnimationOptions<FadeInFilter>()
         {
             From = 0,
             To = percentage,
             Duration = duration,
             DelayProvider = delayProvider,
-            EasingFunction = (p) => easingFunction(p),
-            Setter = p =>
-            {
-                filter.Percentage = p;
-            }
+            EasingFunction = easingFunction,
+            Setter = static (state, percentage) => { state.Percentage = percentage; },
+            Target = filter,
         });
         return filter;
     }
@@ -58,17 +54,15 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        await Animator.AnimateAsync(new FloatAnimationOptions()
+        await Animator.AnimateAsync(new FloatAnimationOptions<FadeOutFilter>()
         {
             From = 0,
             To = percentage,
             Duration = duration,
             DelayProvider = delayProvider,
-            EasingFunction = (p) => easingFunction(p),
-            Setter = p =>
-            {
-                filter.Percentage = p;
-            }
+            EasingFunction = easingFunction,
+            Setter = static (state, percentage) => { state.Percentage = percentage; },
+            Target = filter,
         });
         return filter;
     }
@@ -81,17 +75,15 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        Animator.AnimateSync(new FloatAnimationOptions()
+        Animator.AnimateSync(new FloatAnimationOptions<FadeOutFilter>()
         {
             From = 0,
             To = percentage,
             Duration = duration,
             DelayProvider = delayProvider,
-            EasingFunction = (p) => easingFunction(p),
-            Setter = p =>
-            {
-                filter.Percentage = p;
-            }
+            EasingFunction = easingFunction,
+            Setter = static(state, percentage) => { state.Percentage = percentage; },
+            Target = filter,
         });
         return filter;
     }
