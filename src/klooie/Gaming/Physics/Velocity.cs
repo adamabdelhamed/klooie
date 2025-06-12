@@ -23,6 +23,8 @@ public sealed class Velocity : Recyclable
             Result = result;
             DistanceMoved = distanceMoved;
         }
+
+        public override string ToString() => $"MoveEval(Result: {Result}, DistanceMoved: {DistanceMoved})";
     }
 
     internal Angle angle;
@@ -69,7 +71,6 @@ public sealed class Velocity : Recyclable
             _onSpeedChanged?.Fire();
         }
     }
-    public float EvalFrequencySeconds =>  (this.Speed > ColliderGroup.HighestSpeedForEvalCalc ? ColliderGroup.MostFrequentEval : ColliderGroup.EvalFrequencySlope * this.speed + ColliderGroup.LeastFrequentEval);
 
     public TimeSpan NextCollisionETA
     {
@@ -102,6 +103,8 @@ public sealed class Velocity : Recyclable
         _beforeEvaluate = null;
         _onCollision?.TryDispose();
         _onCollision = null;
+        influenceSubscriptionLifetime?.TryDispose();
+        influenceSubscriptionLifetime = null;
     }
 
 
