@@ -262,6 +262,10 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     /// </summary>
     public void Clear()
     {
+        if(wrappedRecyclable == null || wrappedRecyclable.Count == 0)
+        {
+            return; // Nothing to clear
+        }
         var items = wrapped.ToArray();
         wrapped.Clear();
         LastModifiedIndex = 0;
