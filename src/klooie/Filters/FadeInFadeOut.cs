@@ -137,13 +137,14 @@ internal sealed class FadeInFilter : IConsoleControlFilter
 
     public void Filter(ConsoleBitmap bitmap)
     {
+        bool blendBackgroundFade = Control.Background == ConsoleString.DefaultBackgroundColor && Control.CompositionMode == CompositionMode.BlendBackground;
         for (var x = 0; x < bitmap.Width; x++)
         {
             for (var y = 0; y < bitmap.Height; y++)
             {
                 var pixel = bitmap.GetPixel(x, y);
                 bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, BackgroundColor.ToOther(pixel.ForegroundColor, Percentage),
-                    BackgroundColor.ToOther(pixel.BackgroundColor, Percentage)));
+                    (blendBackgroundFade && pixel.BackgroundColor == ConsoleString.DefaultBackgroundColor) ? ConsoleString.DefaultBackgroundColor : BackgroundColor.ToOther(pixel.BackgroundColor, Percentage)));
             }
         }
     }
