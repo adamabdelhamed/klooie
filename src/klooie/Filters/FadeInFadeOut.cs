@@ -25,6 +25,29 @@ public static class FadeEx
         });
         return filter;
     }
+    public static IConsoleControlFilter FadeInSync(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null, RGB? bg = null)
+    {
+        easingFunction = easingFunction ?? EasingFunctions.Linear;
+        var filter = new FadeInFilter();
+        if (bg.HasValue)
+        {
+            filter.BackgroundColor = bg.Value;
+        }
+        c.Filters.Add(filter);
+        Animator.AnimateSync(new FloatAnimationOptions()
+        {
+            From = 0,
+            To = percentage,
+            Duration = duration,
+            DelayProvider = delayProvider,
+            EasingFunction = (p) => easingFunction(p),
+            Setter = p =>
+            {
+                filter.Percentage = p;
+            }
+        });
+        return filter;
+    }
 
     public static async Task<IConsoleControlFilter> FadeOut(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null, RGB? bg = null)
     {
@@ -36,6 +59,29 @@ public static class FadeEx
         }
         c.Filters.Add(filter);
         await Animator.AnimateAsync(new FloatAnimationOptions()
+        {
+            From = 0,
+            To = percentage,
+            Duration = duration,
+            DelayProvider = delayProvider,
+            EasingFunction = (p) => easingFunction(p),
+            Setter = p =>
+            {
+                filter.Percentage = p;
+            }
+        });
+        return filter;
+    }
+    public static IConsoleControlFilter FadeOutSync(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null, RGB? bg = null)
+    {
+        easingFunction = easingFunction ?? EasingFunctions.Linear;
+        var filter = new FadeOutFilter();
+        if (bg.HasValue)
+        {
+            filter.BackgroundColor = bg.Value;
+        }
+        c.Filters.Add(filter);
+        Animator.AnimateSync(new FloatAnimationOptions()
         {
             From = 0,
             To = percentage,
