@@ -11,7 +11,7 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        await Animator.AnimateAsync(FloatAnimationState<FadeInFilter>.Create(0,percentage, duration, filter, static (state, percentage) =>  state.Percentage = percentage, easingFunction, delayProvider));
+        await Animator.AnimateAsync(0,percentage, duration, filter, static (state, percentage) =>  state.Percentage = percentage, easingFunction, delayProvider);
         return filter;
     }
     public static IConsoleControlFilter FadeInSync(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null, RGB? bg = null)
@@ -23,7 +23,7 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        Animator.AnimateSync(FloatAnimationState<FadeInFilter>.Create(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, delayProvider));
+        Animator.Animate(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, delayProvider);
         return filter;
     }
 
@@ -36,7 +36,7 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        await Animator.AnimateAsync(FloatAnimationState<FadeOutFilter>.Create(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, delayProvider));
+        await Animator.AnimateAsync(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, delayProvider);
         return filter;
     }
     public static IConsoleControlFilter FadeOutSync(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null, RGB? bg = null)
@@ -48,7 +48,7 @@ public static class FadeEx
             filter.BackgroundColor = bg.Value;
         }
         c.Filters.Add(filter);
-        Animator.AnimateSync(FloatAnimationState<FadeOutFilter>.Create(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, delayProvider));
+        Animator.Animate(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, delayProvider);
         return filter;
     }
 }

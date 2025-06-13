@@ -3,7 +3,7 @@
  
 public static partial class Animator
 {
-    public sealed class ConsoleControlAnimationState : FloatAnimationState<ConsoleControlAnimationState>
+    private sealed class ConsoleControlAnimationState : FloatAnimationState<ConsoleControlAnimationState>
     {
         public Func<RectF> Destination { get; set; }
         public ConsoleControl Control { get; set; }

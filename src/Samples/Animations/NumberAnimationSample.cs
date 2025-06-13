@@ -15,11 +15,11 @@ public class NumberAnimationSample : ConsoleApp
         var label = LayoutRoot.Add(new Label(textFactory())).CenterBoth();
 
         await Task.Delay(1000);
-        await Animator.AnimateAsync(Animator.FloatAnimationState.Create(start, end, 4000, (currentAnimatedValue) =>
+        await Animator.AnimateAsync(start, end, 4000, (currentAnimatedValue) =>
         {
             number = (float)Math.Round(currentAnimatedValue);
             label.Text = textFactory();
-        }));
+        });
         Stop();
     }
 }

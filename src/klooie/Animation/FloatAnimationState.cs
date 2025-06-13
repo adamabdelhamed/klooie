@@ -8,7 +8,7 @@ using static klooie.Animator;
 namespace klooie;
 public static partial  class Animator
 {
-    public class FloatAnimationState : CommonAnimationState
+    private class FloatAnimationState : CommonAnimationState
     {
         // Options
         public float From { get; set; }
@@ -21,7 +21,7 @@ public static partial  class Animator
         public virtual void Set(float percentage) => Setter(percentage);
         protected FloatAnimationState() { }
         private static LazyPool<FloatAnimationState> pool = new LazyPool<FloatAnimationState>(() => new FloatAnimationState());
-        public static FloatAnimationState Create(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime loop = null, Func<bool> isCancelled = null, int targetFramesPerSecond = DeafultTargetFramesPerSecond)
+        public static FloatAnimationState Create(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled , int targetFramesPerSecond )
         {
             var ret = pool.Value.Rent();
             ret.Construct(from, to, duration,setter, easingFunction, delayProvider , autoReverse , autoReverseDelay, loop , isCancelled, targetFramesPerSecond);
@@ -118,32 +118,32 @@ public static partial  class Animator
             }
         }
     }
-}
 
-public class FloatAnimationState<T> : FloatAnimationState
-{
-    /// <summary>
-    /// The action that applies the current animation value when it is time
-    /// </summary>
-    public Action<T, float> Setter { get; set; }
-    /// <summary>
-    /// The object that the setter will be called on
-    /// </summary>
-    public T Target { get; set; }
-
-    public override void Set(float percentage) => Setter(Target, percentage);
-    private static LazyPool<FloatAnimationState<T>> pool = new LazyPool<FloatAnimationState<T>>(() => new FloatAnimationState<T>());
-    public static FloatAnimationState<T> Create(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime loop = null, Func<bool> isCancelled = null, int targetFramesPerSecond = DeafultTargetFramesPerSecond)
+    private class FloatAnimationState<T> : FloatAnimationState
     {
-        var ret = pool.Value.Rent();
-        ret.Construct(from, to, duration, target, setter, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
-        return ret;
-    }
+        /// <summary>
+        /// The action that applies the current animation value when it is time
+        /// </summary>
+        public Action<T, float> Setter { get; set; }
+        /// <summary>
+        /// The object that the setter will be called on
+        /// </summary>
+        public T Target { get; set; }
 
-    protected void Construct(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
-    {
-        base.Construct(from, to, duration, null, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
-        Target = target;
-        Setter = setter;
+        public override void Set(float percentage) => Setter(Target, percentage);
+        private static LazyPool<FloatAnimationState<T>> pool = new LazyPool<FloatAnimationState<T>>(() => new FloatAnimationState<T>());
+        public static FloatAnimationState<T> Create(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
+        {
+            var ret = pool.Value.Rent();
+            ret.Construct(from, to, duration, target, setter, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+            return ret;
+        }
+
+        protected void Construct(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
+        {
+            base.Construct(from, to, duration, null, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+            Target = target;
+            Setter = setter;
+        }
     }
 }

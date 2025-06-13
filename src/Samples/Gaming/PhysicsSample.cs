@@ -92,7 +92,7 @@ public class PhysicsSample : Game
         whiteSquare.Velocity.OnCollision.Subscribe(async (collisionInfo) =>
         {
             if (whiteSquare.Background != RGB.White) return;
-            await Animator.AnimateAsync(Animator.RGBAnimationState.Create(new List<KeyValuePair<RGB, RGB>>() { new KeyValuePair<RGB, RGB>(RGB.Red, RGB.White) }, colors => whiteSquare.Background = colors[0], 1000));
+            await Animator.AnimateAsync(RGB.Red, RGB.White, 1000, color => whiteSquare.Background = color);
         }, whiteSquare);
     }
 

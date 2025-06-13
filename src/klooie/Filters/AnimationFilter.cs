@@ -8,7 +8,7 @@ public static class AnimateEx
         var filter = new AnimationFilter() { From = from, To = to };
         c.Filters.Add(filter);
 
-        await Animator.AnimateAsync(Animator.FloatAnimationState.Create(fromPerecntage, toPercentage, duration, p => filter.Percentage = p, easingFunction, null, false, 0, null, null));
+        await Animator.AnimateAsync(fromPerecntage, toPercentage, duration, p => filter.Percentage = p, easingFunction, null, false, 0, null, null);
         return filter;
     }
 }
