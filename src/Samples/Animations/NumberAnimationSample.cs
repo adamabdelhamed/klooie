@@ -15,19 +15,11 @@ public class NumberAnimationSample : ConsoleApp
         var label = LayoutRoot.Add(new Label(textFactory())).CenterBoth();
 
         await Task.Delay(1000);
-        await Animator.AnimateAsync(new FloatAnimationOptions()
+        await Animator.AnimateAsync(Animator.FloatAnimationState.Create(start, end, 4000, (currentAnimatedValue) =>
         {
-            // EasingFunctions.EaseOut makes the animation slow down at the end
-            EasingFunction = EasingFunctions.EaseOut, 
-            Duration = 4000,
-            From = start,
-            To = end,
-            Setter = (currentAnimatedValue) =>
-            {
-                number = (float)Math.Round(currentAnimatedValue);
-                label.Text = textFactory();
-            }
-        });
+            number = (float)Math.Round(currentAnimatedValue);
+            label.Text = textFactory();
+        }));
         Stop();
     }
 }

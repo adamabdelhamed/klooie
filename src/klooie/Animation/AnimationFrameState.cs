@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static klooie.Animator;
 
 namespace klooie;
-public class AnimationState : DelayState
+public class AnimationFrameState : DelayState
 {
-    public FloatAnimationOptions Options { get; set; }
+    public FloatAnimationState AnimationState { get; set; }
     public float NumberOfFrames { get; set; }
     public TimeSpan TimeBetweenFrames { get; set; }
     public float InitialValue { get; set; }
@@ -15,9 +16,9 @@ public class AnimationState : DelayState
     public long StartTime { get; set; }
     public float I { get; set; }
 
-    private AnimationState() { }
-    private static LazyPool<AnimationState> pool = new LazyPool<AnimationState>(() => new AnimationState());
-    public static AnimationState Create()
+    private AnimationFrameState() { }
+    private static LazyPool<AnimationFrameState> pool = new LazyPool<AnimationFrameState>(() => new AnimationFrameState());
+    public static AnimationFrameState Create()
     {
         var ret = pool.Value.Rent();
         ret.AddDependency(ret);
@@ -27,7 +28,7 @@ public class AnimationState : DelayState
     protected override void OnInit()
     {
         base.OnInit();
-        Options = null;
+        AnimationState = null;
         NumberOfFrames = 0;
         TimeBetweenFrames = TimeSpan.Zero;
         InitialValue = 0;

@@ -20,13 +20,6 @@ public class AnimationSample : ConsoleApp
     {
         var destination = new RectF(LayoutRoot.Right() - l.Width,l.Top , l.Width, l.Height);
         await l.FadeIn(1500);
-        await l.AnimateAsync(new ConsoleControlAnimationOptions()
-        {
-            Destination = () => destination,
-            Duration = 1500,
-            AutoReverse = true,
-            EasingFunction = ease,
-        });
     }
 }
 

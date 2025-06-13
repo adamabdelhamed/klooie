@@ -55,24 +55,21 @@ public class BuiltInEpicThemeTransition : EpicThemeTransition
             tasks.Add(ConsoleApp.Current.InvokeAsync(async () =>
             {
                 if (delay > 0) await Task.Delay(delay);
-                await Animator.AnimateAsync(new RGBAnimationOptions()
+                var transitions = myGroup.SelectMany(pixel => new KeyValuePair<RGB, RGB>[]
                 {
-                    Transitions = myGroup.SelectMany(pixel => new KeyValuePair<RGB, RGB>[]
+                    new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).ForegroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).ForegroundColor),
+                    new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).BackgroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).BackgroundColor),
+                }).ToList();
+                Action<RGB[]> callback = (colors) =>
+                {
+                    for (int i = 0; i < colors.Length; i += 2)
                     {
-                            new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).ForegroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).ForegroundColor),
-                            new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).BackgroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).BackgroundColor),
-                    }).ToList(),
-                    OnColorsChanged = (colors) =>
-                    {
-                        for (int i = 0; i < colors.Length; i += 2)
-                        {
-                            var pixel = myGroup.ElementAt(i / 2);
-                            Mask.SetPixel(pixel.x, pixel.y, new ConsoleCharacter(Mask.GetPixel(pixel.x, pixel.y).Value, colors[i], colors[i + 1]));
-                        }
-                    },
-                    Duration = DurationFunc(myGroup),
-                    EasingFunction = EasingFunctions.Linear,
-                });
+                        var pixel = myGroup.ElementAt(i / 2);
+                        Mask.SetPixel(pixel.x, pixel.y, new ConsoleCharacter(Mask.GetPixel(pixel.x, pixel.y).Value, colors[i], colors[i + 1]));
+                    }
+                };
+                await Animator.AnimateAsync(Animator.RGBAnimationState.Create(transitions, callback, DurationFunc(myGroup), EasingFunctions.Linear));
+              
             }));
         }
         await Task.WhenAll(tasks);

@@ -3,63 +3,64 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static klooie.Animator;
 
 namespace klooie;
 public static partial  class Animator
 {
-
-    public class FloatAnimationState : DelayState
+    public class FloatAnimationState : CommonAnimationState
     {
-        public FloatAnimationOptions Options { get; set; }
+        // Options
+        public float From { get; set; }
+        public float To { get; set; }
+        public Action<float> Setter { get; set; }
+
+        // Non-Options State
         public float OriginalFrom { get; set; }
         public float OriginalTo { get; set; }
-        public int LoopLease { get; set; }
-        public TaskCompletionSource? Tcs { get; set; }
-
-        private FloatAnimationState() { }
+        public virtual void Set(float percentage) => Setter(percentage);
+        protected FloatAnimationState() { }
         private static LazyPool<FloatAnimationState> pool = new LazyPool<FloatAnimationState>(() => new FloatAnimationState());
-        public static FloatAnimationState Create()
+        public static FloatAnimationState Create(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime loop = null, Func<bool> isCancelled = null, int targetFramesPerSecond = DeafultTargetFramesPerSecond)
         {
             var ret = pool.Value.Rent();
-            ret.AddDependency(ret);
+            ret.Construct(from, to, duration,setter, easingFunction, delayProvider , autoReverse , autoReverseDelay, loop , isCancelled, targetFramesPerSecond);
             return ret;
         }
-
-        protected override void OnInit()
+ 
+        protected void Construct(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
         {
-            base.OnInit();
-            Options = null;
-            OriginalFrom = 0;
-            OriginalTo = 0;
-            LoopLease = 0;
-            Tcs = null;
+            AddDependency(this);
+            base.Construct(duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+            From = from;
+            To = to;
+            OriginalFrom = from;
+            OriginalTo = to;
+            Setter = setter;
         }
 
         protected override void OnReturn()
         {
             base.OnReturn();
-            Options = null;
             OriginalFrom = 0;
             OriginalTo = 0;
-            LoopLease = 0;
-            Tcs = null;
+            From = 0;
+            To = 0;
+            Setter = null;
         }
 
         // --- Animation sequence helpers ---
         public static void StartForwardAnimation(object stateObj) => StartForwardAnimation((FloatAnimationState)stateObj);
-        public static void StartForwardAnimation(FloatAnimationState state)
-        {
-            Animator.AnimateInternal(state.Options, state, AfterForward);
-        }
+        public static void StartForwardAnimation(FloatAnimationState state) => Animator.AnimateInternal(state, AfterForward);
 
         private static void AfterForward(object o)
         {
             var state = (FloatAnimationState)o;
-            if (state.Options.AutoReverse)
+            if (state.AutoReverse)
             {
-                if (state.Options.AutoReverseDelay > 0)
+                if (state.AutoReverseDelay > 0)
                 {
-                    ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.Options.AutoReverseDelay, state, StartReverse);
+                    ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.AutoReverseDelay, state, StartReverse);
                 }
                 else
                 {
@@ -75,18 +76,18 @@ public static partial  class Animator
         private static void StartReverse(object o)
         {
             var state = (FloatAnimationState)o;
-            var temp = state.Options.From;
-            state.Options.From = state.Options.To;
-            state.Options.To = temp;
-            AnimateInternal(state.Options, state, AfterReverse);
+            var temp = state.From;
+            state.From = state.To;
+            state.To = temp;
+            AnimateInternal(state, AfterReverse);
         }
 
         private static void AfterReverse(object o)
         {
             var state = (FloatAnimationState)o;
-            if (state.Options.AutoReverseDelay > 0)
+            if (state.AutoReverseDelay > 0)
             {
-                ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.Options.AutoReverseDelay, state, FinishReverse);
+                ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.AutoReverseDelay, state, FinishReverse);
             }
             else
             {
@@ -97,24 +98,52 @@ public static partial  class Animator
         private static void FinishReverse(object o)
         {
             var state = (FloatAnimationState)o;
-            state.Options.From = state.OriginalFrom;
-            state.Options.To = state.OriginalTo;
+            state.From = state.OriginalFrom;
+            state.To = state.OriginalTo;
             CompleteOrLoop(state);
         }
 
         private static void CompleteOrLoop(FloatAnimationState state)
         {
-            if (state.Options.Loop != null && state.Options.Loop.IsStillValid(state.LoopLease))
+            if (state.Loop != null && state.Loop.IsStillValid(state.LoopLease))
             {
                 StartForwardAnimation(state);
             }
             else
             {
-                state.Options.From = state.OriginalFrom;
-                state.Options.To = state.OriginalTo;
+                state.From = state.OriginalFrom;
+                state.To = state.OriginalTo;
                 state.Tcs?.SetResult();
                 state.Dispose();
             }
         }
+    }
+}
+
+public class FloatAnimationState<T> : FloatAnimationState
+{
+    /// <summary>
+    /// The action that applies the current animation value when it is time
+    /// </summary>
+    public Action<T, float> Setter { get; set; }
+    /// <summary>
+    /// The object that the setter will be called on
+    /// </summary>
+    public T Target { get; set; }
+
+    public override void Set(float percentage) => Setter(Target, percentage);
+    private static LazyPool<FloatAnimationState<T>> pool = new LazyPool<FloatAnimationState<T>>(() => new FloatAnimationState<T>());
+    public static FloatAnimationState<T> Create(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime loop = null, Func<bool> isCancelled = null, int targetFramesPerSecond = DeafultTargetFramesPerSecond)
+    {
+        var ret = pool.Value.Rent();
+        ret.Construct(from, to, duration, target, setter, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+        return ret;
+    }
+
+    protected void Construct(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
+    {
+        base.Construct(from, to, duration, null, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+        Target = target;
+        Setter = setter;
     }
 }

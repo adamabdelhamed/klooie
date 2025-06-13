@@ -10,21 +10,16 @@ public class ColorAnimationSample : ConsoleApp
     {
         var controlToAnimate = LayoutRoot.Add(new ConsoleControl() { Width = 10, Height = 5, Background = RGB.Orange }).CenterBoth();
 
-        await Animator.AnimateAsync(new RGBAnimationOptions()
-        {
-            // this is a list in case you want to synchronize multiple color animations
-            Transitions = new List<KeyValuePair<RGB, RGB>>()
+        await Animator.AnimateAsync(Animator.RGBAnimationState.Create(new List<KeyValuePair<RGB, RGB>>()
             {
                 new KeyValuePair<RGB, RGB>(controlToAnimate.Background, RGB.Green),
-            },
-            OnColorsChanged = (RGB[] newColors) =>
+            }, (RGB[] newColors) =>
             {
                 // we're just animating one color so we access index 0
                 controlToAnimate.Background = newColors[0];
             },
-            Duration = 500,
-            AutoReverse = true,
-        });
+            autoReverse: true
+        ));
         Stop();
     }
 }

@@ -18,8 +18,7 @@ public class FixedAspectRatioPanelSample : ConsoleApp
         var whiteFixedAspectRatioPanel = resizablePanel.Add(new FixedAspectRatioPanel(2f / 1f, magentaPanelWithFixedAspectRatio) { Background = RGB.White }).Fill();
 
         // simulate resizing the window so we can see the fixed aspect ratio panel do its thing
-        await resizablePanel.AnimateAsync(new ConsoleControlAnimationOptions() { Destination = ()=> LayoutRoot.Bounds, Duration = 3000, AutoReverse = true });
-
+        await resizablePanel.AnimateAsync(()=> LayoutRoot.Bounds, 3000, autoReverse: true);
         Stop();
     }
 }
