@@ -80,7 +80,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
             EasingFunction ease = EasingFunctions.EaseInOut;
 
             // new format
-            var tempAnimation = temp.AnimateAsync(()=> tempDest, duration, ease,isCancelled: () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false);
+            var tempAnimation = temp.AnimateAsync(()=> tempDest, duration, ease,animationLifetime: seekLt);
 
 
             if (!forward)
@@ -91,9 +91,9 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
 
                 await Task.WhenAll
                 (
-                    right.AnimateAsync(() => rightAnimationDest, duration, ease, isCancelled: () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false),
-                    center.AnimateAsync(() => centerAnimationDest, duration, ease, isCancelled: () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false),
-                    left.AnimateAsync(() => leftAnimationDest, duration, ease, isCancelled: () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false),
+                    right.AnimateAsync(() => rightAnimationDest, duration, ease, animationLifetime: seekLt),
+                    center.AnimateAsync(() => centerAnimationDest, duration, ease, animationLifetime: seekLt),
+                    left.AnimateAsync(() => leftAnimationDest, duration, ease, animationLifetime: seekLt),
                     tempAnimation
                 );
 
@@ -110,9 +110,9 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
 
                 await Task.WhenAll
                 (
-                    right.AnimateAsync(() => rightAnimationDest, duration, ease, isCancelled: () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false),
-                    center.AnimateAsync(() => centerAnimationDest, duration, ease, isCancelled: () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false),
-                    left.AnimateAsync(() => leftAnimationDest, duration, ease, isCancelled: () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false),
+                    right.AnimateAsync(() => rightAnimationDest, duration, ease, animationLifetime: seekLt),
+                    center.AnimateAsync(() => centerAnimationDest, duration, ease, animationLifetime: seekLt),
+                    left.AnimateAsync(() => leftAnimationDest, duration, ease, animationLifetime: seekLt),
                     tempAnimation
                 );
 

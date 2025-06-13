@@ -117,7 +117,7 @@ public sealed partial class Camera : ConsolePanel
             }
         };
 
-        return Animator.AnimateAsync(0, 1, duration, setter, ease, delayProvider, false, 0, null, () => lt != null && lt.IsStillValid(lease.Value) == false); 
+        return Animator.AnimateAsync(0, 1, duration, setter, ease, delayProvider, false, 0, animationLifetime: lt); 
     }
 
     /// <summary>

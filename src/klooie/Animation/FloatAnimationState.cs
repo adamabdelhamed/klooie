@@ -21,17 +21,17 @@ public static partial  class Animator
         public virtual void Set(float percentage) => Setter(percentage);
         protected FloatAnimationState() { }
         private static LazyPool<FloatAnimationState> pool = new LazyPool<FloatAnimationState>(() => new FloatAnimationState());
-        public static FloatAnimationState Create(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled , int targetFramesPerSecond )
+        public static FloatAnimationState Create(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime , int targetFramesPerSecond )
         {
             var ret = pool.Value.Rent();
-            ret.Construct(from, to, duration,setter, easingFunction, delayProvider , autoReverse , autoReverseDelay, loop , isCancelled, targetFramesPerSecond);
+            ret.Construct(from, to, duration,setter, easingFunction, delayProvider , autoReverse , autoReverseDelay, loop , animationLifetime, targetFramesPerSecond);
             return ret;
         }
  
-        protected void Construct(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
+        protected void Construct(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime, int targetFramesPerSecond)
         {
             AddDependency(this);
-            base.Construct(duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+            base.Construct(duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond);
             From = from;
             To = to;
             OriginalFrom = from;
@@ -105,7 +105,7 @@ public static partial  class Animator
 
         private static void CompleteOrLoop(FloatAnimationState state)
         {
-            if (state.Loop != null && state.Loop.IsStillValid(state.LoopLease))
+            if (state.LoopShouldContinue)
             {
                 StartForwardAnimation(state);
             }
@@ -132,16 +132,16 @@ public static partial  class Animator
 
         public override void Set(float percentage) => Setter(Target, percentage);
         private static LazyPool<FloatAnimationState<T>> pool = new LazyPool<FloatAnimationState<T>>(() => new FloatAnimationState<T>());
-        public static FloatAnimationState<T> Create(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
+        public static FloatAnimationState<T> Create(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, ILifetime? animationLifetime, int targetFramesPerSecond)
         {
             var ret = pool.Value.Rent();
-            ret.Construct(from, to, duration, target, setter, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+            ret.Construct(from, to, duration, target, setter, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond);
             return ret;
         }
 
-        protected void Construct(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
+        protected void Construct(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime, int targetFramesPerSecond)
         {
-            base.Construct(from, to, duration, null, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+            base.Construct(from, to, duration, null, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond);
             Target = target;
             Setter = setter;
         }

@@ -3,22 +3,26 @@
 
 public abstract class CommonAnimationState : DelayState
 {
-    public double Duration { get; set; }
-    public EasingFunction EasingFunction { get; set; }
-    public IDelayProvider DelayProvider { get; set; }
-    public bool AutoReverse { get; set; }
-    public ILifetime Loop { get; set; }
-    public float AutoReverseDelay { get; set; }
-    public Func<bool> IsCancelled { get; set; }
-    public int TargetFramesPerSecond { get; set; }
+    public double Duration { get; private set; }
+    public EasingFunction EasingFunction { get; private set; }
+    public IDelayProvider DelayProvider { get; private set; }
+    public bool AutoReverse { get; private set; }
+    private int LoopLease { get; set; }
+    public ILifetime Loop { get; private set; }
+    public float AutoReverseDelay { get; private set; }
 
-    // Non-Options State
-    public int LoopLease { get; set; }
+    private int AnimationLifetimeLease { get; set; }
+    public ILifetime? AnimationLifetime { get; private set; }
+    public int TargetFramesPerSecond { get; private set; }
+
+    public bool LoopShouldContinue => Loop != null && Loop.IsStillValid(LoopLease) && AnimationShouldContinue;
+    public bool AnimationShouldContinue => AnimationLifetime == null || AnimationLifetime.IsStillValid(AnimationLifetimeLease);
+
     public TaskCompletionSource? Tcs { get; set; }
     protected CommonAnimationState() { }
 
 
-    protected void Construct(double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
+    protected void Construct(double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, ILifetime? animationLifetime, int targetFramesPerSecond)
     {
         AddDependency(this);
         Duration = duration;
@@ -28,16 +32,19 @@ public abstract class CommonAnimationState : DelayState
         AutoReverseDelay = autoReverseDelay;
         Loop = loop;
         LoopLease = loop?.Lease ?? 0;
-        IsCancelled = isCancelled;
+        AnimationLifetime = animationLifetime;
+        AnimationLifetimeLease = animationLifetime?.Lease ?? 0;
         TargetFramesPerSecond = targetFramesPerSecond;
     }
+
 
     protected override void OnReturn()
     {
         base.OnReturn();
         LoopLease = 0;
         DelayProvider = null;
-        IsCancelled = null;
+        AnimationLifetime = null;
+        AnimationLifetimeLease = 0;
         EasingFunction = null;
         Tcs = null;
     }

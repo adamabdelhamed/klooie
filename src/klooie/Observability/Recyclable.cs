@@ -187,15 +187,15 @@ public class GenericReferenceEqualityComparer<T> : IEqualityComparer<T>
 
 public static class TaskExtensions
 {
-    public static ILifetime ToLifetime(this Task t, EventLoop loop = null)
+    public static Recyclable ToLifetime(this Task t, EventLoop loop = null)
     {
         loop ??= ConsoleApp.Current;
         if (loop == null) throw new ArgumentException("ToLifetime() requires an event loop");
-        var lt = DefaultRecyclablePool.Instance.Rent(out _);
+        var lt = DefaultRecyclablePool.Instance.Rent(out int lease);
         loop.Invoke(async () =>
         {
             await t;
-            lt.Dispose();
+            lt.TryDispose(lease);
         });
         return lt;
     }

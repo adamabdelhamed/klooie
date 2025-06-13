@@ -16,16 +16,16 @@ public static partial class Animator
 
         private static LazyPool<ConsoleControlAnimationState> pool = new LazyPool<ConsoleControlAnimationState>(() => new ConsoleControlAnimationState());
 
-        public static ConsoleControlAnimationState Create(ConsoleControl control, Func<RectF> destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime loop = null, Func<bool> isCancelled = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
+        public static ConsoleControlAnimationState Create(ConsoleControl control, Func<RectF> destination, double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime, int targetFramesPerSecond)
         {
             var ret = pool.Value.Rent();
-            ret.Construct(control, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+            ret.Construct(control, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond);
             return ret;
         }
 
-        protected void Construct(ConsoleControl control, Func<RectF> destination, double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, Func<bool> isCancelled, int targetFramesPerSecond)
+        protected void Construct(ConsoleControl control, Func<RectF> destination, double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime, int targetFramesPerSecond)
         {
-            base.Construct(0, 1, duration, this, SetBounds, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, isCancelled, targetFramesPerSecond);
+            base.Construct(0, 1, duration, this, SetBounds, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond);
             Control = control ?? throw new ArgumentNullException(nameof(control));
             Destination = destination ?? throw new ArgumentNullException(nameof(destination));
             StartX = control.Left;
