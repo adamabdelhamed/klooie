@@ -41,233 +41,79 @@ public static class Animator
     }
 
     public static Task AnimateAsync(RGBAnimationOptions options)
-    {
-        var deltaBufferR = new float[options.Transitions.Count];
-        var deltaBufferG = new float[options.Transitions.Count];
-        var deltaBufferB = new float[options.Transitions.Count];
-
-        var deltaBufferRReversed = new float[options.Transitions.Count];
-        var deltaBufferGReversed = new float[options.Transitions.Count];
-        var deltaBufferBReversed = new float[options.Transitions.Count];
-
-        for (var i = 0; i < options.Transitions.Count; i++)
-        {
-            deltaBufferR[i] = options.Transitions[i].Value.R - options.Transitions[i].Key.R;
-            deltaBufferG[i] = options.Transitions[i].Value.G - options.Transitions[i].Key.G;
-            deltaBufferB[i] = options.Transitions[i].Value.B - options.Transitions[i].Key.B;
-
-            deltaBufferRReversed[i] = options.Transitions[i].Key.R - options.Transitions[i].Value.R;
-            deltaBufferGReversed[i] = options.Transitions[i].Key.G - options.Transitions[i].Value.G;
-            deltaBufferBReversed[i] = options.Transitions[i].Key.B - options.Transitions[i].Value.B;
-        }
-        var colorBuffer = new RGB[options.Transitions.Count];
-        var isReversed = false;
-        return AnimateAsync(new FloatAnimationOptions()
-        {
-            From = 0,
-            To = 1,
-            Duration = options.Duration,
-            AutoReverse = options.AutoReverse,
-            AutoReverseDelay = options.AutoReverseDelay,
-            DelayProvider = options.DelayProvider,
-            EasingFunction = options.EasingFunction,
-            IsCancelled = options.IsCancelled,
-            IsPaused = options.IsPaused,
-            Loop = options.Loop,
-            Setter = percentage =>
-            {
-                if (isReversed == false)
-                {
-                    for (var i = 0; i < options.Transitions.Count; i++)
-                    {
-
-                        if (percentage == 1)
-                        {
-                            colorBuffer[i] = new RGB(
-                           (byte)(options.Transitions[i].Value.R),
-                           (byte)(options.Transitions[i].Value.G),
-                           (byte)(options.Transitions[i].Value.B));
-                        }
-                        else
-                        {
-                            var rDeltaFrame = deltaBufferR[i] * percentage;
-                            var gDeltaFrame = deltaBufferG[i] * percentage;
-                            var bDeltaFrame = deltaBufferB[i] * percentage;
-
-                            colorBuffer[i] = new RGB(
-                                (byte)(options.Transitions[i].Key.R + rDeltaFrame),
-                                (byte)(options.Transitions[i].Key.G + gDeltaFrame),
-                                (byte)(options.Transitions[i].Key.B + bDeltaFrame));
-                        }
-                    }
-                }
-                else
-                {
-                    percentage = 1 - percentage;
-                    for (var i = 0; i < options.Transitions.Count; i++)
-                    {
-                        var rDeltaFrame = deltaBufferRReversed[i] * percentage;
-                        var gDeltaFrame = deltaBufferGReversed[i] * percentage;
-                        var bDeltaFrame = deltaBufferBReversed[i] * percentage;
-                        if (percentage == 1)
-                        {
-                            colorBuffer[i] = new RGB(
-                           (byte)(options.Transitions[i].Key.R),
-                           (byte)(options.Transitions[i].Key.G),
-                           (byte)(options.Transitions[i].Key.B));
-                        }
-                        else
-                        {
-                            colorBuffer[i] = new RGB(
-                                (byte)(options.Transitions[i].Value.R + rDeltaFrame),
-                                (byte)(options.Transitions[i].Value.G + gDeltaFrame),
-                                (byte)(options.Transitions[i].Value.B + bDeltaFrame));
-                        }
-                    }
-                }
-
-                options.OnColorsChanged(colorBuffer);
-            }
-        });
-    }
+        => AnimateAsync(CreateRGBAnimation(options));
 
     public static void AnimateSync(RGBAnimationOptions options)
-    {
-        var deltaBufferR = new float[options.Transitions.Count];
-        var deltaBufferG = new float[options.Transitions.Count];
-        var deltaBufferB = new float[options.Transitions.Count];
-
-        var deltaBufferRReversed = new float[options.Transitions.Count];
-        var deltaBufferGReversed = new float[options.Transitions.Count];
-        var deltaBufferBReversed = new float[options.Transitions.Count];
-
-        for (var i = 0; i < options.Transitions.Count; i++)
-        {
-            deltaBufferR[i] = options.Transitions[i].Value.R - options.Transitions[i].Key.R;
-            deltaBufferG[i] = options.Transitions[i].Value.G - options.Transitions[i].Key.G;
-            deltaBufferB[i] = options.Transitions[i].Value.B - options.Transitions[i].Key.B;
-
-            deltaBufferRReversed[i] = options.Transitions[i].Key.R - options.Transitions[i].Value.R;
-            deltaBufferGReversed[i] = options.Transitions[i].Key.G - options.Transitions[i].Value.G;
-            deltaBufferBReversed[i] = options.Transitions[i].Key.B - options.Transitions[i].Value.B;
-        }
-        var colorBuffer = new RGB[options.Transitions.Count];
-        var isReversed = false;
-        AnimateSync(new FloatAnimationOptions()
-        {
-            From = 0,
-            To = 1,
-            Duration = options.Duration,
-            AutoReverse = options.AutoReverse,
-            AutoReverseDelay = options.AutoReverseDelay,
-            DelayProvider = options.DelayProvider,
-            EasingFunction = options.EasingFunction,
-            IsCancelled = options.IsCancelled,
-            IsPaused = options.IsPaused,
-            Loop = options.Loop,
-            Setter = percentage =>
-            {
-                if (isReversed == false)
-                {
-                    for (var i = 0; i < options.Transitions.Count; i++)
-                    {
-
-                        if (percentage == 1)
-                        {
-                            colorBuffer[i] = new RGB(
-                           (byte)(options.Transitions[i].Value.R),
-                           (byte)(options.Transitions[i].Value.G),
-                           (byte)(options.Transitions[i].Value.B));
-                        }
-                        else
-                        {
-                            var rDeltaFrame = deltaBufferR[i] * percentage;
-                            var gDeltaFrame = deltaBufferG[i] * percentage;
-                            var bDeltaFrame = deltaBufferB[i] * percentage;
-
-                            colorBuffer[i] = new RGB(
-                                (byte)(options.Transitions[i].Key.R + rDeltaFrame),
-                                (byte)(options.Transitions[i].Key.G + gDeltaFrame),
-                                (byte)(options.Transitions[i].Key.B + bDeltaFrame));
-                        }
-                    }
-                }
-                else
-                {
-                    percentage = 1 - percentage;
-                    for (var i = 0; i < options.Transitions.Count; i++)
-                    {
-                        var rDeltaFrame = deltaBufferRReversed[i] * percentage;
-                        var gDeltaFrame = deltaBufferGReversed[i] * percentage;
-                        var bDeltaFrame = deltaBufferBReversed[i] * percentage;
-                        if (percentage == 1)
-                        {
-                            colorBuffer[i] = new RGB(
-                           (byte)(options.Transitions[i].Key.R),
-                           (byte)(options.Transitions[i].Key.G),
-                           (byte)(options.Transitions[i].Key.B));
-                        }
-                        else
-                        {
-                            colorBuffer[i] = new RGB(
-                                (byte)(options.Transitions[i].Value.R + rDeltaFrame),
-                                (byte)(options.Transitions[i].Value.G + gDeltaFrame),
-                                (byte)(options.Transitions[i].Value.B + bDeltaFrame));
-                        }
-                    }
-                }
-
-                options.OnColorsChanged(colorBuffer);
-            }
-        });
-    }
+        => AnimateSync(CreateRGBAnimation(options));
 
 
     public static Task AnimateAsync(this ConsoleControl control, ConsoleControlAnimationOptions options)
-    {
-        var startX = control.Left;
-        var startY = control.Top;
-        var startW = control.Bounds.Width;
-        var startH = control.Bounds.Height;
-
-        return AnimateAsync(new FloatAnimationOptions()
-        {
-            Duration = options.Duration,
-            AutoReverse = options.AutoReverse,
-            AutoReverseDelay = options.AutoReverseDelay,
-            DelayProvider = options.DelayProvider,
-            Loop = options.Loop,
-            EasingFunction = options.EasingFunction,
-            From = 0,
-            To = 1,
-            IsCancelled = options.IsCancelled,
-            IsPaused = options.IsPaused,
-            Setter = v =>
-            {
-                var dest = options.Destination();
-                var xDelta = dest.Left - startX;
-                var yDelta = dest.Top - startY;
-                var wDelta = dest.Width - startW;
-                var hDelta = dest.Height - startH;
-
-                var frameX = startX + (v * xDelta);
-                var frameY = startY + (v * yDelta);
-                var frameW = startW + (v * wDelta);
-                var frameH = startH + (v * hDelta);
-                var frameBounds = new RectF(frameX, frameY, frameW, frameH);
-                options.Setter(control, frameBounds);
-            }
-        });
-    }
+        => AnimateAsync(CreateConsoleControlAnimation(control, options));
 
     public static void Animate(this ConsoleControl control, ConsoleControlAnimationOptions options)
-    {
-        var startX = control.Left;
-        var startY = control.Top;
-        var startW = control.Bounds.Width;
-        var startH = control.Bounds.Height;
+        => AnimateSync(CreateConsoleControlAnimation(control, options));
 
-        AnimateAsync(new FloatAnimationOptions()
+    private static FloatAnimationOptions<RGBAnimationState> CreateRGBAnimation(RGBAnimationOptions options)
+    {
+        var state = new RGBAnimationState
+        {
+            Options = options,
+            DeltaR = new float[options.Transitions.Count],
+            DeltaG = new float[options.Transitions.Count],
+            DeltaB = new float[options.Transitions.Count],
+            Buffer = new RGB[options.Transitions.Count]
+        };
+
+        for (var i = 0; i < options.Transitions.Count; i++)
+        {
+            state.DeltaR[i] = options.Transitions[i].Value.R - options.Transitions[i].Key.R;
+            state.DeltaG[i] = options.Transitions[i].Value.G - options.Transitions[i].Key.G;
+            state.DeltaB[i] = options.Transitions[i].Value.B - options.Transitions[i].Key.B;
+        }
+
+        return new FloatAnimationOptions<RGBAnimationState>()
+        {
+            From = 0,
+            To = 1,
+            Duration = options.Duration,
+            AutoReverse = options.AutoReverse,
+            AutoReverseDelay = options.AutoReverseDelay,
+            DelayProvider = options.DelayProvider,
+            EasingFunction = options.EasingFunction,
+            IsCancelled = options.IsCancelled,
+            IsPaused = options.IsPaused,
+            Loop = options.Loop,
+            Target = state,
+            Setter = static (s, p) => SetRGBAnimation(s, p)
+        };
+    }
+
+    private static void SetRGBAnimation(RGBAnimationState state, float percentage)
+    {
+        for (var i = 0; i < state.Buffer.Length; i++)
+        {
+            var start = state.Options.Transitions[i].Key;
+            state.Buffer[i] = new RGB(
+                (byte)(start.R + (state.DeltaR[i] * percentage)),
+                (byte)(start.G + (state.DeltaG[i] * percentage)),
+                (byte)(start.B + (state.DeltaB[i] * percentage)));
+        }
+        state.Options.OnColorsChanged(state.Buffer);
+    }
+
+    private static FloatAnimationOptions<ConsoleControlAnimationState> CreateConsoleControlAnimation(ConsoleControl control, ConsoleControlAnimationOptions options)
+    {
+        var state = new ConsoleControlAnimationState
+        {
+            Control = control,
+            Options = options,
+            StartX = control.Left,
+            StartY = control.Top,
+            StartW = control.Bounds.Width,
+            StartH = control.Bounds.Height
+        };
+
+        return new FloatAnimationOptions<ConsoleControlAnimationState>()
         {
             Duration = options.Duration,
             AutoReverse = options.AutoReverse,
@@ -279,22 +125,20 @@ public static class Animator
             To = 1,
             IsCancelled = options.IsCancelled,
             IsPaused = options.IsPaused,
-            Setter = v =>
-            {
-                var dest = options.Destination();
-                var xDelta = dest.Left - startX;
-                var yDelta = dest.Top - startY;
-                var wDelta = dest.Width - startW;
-                var hDelta = dest.Height - startH;
+            Target = state,
+            Setter = static (s, v) => SetConsoleControlAnimation(s, v)
+        };
+    }
 
-                var frameX = startX + (v * xDelta);
-                var frameY = startY + (v * yDelta);
-                var frameW = startW + (v * wDelta);
-                var frameH = startH + (v * hDelta);
-                var frameBounds = new RectF(frameX, frameY, frameW, frameH);
-                options.Setter(control, frameBounds);
-            }
-        });
+    private static void SetConsoleControlAnimation(ConsoleControlAnimationState state, float v)
+    {
+        var dest = state.Options.Destination();
+        var frameBounds = new RectF(
+            state.StartX + (v * (dest.Left - state.StartX)),
+            state.StartY + (v * (dest.Top - state.StartY)),
+            state.StartW + (v * (dest.Width - state.StartW)),
+            state.StartH + (v * (dest.Height - state.StartH)));
+        state.Options.Setter(state.Control, frameBounds);
     }
 
     private static void AnimateInternal(FloatAnimationOptions options, object scope, Action<object> onDone)
@@ -365,6 +209,25 @@ public static class Animator
         ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(ConsoleMath.Round(delayTime.TotalMilliseconds), state, ProcessAnimationFrame);
     }
 
+
+    private sealed class RGBAnimationState
+    {
+        public RGBAnimationOptions Options { get; set; }
+        public float[] DeltaR { get; set; }
+        public float[] DeltaG { get; set; }
+        public float[] DeltaB { get; set; }
+        public RGB[] Buffer { get; set; }
+    }
+
+    private sealed class ConsoleControlAnimationState
+    {
+        public ConsoleControl Control { get; set; }
+        public ConsoleControlAnimationOptions Options { get; set; }
+        public float StartX { get; set; }
+        public float StartY { get; set; }
+        public float StartW { get; set; }
+        public float StartH { get; set; }
+    }
 
     public class AnimationFrameState : DelayState
     {
