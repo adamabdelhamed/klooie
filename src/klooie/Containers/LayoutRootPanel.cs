@@ -9,6 +9,7 @@ public partial class LayoutRootPanel : ConsolePanel
     private ConsoleCharacter defaultPen;
     internal Event OnWindowResized { get => _onWindowResized ?? (_onWindowResized = Event.Create()); }
     internal int FramesPerSecond => paintRateMeter.CurrentFPS;
+    internal double SlowestFrameInPrevSecondMs => paintRateMeter.SlowestRecentFrame;
     internal int TotalPaints => paintRateMeter.TotalFrames;
     internal bool PaintEnabled { get; set; } = true;
     internal bool ClearOnExit { get; set; } = true;
