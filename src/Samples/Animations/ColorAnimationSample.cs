@@ -9,22 +9,7 @@ public class ColorAnimationSample : ConsoleApp
     protected override async Task Startup()
     {
         var controlToAnimate = LayoutRoot.Add(new ConsoleControl() { Width = 10, Height = 5, Background = RGB.Orange }).CenterBoth();
-
-        await Animator.AnimateAsync(new RGBAnimationOptions()
-        {
-            // this is a list in case you want to synchronize multiple color animations
-            Transitions = new List<KeyValuePair<RGB, RGB>>()
-            {
-                new KeyValuePair<RGB, RGB>(controlToAnimate.Background, RGB.Green),
-            },
-            OnColorsChanged = (RGB[] newColors) =>
-            {
-                // we're just animating one color so we access index 0
-                controlToAnimate.Background = newColors[0];
-            },
-            Duration = 500,
-            AutoReverse = true,
-        });
+        await Animator.AnimateAsync(controlToAnimate.Background, RGB.Green, 500, (RGB newColor) => controlToAnimate.Background = newColor, autoReverse: true);
         Stop();
     }
 }

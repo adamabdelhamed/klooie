@@ -139,15 +139,7 @@ public static class Dialog
         else
         {
             var lease = lt.Lease;
-            return Animator.AnimateAsync(new FloatAnimationOptions()
-            {
-                From = from,
-                To = to,
-                Duration = duration,
-                EasingFunction = EasingFunctions.EaseInOut,
-                IsCancelled = () => lt.IsStillValid(lease) == false,
-                Setter = percentage => setter(percentage)
-            });
+            return Animator.AnimateAsync(from, to, duration, setter, EasingFunctions.EaseInOut, null, false, 0, animationLifetime: lt);
         }
     }
 }

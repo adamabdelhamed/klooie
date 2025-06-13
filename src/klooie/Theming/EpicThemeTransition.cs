@@ -47,33 +47,47 @@ public class BuiltInEpicThemeTransition : EpicThemeTransition
     protected override async Task Execute()
     {
         List<Task> tasks = new List<Task>();
+        int i = 0;
         foreach (var group in EnumeratePixels(BitmapOfOldTheme, BitmapOfNewTheme).GroupBy(groupBy))
         {
             // capture loop variables because we're going to use them in a closure
             var myGroup = group;
             var delay = DelayFunc(myGroup.Key);
+            var myI = i;
             tasks.Add(ConsoleApp.Current.InvokeAsync(async () =>
             {
                 if (delay > 0) await Task.Delay(delay);
-                await Animator.AnimateAsync(new RGBAnimationOptions()
+                var foregroundTransitions = myGroup.SelectMany(pixel => new KeyValuePair<RGB, RGB>[]
                 {
-                    Transitions = myGroup.SelectMany(pixel => new KeyValuePair<RGB, RGB>[]
-                    {
-                            new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).ForegroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).ForegroundColor),
-                            new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).BackgroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).BackgroundColor),
-                    }).ToList(),
-                    OnColorsChanged = (colors) =>
-                    {
-                        for (int i = 0; i < colors.Length; i += 2)
-                        {
-                            var pixel = myGroup.ElementAt(i / 2);
-                            Mask.SetPixel(pixel.x, pixel.y, new ConsoleCharacter(Mask.GetPixel(pixel.x, pixel.y).Value, colors[i], colors[i + 1]));
-                        }
-                    },
-                    Duration = DurationFunc(myGroup),
-                    EasingFunction = EasingFunctions.Linear,
-                });
+                    new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).ForegroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).ForegroundColor),
+                }).ToList();
+                var backgroundTransitions = myGroup.SelectMany(pixel => new KeyValuePair<RGB, RGB>[]
+                {
+                    new KeyValuePair<RGB, RGB>(BitmapOfOldTheme.GetPixel(pixel.x, pixel.y).BackgroundColor, BitmapOfNewTheme.GetPixel(pixel.x, pixel.y).BackgroundColor),
+                }).ToList();
+                Action<RGB> foregroundCallback = (color) =>
+                {
+
+                    var pixel = myGroup.ElementAt(myI);
+                    var maskPixel = Mask.GetPixel(pixel.x, pixel.y);
+                    Mask.SetPixel(pixel.x, pixel.y, new ConsoleCharacter(maskPixel.Value, color, maskPixel.BackgroundColor));
+
+                };
+                Action<RGB> backgroundCallback = (color) =>
+                {
+                    var pixel = myGroup.ElementAt(myI);
+                    var maskPixel = Mask.GetPixel(pixel.x, pixel.y);
+                    Mask.SetPixel(pixel.x, pixel.y, new ConsoleCharacter(maskPixel.Value, maskPixel.ForegroundColor, color));
+                };
+
+                var groupTasks = new List<Task>();
+                for (var j = 0; j < foregroundTransitions.Count; j++)
+                {
+                    groupTasks.Add(Animator.AnimateAsync(foregroundTransitions[j].Key, foregroundTransitions[j].Value, DurationFunc(myGroup), foregroundCallback,  EasingFunctions.Linear));
+                }
+                await Task.WhenAll(groupTasks);
             }));
+            i++;
         }
         await Task.WhenAll(tasks);
     }

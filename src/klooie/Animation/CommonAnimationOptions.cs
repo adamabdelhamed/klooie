@@ -1,70 +1,51 @@
 ﻿namespace klooie;
 
-public class CommonAnimationOptions
+
+public abstract class CommonAnimationState : DelayState
 {
-    public int TargetFramesPerSecond { get; set; } = Animator.DeafultTargetFramesPerSecond;
-    public EasingFunction EasingFunction { get; set; } = EasingFunctions.Linear;
+    public double Duration { get; private set; }
+    public EasingFunction EasingFunction { get; private set; }
+    public IDelayProvider DelayProvider { get; private set; }
+    public bool AutoReverse { get; private set; }
+    private int LoopLease { get; set; }
+    public ILifetime Loop { get; private set; }
+    public float AutoReverseDelay { get; private set; }
 
-    /// <summary>
-    /// The duration of the animation in milliseconds
-    /// </summary>
-    public double Duration { get; set; } = 500;
+    private int AnimationLifetimeLease { get; set; }
+    public ILifetime? AnimationLifetime { get; private set; }
+    public int TargetFramesPerSecond { get; private set; }
 
-    /// <summary>
-    /// The provider to use for delaying between animation frames
-    /// </summary>
-    public IDelayProvider DelayProvider { get; set; }
+    public bool LoopShouldContinue => Loop != null && Loop.IsStillValid(LoopLease) && AnimationShouldContinue;
+    public bool AnimationShouldContinue => AnimationLifetime == null || AnimationLifetime.IsStillValid(AnimationLifetimeLease);
 
-    /// <summary>
-    /// If true then the animation will automatically reverse itself when done
-    /// </summary>
-    public bool AutoReverse { get; set; }
+    public TaskCompletionSource? Tcs { get; set; }
+    protected CommonAnimationState() { }
 
-    /// <summary>
-    /// When specified, the animation will loop until this lifetime completes
-    /// </summary>
-    public ILifetime Loop { get; set; }
 
-    /// <summary>
-    /// If auto reverse is enabled, this is the pause, in milliseconds, after the forward animation
-    /// finishes, to wait before reversing
-    /// </summary>
-    public float AutoReverseDelay { get; set; } = 0;
-
-    /// <summary>
-    /// A callback that indicates that we should end the animation early
-    /// </summary>
-    public Func<bool> IsCancelled { get; set; }
-
-    /// <summary>
-    /// A callback that indicates that the animation should pause
-    /// </summary>
-    public Func<bool> IsPaused { get; set; }
-
-    private async Task<bool> HandlePause()
+    protected void Construct(double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, ILifetime? animationLifetime, int targetFramesPerSecond)
     {
-        var ret = false;
-        while (IsPaused != null && IsPaused.Invoke())
-        {
-            ret = true;
-            await Task.Yield();
-        }
-        return ret;
+        AddDependency(this);
+        Duration = duration;
+        EasingFunction = easingFunction ?? EasingFunctions.Linear;
+        DelayProvider = delayProvider ?? Animator.DefaultDelayProvider;
+        AutoReverse = autoReverse;
+        AutoReverseDelay = autoReverseDelay;
+        Loop = loop;
+        LoopLease = loop?.Lease ?? 0;
+        AnimationLifetime = animationLifetime;
+        AnimationLifetimeLease = animationLifetime?.Lease ?? 0;
+        TargetFramesPerSecond = targetFramesPerSecond;
     }
 
-    internal async Task YieldAsync()
-    {
-        if (await HandlePause() == false)
-        {
-            await Task.Yield();
-        }
-    }
 
-    public async Task DelayAsync(TimeSpan ts)
+    protected override void OnReturn()
     {
-        if (await HandlePause() == false)
-        {
-            await DelayProvider.Delay(ts);
-        }
+        base.OnReturn();
+        LoopLease = 0;
+        DelayProvider = null;
+        AnimationLifetime = null;
+        AnimationLifetimeLease = 0;
+        EasingFunction = null;
+        Tcs = null;
     }
 }

@@ -105,26 +105,19 @@ public sealed partial class Camera : ConsolePanel
         var startX = cameraLocation.Left;
         var startY = cameraLocation.Top;
         var lease = lt?.Lease;
-        return Animator.AnimateAsync(new FloatAnimationOptions()
+        Action<float> setter = v =>
         {
-            Duration = duration,
-            EasingFunction = ease,
-            From = 0,
-            To = 1,
-            IsCancelled = () => lt != null && lt.IsStillValid(lease.Value) == false,
-            Setter = v =>
+            var xDelta = dest.Left - startX;
+            var yDelta = dest.Top - startY;
+            var frameX = startX + (v * xDelta);
+            var frameY = startY + (v * yDelta);
+            if (lt == null || (lt != null && lt.IsStillValid(lease.Value) == true))
             {
-                var xDelta = dest.Left - startX;
-                var yDelta = dest.Top - startY;
-                var frameX = startX + (v * xDelta);
-                var frameY = startY + (v * yDelta);
-                if (lt == null || (lt != null && lt.IsStillValid(lease.Value) == true))
-                {
-                    CameraLocation = new LocF(frameX, frameY);
-                }
-            },
-            DelayProvider = delayProvider
-        });
+                CameraLocation = new LocF(frameX, frameY);
+            }
+        };
+
+        return Animator.AnimateAsync(0, 1, duration, setter, ease, delayProvider, false, 0, animationLifetime: lt); 
     }
 
     /// <summary>

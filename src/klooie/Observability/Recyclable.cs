@@ -105,7 +105,8 @@ public class Recyclable : ILifetime
     public Recyclable CreateChildRecyclable(out int lease)
     {
         var ret = DefaultRecyclablePool.Instance.Rent(out lease);
-        OnDisposed(ret, TryDisposeChild);
+        var childLease = lease;
+        OnDisposed(ret, (r) => r.TryDispose(childLease));
         return ret;
     }
 
@@ -114,7 +115,6 @@ public class Recyclable : ILifetime
         return CreateChildRecyclable(out _);
     }
 
-    private static void TryDisposeChild(object rec) => ((Recyclable)rec).TryDispose();
 
     public void OnDisposed(Action cleanupCode)
     {
@@ -187,15 +187,15 @@ public class GenericReferenceEqualityComparer<T> : IEqualityComparer<T>
 
 public static class TaskExtensions
 {
-    public static ILifetime ToLifetime(this Task t, EventLoop loop = null)
+    public static Recyclable ToLifetime(this Task t, EventLoop loop = null)
     {
         loop ??= ConsoleApp.Current;
         if (loop == null) throw new ArgumentException("ToLifetime() requires an event loop");
-        var lt = DefaultRecyclablePool.Instance.Rent(out _);
+        var lt = DefaultRecyclablePool.Instance.Rent(out int lease);
         loop.Invoke(async () =>
         {
             await t;
-            lt.Dispose();
+            lt.TryDispose(lease);
         });
         return lt;
     }

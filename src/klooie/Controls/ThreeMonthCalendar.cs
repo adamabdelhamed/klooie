@@ -78,13 +78,10 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
             var tempDest = !forward ? leftDest : rightDest;
 
             EasingFunction ease = EasingFunctions.EaseInOut;
-            var tempAnimation = temp.AnimateAsync(new ConsoleControlAnimationOptions()
-            {
-                IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false,
-                Destination = () => tempDest,
-                Duration = duration,
-                EasingFunction = ease
-            });
+
+            // new format
+            var tempAnimation = temp.AnimateAsync(()=> tempDest, duration, ease,animationLifetime: seekLt);
+
 
             if (!forward)
             {
@@ -94,9 +91,9 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
 
                 await Task.WhenAll
                 (
-                    right.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => rightAnimationDest, Duration = duration }),
-                    center.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => centerAnimationDest, Duration = duration }),
-                    left.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => leftAnimationDest, Duration = duration }),
+                    right.AnimateAsync(() => rightAnimationDest, duration, ease, animationLifetime: seekLt),
+                    center.AnimateAsync(() => centerAnimationDest, duration, ease, animationLifetime: seekLt),
+                    left.AnimateAsync(() => leftAnimationDest, duration, ease, animationLifetime: seekLt),
                     tempAnimation
                 );
 
@@ -113,9 +110,9 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
 
                 await Task.WhenAll
                 (
-                    right.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => rightAnimationDest, Duration = duration }),
-                    center.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => centerAnimationDest, Duration = duration }),
-                    left.AnimateAsync(new ConsoleControlAnimationOptions() { IsCancelled = () => seekLt == null || seekLt.IsStillValid(seekLtLease) == false, EasingFunction = ease, Destination = () => leftAnimationDest, Duration = duration }),
+                    right.AnimateAsync(() => rightAnimationDest, duration, ease, animationLifetime: seekLt),
+                    center.AnimateAsync(() => centerAnimationDest, duration, ease, animationLifetime: seekLt),
+                    left.AnimateAsync(() => leftAnimationDest, duration, ease, animationLifetime: seekLt),
                     tempAnimation
                 );
 
