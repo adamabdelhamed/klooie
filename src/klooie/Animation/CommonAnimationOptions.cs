@@ -1,6 +1,6 @@
 ﻿namespace klooie;
 
-public class CommonAnimationOptions
+public abstract class CommonAnimationOptions
 {
     public int TargetFramesPerSecond { get; set; } = Animator.DeafultTargetFramesPerSecond;
     public EasingFunction EasingFunction { get; set; } = EasingFunctions.Linear;
