@@ -91,7 +91,8 @@ public class ConsoleApp : EventLoop
     /// </summary>
     public int FramesPerSecond => layoutRoot.FramesPerSecond;
 
-    public double SlowestRecentFrame => layoutRoot.SlowestFrameInPrevSecondMs;
+    public double SlowestRecentFrame => layoutRoot.SlowestRecentFrame;
+    public double FastestRecentFrame => layoutRoot.FastestRecentFrame;
 
     /// <summary>
     /// Gets the total number of times a paint actually happened
