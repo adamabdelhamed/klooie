@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 namespace klooie.Gaming;
 public class MovementState : DelayState
 {
-    public int DelayMs { get; private set; }
-    public float ScanOffset { get; private set; }
     public Vision Vision { get; private set; }
     public Velocity Velocity { get; private set; }
     public Targeting Targeting { get; private set; }
@@ -28,8 +26,6 @@ public class MovementState : DelayState
         Targeting = targeting;
         Eye = targeting.Options.Vision.Eye;
         Velocity = Eye.Velocity;
-        DelayMs = 333; // Default delay for movement
-        ScanOffset = Random.Shared.Next(0, DelayMs);
         CuriosityPoint = curiosityPoint;
         Speed = speed;
     }
@@ -40,8 +36,6 @@ public class MovementState : DelayState
         Targeting = null;
         Eye = null;
         Vision = null;
-        DelayMs = 0;
-        ScanOffset = 0;
         Velocity = null;
         CuriosityPoint = null;
         Speed = null;

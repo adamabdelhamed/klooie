@@ -26,11 +26,13 @@ public class Vision : Recyclable
     public Vision() { }
 
     private static Random random = new Random();
+    private static int NextScanOffsetBase = 0;
+    private const int MinScanSpacing = 30; // ms (set as desired)
     public static Vision Create(GameCollider eye, bool autoScan = true)
     {
         var vision = VisionPool.Instance.Rent();
         vision.Eye = eye;
-        vision.ScanOffset = random.Next(0, (int)AutoScanFrequency);
+        vision.ScanOffset = (NextScanOffsetBase++ * MinScanSpacing) % AutoScanFrequency;
 
         _visionInitiated?.Fire(vision);
         if (autoScan)
@@ -59,7 +61,7 @@ public class Vision : Recyclable
             state.Dispose();
             return;
         }
-
+        ConsoleApp.Current.FrameDebugger?.RegisterTask(FrameTaskId.Vision);
         state.Vision.Scan();
         Game.Current.InnerLoopAPIs.Delay(AutoScanFrequency + state.Vision.ScanOffset, state, ScanLoopBody);
     }

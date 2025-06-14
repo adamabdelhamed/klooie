@@ -2,8 +2,11 @@
 
 public class Wander 
 {
-    public static void Execute(WanderMovementState state) => ConsoleApp.Current.InnerLoopAPIs.Delay(state.ScanOffset, state, StaticTick);
-    private static void StaticTick(object o) => Tick((WanderMovementState)o);
+    public static void Execute(WanderMovementState state)
+    {
+        state.Vision.VisibleObjectsChanged.Subscribe(state, Tick, state);
+        state.Vision.OnDisposed(state, Recyclable.TryDisposeMe);
+    }
 
     private static void Tick(WanderMovementState state)
     {
@@ -14,11 +17,9 @@ public class Wander
             state.TryDispose(lease);
             return;
         }
+        ConsoleApp.Current.FrameDebugger?.RegisterTask(FrameTaskId.Wander);
         var scores = WanderLogic.AdjustSpeedAndVelocity(state);
         //onNewScoresAvailable?.Fire(scores.Items);
-
-
-        ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.DelayMs, state, StaticTick);
     }
 }
 

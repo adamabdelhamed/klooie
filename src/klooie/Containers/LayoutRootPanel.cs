@@ -2,12 +2,15 @@
 
 public partial class LayoutRootPanel : ConsolePanel
 {
-    private Event _onWindowResized;
+    private Event _onWindowResized, _afterPaint;
     private int lastConsoleWidth, lastConsoleHeight;
     private List<TaskCompletionSource> paintRequests;
     private FrameRateMeter paintRateMeter;
     private ConsoleCharacter defaultPen;
     internal Event OnWindowResized { get => _onWindowResized ?? (_onWindowResized = Event.Create()); }
+
+    public Event AfterPaint => _afterPaint ?? (_afterPaint = Event.Create());
+
     internal int FramesPerSecond => paintRateMeter.CurrentFPS;
     internal double SlowestRecentFrame => paintRateMeter.SlowestRecentFrame;
     internal double FastestRecentFrame => paintRateMeter.FastestRecentFrame;
@@ -41,6 +44,8 @@ public partial class LayoutRootPanel : ConsolePanel
         base.OnReturn();
         _onWindowResized?.TryDispose();
         _onWindowResized = null;
+        _afterPaint?.TryDispose();
+        _afterPaint = null;
     }
 
     private void OnDescendentAdded(ConsoleControl control) => control.AddedToVisualTreeInternal();
@@ -78,7 +83,7 @@ public partial class LayoutRootPanel : ConsolePanel
             Bitmap.Paint();
         }
         paintRateMeter.Increment();
-
+        _afterPaint?.Fire();
         if (paintRequests.None()) return;
 
         TaskCompletionSource[] paintRequestsCopy;

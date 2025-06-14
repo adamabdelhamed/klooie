@@ -166,7 +166,7 @@ public class EventLoopTests
         var tolerance = expectedDuration * 0.1;
         var minAcceptableDuration = expectedDuration - tolerance;
         var maxAcceptableDuration = expectedDuration + tolerance;
-        Console.WriteLine($"Actual duration: {sw.ElapsedMilliseconds}ms");
+        Console.WriteLine($"Expected duration: {expectedDuration}, Actual duration: {sw.ElapsedMilliseconds}ms");
         Assert.IsTrue(sw.ElapsedMilliseconds >= minAcceptableDuration);
         Assert.IsTrue(sw.ElapsedMilliseconds <= maxAcceptableDuration);
     }
@@ -192,7 +192,7 @@ public class EventLoopTests
         var tolerance = expectedDuration * 0.1;
         var minAcceptableDuration = expectedDuration - tolerance;
         var maxAcceptableDuration = expectedDuration + tolerance;
-        Console.WriteLine($"Actual duration: {sw.ElapsedMilliseconds}ms");
+        Console.WriteLine($"Expected duration: {expectedDuration}, Actual duration: {sw.ElapsedMilliseconds}ms");
         Assert.IsTrue(sw.ElapsedMilliseconds >= minAcceptableDuration);
         Assert.IsTrue(sw.ElapsedMilliseconds <= maxAcceptableDuration);
     }

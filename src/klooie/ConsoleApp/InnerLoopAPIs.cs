@@ -189,7 +189,7 @@ public sealed class InnerLoopAPIs
         }
         var loopState = ForLoopStatePool.Instance.Rent(out _);
         loopState.length = length;
-        loopState.lastIterationTime = Stopwatch.GetTimestamp();
+        loopState.lastIterationTime = 0;
         loopState.i = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
         loopState.actionO = action;
@@ -209,7 +209,7 @@ public sealed class InnerLoopAPIs
         }
         var loopState = ForLoopStatePool.Instance.Rent(out _);
         loopState.length = length;
-        loopState.lastIterationTime = Stopwatch.GetTimestamp();
+        loopState.lastIterationTime = 0;
         loopState.i = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
         loopState.action = action;
