@@ -1,11 +1,12 @@
 ﻿namespace klooie;
 public interface IObjectPool
 {
-#if DEBUG
     int Created { get; }
     int Rented { get; }
     int Returned { get; }
+    int Pending => Rented - Returned;
     int AllocationsSaved => Rented - Created;
+#if DEBUG
     StackHunter StackHunter { get; }
     HashSet<PendingRecyclableTracker> PendingReturns { get; }
 #endif
@@ -16,12 +17,13 @@ public interface IObjectPool
 
 public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 {
-#if DEBUG
+
     public int Created { get; private set; }
     public int Rented { get; private set; }
     public int Returned { get; private set; }
+    int Pending => Rented - Returned;
     public int AllocationsSaved => Rented - Created;
-
+#if DEBUG
     public HashSet<PendingRecyclableTracker> PendingReturns { get; } = new HashSet<PendingRecyclableTracker>();
     public StackHunter StackHunter { get; private set; } = new StackHunter() { Mode = Recyclable.StackHunterMode };
 #endif
@@ -37,10 +39,8 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public override string ToString()
     {
         var typeName = GetFriendlyName(typeof(T));
-#if DEBUG
         return $"{typeName}: Pending Return: {Rented - Returned} Created: {Created} Rented: {Rented} Returned: {Returned} AllocationsSaved: {AllocationsSaved}";
-#endif
-        return $"{typeName}";
+
     }
 
     public static string GetFriendlyName(Type type)
@@ -72,8 +72,9 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
             return fresh;
         }
 
-#if DEBUG
+
         Rented++;
+#if DEBUG
         ComparableStackTrace? trace = null;
         if (Recyclable.StackHunterMode == StackHunterMode.Full)
         {
@@ -88,9 +89,8 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         }
         else
         {
-#if DEBUG
+
             Created++;
-#endif
             ret = Factory();
         }
         ret.Pool = this;
@@ -110,8 +110,8 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
     public void ReturnThatShouldOnlyBeCalledInternally(Recyclable rented)
     {
-#if DEBUG
         Returned++;
+#if DEBUG
         PendingReturns.Remove(new PendingRecyclableTracker((T)rented, null));
 #endif
 
@@ -123,10 +123,10 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public void Clear()
     {
         _pool.Clear();
-#if DEBUG
         Created = 0;
         Rented = 0;
         Returned = 0;
+#if DEBUG
         StackHunter = new StackHunter();
 #endif
     }
