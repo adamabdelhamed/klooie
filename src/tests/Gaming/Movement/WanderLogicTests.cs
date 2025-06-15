@@ -38,8 +38,6 @@ public class WanderLogicTests
         Game.Current.GamePanel.Background = new RGB(50, 50, 50);
         var mover = AddMoverAndObstacles(moverPosition, curiosityPoint, obstaclePositions);
         var vision = Vision.Create(mover, autoScan: false);
-        var targeting = TargetingPool.Instance.Rent();
-        targeting.Bind(new TargetingOptions() { Source = mover, Vision = vision });
         vision.Range = 15;
         vision.Scan();
         var visionFilter = new VisionFilter(vision);
@@ -47,9 +45,9 @@ public class WanderLogicTests
 
         await context.PaintAndRecordKeyFrameAsync();
 
-        var state = WanderMovementState.Create(targeting, (s) => curiosityPoint, () => 1);
+        var state = Wander.Create(vision, (s) => curiosityPoint, () => 1, autoBindToVision: false);
         mover.Velocity.Speed = 20;
-        var scores = WanderLogic.AdjustSpeedAndVelocity(state);
+        var scores = state.AdjustSpeedAndVelocity();
         mover.Velocity.Speed = 0;
         var maxScore = scores.Items.Max(s => s.Total);
 

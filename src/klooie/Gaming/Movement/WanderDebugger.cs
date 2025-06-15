@@ -3,7 +3,7 @@ using PowerArgs;
 
 #if DEBUG
 namespace klooie.Gaming;
-public class WanderDebuggerState : WanderMovementState
+public class WanderDebugger : Wander
 {
     private static readonly BackgroundColorFilter StuckFilter = new BackgroundColorFilter(RGB.Orange);
     private static readonly BackgroundColorFilter HasMovedRecentlyFilter = new BackgroundColorFilter(RGB.Green);
@@ -12,7 +12,7 @@ public class WanderDebuggerState : WanderMovementState
     private static readonly BackgroundColorFilter IsAtPointOfInterestFilter = new BackgroundColorFilter(RGB.Magenta);
     private static readonly BackgroundColorFilter StaleEvaluationFilter = new BackgroundColorFilter(RGB.Gray);
 
-    private static LazyPool<WanderDebuggerState> pool = new LazyPool<WanderDebuggerState>(() => new WanderDebuggerState());
+    private static LazyPool<WanderDebugger> pool = new LazyPool<WanderDebugger>(() => new WanderDebugger());
 
     private TimeSpan lastMoveTime;
     private TimeSpan lastCollisionTime;
@@ -21,24 +21,24 @@ public class WanderDebuggerState : WanderMovementState
     public bool HasCollidedInPastSecond => Game.Current.MainColliderGroup.Now - lastCollisionTime < TimeSpan.FromSeconds(1);
     public bool HasBeenEvaluatedInPastSecond => Game.Current.MainColliderGroup.Now - lastVelocityEvaluationTime < TimeSpan.FromSeconds(1);
 
-    protected override void Construct(Targeting targeting, Func<MovementState, RectF?>? curiosityPoint, Func<float> speed)
+    protected override void Construct(Vision vision, Func<Movement, RectF?>? curiosityPoint, Func<float> speed)
     {
-        base.Construct(targeting, curiosityPoint, speed);
-        Eye.Velocity.AfterEvaluate.Subscribe(this, OnAfterEvaluateVelocity, this);
+        base.Construct(vision, curiosityPoint, speed);
+        Eye.Velocity.AfterEvaluate.Subscribe(this, static (me, eval) => me.OnAfterEvaluateVelocity(eval), this);
     }
 
-    public static WanderDebuggerState Create(Targeting targeting, Func<MovementState, RectF?> curiosityPoint, Func<float> speed)
+    public static WanderDebugger Create(Vision vision, Func<Movement, RectF?> curiosityPoint, Func<float> speed)
     {
         var state = pool.Value.Rent();
-        state.Construct(targeting, curiosityPoint, speed);
+        state.Construct(vision, curiosityPoint, speed);
         return state;
     }
 
-    private static void OnAfterEvaluateVelocity(WanderDebuggerState state, Velocity.MoveEval eval)
+    private void OnAfterEvaluateVelocity(Velocity.MoveEval eval)
     {
-        state.lastVelocityEvaluationTime = Game.Current.MainColliderGroup.Now;
-        state.lastMoveTime = eval.Result == Velocity.MoveEvalResult.Moved ? Game.Current.MainColliderGroup.Now : state.lastMoveTime;
-        state.lastCollisionTime = eval.Result == Velocity.MoveEvalResult.Collision ? Game.Current.MainColliderGroup.Now : state.lastCollisionTime;
+        lastVelocityEvaluationTime = Game.Current.MainColliderGroup.Now;
+        lastMoveTime = eval.Result == Velocity.MoveEvalResult.Moved ? Game.Current.MainColliderGroup.Now : lastMoveTime;
+        lastCollisionTime = eval.Result == Velocity.MoveEvalResult.Collision ? Game.Current.MainColliderGroup.Now : lastCollisionTime;
     }
 
     public void ClearStuckFilter() => ClearFilter(StuckFilter);

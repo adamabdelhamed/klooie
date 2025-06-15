@@ -1,164 +1,169 @@
-﻿namespace klooie.Gaming;
+﻿using System.Reflection;
 
-public class Wander 
+namespace klooie.Gaming;
+
+public class Wander : Movement
 {
-    public static void Execute(WanderMovementState state)
+    private const float MaxCollisionHorizon = 1.25f;   // seconds – > this long = perfectly safe
+
+    public MotionInfluence Influence { get; private set; }
+    public RecyclableList<Angle> LastFewAngles;
+    public RecyclableList<RectF> LastFewRoundedBounds;
+    public WanderWeights Weights { get; set; } = WanderWeights.Default;
+    public RecyclableList<AngleScore> AngleScores { get; private set; }
+    public float CloseEnough { get; set; }
+    public int StuckCooldownTicks = 0;
+    public bool IsCurrentlyCloseEnoughToPointOfInterest;
+
+    private static LazyPool<Wander> pool = new LazyPool<Wander>(() => new Wander());
+
+    protected Wander() { }
+    public static Wander Create(Vision vision, Func<Movement, RectF?> curiosityPoint, Func<float> speed, bool autoBindToVision = true)
     {
-        state.Vision.VisibleObjectsChanged.Subscribe(state, Tick, state);
+        var state = pool.Value.Rent();
+        state.Construct(vision, curiosityPoint, speed, autoBindToVision);
+        return state;
     }
 
-    private static void Tick(WanderMovementState state)
+    protected void Construct(Vision vision, Func<Movement, RectF?> curiosityPoint, Func<float> speed, bool autoBindToVision)
     {
-        if(state.IsStillValid(state.Lease) == false) throw new InvalidOperationException("WanderMovementState is not valid, but was passed to Wander.Tick");
-        var lease = state.Lease;
-        if (state.AreAllDependenciesValid == false)
-        {          
-            state.TryDispose(lease);
+        base.Construct(vision, curiosityPoint, speed);
+        Influence = new MotionInfluence();
+        Weights = WanderWeights.Default;
+        AngleScores = RecyclableListPool<AngleScore>.Instance.Rent();
+        LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
+        LastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent();
+        CloseEnough = 1;
+        Velocity.AddInfluence(Influence);
+        StuckCooldownTicks = 0;
+        IsCurrentlyCloseEnoughToPointOfInterest = false;
+        if(autoBindToVision)
+        {
+            Vision.VisibleObjectsChanged.Subscribe(this, static (me) => me.Tick(), this);
+        }
+    }
+    private void Tick()
+    {
+        var lease = Lease;
+        if (AreAllDependenciesValid == false)
+        {
+            TryDispose(lease);
             return;
         }
         FrameDebugger.RegisterTask(nameof(Wander));
-        var scores = WanderLogic.AdjustSpeedAndVelocity(state);
+        var scores = AdjustSpeedAndVelocity();
         //onNewScoresAvailable?.Fire(scores.Items);
     }
-}
 
-
-/// <summary>
-/// Logic for the Wander movement, including speed and velocity adjustments.
-/// 
-/// Requirements:
-/// - The wanderer intelligentlys avoid obstacles by altering its trajectory a few seconds before collision.
-/// - The wanderer strongly prefers to walk around obstacles rather than turning around and going back.
-/// - If a curiosity point is set, the wanderer should try to move towards it. Speed should be set to zero if the wanderer is close enough to the curiosity point.
-/// - If the curiosity point is not set, the wanderer should wander in the space, trying to avoid objects without bumping into them.
-/// - All code of non-trivial complexity should be isolated in its own method that accepts the WanderLoopState as a parameter.
-///     - All math of non-trivial complexity should have helpful variable names and comments.
-/// - Wanderers and obstacles are rectangles that can be any size. The code should never assume a specific size.
-/// </summary>
-// klooie.Gaming – Refactored WanderLogic for testability, prod/test control, and encapsulated weights/scores
-public static class WanderLogic
-{
-
-
-
-
-
-
-
-    // --- Public surface --------------------------------------------------------------------
-
-     /// <summary>
-    /// Top-level API used by <see cref="Wander"/>.  Returns the list of scores for every candidate.
-    /// </summary>
-    public static RecyclableList<AngleScore> AdjustSpeedAndVelocity(WanderMovementState state)
+    public  RecyclableList<AngleScore> AdjustSpeedAndVelocity()
     {
-        ComputeScores(state);
-        ConsiderEmergencyMode(state);
+        ComputeScores();
+        ConsiderEmergencyMode();
         // pick best angle
-        AngleScore best = state.AngleScores[0];
-        for (int i = 1; i < state.AngleScores.Count; i++)
+        AngleScore best = AngleScores[0];
+        for (int i = 1; i < AngleScores.Count; i++)
         {
-            if (state.AngleScores[i].Total > best.Total)
+            if (AngleScores[i].Total > best.Total)
             {
-                best = state.AngleScores[i];
+                best = AngleScores[i];
             }
         }
         var angle = best.Angle;
-        var speed = EvaluateSpeed(state, angle);
+        var speed = EvaluateSpeed( angle);
 
-        state.Influence.Angle = angle;
-        state.Influence.DeltaSpeed = speed;
+        Influence.Angle = angle;
+        Influence.DeltaSpeed = speed;
 #if DEBUG
-        (state as WanderDebuggerState)?.ApplyMovingFreeFilter();
+        (this as WanderDebugger)?.ApplyMovingFreeFilter();
 #endif
 
 
         // Update inertia history
-        state.LastFewAngles.Items.Add(angle);
-        if (state.LastFewAngles.Count > 10) state.LastFewAngles.Items.RemoveAt(0);
+        LastFewAngles.Items.Add(angle);
+        if (LastFewAngles.Count > 10) LastFewAngles.Items.RemoveAt(0);
 
-        var rounded = state.Eye.Bounds.Round();
+        var rounded = Eye.Bounds.Round();
 
-        state.LastFewRoundedBounds.Items.Add(rounded);
-        if (state.LastFewRoundedBounds.Count > 10)
-            state.LastFewRoundedBounds.Items.RemoveAt(0);
+        LastFewRoundedBounds.Items.Add(rounded);
+        if (LastFewRoundedBounds.Count > 10)
+            LastFewRoundedBounds.Items.RemoveAt(0);
 #if DEBUG
-        (state as WanderDebuggerState)?.RefreshLoopRunningFilter();
+        (this as WanderDebugger)?.RefreshLoopRunningFilter();
 #endif
 
-        return state.AngleScores;
+        return AngleScores;
     }
 
     // --- Private helpers -------------------------------------------------------------------
 
-    private static void ConsiderEmergencyMode(WanderMovementState state)
+    private void ConsiderEmergencyMode()
     {
         return;
-        if (state.StuckCooldownTicks > 0)
+        if (StuckCooldownTicks > 0)
         {
-            state.StuckCooldownTicks--;
+            StuckCooldownTicks--;
             return;
         }
 
         // Emergency mode if stuck
-        if (IsStuck(state))
+        if (IsStuck())
         {
-            state.StuckCooldownTicks = 5;
+            StuckCooldownTicks = 5;
 #if DEBUG
-            (state as WanderDebuggerState)?.ApplyStuckFilter();
+            (this as WanderDebugger)?.ApplyStuckFilter();
 #endif
-            var emergencyWeights = state.Weights;
+            var emergencyWeights = Weights;
             emergencyWeights.InertiaWeight = -0.2f;
             emergencyWeights.ForwardWeight = -0.2f;
-            RescoreAnglesWithWeights(state, emergencyWeights);
+            RescoreAnglesWithWeights(emergencyWeights);
         }
         else
         {
 #if DEBUG
-            (state as WanderDebuggerState)?.ClearStuckFilter();
+            (this as WanderDebugger)?.ClearStuckFilter();
 #endif
         }
     }
 
 
 
-    private const float MaxCollisionHorizon = 1.25f;   // seconds – > this long = perfectly safe
 
-    private static void ComputeScores(WanderMovementState state)
+
+    private void ComputeScores()
     {
-        var inertiaAngle = AverageAngle(state.LastFewAngles.Items, state.Velocity.Angle);
+        var inertiaAngle = AverageAngle(LastFewAngles.Items, Velocity.Angle);
 
         Angle? curiosityAngle = null;
-        if (state.CuriosityPoint != null)
+        if (CuriosityPoint != null)
         {
-            var target = state.CuriosityPoint(state);
+            var target = CuriosityPoint(this);
             if (target.HasValue)
-                curiosityAngle = state.Eye.CalculateAngleTo(target.Value);
+                curiosityAngle = Eye.CalculateAngleTo(target.Value);
         }
 
-        state.AngleScores.Items.Clear();
+        AngleScores.Items.Clear();
         var totalAngularTravel = 180f;
         float travelCompleted = 0f;
         var travelPerStep = 12f;
-        ScoreAngle(state, inertiaAngle, curiosityAngle, state.Velocity.Angle); // score the current angle first
+        ScoreAngle(inertiaAngle, curiosityAngle, Velocity.Angle); // score the current angle first
         while (travelCompleted < totalAngularTravel)
         {
-            var leftCandidate = state.Velocity.Angle.Add(-(travelPerStep + travelCompleted));
-            var rightCandidate = state.Velocity.Angle.Add(travelPerStep + travelCompleted);
+            var leftCandidate = Velocity.Angle.Add(-(travelPerStep + travelCompleted));
+            var rightCandidate = Velocity.Angle.Add(travelPerStep + travelCompleted);
             travelCompleted += travelPerStep;
 
-            ScoreAngle(state, inertiaAngle, curiosityAngle, leftCandidate);
-            ScoreAngle(state, inertiaAngle, curiosityAngle, rightCandidate);
+            ScoreAngle(inertiaAngle, curiosityAngle, leftCandidate);
+            ScoreAngle(inertiaAngle, curiosityAngle, rightCandidate);
         }
     }
 
-    private static void ScoreAngle(WanderMovementState state, Angle inertiaAngle, Angle? curiosityAngle, Angle candidate)
+    private void ScoreAngle(Angle inertiaAngle, Angle? curiosityAngle, Angle candidate)
     {
         // Compute raw components
-        float rawCollision = PredictCollision(state, candidate);
+        float rawCollision = PredictCollision(candidate);
         float rawInertia = candidate.DiffShortest(inertiaAngle);
-        float rawForward = candidate.DiffShortest(state.Velocity.Angle);
-        float rawCuriosity = curiosityAngle.HasValue ? candidate.DiffShortest(curiosityAngle.Value) : state.Vision.AngularVisibility;
+        float rawForward = candidate.DiffShortest(Velocity.Angle);
+        float rawCuriosity = curiosityAngle.HasValue ? candidate.DiffShortest(curiosityAngle.Value) : Vision.AngularVisibility;
 
         // Normalise [0,1]
         float normCollision = DangerClamp(rawCollision);
@@ -166,9 +171,9 @@ public static class WanderLogic
         float normForward = 1f - Clamp01(rawForward / 90);
         float normCuriosity = 1f - Clamp01(rawCuriosity / 180);
 
-        float inertiaWeight = state.Weights.InertiaWeight;
-        float curiosityWeight = state.Weights.CuriosityWeight;
-        if (state.LastFewAngles.Count == 0)
+        float inertiaWeight = Weights.InertiaWeight;
+        float curiosityWeight = Weights.CuriosityWeight;
+        if (LastFewAngles.Count == 0)
         {
             normInertia = 0f;          // Could be any value—weight will be zero
             inertiaWeight = 0f;
@@ -182,12 +187,12 @@ public static class WanderLogic
 
         var score = new AngleScore(candidate, normCollision, normInertia, normForward, normCuriosity, new WanderWeights()
         {
-            CollisionWeight = state.Weights.CollisionWeight,
+            CollisionWeight = Weights.CollisionWeight,
             InertiaWeight = inertiaWeight,
-            ForwardWeight = state.Weights.ForwardWeight,
+            ForwardWeight = Weights.ForwardWeight,
             CuriosityWeight = curiosityWeight
         });
-        state.AngleScores.Items.Add(score);
+        AngleScores.Items.Add(score);
     }
 
     private static float DangerClamp(float timeToCollision)
@@ -202,12 +207,12 @@ public static class WanderLogic
     }
 
 
-    private static void RescoreAnglesWithWeights(WanderMovementState state, WanderWeights weights)
+    private void RescoreAnglesWithWeights(WanderWeights weights)
     {
-        for (int i = 0; i < state.AngleScores.Count; i++)
+        for (int i = 0; i < AngleScores.Count; i++)
         {
-            var prev = state.AngleScores[i];
-            state.AngleScores[i] = new AngleScore(
+            var prev = AngleScores[i];
+            AngleScores[i] = new AngleScore(
                 prev.Angle,
                 prev.Collision,
                 prev.Inertia,
@@ -220,45 +225,43 @@ public static class WanderLogic
 
     // We are single threaded so it's safe
     private static HashSet<RectF> sharedUniqueModeHashSet = new HashSet<RectF>();
-    private static bool IsStuck(WanderMovementState state, int window = 5, int maxUnique = 4)
+    private bool IsStuck(int window = 5, int maxUnique = 4)
     {
-        if (state.LastFewRoundedBounds.Count < window) return false;
-        sharedUniqueModeHashSet.Clear();
-        for (int i = state.LastFewRoundedBounds.Count - window; i < state.LastFewRoundedBounds.Count; i++)
+        if (LastFewRoundedBounds.Count < window) return false;
+    
+        for (int i = LastFewRoundedBounds.Count - window; i < LastFewRoundedBounds.Count; i++)
         {
-            sharedUniqueModeHashSet.Add(state.LastFewRoundedBounds[i]);
+            sharedUniqueModeHashSet.Add(LastFewRoundedBounds[i]);
         }
-        return sharedUniqueModeHashSet.Count <= maxUnique;
+        var ret = sharedUniqueModeHashSet.Count <= maxUnique;
+        sharedUniqueModeHashSet.Clear();
+        return ret;
     }
 
-    private static float EvaluateSpeed(WanderMovementState state, Angle chosenAngle)
+    private float EvaluateSpeed(Angle chosenAngle)
     {
-        if (state.Speed() == 0) throw new Exception("Zero Speed Yo");
-        var pointOfInterest = state.CuriosityPoint == null ? null : state.CuriosityPoint.Invoke(state);
-        state.IsCurrentlyCloseEnoughToPointOfInterest = pointOfInterest.HasValue && state.Eye.Bounds.CalculateNormalizedDistanceTo(pointOfInterest.Value) <= state.CloseEnough;
-        return state.IsCurrentlyCloseEnoughToPointOfInterest ? 0 : state.Speed();
+        if (Speed() == 0) throw new Exception("Zero Speed Yo");
+        var pointOfInterest = CuriosityPoint == null ? null : CuriosityPoint.Invoke(this);
+        IsCurrentlyCloseEnoughToPointOfInterest = pointOfInterest.HasValue && Eye.Bounds.CalculateNormalizedDistanceTo(pointOfInterest.Value) <= CloseEnough;
+        return IsCurrentlyCloseEnoughToPointOfInterest ? 0 : Speed();
     }
 
-    // ----------------------------------------------------------------------------------------
-    // Individual component calculations -----------------------------------------------------
-    // ----------------------------------------------------------------------------------------
-
-    private static float PredictCollision(WanderMovementState state, Angle angle)
+    private float PredictCollision(Angle angle)
     {
         var buffer = ObstacleBufferPool.Instance.Rent();
         var prediction = CollisionPredictionPool.Instance.Rent();
         try
         {
             // Gather nearby obstacles (already tracked by vision)
-            var tracked = state.Vision.TrackedObjectsList;
+            var tracked = Vision.TrackedObjectsList;
             for (int i = 0; i < tracked.Count; i++)
                 buffer.WriteableBuffer.Add(tracked[i].Target);
 
             CollisionDetector.Predict(
-                state.Eye,
+                Eye,
                 angle,
                 buffer.WriteableBuffer,
-                state.Vision.Range,
+                Vision.Range,
                 CastingMode.Rough,
                 buffer.WriteableBuffer.Count,
                 prediction);
@@ -266,8 +269,8 @@ public static class WanderLogic
             if (!prediction.CollisionPredicted)
                 return MaxCollisionHorizon; // safe path
 
-            return (state.Velocity.Speed > 0)
-             ? prediction.LKGD / state.Velocity.Speed
+            return (Velocity.Speed > 0)
+             ? prediction.LKGD / Velocity.Speed
              : float.MaxValue;
         }
         finally
@@ -276,10 +279,6 @@ public static class WanderLogic
             prediction.Dispose();
         }
     }
-
-    // ----------------------------------------------------------------------------------------
-    // Utility -------------------------------------------------------------------------------
-    // ----------------------------------------------------------------------------------------
 
     private static Angle AverageAngle(List<Angle> list, Angle fallback)
     {
@@ -295,6 +294,23 @@ public static class WanderLogic
     }
 
     private static float Clamp01(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
+
+    protected override void OnReturn()
+    {
+        Velocity?.RemoveInfluence(Influence);
+        base.OnReturn();
+        LastFewAngles.TryDispose();
+        LastFewAngles = null!;
+        LastFewRoundedBounds.TryDispose();
+        LastFewRoundedBounds = null!;
+        AngleScores?.TryDispose();
+        AngleScores = null!;
+        Influence = null!;
+        Weights = WanderWeights.Default;
+        CloseEnough = 0;
+        StuckCooldownTicks = 0;
+        IsCurrentlyCloseEnoughToPointOfInterest = false;
+    }
 }
 
 /// <summary>
@@ -351,61 +367,3 @@ public struct WanderWeights
         CuriosityWeight = 0.7f
     };
 }
-
-
-public class WanderMovementState : MovementState
-{
-    public MotionInfluence Influence { get; private set; }
-    public RecyclableList<Angle> LastFewAngles;
-    public RecyclableList<RectF> LastFewRoundedBounds;
-    public WanderWeights Weights { get; set; } = WanderWeights.Default;
-    public RecyclableList<AngleScore> AngleScores { get; private set; }
-    public float CloseEnough { get; set; }
-    public int StuckCooldownTicks = 0;
-    public bool IsCurrentlyCloseEnoughToPointOfInterest;
-
-    private static LazyPool<WanderMovementState> pool = new LazyPool<WanderMovementState>(() => new WanderMovementState());
-
-    protected WanderMovementState() { }
-    public static WanderMovementState Create(Targeting targeting, Func<MovementState, RectF?> curiosityPoint, Func<float> speed)
-    {
-        var state = pool.Value.Rent();
-        state.Construct(targeting, curiosityPoint, speed);
-        return state;
-    }
-
-    protected override void Construct(Targeting targeting, Func<MovementState, RectF?> curiosityPoint, Func<float> speed)
-    {
-        base.Construct(targeting, curiosityPoint, speed);
-        Influence = new MotionInfluence();
-        Weights = WanderWeights.Default;
-        AngleScores = RecyclableListPool<AngleScore>.Instance.Rent();
-        LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
-        LastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent();
-        CloseEnough = 1;
-        Velocity.AddInfluence(Influence);
-        StuckCooldownTicks = 0;
-        IsCurrentlyCloseEnoughToPointOfInterest = false;
-    }
-
-    protected override void OnReturn()
-    {
-        Velocity?.RemoveInfluence(Influence);
-        base.OnReturn();
-        LastFewAngles.TryDispose();
-        LastFewAngles = null!;
-        LastFewRoundedBounds.TryDispose();
-        LastFewRoundedBounds = null!;
-        AngleScores?.TryDispose();
-        AngleScores = null!;
-        Influence = null!;
-        Weights = WanderWeights.Default;
-        CloseEnough = 0;
-        StuckCooldownTicks = 0;
-        IsCurrentlyCloseEnoughToPointOfInterest = false;
-    }
-}
-
-
-
-
