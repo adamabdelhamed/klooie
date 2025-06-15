@@ -16,8 +16,7 @@ public class Game : ConsoleApp, IDelayProvider
     private RuleManager ruleManager;
     private PauseManager pauseManager;
     private ColliderGroup mainColliderGroup;
-
-    internal FrameDebugger FrameDebugger { get; private set; }
+ 
 
     /// <summary>
     /// During startup, this will be populated with the current rule that's running.
@@ -144,19 +143,7 @@ public class Game : ConsoleApp, IDelayProvider
         await RequestPaintAsync();
     }
 
-    public FrameDebugger DebugFrames(ILifetime lt)
-    {
-        if (FrameDebugger != null) throw new InvalidOperationException("Frame debugging is already enabled for this app");
-        FrameDebugger = new FrameDebugger(lt);
-        OnDisposed(this, static (app) => app.FrameDebugger = null);
-        return FrameDebugger;
-    }
 
-    public FrameDebugger DebugFrames(TimeSpan duration)
-    {
-        var lt = Task.Delay(duration).ToLifetime();
-        return DebugFrames(lt);
-    }
 
     /// <summary>
     /// implements a pause aware delay action

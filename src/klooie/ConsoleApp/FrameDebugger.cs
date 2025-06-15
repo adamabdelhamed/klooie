@@ -7,36 +7,34 @@ using System.Threading.Tasks;
 
 namespace klooie;
 
-public enum FrameTaskId
-{
-    Wander,
-    Vision,
-    Count // Always last!
-}
 
 public sealed class FrameDebugger
 {
+    private static FrameDebugger Instance { get; set; } 
+    private readonly List<FrameInfo> _frames;
+    private Dictionary<string, int> _currentTaskCounts;
+    private long _currentFrameStart;
+    private bool _frameInProgress = false;
+
     public struct FrameInfo
     {
         public long FrameStartTimestamp { get; set; }
         public double FrameDurationMs { get; set; }
-        public int[] TaskCounts { get; set; }
+        public Dictionary<string, int> TaskCounts { get; set; }
     }
 
-
-    private readonly List<FrameInfo> _frames;
-
-    private int[] _currentTaskCounts;
-    private long _currentFrameStart;
-    private bool _frameInProgress = false;
-
-    public List<FrameDebuggerFinalOutputFrame> Output { get; private set; }
-
-    public FrameDebugger(ILifetime lifetime)
+    public static List<FrameInfo> Attach(ILifetime lt)
     {
+        if (Instance != null) throw new InvalidOperationException("Frame debugging is already enabled for this app");
+        Instance = new FrameDebugger(lt);
+        lt.OnDisposed(static () => FrameDebugger.Instance = null);
+        return Instance._frames;
+    }
 
+    private FrameDebugger(ILifetime lifetime)
+    {
         _frames = new List<FrameInfo>();
-        _currentTaskCounts = new int[(int)FrameTaskId.Count];
+        _currentTaskCounts = new Dictionary<string, int>();
         // Subscribe to the paint event for the given lifetime
         ConsoleApp.Current.AfterPaint.Subscribe(this, static(me)=> me.OnPaint(), lifetime);
         // Clean up at end of lifetime if frame in progress
@@ -48,7 +46,6 @@ public sealed class FrameDebugger
         if (_frameInProgress == false) return;
         EndFrame();
         _frameInProgress = false;
-        Output = _frames.Select(f => new FrameDebuggerFinalOutputFrame(f)).ToList();
     }
 
     private void OnPaint()
@@ -64,10 +61,21 @@ public sealed class FrameDebugger
     private void BeginFrame()
     {
         _currentFrameStart = Stopwatch.GetTimestamp();
-        Array.Clear(_currentTaskCounts, 0, _currentTaskCounts.Length);
+        _currentTaskCounts = new Dictionary<string, int>();
     }
 
-    public void RegisterTask(FrameTaskId taskId) => _currentTaskCounts[(int)taskId]++;
+    public static void RegisterTask(string name)
+    {
+        if (Instance == null) return;
+        if(Instance._currentTaskCounts.TryGetValue(name, out var count))
+        {
+            Instance._currentTaskCounts[name] = count + 1;
+        }
+        else
+        {
+            Instance._currentTaskCounts[name] = 1;
+        }
+    }
 
     private void EndFrame()
     {
@@ -79,26 +87,10 @@ public sealed class FrameDebugger
         {
             FrameStartTimestamp = _currentFrameStart,
             FrameDurationMs = durationMs,
-            TaskCounts = (int[])_currentTaskCounts.Clone()
+            TaskCounts = _currentTaskCounts
         };
         _frames.Add(info);
     }
 }
 
-public class FrameDebuggerFinalOutputFrame
-{
-    public long FrameStartTimestamp { get; set; }
-    public double FrameDurationMs { get; set; }
-    public Dictionary<string, int> TaskCounts { get; set; }
-    public FrameDebuggerFinalOutputFrame(FrameDebugger.FrameInfo frame)
-    {
-        this.FrameDurationMs = frame.FrameDurationMs;
-        this.FrameStartTimestamp = frame.FrameStartTimestamp;
-        this.TaskCounts = new Dictionary<string, int>();
-        for (int i = 0; i < frame.TaskCounts.Length; i++)
-        {
-            var taskId = (FrameTaskId)i;
-            TaskCounts[taskId.ToString()] = frame.TaskCounts[i];
-        }
-    }
-}
+ 

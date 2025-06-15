@@ -61,7 +61,7 @@ public class Vision : Recyclable
             state.Dispose();
             return;
         }
-        ConsoleApp.Current.FrameDebugger?.RegisterTask(FrameTaskId.Vision);
+        FrameDebugger.RegisterTask(nameof(Vision));
         state.Vision.Scan();
         Game.Current.InnerLoopAPIs.Delay(AutoScanFrequency + state.Vision.ScanOffset, state, ScanLoopBody);
     }

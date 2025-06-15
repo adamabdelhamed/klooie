@@ -19,7 +19,6 @@ public class ConsoleApp : EventLoop
 
     public Event AfterPaint => layoutRoot.AfterPaint;
 
-    internal FrameDebugger? FrameDebugger { get; private set; } = null;
 
     /// <summary>
     /// When key throttling is enabled this lets you set the minimum time that must
