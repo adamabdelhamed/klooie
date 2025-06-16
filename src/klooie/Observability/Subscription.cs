@@ -44,7 +44,7 @@ internal sealed class ActionSubscription : Subscription
 
     public override void Notify()
     {
-        Callback.Invoke();
+        Callback?.Invoke();
     }
 
     protected override void OnReturn()
@@ -71,7 +71,7 @@ internal sealed class ScopedSubscription<T> : Subscription
 
     public override void Notify()
     {
-        ScopedCallback.Invoke(Scope);
+        ScopedCallback?.Invoke(Scope);
     }
 
     protected override void OnReturn()
@@ -98,7 +98,7 @@ internal class ArgsSubscription<TArgs> : Subscription
 
     public override void Notify()
     {
-        ArgsCallback.Invoke(Args);
+        ArgsCallback?.Invoke(Args);
     }
 
     protected override void OnReturn()
@@ -125,7 +125,7 @@ internal sealed class ScopedArgsSubscription<TScope, TArgs> : ArgsSubscription<T
 
     public override void Notify()
     {
-        ScopedCallback.Invoke(Scope, Args);
+        ScopedCallback?.Invoke(Scope, Args);
     }
 
     protected override void OnReturn()
