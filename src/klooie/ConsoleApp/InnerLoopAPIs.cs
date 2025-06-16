@@ -116,6 +116,13 @@ public sealed class InnerLoopAPIs
             delayStates = new List<DelayState>();
             ConsoleApp.Current.OnDisposed(this, DisposeStates);
         }
+        // TODO: This is an ever growing list during the lifetime of the app. This could cause two issues.
+        // First, the dispose loop at the end of the app could be slow due to the number of states being very large.
+        // Second, and more importantly, these states are not always disposed by this class' code. Sometimes (frequently)
+        // the caller disposes of it. At the very least, this code needs to track the lease of the state and pass it to
+        // TryDispose during DisposeStates so that we don't accidentally dispose of a state that has been recycled.
+        // It's not super critical since DisposeStates is only called at the end of the app, but we should defend against
+        // it in case there are any unforseeable scenarios where DelayState objects are used across multiple app lifetimes.
         delayStates.Add(statefulScope);
         Delay(delayMs, (object)statefulScope, DisposeAllDependneciesFromDelayState);
     }
