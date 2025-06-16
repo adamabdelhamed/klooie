@@ -134,11 +134,9 @@ public sealed class Velocity : Recyclable
 
     private void EnsureInfluenceSubscribed()
     {
-        if (influenceSubscriptionLifetime == null)
-        {
-            influenceSubscriptionLifetime = DefaultRecyclablePool.Instance.Rent();
-            this.BeforeEvaluate.Subscribe(ApplyInfluences, influenceSubscriptionLifetime);
-        }
+        if (influenceSubscriptionLifetime != null) return;
+        influenceSubscriptionLifetime = DefaultRecyclablePool.Instance.Rent();
+        this.BeforeEvaluate.Subscribe(this, static me => me.ApplyInfluences(), influenceSubscriptionLifetime);
     }
 
     public void ApplyInfluences()
