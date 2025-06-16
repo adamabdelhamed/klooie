@@ -139,7 +139,7 @@ public static class CollisionDetector
             singleObstacleEdgeBuffer[2] = obstacle.Bounds.LeftEdge;
             singleObstacleEdgeBuffer[3] = obstacle.Bounds.RightEdge;
 
-            CustomSorter.Sort(movingObject, singleObstacleEdgeBuffer);
+            EdgeComparerByDistance.Sort(movingObject, singleObstacleEdgeBuffer);
            
             for(var j = 0; j < singleObstacleEdgeBuffer.Length; j++)
             {
@@ -444,30 +444,24 @@ public class ArrayPlusOne<T> : Recyclable, IList<ICollidable> where T : ICollida
     }
 }
 
-public static class CustomSorter
+public static class EdgeComparerByDistance 
 {
-    public static void Sort(RectF movingObjectBounds, Span<Edge> edges)
+    private static float cx, cy;
+
+    private static Comparison<Edge> comparison = new Comparison<Edge>(Compare);
+
+    public static void Sort(RectF rect, Span<Edge> edges)
     {
         for (int i = 0; i < edges.Length; i++)
         {
             var e = edges[i];
             GeometryGuard.ValidateFloats(e.X1, e.Y1, e.X2, e.Y2);
         }
-        var c = movingObjectBounds.Center;
-        edges.Sort(new EdgeComparerByDistance(c.Left, c.Top)); 
-    }
-}
-
-public readonly struct EdgeComparerByDistance : IComparer<Edge>
-{
-    private readonly float cx, cy;
-
-    public EdgeComparerByDistance(float centerX, float centerY)
-    {
-        cx = centerX;
-        cy = centerY;
+        cx = rect.CenterX;
+        cy = rect.CenterY;
+        edges.Sort(comparison);
     }
 
-    public int Compare(Edge a, Edge b)
+    private static int Compare(Edge a, Edge b)
         => a.CalculateDistanceTo(cx, cy).CompareTo(b.CalculateDistanceTo(cx, cy));
 }
