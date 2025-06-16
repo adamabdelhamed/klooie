@@ -272,7 +272,7 @@ public partial class ConsoleControl : Rectangular
     { 
         get
         {
-            _bitmap = _bitmap ?? new ConsoleBitmap(Width, Height);
+            _bitmap = _bitmap ?? ConsoleBitmap.Create(Width, Height);
             return _bitmap;
         }
         internal set
@@ -350,6 +350,9 @@ public partial class ConsoleControl : Rectangular
 
         _this.tags?.Clear();
         _this.Tag = null;
+
+        _this.Bitmap?.Dispose();
+        _this.Bitmap = null;
 
         // This is here because controls can either be removed using Dispose() or by calling Remove from a parent's Controls collection.
         // In the case where Dispose() is called somebody needs to remove this control from its parent.
@@ -621,7 +624,7 @@ public partial class ConsoleControl : Rectangular
         if (_this.Width <= 0 || _this.Height <= 0) return;
         if (_this.Bitmap == null)
         {
-            _this.Bitmap = new ConsoleBitmap(_this.Width, _this.Height);
+            _this.Bitmap = ConsoleBitmap.Create(_this.Width, _this.Height);
         }
         else
         {

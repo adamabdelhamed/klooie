@@ -1,11 +1,12 @@
-﻿using System.Text;
+﻿using System.Buffers;
+using System.Text;
 
 namespace klooie;
 /// <summary>
 /// A data structure representing a 2d image that can be pained in
 /// a console window
 /// </summary>
-public sealed class ConsoleBitmap
+public sealed class ConsoleBitmap : Recyclable
 {
     private static readonly ConsoleCharacter EmptySpace = new ConsoleCharacter(' ');
 
@@ -55,24 +56,31 @@ public sealed class ConsoleBitmap
     /// </summary>
     /// <param name="w">the width of the image</param>
     /// <param name="h">the height of the image</param>
-    public ConsoleBitmap(int w, int h)
+    private ConsoleBitmap() { }
+    public static ConsoleBitmap Create(int w, int h)
     {
-        this.Width = w;
-        this.Height = h;
-        this.Console = ConsoleProvider.Current;
-        this.lastBufferWidth = this.Console.BufferWidth;
-        Pixels = new ConsoleCharacter[this.Width][];
-
-        for (int x = 0; x < this.Width; x++)
+        var ret = pool.Value.Rent();
+        ret.Width = w;
+        ret.Height = h;
+        ret.Console = ConsoleProvider.Current;
+        ret.lastBufferWidth = ret.Console.BufferWidth;
+        ret.Pixels = Array2DPool<ConsoleCharacter>.Rent(w, h);
+        for (int x = 0; x < w; x++)
         {
-            Pixels[x] = new ConsoleCharacter[this.Height];
-
-            for (int y = 0; y < this.Height; y++)
-            {
-                Pixels[x][y] = EmptySpace;
-
-            }
+            Array.Fill(ret.Pixels[x], EmptySpace, 0, h);
         }
+        return ret;
+    }
+
+    private static LazyPool<ConsoleBitmap> pool = new LazyPool<ConsoleBitmap>(() => new ConsoleBitmap());
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Array2DPool<ConsoleCharacter>.Return(Pixels, Width, Height);
+        Pixels = Array.Empty<ConsoleCharacter[]>();
+        Width = 0;
+        Height = 0;
     }
 
     /// <summary>
@@ -145,20 +153,20 @@ public sealed class ConsoleBitmap
     {
         if (w == Width && h == Height) return;
 
-        var newPixels = new ConsoleCharacter[w][];
+        var newPixels = Array2DPool<ConsoleCharacter>.Rent(w, h);
         for (int x = 0; x < w; x++)
         {
-            newPixels[x] = new ConsoleCharacter[h];
             for (int y = 0; y < h; y++)
             {
-                var c = x < Width && y < Height ? Pixels[x][y] : EmptySpace;
-                newPixels[x][y] = c;
+                newPixels[x][y] = (x < Width && y < Height) ? Pixels[x][y] : EmptySpace;
             }
         }
 
+        Array2DPool<ConsoleCharacter>.Return(Pixels, Width, Height);
+
         Pixels = newPixels;
-        this.Width = w;
-        this.Height = h;
+        Width = w;
+        Height = h;
     }
 
     /// <summary>
@@ -584,15 +592,15 @@ public sealed class ConsoleBitmap
     /// <returns>a copy of this bitmap</returns>
     public ConsoleBitmap Clone()
     {
-        var ret = new ConsoleBitmap(Width, Height);
-        for (var x = 0; x < Width; x++)
+        var clone = ConsoleBitmap.Create(Width, Height);
+        for (int x = 0; x < Width; x++)
         {
-            for (var y = 0; y < Height; y++)
+            for (int y = 0; y < Height; y++)
             {
-                ret.Pixels[x][y] = Pixels[x][y];
+                clone.Pixels[x][y] = Pixels[x][y];
             }
         }
-        return ret;
+        return clone;
     }
 
 
@@ -769,7 +777,7 @@ public sealed class ConsoleBitmap
             return null;
         }
 
-        var ret = new ConsoleBitmap(a.Width, a.Height);
+        var ret = ConsoleBitmap.Create(a.Width, a.Height);
         for (var x = 0; x < a.Width; x++)
         {
             for (var y = 0; y < a.Height; y++)
@@ -787,6 +795,57 @@ public sealed class ConsoleBitmap
             }
         }
         return ret;
+    }
+
+    private static class Array2DPool<T>
+    {
+        private static readonly ArrayPool<T> InnerPool = ArrayPool<T>.Shared;
+
+        // Width -> Stack of T[][]
+        private static readonly Dictionary<int, Stack<T[][]>> OuterCache = new();
+
+        public static T[][] Rent(int width, int height)
+        {
+            T[][] outer;
+
+            if (!OuterCache.TryGetValue(width, out var stack) || stack.Count == 0)
+            {
+                outer = new T[width][];
+            }
+            else
+            {
+                outer = stack.Pop();
+            }
+
+
+            for (int x = 0; x < width; x++)
+            {
+                outer[x] = InnerPool.Rent(height);
+            }
+
+            return outer;
+        }
+
+        public static void Return(T[][] array, int width, int height)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (array[x] != null)
+                {
+                    InnerPool.Return(array[x], clearArray: true);
+                    array[x] = null!;
+                }
+            }
+
+
+            if (!OuterCache.TryGetValue(width, out var stack))
+            {
+                stack = new Stack<T[][]>();
+                OuterCache[width] = stack;
+            }
+            stack.Push(array);
+
+        }
     }
 }
 internal class ChunkAwarePaintBuffer : PaintBuffer
@@ -869,7 +928,7 @@ public static class ConsoleStringEx
         var lines = str.Split("\n");
         var h = lines.Count;
         var w = lines.Select(l => l.Length).Max();
-        var ret = new ConsoleBitmap(w, h);
+        var ret = ConsoleBitmap.Create(w, h);
 
         var x = 0;
         var y = 0;
@@ -929,3 +988,5 @@ public class FastConsoleWriter
         }
     }
 }
+
+

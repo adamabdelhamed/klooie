@@ -17,12 +17,12 @@ public class RecordingTests
     [TestMethod]
     public void ConsoleBitmapVideoWriter_Basic()
     {
-        ConsoleBitmap bitmap = new ConsoleBitmap(4, 2), redBitmap = null, greenBitmap = null, magentaPixelBitmap = null;
+        ConsoleBitmap bitmap = ConsoleBitmap.Create(4, 2), redBitmap = null, greenBitmap = null, magentaPixelBitmap = null;
         using (var sharedStream = new MemoryStream())
         {
             var bitmapVideoWriter = new ConsoleBitmapVideoWriter(s => sharedStream.Write(Encoding.Default.GetBytes(s)));
 
-            bitmap = new ConsoleBitmap(4, 2);
+            bitmap = ConsoleBitmap.Create(4, 2);
             bitmap.Fill(ConsoleCharacter.RedBG());
             redBitmap = bitmapVideoWriter.WriteFrame(bitmap).Clone();
             bitmap.Fill(ConsoleCharacter.GreenBG());
@@ -51,7 +51,7 @@ public class RecordingTests
     [TestMethod, Timeout(1000)]
     public void ConsoleBitmapVideoWriter_Large()
     {
-        ConsoleBitmap bitmap = new ConsoleBitmap(1, 1);
+        ConsoleBitmap bitmap = ConsoleBitmap.Create(1, 1);
         var numFrames = 10000;
         using (var sharedStream = new MemoryStream())
         {
@@ -91,7 +91,7 @@ public class RecordingTests
         using (var stream = File.OpenWrite(temp))
         {
             var writer = new ConsoleBitmapVideoWriter(s => stream.Write(Encoding.Default.GetBytes(s)));
-            var bitmap = new ConsoleBitmap(w, h);
+            var bitmap = ConsoleBitmap.Create(w, h);
 
             for (var i = 0; i < bitmap.Width; i++)
             {

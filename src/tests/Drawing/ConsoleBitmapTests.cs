@@ -13,7 +13,7 @@ public class ConsoleBitmapTests
     [TestMethod]
     public void ConsoleBitmap_DrawLines()
     {
-        var bitmap = new ConsoleBitmap(80, 30);
+        var bitmap = ConsoleBitmap.Create(80, 30);
         var centerX = bitmap.Width / 2;
         var centerY = bitmap.Height / 2;
 
@@ -78,7 +78,7 @@ public class ConsoleBitmapTests
     [TestMethod]
     public void ConsoleBitmap_DrawLinesReverse()
     {
-        var bitmap = new ConsoleBitmap(80, 30);
+        var bitmap = ConsoleBitmap.Create(80, 30);
         var centerX = bitmap.Width / 2;
         var centerY = bitmap.Height / 2;
 
@@ -136,7 +136,7 @@ public class ConsoleBitmapTests
     [TestMethod]
     public void ConsoleBitmap_DrawRect()
     {
-        var bitmap = new ConsoleBitmap(80, 30);
+        var bitmap = ConsoleBitmap.Create(80, 30);
 
         AppTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified,80,30,async (context) =>
         {
@@ -154,7 +154,7 @@ public class ConsoleBitmapTests
     [TestMethod]
     public void ConsoleBitmap_Resize()
     {
-        var bitmap = new ConsoleBitmap(2, 1);
+        var bitmap = ConsoleBitmap.Create(2, 1);
         bitmap.Fill(RGB.Red);
         bitmap.Resize(4, 1);
         Assert.AreEqual(RGB.Red, bitmap.GetPixel(0, 0).BackgroundColor);
@@ -166,7 +166,7 @@ public class ConsoleBitmapTests
     [TestMethod]
     public void ConsoleBitmap_DrawStringH()
     {
-        var bitmap = new ConsoleBitmap(3, 1);
+        var bitmap = ConsoleBitmap.Create(3, 1);
         bitmap.DrawString("Adamab", -1, 0);
         Assert.AreEqual('d', bitmap.GetPixel(0, 0).Value);
         Assert.AreEqual('a', bitmap.GetPixel(1, 0).Value);
@@ -176,7 +176,7 @@ public class ConsoleBitmapTests
     [TestMethod]
     public void ConsoleBitmap_DrawStringV()
     {
-        var bitmap = new ConsoleBitmap(1, 3);
+        var bitmap = ConsoleBitmap.Create(1, 3);
         bitmap.DrawString("Adamab", 0, -1, true);
         Assert.AreEqual('d', bitmap.GetPixel(0, 0).Value);
         Assert.AreEqual('a', bitmap.GetPixel(0, 1).Value);
@@ -186,7 +186,7 @@ public class ConsoleBitmapTests
     [TestMethod]
     public void ConsoleBitmap_Clone()
     {
-        var b = new ConsoleBitmap(2, 2);
+        var b = ConsoleBitmap.Create(2, 2);
         b.DrawPoint(new ConsoleCharacter('a'), 0, 0);
         b.DrawPoint(new ConsoleCharacter('b'), 1, 0);
         b.DrawPoint(new ConsoleCharacter('c'), 0, 1);
@@ -212,8 +212,8 @@ public class ConsoleBitmapTests
     [TestMethod]
     public void ConsoleBitmap_Equality()
     {
-        var a = new ConsoleBitmap(2, 1);
-        var b = new ConsoleBitmap(2, 1);
+        var a = ConsoleBitmap.Create(2, 1);
+        var b = ConsoleBitmap.Create(2, 1);
 
         Assert.AreEqual(a, b);
         a.Fill(RGB.Green);
@@ -221,18 +221,18 @@ public class ConsoleBitmapTests
         b.Fill(RGB.Green);
         Assert.AreEqual(a, b);
 
-        var small = new ConsoleBitmap(1, 1);
-        var big = new ConsoleBitmap(2, 2);
+        var small = ConsoleBitmap.Create(1, 1);
+        var big = ConsoleBitmap.Create(2, 2);
         Assert.AreNotEqual(small, big);
 
-        var aRed = new ConsoleBitmap(1, 1);
-        var aGreen = new ConsoleBitmap(1, 1);
+        var aRed = ConsoleBitmap.Create(1, 1);
+        var aGreen = ConsoleBitmap.Create(1, 1);
         aRed.DrawPoint(new ConsoleCharacter('a', RGB.Red), 0, 0);
         aGreen.DrawPoint(new ConsoleCharacter('a', RGB.Green), 0, 0);
         Assert.AreNotEqual(aRed, aGreen);
 
-        var aRedBG = new ConsoleBitmap(1, 1);
-        var aGreenBG = new ConsoleBitmap(1, 1);
+        var aRedBG = ConsoleBitmap.Create(1, 1);
+        var aGreenBG = ConsoleBitmap.Create(1, 1);
         aRedBG.DrawPoint(new ConsoleCharacter('a', backgroundColor: RGB.Red), 0, 0);
         aGreenBG.DrawPoint(new ConsoleCharacter('a', backgroundColor: RGB.Green), 0, 0);
         Assert.AreNotEqual(aRedBG, aGreenBG);
