@@ -67,9 +67,9 @@ public sealed class ConsoleBitmap
         {
             Pixels[x] = new ConsoleCharacter[this.Height];
 
-            for (int y = 0; y < Pixels[x].Length; y++)
+            for (int y = 0; y < this.Height; y++)
             {
-                Pixels[x][y] = new ConsoleCharacter(' ');
+                Pixels[x][y] = EmptySpace;
 
             }
         }
@@ -146,16 +146,13 @@ public sealed class ConsoleBitmap
         if (w == Width && h == Height) return;
 
         var newPixels = new ConsoleCharacter[w][];
-        var newLastDrawnCharacters = new ConsoleCharacter[w][];
         for (int x = 0; x < w; x++)
         {
             newPixels[x] = new ConsoleCharacter[h];
-            newLastDrawnCharacters[x] = new ConsoleCharacter[h];
-            for (int y = 0; y < newPixels[x].Length; y++)
+            for (int y = 0; y < h; y++)
             {
-                var c = x < Pixels.Length && y < Pixels[0].Length ? Pixels[x][y] : EmptySpace;
+                var c = x < Width && y < Height ? Pixels[x][y] : EmptySpace;
                 newPixels[x][y] = c;
-                newLastDrawnCharacters[x][y] = c;
             }
         }
 
