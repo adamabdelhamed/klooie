@@ -141,9 +141,10 @@ public sealed class Velocity : Recyclable
         }
     }
 
-    private void ApplyInfluences()
+    public void ApplyInfluences()
     {
         if (_influences.Count == 0) return;
+
         float x = 0, y = 0;
         for (int index = 0; index < _influences.Count; index++)
         {
@@ -151,9 +152,37 @@ public sealed class Velocity : Recyclable
             x += influence.DeltaSpeed * (float)Math.Cos(influence.Angle.ToRadians());
             y += influence.DeltaSpeed * (float)Math.Sin(influence.Angle.ToRadians());
         }
-        Speed = MathF.Sqrt(x * x + y * y);
-        Angle = Angle.FromRadians(MathF.Atan2(y, x));
+        float speed = MathF.Sqrt(x * x + y * y);
+
+        if (speed > 0)
+        {
+            Speed = speed;
+            Angle = Angle.FromRadians(MathF.Atan2(y, x));
+        }
+        else
+        {
+            // Average the angles
+            float sumX = 0, sumY = 0;
+            for (int i = 0; i < _influences.Count; i++)
+            {
+                float radians = _influences[i].Angle.ToRadians();
+                sumX += (float)Math.Cos(radians);
+                sumY += (float)Math.Sin(radians);
+            }
+            // Edge case: influences exactly cancel (sumX=sumY=0); fallback to first influence.
+            if (sumX != 0 || sumY != 0)
+            {
+                Angle = Angle.FromRadians(MathF.Atan2(sumY, sumX));
+            }
+            else
+            {
+                Angle = _influences[0].Angle;
+            }
+            Speed = 0;
+        }
     }
+
+
 }
 
 public class MotionInfluence
