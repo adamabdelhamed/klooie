@@ -25,5 +25,5 @@ public partial class PixelControl : ConsoleControl
         if (me.Width != 1 || me.Height != 1) throw new InvalidOperationException(nameof(PixelControl) + " must be 1 X 1");
     }
 
-    protected override void OnPaint(ConsoleBitmap context) => context.Pixels[0][0] = Value;
+    protected override void OnPaint(ConsoleBitmap context) => context.SetPixel(0,0,Value);
 }

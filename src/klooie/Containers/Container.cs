@@ -150,13 +150,11 @@ public abstract class Container : ConsoleControl
         var maxX = Math.Min(Width, position.X + control.Width);
         var maxY = Math.Min(Height, position.Y + control.Height);
 
-        var myPixX = Bitmap.Pixels.AsSpan();
         for (var x = minX; x < maxX; x++)
         {
-            var myPixY = myPixX[x].AsSpan();
             for (var y = minY; y < maxY; y++)
             {
-                myPixY[y] = control.Bitmap.Pixels[x - position.X][y - position.Y];
+                Bitmap.SetPixel(x,y, control.Bitmap.GetPixel(x - position.X, y - position.Y));
             }
         }
     }
@@ -172,11 +170,11 @@ public abstract class Container : ConsoleControl
         {
             for (var y = minY; y < maxY; y++)
             {
-                var controlPixel = control.Bitmap.Pixels[x - position.X][y - position.Y];
-                var myPixel = Bitmap.Pixels[x][y];
+                var controlPixel = control.Bitmap.GetPixel(x - position.X,y - position.Y);
+                var myPixel = Bitmap.GetPixel(x, y);
                 var controlIsDefaultBg = controlPixel.BackgroundColor == ConsoleString.DefaultBackgroundColor;
                 var blend = controlIsDefaultBg;
-                Bitmap.Pixels[x][y] = blend ? new ConsoleCharacter(controlPixel.Value, controlPixel.ForegroundColor, myPixel.BackgroundColor) : controlPixel;
+                Bitmap.SetPixel(x,y, blend ? new ConsoleCharacter(controlPixel.Value, controlPixel.ForegroundColor, myPixel.BackgroundColor) : controlPixel);
             }
         }
     }
@@ -192,9 +190,9 @@ public abstract class Container : ConsoleControl
         {
             for (var y = minY; y < maxY; y++)
             {
-                var controlPixel = control.Bitmap.Pixels[x - position.X][y - position.Y];
+                var controlPixel = control.Bitmap.GetPixel(x - position.X, y - position.Y);
                 var vis = controlPixel.Value == ' ' ? controlPixel.BackgroundColor != Background : controlPixel.ForegroundColor != Background || controlPixel.BackgroundColor != Background;
-                Bitmap.Pixels[x][y] = vis ? controlPixel : Bitmap.Pixels[x][y];
+                Bitmap.SetPixel(x,y, vis ? controlPixel : Bitmap.GetPixel(x,y));
             }
         }
     }

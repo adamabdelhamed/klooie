@@ -79,10 +79,11 @@ public class GifWriter : IDisposable
         var colors = new HashSet<RGB>();
         foreach (var frame in video.Frames)
         {
-            foreach (var row in frame.Bitmap.Pixels)
+            for(var x = 0; x < frame.Bitmap.Width; x++)
             {
-                foreach (var pixel in row)
+                for (var y = 0; y < frame.Bitmap.Height; y++)
                 {
+                    var pixel = frame.Bitmap.GetPixel(x, y);
                     colors.Add(pixel.ForegroundColor);
                     colors.Add(pixel.BackgroundColor);
                 }

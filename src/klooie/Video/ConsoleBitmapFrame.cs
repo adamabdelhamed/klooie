@@ -44,7 +44,7 @@ public sealed class ConsoleBitmapRawFrame : ConsoleBitmapFrame
         {
             for (var y = 0; y < Pixels[0].Length; y++)
             {
-                bitmap.Pixels[x][y] = Pixels[x][y];
+                bitmap.SetPixel(x,y,Pixels[x][y]);
             }
         }
         return bitmap;
@@ -71,7 +71,7 @@ public sealed class ConsoleBitmapDiffFrame : ConsoleBitmapFrame
     {
         foreach (var diff in Diffs)
         {
-            bitmap.Pixels[diff.X][diff.Y] = diff.Value;
+            bitmap.SetPixel(diff.X, diff.Y, diff.Value);
         }
         return bitmap;
     }

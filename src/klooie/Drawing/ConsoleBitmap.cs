@@ -45,7 +45,7 @@ public sealed class ConsoleBitmap
     /// using the built in methods. If you modify the values to an inconsistent state then
     /// you can break the object.
     /// </summary>
-    public ConsoleCharacter[][] Pixels;
+    private ConsoleCharacter[][] Pixels;
 
     private int lastBufferWidth;
 
@@ -883,7 +883,7 @@ public static class ConsoleStringEx
             }
             else
             {
-                ret.Pixels[x++][y] = c;
+                ret.GetPixel(x++,y) = c;
             }
         }
 
