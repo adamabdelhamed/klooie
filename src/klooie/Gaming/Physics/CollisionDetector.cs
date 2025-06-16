@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace klooie.Gaming;
 public class Collision : Recyclable
@@ -76,7 +77,6 @@ public static class CollisionDetector
     public const float VerySmallNumber = 1e-5f;
 
     private static Edge[] rayBuffer = null;
-    private static Edge[] singleObstacleEdgeBuffer = new Edge[4];
     public static bool HasLineOfSight<T>(this ICollidable from, ICollidable to, IList<T> obstacles) where T : ICollidable => GetLineOfSightObstruction(from, to, obstacles) == null;
 
     public static ICollidable? GetLineOfSightObstruction<T>( this ICollidable from, ICollidable to, IList<T> obstacleControls, CastingMode castingMode = CastingMode.Rough) where T : ICollidable
@@ -133,6 +133,7 @@ public static class CollisionDetector
             if (ReferenceEquals(from, obstacle) || !from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
             if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obstacle.Bounds) > visibility + VerySmallNumber) continue;
 
+            Span<Edge> singleObstacleEdgeBuffer = stackalloc Edge[4];
             singleObstacleEdgeBuffer[0] = obstacle.Bounds.TopEdge;
             singleObstacleEdgeBuffer[1] = obstacle.Bounds.BottomEdge;
             singleObstacleEdgeBuffer[2] = obstacle.Bounds.LeftEdge;
@@ -175,22 +176,22 @@ public static class CollisionDetector
             var dy = delta.Top - movingObject.Top;
 
             // corners
-            rayBuffer[rayCount++] = new Edge(movingObject.Left, movingObject.Top, movingObject.Left + dx, movingObject.Top + dy);
-            rayBuffer[rayCount++] = new Edge(movingObject.Right, movingObject.Top, movingObject.Right + dx, movingObject.Top + dy);
-            rayBuffer[rayCount++] = new Edge(movingObject.Left, movingObject.Bottom, movingObject.Left + dx, movingObject.Bottom + dy);
-            rayBuffer[rayCount++] = new Edge(movingObject.Right, movingObject.Bottom, movingObject.Right + dx, movingObject.Bottom + dy);
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, movingObject.Top, movingObject.Left + dx, movingObject.Top + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, movingObject.Top, movingObject.Right + dx, movingObject.Top + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, movingObject.Bottom, movingObject.Left + dx, movingObject.Bottom + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, movingObject.Bottom, movingObject.Right + dx, movingObject.Bottom + dy));
 
             var granularity = .5f;
             for (var x = movingObject.Left + granularity; x < movingObject.Left + movingObject.Width; x += granularity)
             {
-                rayBuffer[rayCount++] = new Edge(x, movingObject.Top, x + dx, movingObject.Top + dy);
-                rayBuffer[rayCount++] = new Edge(x, movingObject.Bottom, x + dx, movingObject.Bottom + dy);
-            }
+                AddRay(rayBuffer, ref rayCount, new Edge(x, movingObject.Top, x + dx, movingObject.Top + dy));
+                AddRay(rayBuffer, ref rayCount, new Edge(x, movingObject.Bottom, x + dx, movingObject.Bottom + dy));
+                }
 
             for (var y = movingObject.Top + granularity; y < movingObject.Top + movingObject.Height; y += granularity)
             {
-                rayBuffer[rayCount++] = new Edge(movingObject.Left, y, movingObject.Left + dx, y + dy);
-                rayBuffer[rayCount++] = new Edge(movingObject.Right, y, movingObject.Right + dx, y + dy);
+                AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, y, movingObject.Left + dx, y + dy));
+                AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, y, movingObject.Right + dx, y + dy));
             }
         }
         else if (mode == CastingMode.Rough)
@@ -200,12 +201,12 @@ public static class CollisionDetector
             var dy = delta.Top - movingObject.Top;
 
             // corners
-            rayBuffer[rayCount++] = new Edge(movingObject.Left, movingObject.Top, movingObject.Left + dx, movingObject.Top + dy);
-            rayBuffer[rayCount++] = new Edge(movingObject.Right, movingObject.Top, movingObject.Right + dx, movingObject.Top + dy);
-            rayBuffer[rayCount++] = new Edge(movingObject.Left, movingObject.Bottom, movingObject.Left + dx, movingObject.Bottom + dy);
-            rayBuffer[rayCount++] = new Edge(movingObject.Right, movingObject.Bottom, movingObject.Right + dx, movingObject.Bottom + dy);
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, movingObject.Top, movingObject.Left + dx, movingObject.Top + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, movingObject.Top, movingObject.Right + dx, movingObject.Top + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, movingObject.Bottom, movingObject.Left + dx, movingObject.Bottom + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, movingObject.Bottom, movingObject.Right + dx, movingObject.Bottom + dy));
             // center
-            rayBuffer[rayCount++] = new Edge(movingObject.CenterX, movingObject.CenterY, movingObject.CenterX + dx, movingObject.CenterY + dy);
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.CenterX, movingObject.CenterY, movingObject.CenterX + dx, movingObject.CenterY + dy));
         }
         else if (mode == CastingMode.SingleRay)
         {
@@ -213,7 +214,7 @@ public static class CollisionDetector
             var dx = delta.Left - movingObject.Left;
             var dy = delta.Top - movingObject.Top;
             // single center ray
-            rayBuffer[rayCount++] = new Edge(movingObject.CenterX, movingObject.CenterY, movingObject.CenterX + dx, movingObject.CenterY + dy);
+            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.CenterX, movingObject.CenterY, movingObject.CenterX + dx, movingObject.CenterY + dy));
         }
         else
         {
@@ -221,6 +222,14 @@ public static class CollisionDetector
         }
 
         return rayCount;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void AddRay(Edge[] buffer, ref int count, Edge ray)
+    {
+        if (count >= buffer.Length)
+            throw new InvalidOperationException($"rayBuffer overflow: tried to add {count + 1} of {buffer.Length}");
+        buffer[count++] = ray;
     }
 
     private static void ProcessEdge(
@@ -437,23 +446,28 @@ public class ArrayPlusOne<T> : Recyclable, IList<ICollidable> where T : ICollida
 
 public static class CustomSorter
 {
-    private static float centerX;
-    private static float centerY;
-
-    public static void Sort(RectF movingObjectBounds, Edge[] obstacleEdgeBuffer)
+    public static void Sort(RectF movingObjectBounds, Span<Edge> edges)
     {
-        // Set static variables to avoid capturing or passing them
-        centerX = movingObjectBounds.Center.Left;
-        centerY = movingObjectBounds.Center.Top;
+        for (int i = 0; i < edges.Length; i++)
+        {
+            var e = edges[i];
+            GeometryGuard.ValidateFloats(e.X1, e.Y1, e.X2, e.Y2);
+        }
+        var c = movingObjectBounds.Center;
+        edges.Sort(new EdgeComparerByDistance(c.Left, c.Top)); 
+    }
+}
 
-        // Use a static comparison method
-        Array.Sort(obstacleEdgeBuffer, CompareEdges);
+public readonly struct EdgeComparerByDistance : IComparer<Edge>
+{
+    private readonly float cx, cy;
+
+    public EdgeComparerByDistance(float centerX, float centerY)
+    {
+        cx = centerX;
+        cy = centerY;
     }
 
-    private static int CompareEdges(Edge edge1, Edge edge2)
-    {
-        var distance1 = edge1.CalculateDistanceTo(centerX, centerY);
-        var distance2 = edge2.CalculateDistanceTo(centerX, centerY);
-        return distance1.CompareTo(distance2);
-    }
+    public int Compare(Edge a, Edge b)
+        => a.CalculateDistanceTo(cx, cy).CompareTo(b.CalculateDistanceTo(cx, cy));
 }
