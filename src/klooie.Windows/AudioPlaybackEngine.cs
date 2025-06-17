@@ -240,25 +240,20 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     {
         private sealed class SoundContext
         {
-            public required Func<Stream> StreamFactory { get; init; }
+            public required CachedSound Cached { get; init; }
         }
 
-        private Dictionary<string, SoundContext> soundContext;
-
-        // Map from sample provider back to its soundId
-        //private Dictionary<ISampleProvider, string> soundIdLookup;
+        private readonly Dictionary<string, SoundContext> soundContext;
 
         public SampleFactory(Dictionary<string, Func<Stream>> rawSoundData)
         {
-            // Create a single memory copy of all sounds
             soundContext = new Dictionary<string, SoundContext>(StringComparer.OrdinalIgnoreCase);
-            //soundIdLookup = new Dictionary<ISampleProvider, string>();
 
             foreach (var kvp in rawSoundData)
             {
-                soundContext[kvp.Key] = new SoundContext()
+                soundContext[kvp.Key] = new SoundContext
                 {
-                    StreamFactory = kvp.Value,
+                    Cached = new CachedSound(kvp.Value)
                 };
             }
         }
@@ -266,33 +261,10 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         public ISampleProvider Create(string soundId)
         {
             var context = soundContext[soundId];
-            return CreateFreshSample(soundId, context);
+            return new CachedSoundSampleProvider(context.Cached);
         }
+    }
 
- 
-
-      
-        private ISampleProvider CreateFreshSample(string soundId, SoundContext context)
-        {
-            var freshCopy = context.StreamFactory();
-            var waveReader = new WaveFileReader(freshCopy);
-            var freshSample = waveReader.ToSampleProvider();
-            //soundIdLookup[freshSample] = soundId;
-            return freshSample;
-        }
-        /*
-        private ISampleProvider UnwrapSampleProvider(ISampleProvider sample)
-        {
-            while (!soundIdLookup.ContainsKey(sample))
-            {
-                sample = sample is LifetimeAwareSampleProvider lifetimeAware ? lifetimeAware.InnerSample :
-                         sample is VolumeSampleProvider volumeProvider ? volumeProvider.InnerSample :
-                         throw new InvalidOperationException("Sample provider type not recognized in Return()");
-            }
-
-            return sample;
-        }
-        */
     }
 }
 
@@ -370,3 +342,50 @@ internal sealed class LoopInfo
     public ILifetime Lifetime { get; set; }
 }
 
+
+internal sealed class CachedSound
+{
+    public float[] AudioData { get; }
+    public WaveFormat WaveFormat { get; }
+
+    public CachedSound(Func<Stream> streamFactory)
+    {
+        using var stream = streamFactory();
+        using var reader = new WaveFileReader(stream);
+        WaveFormat = reader.WaveFormat;
+        var sampleProvider = reader.ToSampleProvider();
+        var wholeFile = new List<float>((int)(reader.Length / 4));
+        var readBuffer = new float[sampleProvider.WaveFormat.SampleRate * sampleProvider.WaveFormat.Channels];
+        int samplesRead;
+        while ((samplesRead = sampleProvider.Read(readBuffer, 0, readBuffer.Length)) > 0)
+        {
+            for (int n = 0; n < samplesRead; n++)
+            {
+                wholeFile.Add(readBuffer[n]);
+            }
+        }
+        AudioData = wholeFile.ToArray();
+    }
+}
+
+internal sealed class CachedSoundSampleProvider : ISampleProvider
+{
+    private readonly CachedSound cachedSound;
+    private long position;
+
+    public CachedSoundSampleProvider(CachedSound cachedSound)
+    {
+        this.cachedSound = cachedSound;
+    }
+
+    public WaveFormat WaveFormat => cachedSound.WaveFormat;
+
+    public int Read(float[] buffer, int offset, int count)
+    {
+        var availableSamples = cachedSound.AudioData.Length - position;
+        var samplesToCopy = Math.Min(availableSamples, count);
+        Array.Copy(cachedSound.AudioData, position, buffer, offset, samplesToCopy);
+        position += samplesToCopy;
+        return (int)samplesToCopy;
+    }
+}
