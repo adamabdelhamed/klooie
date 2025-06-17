@@ -97,7 +97,7 @@ public class Event : Recyclable
     /// <summary>
     /// Calls the callback now and subscribes to the event with a scope object.
     /// </summary>
-    public void Sync<TScope>(TScope scope, Action<object> handler, ILifetime lifetimeManager)
+    public void Sync<TScope>(TScope scope, Action<TScope> handler, ILifetime lifetimeManager)
     {
         handler(scope);
         Subscribe(scope, handler, lifetimeManager);
