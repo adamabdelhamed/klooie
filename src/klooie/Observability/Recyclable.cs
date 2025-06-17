@@ -58,6 +58,8 @@ public class Recyclable : ILifetime
         IsExpiring = true;
         try
         {
+            OnReturn();
+
             if (disposalSubscribers?.Count > 0)
             {
                 disposalSubscribers.Notify();
@@ -71,7 +73,6 @@ public class Recyclable : ILifetime
                 endedTaskCompletionSource = null;
             }
 
-            OnReturn();
             if (Pool != null)
             {
                 Pool.ReturnThatShouldOnlyBeCalledInternally(this);
@@ -105,8 +106,12 @@ public class Recyclable : ILifetime
     public Recyclable CreateChildRecyclable(out int lease)
     {
         var ret = DefaultRecyclablePool.Instance.Rent(out lease);
-        var childLease = lease;
-        OnDisposed(ret, (r) => r.TryDispose(childLease));
+        var tracker = LeaseHelper.TrackOwnerRelationship(this, ret);
+        OnDisposed(tracker, static (tracker) =>
+        {
+            tracker.TryDisposeRecyclable();
+            tracker.Dispose();
+        });
         return ret;
     }
 
