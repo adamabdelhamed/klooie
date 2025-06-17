@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace klooie;
 internal class FrameRateMeter
 {
-    private const int BufferSize = 3; // Rolling window of 3 seconds
+    private const int BufferSize = 2; // Rolling window of 2 seconds
     private int[] framesPerSecond = new int[BufferSize];
     private double[] slowestMsPerSecond = new double[BufferSize];
     private double[] fastestMsPerSecond = new double[BufferSize];
