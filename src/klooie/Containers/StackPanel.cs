@@ -75,7 +75,7 @@ public partial class StackPanel : ConsolePanel
 
             if (AutoSize == AutoSizeMode.Width || AutoSize == AutoSizeMode.Both)
             {
-                Width = Controls.Count == 0 ? 0 : Controls.Select(c => c.X + c.Width).Max();
+                Width = Controls.Count == 0 ? 0 : CalculateMaxWidth();
             }
         }
         else
@@ -88,8 +88,36 @@ public partial class StackPanel : ConsolePanel
 
             if (AutoSize == AutoSizeMode.Height || AutoSize == AutoSizeMode.Both)
             {
-                Height = Controls.Count == 0 ? 0 : Controls.Select(c => c.Y + c.Height).Max();
+                Height = Controls.Count == 0 ? 0 : CalculateMaxHeight();
             }
         }
+    }
+
+    private int CalculateMaxHeight()
+    {
+        int maxHeight = 0;
+        for (int i = 0; i < Controls.Count; i++)
+        {
+            var control = Controls[i];
+            if (control.Y + control.Height > maxHeight)
+            {
+                maxHeight = control.Y + control.Height;
+            }
+        }
+        return maxHeight;
+    }
+
+    private int CalculateMaxWidth()
+    {
+        int maxWidth = 0;
+        for (int i = 0; i < Controls.Count; i++)
+        {
+            var control = Controls[i];
+            if (control.X + control.Width > maxWidth)
+            {
+                maxWidth = control.X + control.Width;
+            }
+        }
+        return maxWidth;
     }
 }
