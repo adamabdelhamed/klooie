@@ -8,6 +8,10 @@ public class Collision : Recyclable
     public Angle Angle { get; private set; }
     public ICollidable MovingObject { get; private set; }
     public ICollidable ColliderHit { get; private set; }
+
+    public LeaseState<GameCollider> MovingObjectLeaseState { get; private set; }
+    public LeaseState<GameCollider> ColliderHitLeaseState { get; private set; }
+
     public CollisionPrediction Prediction { get; private set; }
     public override string ToString() => $"{Prediction.LKGX},{Prediction.LKGY} - {ColliderHit?.GetType().Name}";
 
@@ -23,6 +27,9 @@ public class Collision : Recyclable
         MovingObject = movingObject;
         ColliderHit = colliderHit;
         Prediction = prediction;
+
+        if(movingObject is GameCollider gc) MovingObjectLeaseState = LeaseHelper.Track(gc);
+        if(colliderHit is GameCollider ch) ColliderHitLeaseState = LeaseHelper.Track(ch);
     }
 
     public void Reset()
@@ -32,6 +39,10 @@ public class Collision : Recyclable
         MovingObject = null;
         ColliderHit = null;
         Prediction = null;
+        MovingObjectLeaseState?.TryDispose();
+        MovingObjectLeaseState = null;
+        ColliderHitLeaseState?.TryDispose();
+        ColliderHitLeaseState = null;
     }
 }
 
@@ -79,11 +90,12 @@ public static class CollisionDetector
     private static Edge[] rayBuffer = null;
     public static bool HasLineOfSight<T>(this ICollidable from, ICollidable to, IList<T> obstacles) where T : ICollidable => GetLineOfSightObstruction(from, to, obstacles) == null;
 
-    public static ICollidable? GetLineOfSightObstruction<T>( this ICollidable from, ICollidable to, IList<T> obstacleControls, CastingMode castingMode = CastingMode.Rough) where T : ICollidable
+    public static ICollidable? GetLineOfSightObstruction<T>( this ICollidable from, ICollidable to, IList<T> obstacleControls, CastingMode castingMode = CastingMode.Rough, CollisionPrediction prediction = null) where T : ICollidable
     {
         var massBounds = from.Bounds;
         var colliders = ArrayPlusOnePool<T>.Instance.Rent();
-        var prediction = CollisionPredictionPool.Instance.Rent();
+        var autoDisposePrediction = prediction == null;
+        prediction = prediction ?? CollisionPredictionPool.Instance.Rent();
         colliders.Bind(obstacleControls, to);
         try
         {
@@ -98,7 +110,10 @@ public static class CollisionDetector
         finally
         {
             colliders.Dispose();
-            prediction.Dispose();
+            if (autoDisposePrediction)
+            {
+                prediction.Dispose();
+            }
         }
     }
  
