@@ -155,11 +155,25 @@ public partial class ConsoleControl : Rectangular
     /// </summary>
     public bool IsVisibleAndAllParentsVisible => IsVisible && AreAllParentsVisible;
 
+
+    private Event canFocusChanged;
+    public Event CanFocusChanged => canFocusChanged ?? (canFocusChanged = Event.Create());
+    private bool canFocus;
     /// <summary>
     /// Gets or sets whether or not this control can accept focus.  By default this is set to true, but can
     /// be overridden by derived classes to be false by default.
     /// </summary>
-    public partial bool CanFocus { get; set; }
+    public bool CanFocus
+    {
+        get => canFocus;
+        set 
+        {
+            if(value == canFocus) return;
+            canFocus = value;
+            HandleCanFocusChanged();
+            canFocusChanged?.Fire();
+        }
+    }
 
     /// <summary>
     /// Gets or sets whether or not this control can accept focus via the tab key. By default this is set to false. This
@@ -297,25 +311,23 @@ public partial class ConsoleControl : Rectangular
         FocusContrastColor = DefaultColors.FocusContrastColor;
         CompositionMode = CompositionMode.PaintOver;
         
-        BoundsChanged.Subscribe(this, ResizeBitmapOnBoundsChanged, this);
-        CanFocusChanged.Subscribe(this, HandleCanFocusChanged, this);
-        OnDisposed(this, ReturnEvents);
+        BoundsChanged.Subscribe(this, static me =>  me.ResizeBitmapOnBoundsChanged(), this);
     }
      
 
     protected virtual void OnAnyPropertyChanged() { }
 
-    private static void HandleCanFocusChanged(object me)
+    private void HandleCanFocusChanged()
     {
-        var _this = me as ConsoleControl;
-        if (_this.HasFocus && _this.CanFocus == false) ConsoleApp.Current?.MoveFocus();
+        if (HasFocus && CanFocus == false) ConsoleApp.Current?.MoveFocus();
     }
 
-  
 
-    private static void ReturnEvents(object me)
+    protected override void OnReturn()
     {
-        var _this = me as ConsoleControl;
+
+    
+        var _this = this;
         if (_this._focused != null)
         {
             _this._focused.Dispose();
@@ -343,6 +355,9 @@ public partial class ConsoleControl : Rectangular
             _this._keyInputReceived = null;
         }
 
+        _this.canFocusChanged?.Dispose();
+        _this.canFocusChanged = null;
+
         _this.HasFocus = false;
 
         _this._filters?.Dispose();
@@ -359,6 +374,8 @@ public partial class ConsoleControl : Rectangular
         // We could do this from within ConsolePanel, but it would require a lambda with a capture, which causes an allocation.
         // Doing it here looks a bit hacky, but that allocation is on a critical path.
         (_this.Parent as ConsolePanel)?.Controls.Remove(_this);
+
+        base.OnReturn();
     }
 
     /// <summary>
@@ -618,17 +635,16 @@ public partial class ConsoleControl : Rectangular
         return new Loc(x, y);
     }
 
-    private static void ResizeBitmapOnBoundsChanged(object me)
+    private void ResizeBitmapOnBoundsChanged()
     {
-        var _this = me as ConsoleControl;
-        if (_this.Width <= 0 || _this.Height <= 0) return;
-        if (_this.Bitmap == null)
+        if (Width <= 0 || Height <= 0) return;
+        if (Bitmap == null)
         {
-            _this.Bitmap = ConsoleBitmap.Create(_this.Width, _this.Height);
+            Bitmap = ConsoleBitmap.Create(Width, Height);
         }
         else
         {
-            _this.Bitmap.Resize(_this.Width, _this.Height);
+            Bitmap.Resize(Width, Height);
         }
     }
 
