@@ -163,6 +163,8 @@ public class GameCollider : ConsoleControl
         Velocity?.TryDispose("By owning collider");
         Velocity = null;
         ColliderGroup = null;
+        UniformGrid.Remove(this);
+        UniformGrid = null;
     }
 }
 

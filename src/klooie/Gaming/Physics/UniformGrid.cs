@@ -76,8 +76,7 @@ public sealed class UniformGrid
         // If that ever changes then we will need to unsubscribe in
         // a different way, possibly by using an observable collection.
         obj.UniformGrid = this; // Set the grid reference on the collider
-        obj.BoundsChanged.Subscribe(obj, HandleBoundsChanged, obj);
- 
+        obj.BoundsChanged.Subscribe(obj, static objParam => objParam.UniformGrid.Update(objParam), obj);
 
         LoadCells(obj.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)
@@ -91,13 +90,11 @@ public sealed class UniformGrid
         }
     }
 
-    private static void HandleBoundsChanged(object state)
-    {
-        var obj = (GameCollider)state;
-        obj.UniformGrid.Update(obj);
-    }
+  
 
-    private void Remove(GameCollider obj)
+    // internal so that the game collider can remove itself when disposing, saving us a 
+    // subscription to its OnDisposed.
+    internal void Remove(GameCollider obj)
     {
         var state = membershipStates[obj];
         membershipStates.Remove(obj);
@@ -228,7 +225,6 @@ public sealed class UniformGrid
             ret.Collider = collider;
             ret.Grid = grid;
             ret.PreviousBounds = collider.Bounds;
-            collider.OnDisposed(ret, RemoveFromGrid);
             return ret;
         }
 
