@@ -33,7 +33,7 @@ public class DelayState : Recyclable
     {
         base.OnInit();
         Dependencies = RecyclableListPool<ILifetime>.Instance.Rent();
-        Leases = RecyclableListPool<int>.Instance.Rent(1);
+        Leases = RecyclableListPool<int>.Instance.Rent();
     }
 
     public static DelayState Create(ILifetime dependency)
@@ -72,14 +72,10 @@ public class DelayState : Recyclable
         if (Dependencies == null) return;
         for (int i = 0; i < Dependencies.Count; i++)
         {
-            if (Dependencies[i] == null || Dependencies[i].IsStillValid(Leases[i]) == false)
-            {
-                continue;
-            }
             if (Dependencies[i] is Recyclable r)
             { 
                 _beforeDisposeDependency?.Fire(r);
-                r.TryDispose($"InnerLoopAPIs - {nameof(DisposeAllValidDependencies)}");
+                r.TryDispose(Leases[i], $"InnerLoopAPIs - {nameof(DisposeAllValidDependencies)}");
             }
         }
     }
