@@ -452,11 +452,14 @@ public static class EdgeComparerByDistance
 
     public static void Sort(RectF rect, Span<Edge> edges)
     {
+        /*
+        // Commented out because it's killing the CPU, but bring it back if you ever suspect corrupt memory reads that lead to Edge sorting.
         for (int i = 0; i < edges.Length; i++)
         {
             var e = edges[i];
             GeometryGuard.ValidateFloats(e.X1, e.Y1, e.X2, e.Y2);
         }
+        */
         cx = rect.CenterX;
         cy = rect.CenterY;
         edges.Sort(comparison);
