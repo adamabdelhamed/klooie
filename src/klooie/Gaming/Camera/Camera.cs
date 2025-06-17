@@ -101,26 +101,8 @@ public sealed partial class Camera : ConsolePanel
     /// <returns>an async task that completes when the animation is finished or cancelled</returns>
     public Task AnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, IDelayProvider delayProvider = null)
     {
-        // TODO: Go to the Animation folder and add a new file called CameraAnimationState.cs. It should follow the pattern that ConsoleControlAnimationState follows.
-        // Then expose an Animate API in Animator.cs that uses CameraAnimationState to animate the camera. Then this method won't need this setter function, which currently
-        // allocates an action on every call.
         ease = ease ?? EasingFunctions.EaseInOut;
-        var startX = cameraLocation.Left;
-        var startY = cameraLocation.Top;
-        var lease = lt?.Lease;
-        Action<float> setter = v =>
-        {
-            var xDelta = dest.Left - startX;
-            var yDelta = dest.Top - startY;
-            var frameX = startX + (v * xDelta);
-            var frameY = startY + (v * yDelta);
-            if (lt == null || (lt != null && lt.IsStillValid(lease.Value) == true))
-            {
-                CameraLocation = new LocF(frameX, frameY);
-            }
-        };
-
-        return Animator.AnimateAsync(0, 1, duration, setter, ease, delayProvider, false, 0, animationLifetime: lt); 
+        return Animator.AnimateAsync(this, dest, duration, ease, delayProvider, animationLifetime: lt);
     }
 
     /// <summary>
