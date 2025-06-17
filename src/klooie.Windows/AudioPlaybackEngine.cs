@@ -264,8 +264,6 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             return new CachedSoundSampleProvider(context.Cached);
         }
     }
-
-    }
 }
 
 internal sealed class LifetimeAwareSampleProvider : ISampleProvider
