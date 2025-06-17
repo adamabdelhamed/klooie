@@ -12,7 +12,6 @@ public class Vision : Recyclable
     private Event? _visibleObjectsChanged;
     public Event VisibleObjectsChanged => _visibleObjectsChanged ??= Event.Create();
 
-    private const float AutoScanFrequency = 667;
 
     private VisionFilterContext targetFilterContext = new VisionFilterContext();
     private Event<VisionFilterContext>? _targetBeingEvaluated;
@@ -23,6 +22,11 @@ public class Vision : Recyclable
     public float Range { get; set; } 
     public float AngularVisibility { get; set; } 
     public float ScanOffset { get; set; }
+    public CastingMode CastingMode { get; set; }
+    public float AutoScanFrequency { get; set; }
+    public float AngleStep {get;set;}
+    public int AngleFuzz { get; set; }
+    public  TimeSpan MaxMemoryTime { get; set; }
     public Vision() { }
 
     private static Random random = new Random();
@@ -32,8 +36,12 @@ public class Vision : Recyclable
     {
         var vision = VisionPool.Instance.Rent();
         vision.Eye = eye;
-        vision.ScanOffset = (NextScanOffsetBase++ * MinScanSpacing) % AutoScanFrequency;
-
+        vision.AutoScanFrequency = 667f;
+        vision.AngleStep = 5;
+        vision.AngleFuzz = 2;
+        vision.ScanOffset = (NextScanOffsetBase++ * MinScanSpacing) % vision.AutoScanFrequency;
+        vision.CastingMode = CastingMode.SingleRay;
+        vision.MaxMemoryTime = TimeSpan.FromSeconds(2);
         _visionInitiated?.Fire(vision);
         if (autoScan)
         {
@@ -56,14 +64,9 @@ public class Vision : Recyclable
     private static void ScanLoopBody(object obj)
     {
         var state = (VisionDependencyState)obj;
-        if(state.AreAllDependenciesValid == false)
-        {
-            state.Dispose();
-            return;
-        }
         FrameDebugger.RegisterTask(nameof(Vision));
         state.Vision.Scan();
-        Game.Current.InnerLoopAPIs.Delay(AutoScanFrequency + state.Vision.ScanOffset, state, ScanLoopBody);
+        Game.Current.InnerLoopAPIs.DelayIfValid(state.Vision.AutoScanFrequency + state.Vision.ScanOffset, state, ScanLoopBody);
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
@@ -72,31 +75,13 @@ public class Vision : Recyclable
         RemoveStaleTrackedObjects();
         if (Eye.IsVisible == false) return;
         var buffer = ObstacleBufferPool.Instance.Rent();
-        Eye.GetObstacles(buffer);
+        Eye.ColliderGroup.SpacialIndex.Query(Eye.Bounds.SweptAABB(Eye.Bounds.RadialOffset(Eye.Velocity.Angle, Range)), buffer);
         FilterObstacles(buffer);
         try
         {
-            var directlyAheadResult = Cast(Eye.Velocity.Angle, buffer);   
-            if (directlyAheadResult != null)
+            if (TryPerfestScan(buffer) == false)
             {
-                TrackedObjectsDictionary.Add(directlyAheadResult.Target, directlyAheadResult);
-                TrackedObjectsList.Add(directlyAheadResult);
-            }
-
-            var currentAngle = FieldOfViewStart;
-            var totalTravel = 0f;
-            var angleStep = 5f;
-            var angleFuzz = 2;
-            while(totalTravel <= AngularVisibility)
-            {
-                var visibleObject = Cast(currentAngle.Add(Random.Shared.Next(-angleFuzz, angleFuzz)), buffer);
-                if (visibleObject != null)
-                {
-                    TrackedObjectsDictionary.Add(visibleObject.Target, visibleObject);
-                    TrackedObjectsList.Add(visibleObject);
-                }
-                totalTravel += angleStep;
-                currentAngle = currentAngle.Add(angleStep);
+                ApproximateScan(buffer);
             }
         }
         finally
@@ -106,9 +91,75 @@ public class Vision : Recyclable
         _visibleObjectsChanged?.Fire();
     }
 
+    private bool TryPerfestScan(ObstacleBuffer buffer)
+    {
+        if (AngleStep > 1) return false;
+        if(MaxMemoryTime > TimeSpan.Zero) throw new InvalidOperationException($"When {nameof(AngleStep)} is <= 1 then MaxMemoryTime must be <= TimeSpan.Zero.");
+        if(TrackedObjectsList.Count > 0) throw new InvalidOperationException($"When {nameof(AngleStep)} is <= 1 then TrackedObjectsList must be empty."); 
+        
+        for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
+        {
+            var distance = Eye.CalculateNormalizedDistanceTo(buffer.WriteableBuffer[i]);
+            if (distance > Range) continue;
+
+            var angle = Eye.CalculateAngleTo(buffer.WriteableBuffer[i]);
+            var angleDiff = Eye.Velocity.Angle.DiffShortest(angle);
+            if (angleDiff > AngularVisibility) continue;
+
+            var prediction = CollisionPredictionPool.Instance.Rent();
+            var obstruction = CollisionDetector.GetLineOfSightObstruction(Eye, buffer.WriteableBuffer[i], buffer.WriteableBuffer, CastingMode.Precise, prediction) as GameCollider;
+            VisuallyTrackedObject? target = null;
+            if (obstruction != null || TryIgnorePotentialTargetIgnorable(buffer.WriteableBuffer[i], out target))
+            {
+                if (target != null)
+                {
+                    throw new InvalidOperationException($"Target was present in visible objects, but should have been marked as stale.");
+                }
+                prediction.TryDispose();
+                continue;
+            }
+
+            var newItem =  VisuallyTrackedObject.Create(buffer.WriteableBuffer[i], prediction, prediction.LKGD, distance);
+            TrackedObjectsDictionary.Add(newItem.Target, newItem);
+            TrackedObjectsList.Add(newItem);
+        }
+        return true;
+    }
+
+    private void ApproximateScan(ObstacleBuffer buffer)
+    {
+        var directlyAheadResult = Cast(Eye.Velocity.Angle, buffer);
+        if (directlyAheadResult != null)
+        {
+            TrackedObjectsDictionary.Add(directlyAheadResult.Target, directlyAheadResult);
+            TrackedObjectsList.Add(directlyAheadResult);
+        }
+
+        var currentAngle = FieldOfViewStart;
+        var totalTravel = 0f;
+
+        while (totalTravel <= AngularVisibility)
+        {
+            var visibleObject = Cast(currentAngle.Add(AngleFuzz == 0 ? 0 : Random.Shared.Next(-AngleFuzz, AngleFuzz)), buffer);
+            if (visibleObject != null)
+            {
+                TrackedObjectsDictionary.Add(visibleObject.Target, visibleObject);
+                TrackedObjectsList.Add(visibleObject);
+            }
+            totalTravel += AngleStep;
+            currentAngle = currentAngle.Add(AngleStep);
+        }
+    }
+
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     private void RemoveStaleTrackedObjects()
     {
+        if(MaxMemoryTime <= TimeSpan.Zero)
+        {
+            UntrackAll();
+            return;
+        }
+
         for (var i = TrackedObjectsList.Count - 1; i >= 0; i--)
         {
             var trackedObject = TrackedObjectsList[i];
@@ -118,7 +169,13 @@ public class Vision : Recyclable
                 continue;
             }
 
-            if (trackedObject.TimeSinceLastSeen > VisuallyTrackedObject.MaxMemoryTime)
+            if (trackedObject.TimeSinceLastSeen > MaxMemoryTime)
+            {
+                UnTrackAtIndex(i);
+                continue;
+            }
+
+            if(trackedObject.Target.CalculateNormalizedDistanceTo(Eye) > Range)
             {
                 UnTrackAtIndex(i);
                 continue;
@@ -135,31 +192,44 @@ public class Vision : Recyclable
         trackedObject.TryDispose();
     }
 
+    private void UntrackAll()
+    {
+        for(var i = 0; i < TrackedObjectsList.Count; i++)
+        {
+            TrackedObjectsList [i].TryDispose();
+        }
+        TrackedObjectsList.Clear();
+        TrackedObjectsDictionary.Clear();
+    }
+
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     private VisuallyTrackedObject? Cast(Angle angle, ObstacleBuffer buffer)
     {
         var singleRay = CollisionPredictionPool.Instance.Rent();
-        CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Range, CastingMode.SingleRay, buffer.WriteableBuffer.Count, singleRay);
+        CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Range, CastingMode, buffer.WriteableBuffer.Count, singleRay);
         var potentialTarget = singleRay.ColliderHit as GameCollider;
-   
-        if (potentialTarget != null && TrackedObjectsDictionary.TryGetValue(potentialTarget, out var target))
-        {
-            target.LastSeenTime = Game.Current.MainColliderGroup.Now;
-            singleRay.TryDispose();
-            return null;
-        }
 
-        if(potentialTarget == null || 
-            potentialTarget?.Velocity == null ||
-            potentialTarget.IsVisible == false || 
-            potentialTarget.CanCollideWith(Eye) == false || 
-            Eye.CanCollideWith(potentialTarget) == false)
+        if (TryIgnorePotentialTargetIgnorable(potentialTarget, out var target))
         {
+            if (target != null)
+            {
+                target.LastSeenTime = Game.Current.MainColliderGroup.Now;
+                target.Distance = Eye.CalculateNormalizedDistanceTo(potentialTarget);
+            }
             singleRay.TryDispose();
             return null;
         }
 
         return VisuallyTrackedObject.Create(potentialTarget,singleRay,singleRay.LKGD,angle);
+    }
+
+    private bool TryIgnorePotentialTargetIgnorable(GameCollider? potentialTarget, out VisuallyTrackedObject existing)
+    {
+        VisuallyTrackedObject existingTarget = null;
+        var alreadyTracked = potentialTarget != null && TrackedObjectsDictionary.TryGetValue(potentialTarget, out existingTarget);
+        var shouldBeIgnored = alreadyTracked || potentialTarget == null || potentialTarget?.Velocity == null || potentialTarget.IsVisible == false || potentialTarget.CanCollideWith(Eye) == false || Eye.CanCollideWith(potentialTarget) == false;
+        existing = existingTarget;
+        return shouldBeIgnored;
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
@@ -252,7 +322,6 @@ public class VisionDependencyState : DelayState
 
 public class VisuallyTrackedObject : Recyclable
 {
-    public static readonly TimeSpan MaxMemoryTime = TimeSpan.FromSeconds(2);
     private int targetLease;
     public GameCollider Target { get; private set; }
     public TimeSpan LastSeenTime { get; set; }
@@ -312,7 +381,7 @@ public class VisionFilter : IConsoleControlFilter
         }
 
         var ageSeconds = (float)vto.TimeSinceLastSeen.TotalSeconds;
-        var staleness =  ageSeconds / (float)VisuallyTrackedObject.MaxMemoryTime.TotalSeconds;
+        var staleness =  ageSeconds / (float)Vision.MaxMemoryTime.TotalSeconds;
 
         bitmap.Fill(SeenNow.ToOther(NotSeen, staleness)); 
     }
