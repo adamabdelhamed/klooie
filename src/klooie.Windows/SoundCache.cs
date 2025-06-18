@@ -11,16 +11,11 @@ internal sealed class SoundCache
         GC.Collect();
     }
 
-    public bool TryCreate(EventLoop eventLoop, string soundId, float volume, ILifetime? maxLifetime, bool loop, out RecyclableSampleProvider ret)
+    public RecyclableSampleProvider? TryCreate(EventLoop eventLoop, string? soundId, float volume, ILifetime? maxLifetime, bool loop)
     {
-        if(soundCacheDictionary.TryGetValue(soundId, out var cachedSound) == false)
-        {
-            ret = null!;
-            return false;
-        }
-        
-        ret = RecyclableSampleProvider.Create(eventLoop, cachedSound, volume, maxLifetime, loop);
-        return true;
+        if (string.IsNullOrEmpty(soundId)) return null;
+        if (soundCacheDictionary.TryGetValue(soundId, out var cachedSound) == false) return null;
+        return RecyclableSampleProvider.Create(eventLoop, cachedSound, volume, maxLifetime, loop);
     }
 }
 internal sealed class CachedSound
