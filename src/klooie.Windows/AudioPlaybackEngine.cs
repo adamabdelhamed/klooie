@@ -12,8 +12,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     private readonly MixingSampleProvider mixer;
     private EventLoop eventLoop;
     private SoundCache soundCache;
-    public float NewPlaySoundVolume { get; set; } = 1;
-    public float MasterVolume { get; set; } = 1;
+    public VolumeKnob MasterVolume { get; set; } 
 
     public AudioPlaybackEngine()
     {
@@ -22,6 +21,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             eventLoop = ConsoleApp.Current;
             if(eventLoop == null) throw new InvalidOperationException("AudioPlaybackEngine requires an event loop to be set. Please set EventLoop.Current before creating an instance of AudioPlaybackEngine.");
             var sw = Stopwatch.StartNew();
+            MasterVolume = VolumeKnob.Create();
             mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
             outputDevice = new WaveOutEvent();
             outputDevice.Init(mixer);
@@ -37,24 +37,18 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         }
     }
 
-    public void Play(string? soundId, ILifetime? maxDuration = null) 
-        => AddMixerInput(soundCache.GetSample(eventLoop, soundId, NewPlaySoundVolume, maxDuration, false));
+    public void Play(string? soundId, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null) 
+        => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, maxDuration, false));
 
 
-    public void Loop(string? soundId, ILifetime? lt = null) 
-        => AddMixerInput(soundCache.GetSample(eventLoop, soundId, NewPlaySoundVolume, lt ?? Recyclable.Forever, true));
+    public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null) 
+        => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
 
 
     private void AddMixerInput(RecyclableSampleProvider? sample)
     {
         if (sample == null) return;
 
-        if (MasterVolume != 1)
-        {
-            MasterVolume = Math.Max(0, MasterVolume);
-            MasterVolume = Math.Min(1, MasterVolume);
-            sample.Volume *= MasterVolume;
-        }
         mixer?.AddMixerInput(sample);
     }
 

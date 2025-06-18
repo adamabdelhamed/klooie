@@ -1,20 +1,18 @@
 ﻿namespace klooie;
 public interface ISoundProvider
 {
-    float MasterVolume { get; set; }
-    float NewPlaySoundVolume { get; set; }
-    void Play(string? sound, ILifetime? maxDuration = null);
-    void Loop(string? sound, ILifetime? duration = null);
+    VolumeKnob MasterVolume { get;  }
+    void Play(string? sound, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null);
+    void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null);
     void Pause();
     void Resume();
 }
 
 public class NoOpSoundProvider : ISoundProvider
 {
-    public float NewPlaySoundVolume { get; set; } = 1;
-    public float MasterVolume { get; set; } = 1;
-    public void Loop(string? sound, ILifetime? duration = null) { }
-    public void Play(string? sound, ILifetime? maxDuration = null) { }
+    public VolumeKnob MasterVolume { get; set; } 
+    public void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null) { }
+    public void Play(string? sound, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null) { }
     public void Pause() { }
     public void Resume() { }
 }
