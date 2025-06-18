@@ -11,7 +11,7 @@ internal sealed class SoundCache
         GC.Collect();
     }
 
-    public RecyclableSampleProvider? TryCreate(EventLoop eventLoop, string? soundId, float volume, ILifetime? maxLifetime, bool loop)
+    public RecyclableSampleProvider? GetSample(EventLoop eventLoop, string? soundId, float volume, ILifetime? maxLifetime, bool loop)
     {
         if (string.IsNullOrEmpty(soundId)) return null;
         if (soundCacheDictionary.TryGetValue(soundId, out var cachedSound) == false) return null;

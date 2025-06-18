@@ -38,11 +38,11 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     }
 
     public void Play(string? soundId, ILifetime? maxDuration = null) 
-        => AddMixerInput(soundCache.TryCreate(eventLoop, soundId, NewPlaySoundVolume, maxDuration, false));
+        => AddMixerInput(soundCache.GetSample(eventLoop, soundId, NewPlaySoundVolume, maxDuration, false));
 
 
     public void Loop(string? soundId, ILifetime? lt = null) 
-        => AddMixerInput(soundCache.TryCreate(eventLoop, soundId, NewPlaySoundVolume, lt ?? Recyclable.Forever, true));
+        => AddMixerInput(soundCache.GetSample(eventLoop, soundId, NewPlaySoundVolume, lt ?? Recyclable.Forever, true));
 
 
     private void AddMixerInput(RecyclableSampleProvider? sample)
