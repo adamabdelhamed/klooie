@@ -15,10 +15,9 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     private const int ChannelCount = 2;
     private readonly IWavePlayer outputDevice;
     private readonly MixingSampleProvider mixer;
-    private List<Recyclable> currentSoundLifetimes;
-    private HashSet<string> soundIds;
-    private Dictionary<ISampleProvider, LoopInfo> runningLoops;
-    private SampleFactory samplePool;
+    private EventLoop eventLoop;
+
+    private SoundCache soundCache;
 
     /// <summary>
     /// Sets the volume to apply to any sounds played moving forward
@@ -37,17 +36,15 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     {
         try
         {
-            currentSoundLifetimes = new List<Recyclable>();
-            runningLoops = new Dictionary<ISampleProvider, LoopInfo>();
+            eventLoop = ConsoleApp.Current;
+            if(eventLoop == null) throw new InvalidOperationException("AudioPlaybackEngine requires an event loop to be set. Please set EventLoop.Current before creating an instance of AudioPlaybackEngine.");
             var sw = Stopwatch.StartNew();
             mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
-            mixer.MixerInputEnded += Mixer_MixerInputEnded;
             outputDevice = new WaveOutEvent();
             outputDevice.Init(mixer);
             outputDevice.Play();
             var sounds = LoadSounds();
-            soundIds = new HashSet<string>(sounds.Keys, StringComparer.OrdinalIgnoreCase);
-            samplePool = new SampleFactory(LoadSounds());
+            soundCache = new SoundCache(LoadSounds());
             sw.Stop();
             LogSoundLoaded(sw.ElapsedMilliseconds);
         }
@@ -57,7 +54,6 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         }
     }
 
-    protected virtual string ReplaceSoundHook(string aboutToPlay) => aboutToPlay;
 
     /// <summary>
     /// Plays the given sound
@@ -68,24 +64,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         if (soundId == null) return;
         try
         {
-            var overrideSound = ReplaceSoundHook(soundId);
-            var toPlay = soundIds.Contains(overrideSound) ? overrideSound : soundId;
-            if (soundIds.Contains(toPlay))
-            {
-                var sample = CreateNewSample(toPlay);
-
-                if (NewPlaySoundVolume != 1)
-                {
-                    sample = new VolumeSampleProvider(sample) { Volume = NewPlaySoundVolume };
-                }
-
-                if (maxDuration != null)
-                {
-                    sample = AddMixerInput(new LifetimeAwareSampleProvider(sample, maxDuration));
-                }
-
-                AddMixerInput(sample);
-            }
+            if (soundCache.TryCreate(eventLoop, soundId, NewPlaySoundVolume, maxDuration, false, out RecyclableSampleProvider sampleProvider) == false) return;
+            AddMixerInput(sampleProvider);
         }
         catch (Exception)
         {
@@ -104,27 +84,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         lt = lt ?? Recyclable.Forever;
         try
         {
-            if (soundIds.Contains(soundId))
-            {
-                var overrideLifetime = DefaultRecyclablePool.Instance.Rent();
-                lock (currentSoundLifetimes)
-                {
-                    currentSoundLifetimes.Add(overrideLifetime);
-                }
-
-                var rawSample = CreateNewSample(soundId);
-
-                if (NewPlaySoundVolume != 1)
-                {
-                    rawSample = new VolumeSampleProvider(rawSample) { Volume = NewPlaySoundVolume };
-                }
-                var sample = AddMixerInput(new LifetimeAwareSampleProvider(rawSample, lt));
-                runningLoops.Add(sample, new LoopInfo() { Lifetime = lt, Sound = soundId });
-                lt.OnDisposed(sample, (sampleObj) =>
-                {
-                    runningLoops.Remove((ISampleProvider)sampleObj);
-                });
-            }
+            if (soundCache.TryCreate(eventLoop, soundId, NewPlaySoundVolume, lt, true, out RecyclableSampleProvider sampleProvider) == false) return;
+            AddMixerInput(sampleProvider);
         }
         catch (Exception)
         {
@@ -132,13 +93,13 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         }
     }
 
-    private ISampleProvider AddMixerInput(ISampleProvider sample)
+    private ISampleProvider AddMixerInput(RecyclableSampleProvider sample)
     {
         if (MasterVolume != 1)
         {
             MasterVolume = Math.Max(0, MasterVolume);
             MasterVolume = Math.Min(100, MasterVolume);
-            sample = new VolumeSampleProvider(sample) { Volume = MasterVolume };
+            sample.Volume *= MasterVolume;
         }
         mixer?.AddMixerInput(sample);
         return sample;
@@ -178,39 +139,6 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     }
 
     /// <summary>
-    /// Stops all sounds that are looping
-    /// </summary>
-    public void EndAllLoops()
-    {
-        try
-        {
-            lock (currentSoundLifetimes)
-            {
-                foreach (var sound in currentSoundLifetimes)
-                {
-                    sound.Dispose();
-                }
-                currentSoundLifetimes.Clear();
-            }
-        }
-        catch (Exception)
-        {
-
-        }
-    }
-
-    private ISampleProvider CreateNewSample(string soundId) => samplePool.Create(soundId);
-
-    private void Mixer_MixerInputEnded(object sender, SampleProviderEventArgs e)
-    {
-        if (runningLoops.TryGetValue(e.SampleProvider, out LoopInfo info))
-        {
-            Loop(info.Sound, info.Lifetime);
-            runningLoops.Remove(e.SampleProvider);
-        }
-    }
-
-    /// <summary>
     /// Derived classes should return a dictionary where the keys are the names
     /// of the sound effects and the values are the bytes of MP3 files.
     /// </summary>
@@ -235,138 +163,5 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     {
 
     }
-
-    private sealed class SampleFactory
-    {
-        private sealed class SoundContext
-        {
-            public required Func<Stream> StreamFactory { get; init; }
-        }
-
-        private Dictionary<string, SoundContext> soundContext;
-
-        // Map from sample provider back to its soundId
-        //private Dictionary<ISampleProvider, string> soundIdLookup;
-
-        public SampleFactory(Dictionary<string, Func<Stream>> rawSoundData)
-        {
-            // Create a single memory copy of all sounds
-            soundContext = new Dictionary<string, SoundContext>(StringComparer.OrdinalIgnoreCase);
-            //soundIdLookup = new Dictionary<ISampleProvider, string>();
-
-            foreach (var kvp in rawSoundData)
-            {
-                soundContext[kvp.Key] = new SoundContext()
-                {
-                    StreamFactory = kvp.Value,
-                };
-            }
-        }
-
-        public ISampleProvider Create(string soundId)
-        {
-            var context = soundContext[soundId];
-            return CreateFreshSample(soundId, context);
-        }
-
- 
-
-      
-        private ISampleProvider CreateFreshSample(string soundId, SoundContext context)
-        {
-            var freshCopy = context.StreamFactory();
-            var waveReader = new WaveFileReader(freshCopy);
-            var freshSample = waveReader.ToSampleProvider();
-            //soundIdLookup[freshSample] = soundId;
-            return freshSample;
-        }
-        /*
-        private ISampleProvider UnwrapSampleProvider(ISampleProvider sample)
-        {
-            while (!soundIdLookup.ContainsKey(sample))
-            {
-                sample = sample is LifetimeAwareSampleProvider lifetimeAware ? lifetimeAware.InnerSample :
-                         sample is VolumeSampleProvider volumeProvider ? volumeProvider.InnerSample :
-                         throw new InvalidOperationException("Sample provider type not recognized in Return()");
-            }
-
-            return sample;
-        }
-        */
-    }
-}
-
-internal sealed class LifetimeAwareSampleProvider : ISampleProvider
-{
-    internal ISampleProvider InnerSample;
-    private ILifetime lt;
-    private int lease;
-    public LifetimeAwareSampleProvider(ISampleProvider inner, ILifetime lt)
-    {
-        this.InnerSample = inner;
-        this.lt = lt;
-        this.lease = lt.Lease;
-        lt.OnDisposed(() =>
-        {
-            lt = null;
-            lease = 0;
-            InnerSample = null;
-        });
-    }
-
-    public WaveFormat WaveFormat => InnerSample.WaveFormat;
-    public int Read(float[] buffer, int offset, int count) => lt?.IsStillValid(lease) == true ? InnerSample.Read(buffer, offset, count) : 0;
-}
-
-internal sealed class VolumeSampleProvider : ISampleProvider
-{
-    internal ISampleProvider InnerSample;
-
-    /// <summary>
-    /// Initializes a new instance of VolumeSampleProvider
-    /// </summary>
-    /// <param name="source">Source Sample Provider</param>
-    public VolumeSampleProvider(ISampleProvider source)
-    {
-        this.InnerSample = source;
-        Volume = 1.0f;
-    }
-
-    /// <summary>
-    /// WaveFormat
-    /// </summary>
-    public WaveFormat WaveFormat => InnerSample.WaveFormat;
-
-    /// <summary>
-    /// Reads samples from this sample provider
-    /// </summary>
-    /// <param name="buffer">Sample buffer</param>
-    /// <param name="offset">Offset into sample buffer</param>
-    /// <param name="sampleCount">Number of samples desired</param>
-    /// <returns>Number of samples read</returns>
-    public int Read(float[] buffer, int offset, int sampleCount)
-    {
-        int samplesRead = InnerSample.Read(buffer, offset, sampleCount);
-        if (Volume != 1f)
-        {
-            for (int n = 0; n < sampleCount; n++)
-            {
-                buffer[offset + n] *= Volume;
-            }
-        }
-        return samplesRead;
-    }
-
-    /// <summary>
-    /// Allows adjusting the volume, 1.0f = full volume
-    /// </summary>
-    public float Volume { get; set; }
-}
-
-
-internal sealed class LoopInfo
-{
-    public string Sound { get; set; }
-    public ILifetime Lifetime { get; set; }
 }
 
