@@ -13,6 +13,7 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
     private VolumeKnob masterKnob;
     private VolumeKnob? sampleKnob;
     private float effectiveVolume;
+    private float effectivePan;
 
     private static LazyPool<RecyclableSampleProvider> pool = new LazyPool<RecyclableSampleProvider>(() => new RecyclableSampleProvider());
 
@@ -25,17 +26,29 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
 
         masterKnob.VolumeChanged.Subscribe(this, static (me, v) => me.OnVolumeChanged(), this);
         sampleKnob?.VolumeChanged.Subscribe(this, static (me, v) => me.OnVolumeChanged(), this);
+        sampleKnob?.PanChanged.Subscribe(this, static (me, v) => me.OnPanChanged(), this);
         OnVolumeChanged();
+        OnPanChanged();
         this.position = 0;
         this.maxLifetime = loopLifetime;
         this.maxLifetimeLease = loopLifetime?.Lease ?? -1;
         this.loop = loop;
     }
 
+    private void OnPanChanged()
+    {
+        float pan = sampleKnob?.Pan ?? 0f; // Default to center pan if no sample knob
+        effectivePan = Math.Max(-1f, Math.Min(1f, pan)); // Clamp pan to -1 (left) to 1 (right)
+        if (effectivePan < -1f || effectivePan > 1f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(pan), "Pan must be between -1 and 1.");
+        }
+    }
+
     private void OnVolumeChanged()
     {
-        float master = (float)Math.Pow(masterKnob.Volume, 2.0f);
-        float sample = (float)Math.Pow(sampleKnob?.Volume ?? 1, 2.0f);
+        float master = (float)Math.Pow(masterKnob.Volume, 1.5f);
+        float sample = (float)Math.Pow(sampleKnob?.Volume ?? 1, 1.5f);
         effectiveVolume = master * sample;
         if (effectiveVolume < 0.0001f)
         {
@@ -64,6 +77,17 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
 
         int totalSamplesWritten = 0;
 
+        // For stereo: each sample is 2 floats (L, R)
+        int channels = sound.WaveFormat.Channels;
+        if (channels != 2) throw new NotSupportedException("Panning only supported for stereo samples");
+
+        // Precompute gains
+        float pan = effectivePan; // -1=left, 0=center, 1=right
+        double angle = (Math.PI / 4) * (pan + 1); // map -1..1 to 0..PI/2
+        float leftGain = (float)Math.Cos(angle);
+        float rightGain = (float)Math.Sin(angle);
+        float vol = effectiveVolume;
+
         while (count > 0)
         {
             int intPosition = (int)position;
@@ -73,7 +97,7 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
                 if (loop)
                 {
                     position = 0;
-                    continue; // loop back to start and try again
+                    continue;
                 }
                 else
                 {
@@ -82,21 +106,21 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
                 }
             }
 
-            int samplesToCopy = Math.Min(availableSamples, count);
+            int framesAvailable = availableSamples / channels;
+            int framesToCopy = Math.Min(framesAvailable, count / channels);
 
-            var volumeForThisRead = effectiveVolume;
-            if (volumeForThisRead == 1f)
+            for (int i = 0; i < framesToCopy; i++)
             {
-                Array.Copy(sound.AudioData, intPosition, buffer, offset, samplesToCopy);
-            }
-            else
-            {
-                for (int i = 0; i < samplesToCopy; i++)
-                {
-                    buffer[offset + i] = sound.AudioData[intPosition + i] * volumeForThisRead;
-                }
+                int srcIdx = intPosition + i * channels;
+                float srcLeft = sound.AudioData[srcIdx];
+                float srcRight = sound.AudioData[srcIdx + 1];
+
+                // Mix: apply gain and pan
+                buffer[offset + i * 2] = srcLeft * vol * leftGain;
+                buffer[offset + i * 2 + 1] = srcRight * vol * rightGain;
             }
 
+            int samplesToCopy = framesToCopy * channels;
             position += samplesToCopy;
             offset += samplesToCopy;
             count -= samplesToCopy;
@@ -105,7 +129,6 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
 
         return totalSamplesWritten;
     }
-
 
 
     private void ScheduleDisposal() => eventLoop.Invoke(this, static (o) =>
