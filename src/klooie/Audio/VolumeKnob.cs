@@ -38,7 +38,7 @@ public class VolumeKnob : Recyclable
 
 
     private static LazyPool<VolumeKnob> pool = new LazyPool<VolumeKnob>(() => new VolumeKnob());
-    private VolumeKnob() { }
+    protected VolumeKnob() { }
     public static VolumeKnob Create()
     {
         var knob = pool.Value.Rent();
