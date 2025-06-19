@@ -18,8 +18,6 @@ public static class ResourceFileSoundLoader
         foreach (var sound in sounds)
         {
             var key = sound.Name;
-            var bytes = new List<byte>();
- 
             ret.Add(key, () => (UnmanagedMemoryStream)sound.GetValue(null));
         }
         return ret;
