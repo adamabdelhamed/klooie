@@ -26,7 +26,6 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             outputDevice = new WaveOutEvent();
             outputDevice.Init(mixer);
             outputDevice.Play();
-            var sounds = LoadSounds();
             soundCache = new SoundCache(LoadSounds());
             sw.Stop();
             LogSoundLoaded(sw.ElapsedMilliseconds);
@@ -54,6 +53,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
     public void Pause() => outputDevice?.Pause(); 
     public void Resume() => outputDevice?.Play();
+
+    public void ClearCache() => soundCache.Clear();
 
     /// <summary>
     /// Derived classes should return a dictionary where the keys are the names

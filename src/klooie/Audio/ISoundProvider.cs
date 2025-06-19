@@ -6,13 +6,15 @@ public interface ISoundProvider
     void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null);
     void Pause();
     void Resume();
+    void ClearCache();
 }
 
 public class NoOpSoundProvider : ISoundProvider
 {
-    public VolumeKnob MasterVolume { get; set; } 
+    public VolumeKnob MasterVolume { get; set; }
     public void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null) { }
     public void Play(string? sound, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null) { }
     public void Pause() { }
     public void Resume() { }
+    public void ClearCache() { }
 }
