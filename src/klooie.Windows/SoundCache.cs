@@ -6,9 +6,9 @@ internal sealed class SoundCache
     private readonly Dictionary<string, Func<Stream>> factories;
     private readonly Dictionary<string, CachedSound> cached;
 
-    public SoundCache(Dictionary<string, Func<Stream>> rawSoundData)
+    public SoundCache(Dictionary<string, Func<Stream>> factories)
     {
-        factories = new Dictionary<string, Func<Stream>>(rawSoundData, StringComparer.OrdinalIgnoreCase);
+        this.factories = factories;
         cached = new Dictionary<string, CachedSound>(StringComparer.OrdinalIgnoreCase);
     }
 
@@ -38,35 +38,51 @@ internal sealed class CachedSound
     public int SampleCount { get; }
     public WaveFormat WaveFormat { get; }
 
+    private const int ExpectedSampleRate = 44100;
+    private const int ExpectedChannels = 2;
+    private const int ExpectedBitsPerSample = 16;
+
     public CachedSound(Func<Stream> streamFactory)
     {
         using var stream = streamFactory();
         using var reader = new WaveFileReader(stream);
-        WaveFormat = reader.WaveFormat;
-        var sampleProvider = reader.ToSampleProvider();
 
-        // Guess a starting size, expand if needed
-        int allocSamples = (int)(reader.Length / 4) + 4096; // generous fudge factor
-        float[] audioData = new float[allocSamples];
-
-        int totalRead = 0;
-        var readBuffer = new float[4096];
-        int samplesRead;
-        while ((samplesRead = sampleProvider.Read(readBuffer, 0, readBuffer.Length)) > 0)
+        // Guard: Check format
+        var wf = reader.WaveFormat;
+        if (wf.SampleRate != ExpectedSampleRate ||
+            wf.Channels != ExpectedChannels ||
+            wf.BitsPerSample != ExpectedBitsPerSample ||
+            wf.Encoding != WaveFormatEncoding.Pcm)
         {
-            if (totalRead + samplesRead > audioData.Length)
-            {
-                // Grow array (double in size)
-                int newSize = Math.Max(audioData.Length * 2, totalRead + samplesRead);
-                Array.Resize(ref audioData, newSize);
-            }
-            Array.Copy(readBuffer, 0, audioData, totalRead, samplesRead);
-            totalRead += samplesRead;
+            throw new InvalidOperationException(
+                $"WAV format mismatch. Expected {ExpectedChannels}ch, {ExpectedSampleRate}Hz, {ExpectedBitsPerSample}-bit PCM. " +
+                $"Got {wf.Channels}ch, {wf.SampleRate}Hz, {wf.BitsPerSample}-bit {wf.Encoding}.");
         }
 
-        if (totalRead != audioData.Length)
+        WaveFormat = wf;
+
+        // Calculate total sample count (bytes / 2 bytes per sample / channels)
+        long totalSamples = reader.Length / (ExpectedBitsPerSample / 8);
+        int sampleCount = checked((int)totalSamples);
+
+        // NAudio provides ToSampleProvider() for float conversion
+        var sampleProvider = reader.ToSampleProvider();
+
+        // Pre-allocate float[]: NAudio's sample provider gives floats per channel
+        float[] audioData = new float[sampleCount];
+
+        int totalRead = 0;
+        while (totalRead < sampleCount)
         {
-            Array.Resize(ref audioData, totalRead);
+            int read = sampleProvider.Read(audioData, totalRead, sampleCount - totalRead);
+            if (read == 0) break;
+            totalRead += read;
+        }
+        if (totalRead != sampleCount)
+        {
+            throw new InvalidOperationException(
+                $"Expected to read {sampleCount} samples, but only read {totalRead}. " +
+                "This may indicate an issue with the WAV file or its format.");
         }
 
         AudioData = audioData;
