@@ -297,7 +297,7 @@ public class Wander : Movement
 
     protected override void OnReturn()
     {
-        Velocity?.RemoveInfluence(Influence);
+        Eye?.Velocity?.RemoveInfluence(Influence);
         base.OnReturn();
         LastFewAngles.TryDispose();
         LastFewAngles = null!;
