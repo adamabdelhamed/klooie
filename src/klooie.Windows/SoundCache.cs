@@ -3,19 +3,33 @@
 namespace klooie;
 internal sealed class SoundCache
 {
-    private readonly Dictionary<string, CachedSound> soundCacheDictionary;
+    private readonly Dictionary<string, Func<Stream>> factories;
+    private readonly Dictionary<string, CachedSound> cached;
 
     public SoundCache(Dictionary<string, Func<Stream>> rawSoundData)
     {
-        soundCacheDictionary = rawSoundData.ToDictionary(kvp => kvp.Key, kvp => new CachedSound(kvp.Value), StringComparer.OrdinalIgnoreCase);
-        GC.Collect();
+        factories = new Dictionary<string, Func<Stream>>(rawSoundData, StringComparer.OrdinalIgnoreCase);
+        cached = new Dictionary<string, CachedSound>(StringComparer.OrdinalIgnoreCase);
     }
 
     public RecyclableSampleProvider? GetSample(EventLoop eventLoop, string? soundId, VolumeKnob masterVolume, VolumeKnob? sampleVolume, ILifetime? maxLifetime, bool loop)
     {
         if (string.IsNullOrEmpty(soundId)) return null;
-        if (soundCacheDictionary.TryGetValue(soundId, out var cachedSound) == false) return null;
+        if (!factories.TryGetValue(soundId, out var factory)) return null;
+
+        if (!cached.TryGetValue(soundId, out var cachedSound))
+        {
+            cachedSound = new CachedSound(factory);
+            cached[soundId] = cachedSound;
+        }
+
         return RecyclableSampleProvider.Create(eventLoop, cachedSound, masterVolume, sampleVolume, maxLifetime, loop);
+    }
+
+    public void Clear()
+    {
+        cached.Clear();
+        GC.Collect();
     }
 }
 internal sealed class CachedSound
