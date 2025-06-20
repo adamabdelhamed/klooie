@@ -30,8 +30,7 @@ public class Wander : Movement
     protected void Construct(Vision vision, Func<Movement, RectF?> curiosityPoint, Func<float> speed, bool autoBindToVision)
     {
         base.Construct(vision, curiosityPoint, speed);
-        Influence = new MotionInfluence();
-        Influence.Name = "Wander Influence";
+        Influence = new MotionInfluence() { Name = "Wander Influence", IsExclusive = true, };
         Weights = WanderWeights.Default;
         AngleScores = RecyclableListPool<AngleScore>.Instance.Rent();
         LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
@@ -324,6 +323,10 @@ public class Wander : Movement
 
     protected override void OnReturn()
     {
+        if(Eye != null && Eye.Velocity != null && Eye.Velocity.ContainsInfluence(Influence) == false)
+        {
+            throw new InvalidOperationException($"Wander Influence not found in Eye.Velocity influences. This is a bug in the code, please report it.");
+        }
         Eye?.Velocity?.RemoveInfluence(Influence);
         base.OnReturn();
         LastFewAngles.TryDispose();

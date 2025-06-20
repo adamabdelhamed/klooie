@@ -106,7 +106,7 @@ public sealed class Velocity : Recyclable
         _beforeEvaluate = null;
         _onCollision?.TryDispose();
         _onCollision = null;
-        influenceSubscriptionLifetime?.TryDispose();
+        influenceSubscriptionLifetime?.TryDispose("Velocity Disposal");
         influenceSubscriptionLifetime = null;
     }
 
@@ -116,8 +116,18 @@ public sealed class Velocity : Recyclable
 
     public void AddInfluence(MotionInfluence influence)
     {
+        if(influence.IsExclusive && _influences.Contains(influence))
+        {
+            throw new InvalidOperationException($"Cannot add a second influence with name '{influence.Name}' because it is exclusive and already exists in the list.");
+        }
         _influences.Add(influence);
-        EnsureInfluenceSubscribed();
+        if (_influences.Count == 1)
+        {
+            if(influenceSubscriptionLifetime != null) throw new InvalidOperationException("influenceSubscriptionLifetime should be null when adding the first influence.");
+            influenceSubscriptionLifetime = DefaultRecyclablePool.Instance.Rent();
+        }
+        AssertValidInfluenceSubscription();
+        this.BeforeEvaluate.Subscribe(this, static me => me.ApplyInfluences(), influenceSubscriptionLifetime);
     }
 
     public bool ContainsInfluence(MotionInfluence influence)
@@ -125,21 +135,24 @@ public sealed class Velocity : Recyclable
         return _influences.Contains(influence);
     }
 
-    public void RemoveInfluence(MotionInfluence influence)
+    private void AssertValidInfluenceSubscription()
     {
-        _influences.Remove(influence);
-        if (_influences.Count == 0 && influenceSubscriptionLifetime != null)
+        if (influenceSubscriptionLifetime == null || influenceSubscriptionLifetime.IsStillValid(influenceSubscriptionLifetime.Lease) == false)
         {
-            influenceSubscriptionLifetime.Dispose();
-            influenceSubscriptionLifetime = null;
+            throw new InvalidOperationException("influenceSubscriptionLifetime should be valid");
         }
     }
 
-    private void EnsureInfluenceSubscribed()
+    public void RemoveInfluence(MotionInfluence influence)
     {
-        if (influenceSubscriptionLifetime != null) return;
-        influenceSubscriptionLifetime = DefaultRecyclablePool.Instance.Rent();
-        this.BeforeEvaluate.Subscribe(this, static me => me.ApplyInfluences(), influenceSubscriptionLifetime);
+        if(this.IsStillValid(Lease) == false) throw new InvalidOperationException("Cannot remove influence from a Velocity that is no longer valid.");
+        AssertValidInfluenceSubscription();
+        var removed = _influences.Remove(influence);
+        if(removed == false) throw new InvalidOperationException($"Cannot remove influence with name '{influence.Name}' because it does not exist in the list.");
+        if (_influences.Count > 0) return;
+        
+        influenceSubscriptionLifetime.Dispose("No influences left");
+        influenceSubscriptionLifetime = null;
     }
 
     public void ApplyInfluences()
@@ -186,9 +199,13 @@ public sealed class Velocity : Recyclable
 
 }
 
-public class MotionInfluence
+public class MotionInfluence : IEquatable<MotionInfluence>
 {
     public float DeltaSpeed;
     public Angle Angle;
-    public string Name;
+    public required string Name;
+    public required bool IsExclusive;
+
+    public bool Equals(MotionInfluence? other) => Name.Equals(other?.Name, StringComparison.OrdinalIgnoreCase);
+    
 }
