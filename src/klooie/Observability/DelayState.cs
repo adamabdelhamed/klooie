@@ -9,7 +9,7 @@ public class DelayState : Recyclable
 
     private Event<Recyclable>? _beforeDisposeDependency;
     public Event<Recyclable> BeforeDisposeDependency => _beforeDisposeDependency ??= Event<Recyclable>.Create();
-    public ILifetime MainDependency => Dependencies.Items[0];
+    public Recyclable MainDependency => Dependencies.Count > 0 && Dependencies.Items[0].IsRecyclableValid ? Dependencies.Items[0].Recyclable : null;
 
     public bool AreAllDependenciesValid
     {
