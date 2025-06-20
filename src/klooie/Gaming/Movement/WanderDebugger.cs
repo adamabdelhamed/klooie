@@ -13,6 +13,7 @@ public class WanderDebugger : Wander
     private static readonly BackgroundColorFilter StaleEvaluationFilter = new BackgroundColorFilter(RGB.Gray);
 
     private static LazyPool<WanderDebugger> pool = new LazyPool<WanderDebugger>(() => new WanderDebugger());
+    private Dictionary<string, (PixelControl Control, Func<Angle?> AngleFunction, RGB Color)> angleHighlights = new Dictionary<string, (PixelControl Control, Func<Angle?> AngleFunction, RGB Color)>();
 
     private TimeSpan lastMoveTime;
     private TimeSpan lastCollisionTime;
@@ -21,9 +22,9 @@ public class WanderDebugger : Wander
     public bool HasCollidedInPastSecond => Game.Current.MainColliderGroup.Now - lastCollisionTime < TimeSpan.FromSeconds(1);
     public bool HasBeenEvaluatedInPastSecond => Game.Current.MainColliderGroup.Now - lastVelocityEvaluationTime < TimeSpan.FromSeconds(1);
 
-    protected override void Construct(Vision vision, Func<Movement, RectF?>? curiosityPoint, Func<float> speed)
+    protected void Construct(Vision vision, Func<Movement, RectF?>? curiosityPoint, Func<float> speed, bool autoBindToVision)
     {
-        base.Construct(vision, curiosityPoint, speed);
+        base.Construct(vision, curiosityPoint, speed, autoBindToVision);
         Eye.Velocity.AfterEvaluate.Subscribe(this, static (me, eval) => me.OnAfterEvaluateVelocity(eval), this);
     }
 
@@ -39,6 +40,49 @@ public class WanderDebugger : Wander
         lastVelocityEvaluationTime = Game.Current.MainColliderGroup.Now;
         lastMoveTime = eval.Result == Velocity.MoveEvalResult.Moved ? Game.Current.MainColliderGroup.Now : lastMoveTime;
         lastCollisionTime = eval.Result == Velocity.MoveEvalResult.Collision ? Game.Current.MainColliderGroup.Now : lastCollisionTime;
+        UpdateAngleHighlights();
+    }
+
+    public void HighlightAngle(string key, Func<Angle?> angleFunc, RGB color)
+    {
+        if (IsStuck == false) return;
+        if(angleHighlights.TryGetValue(key, out (PixelControl Control, Func<Angle?> AngleFunction, RGB Color) entry))
+        {
+            entry.Control.Dispose();
+            angleHighlights.Remove(key);
+        }
+
+        var control = Game.Current.GamePanel.Add(PixelControlPool.Instance.Rent());
+        control.CompositionMode = CompositionMode.BlendBackground;
+        angleHighlights[key] = (control, angleFunc, color);
+    }
+
+    private void UpdateAngleHighlights()
+    {
+        foreach (var entry in angleHighlights)
+        {
+            var control = entry.Value.Control;
+            if (IsStuck == false)
+            {
+                control.IsVisible = false;
+                continue;
+            }
+
+            var poiAngle = entry.Value.AngleFunction();
+            if (poiAngle.HasValue == false)
+            {
+                control.IsVisible = false;
+                continue;
+            }
+
+            var speedPercentage = Influence.DeltaSpeed / Speed();
+            control.IsVisible = true;
+            var displayCharacter = poiAngle.Value.LineChar;
+            var position = Eye.Bounds.Center.RadialOffset(poiAngle.Value, 2f);
+            control.MoveCenterTo(position.Left, position.Top);
+            control.ZIndex = 1000;
+            control.Value = new ConsoleCharacter(displayCharacter, entry.Value.Color.ToOther(Game.Current.GamePanel.Background, 1 - speedPercentage));
+        }
     }
 
     public void ClearStuckFilter() => ClearFilter(StuckFilter);

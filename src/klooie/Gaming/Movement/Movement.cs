@@ -19,7 +19,7 @@ public abstract class Movement : DelayState, IMovement
 {
     public Vision Vision { get; private set; }
     public Velocity Velocity => Eye.Velocity;
-    public GameCollider Eye => Vision.Eye;
+    public GameCollider Eye => Vision?.Eye;
     public Func<Movement, RectF?> CuriosityPoint { get; set; }
     public Func<float> Speed { get; set; }
     protected Movement() { }
