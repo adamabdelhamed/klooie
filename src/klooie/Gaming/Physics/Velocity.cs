@@ -83,6 +83,8 @@ public sealed class Velocity : Recyclable
         }
     }
 
+    public int InfluenceCount => _influences?.Count ?? 0;
+
     public Velocity() { }
 
     protected override void OnInit()
@@ -95,6 +97,7 @@ public sealed class Velocity : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
+        _influences.Clear();
         _onAngleChanged?.TryDispose();
         _onAngleChanged = null;
         _onSpeedChanged?.TryDispose();
@@ -187,4 +190,5 @@ public class MotionInfluence
 {
     public float DeltaSpeed;
     public Angle Angle;
+    public string Name;
 }
