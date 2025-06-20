@@ -69,7 +69,7 @@ public class Wander : Movement
             }
         }
         var angle = best.Angle;
-        var speed = EvaluateSpeed( angle);
+        var speed = EvaluateSpeed(angle, best.Total);
 
         Influence.Angle = angle;
         Influence.DeltaSpeed = speed;
@@ -144,12 +144,22 @@ public class Wander : Movement
         AngleScores.Items.Clear();
         var totalAngularTravel = 180f;
         float travelCompleted = 0f;
-        var travelPerStep = 12f;
-        ScoreAngle(inertiaAngle, curiosityAngle, Velocity.Angle); // score the current angle first
+
+        Angle baseAngle = Velocity.Angle;
+        if (curiosityAngle.HasValue && !IsCurrentlyCloseEnoughToPointOfInterest)
+        {
+            baseAngle = curiosityAngle.Value;
+        }
+
+        ScoreAngle(inertiaAngle, curiosityAngle, baseAngle); // score the current angle first
+
+        float travelPerStep = 12f;
+        travelPerStep = 6f + (18f - 6f) * (AngleScores.Count > 0 ? AngleScores[0].Total : 0.5f);
+
         while (travelCompleted < totalAngularTravel)
         {
-            var leftCandidate = Velocity.Angle.Add(-(travelPerStep + travelCompleted));
-            var rightCandidate = Velocity.Angle.Add(travelPerStep + travelCompleted);
+            var leftCandidate = baseAngle.Add(-(travelPerStep + travelCompleted));
+            var rightCandidate = baseAngle.Add(travelPerStep + travelCompleted);
             travelCompleted += travelPerStep;
 
             ScoreAngle(inertiaAngle, curiosityAngle, leftCandidate);
@@ -167,6 +177,17 @@ public class Wander : Movement
 
         // Normalise [0,1]
         float normCollision = DangerClamp(rawCollision);
+        float repulsionPenalty = 1f;
+        var predictedPos = PredictRoundedPosition(candidate);
+        for (int i = 0; i < LastFewRoundedBounds.Count; i++)
+        {
+            if (LastFewRoundedBounds[i].Equals(predictedPos))
+            {
+                repulsionPenalty = 0.75f; // Tweak as needed
+                break;
+            }
+        }
+        normCollision *= repulsionPenalty;
         float normInertia = 1f - Clamp01(rawInertia / 180);            // smaller deviation -> better
         float normForward = 1f - Clamp01(rawForward / 90);
         float normCuriosity = 1f - Clamp01(rawCuriosity / 180);
@@ -238,12 +259,24 @@ public class Wander : Movement
         return ret;
     }
 
-    private float EvaluateSpeed(Angle chosenAngle)
+    private float EvaluateSpeed(Angle chosenAngle, float confidence)
     {
         if (Speed() == 0) throw new Exception("Zero Speed Yo");
         var pointOfInterest = CuriosityPoint == null ? null : CuriosityPoint.Invoke(this);
         IsCurrentlyCloseEnoughToPointOfInterest = pointOfInterest.HasValue && Eye.Bounds.CalculateNormalizedDistanceTo(pointOfInterest.Value) <= CloseEnough;
-        return IsCurrentlyCloseEnoughToPointOfInterest ? 0 : Speed();
+
+        if (IsCurrentlyCloseEnoughToPointOfInterest) return 0;
+
+        float minFactor = 0.2f;
+        return Speed() * (minFactor + (1f - minFactor) * Clamp01(confidence));
+    }
+
+    private RectF PredictRoundedPosition(Angle angle)
+    {
+        var unit = Eye.Bounds.Width;
+        var direction = Loc.FromAngle(angle);
+        var futurePosition = Eye.Bounds.MoveBy(direction.X * unit, direction.Y * unit);
+        return futurePosition.Round();
     }
 
     private float PredictCollision(Angle angle)
@@ -283,14 +316,16 @@ public class Wander : Movement
     private static Angle AverageAngle(List<Angle> list, Angle fallback)
     {
         if (list.Count == 0) return fallback;
-        float sum = 0f;
+
+        float totalWeight = 0f;
+        float weightedSum = 0f;
         for (int i = 0; i < list.Count; i++)
         {
-            Angle a = list[i];
-            sum += a.Value;
+            float weight = (i + 1); // More recent angles = heavier
+            weightedSum += list[i].Value * weight;
+            totalWeight += weight;
         }
-
-        return new Angle(sum / list.Count);
+        return new Angle(weightedSum / totalWeight);
     }
 
     private static float Clamp01(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
