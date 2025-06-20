@@ -26,6 +26,7 @@ public abstract class Movement : DelayState, IMovement
 
     protected virtual void Construct(Vision vision, Func<Movement, RectF?> curiosityPoint, Func<float> speed)
     {
+        AddDependency(this);
         AddDependency(vision);
         AddDependency(vision.Eye);
         AddDependency(vision.Eye.Velocity);
