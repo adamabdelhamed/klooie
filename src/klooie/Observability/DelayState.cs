@@ -3,8 +3,9 @@
 public class DelayState : Recyclable
 {
     internal Action<object> InnerAction;
-    protected RecyclableList<ILifetime> Dependencies;
-    protected RecyclableList<int> Leases;
+    // Tracks the lease of each dependency so that validity checks and
+    // disposals use the captured lease instead of the current one
+    protected RecyclableList<LeaseState<Recyclable>> Dependencies;
 
     private Event<Recyclable>? _beforeDisposeDependency;
     public Event<Recyclable> BeforeDisposeDependency => _beforeDisposeDependency ??= Event<Recyclable>.Create();
@@ -14,10 +15,10 @@ public class DelayState : Recyclable
     {
         get
         {
-            if (Leases == null ||Dependencies == null || Leases.Count == 0 || Dependencies.Count == 0) return false;
-            for (int i = 0; i < Leases.Count; i++)
+            if (Dependencies == null || Dependencies.Count == 0) return false;
+            for (int i = 0; i < Dependencies.Count; i++)
             {
-                if (Dependencies[i].IsStillValid(Leases[i]) == false)
+                if (Dependencies[i].IsRecyclableValid == false)
                 {
                     return false;
                 }
@@ -27,13 +28,15 @@ public class DelayState : Recyclable
     }
 
     public ILifetime[] ValidDependencies =>
-        Dependencies?.Items.Where((d, i) => d != null && d.IsStillValid(Leases[i])).ToArray() ?? Array.Empty<Recyclable>();
+        Dependencies?.Items
+            .Where(d => d.IsRecyclableValid && d.Recyclable != null)
+            .Select(d => (ILifetime)d.Recyclable!)
+            .ToArray() ?? Array.Empty<Recyclable>();
 
     protected override void OnInit()
     {
         base.OnInit();
-        Dependencies = RecyclableListPool<ILifetime>.Instance.Rent();
-        Leases = RecyclableListPool<int>.Instance.Rent();
+        Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent();
     }
 
     public static DelayState Create(ILifetime dependency)
@@ -48,22 +51,20 @@ public class DelayState : Recyclable
         if(dependency == null) throw new ArgumentNullException(nameof(dependency), "Dependency cannot be null");
         if (Dependencies == null)
         {
-            Dependencies = RecyclableListPool<ILifetime>.Instance.Rent();
-            Leases = RecyclableListPool<int>.Instance.Rent();
+            Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent();
         }
-        Dependencies.Items.Add(dependency);
-        Leases.Items.Add(dependency.Lease);
+        Dependencies.Items.Add(LeaseHelper.Track((Recyclable)dependency));
     }
 
     public static DelayState Create(RecyclableList<ILifetime> dependencies)
     {
         var ret = DelayStatePool.Instance.Rent();
-        ret.Dependencies = dependencies;
-        ret.Leases = RecyclableListPool<int>.Instance.Rent(dependencies.Count);
+        ret.Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent(dependencies.Count);
         for (int i = 0; i < dependencies.Count; i++)
         {
-            ret.Leases.Items.Add(dependencies[i].Lease);
+            ret.Dependencies.Items.Add(LeaseHelper.Track((Recyclable)dependencies[i]));
         }
+        dependencies.Dispose();
         return ret;
     }
 
@@ -72,10 +73,12 @@ public class DelayState : Recyclable
         if (Dependencies == null) return;
         for (int i = 0; i < Dependencies.Count; i++)
         {
-            if (Dependencies[i] is Recyclable r)
-            { 
-                _beforeDisposeDependency?.Fire(r);
-                r.TryDispose(Leases[i], $"InnerLoopAPIs - {nameof(DisposeAllValidDependencies)}");
+            var tracker = Dependencies[i];
+            var dep = tracker.Recyclable;
+            if (dep != null)
+            {
+                _beforeDisposeDependency?.Fire(dep);
+                tracker.TryDisposeRecyclable();
             }
         }
     }
@@ -83,10 +86,15 @@ public class DelayState : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        Dependencies?.Dispose();
-        Dependencies = null;
-        Leases?.Dispose();
-        Leases = null;
+        if (Dependencies != null)
+        {
+            for (int i = 0; i < Dependencies.Count; i++)
+            {
+                Dependencies[i]?.TryDispose();
+            }
+            Dependencies.Dispose();
+            Dependencies = null;
+        }
         InnerAction = null;
         _beforeDisposeDependency?.TryDispose();
         _beforeDisposeDependency = null;
