@@ -46,10 +46,9 @@ public class Wander : Movement
     }
     private void Tick()
     {
-        var lease = Lease;
         if (AreAllDependenciesValid == false)
         {
-            TryDispose(lease);
+            TryDispose();
             return;
         }
         FrameDebugger.RegisterTask(nameof(Wander));

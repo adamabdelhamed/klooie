@@ -19,7 +19,7 @@ public class Targeting : Recyclable
 
     public void Bind(Vision v, string[] targetTags, bool highlightTargets)
     {
-        Vision = v;
+        Vision = v ?? throw new ArgumentNullException(nameof(v));
         TargetTags = targetTags;
         HighlightTargets = highlightTargets;
 
