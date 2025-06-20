@@ -73,3 +73,42 @@ The goal is to refactor these over time. If you are ever asked to do general mai
 
 ### Golden Examples
 - EventThrottle.cs - good example of a Recyclable that uses the pattern correctly and it lives in the same folder as this document.
+
+## Lease Tracking
+We recently released LeaseHelper, which helps manage leases for recyclable objects. The most basic usage is to track the lifetime of an object and ensure it is disposed of correctly. The most basic usage is as follows:
+
+```csharp
+        var someRecyclable = DefaultRecyclablePool.Instance.Rent();
+        var tracker = LeaseHelper.Track(someRecyclable);
+
+        // then later you can test if the recyclable is still valid given the lease that was captures when you called Track.
+        if(IsRecyclableValid) { ... }
+
+        // You can also dispose the recyclable when you are done with it. This disposal method will pass the captured lease to TryDispose internally, ensuring it only disposes the object if it's current lease matches the lease that we captured when we called Track.
+        tracker.TryDisposeRecyclable()
+
+        // Finally, you must dispose the tracker, but only when you are done with it.
+        tracker.Dispose();
+    });
+```
+
+One place we should update is DelayState, which currently manages leases manually. We should replace the manual lease management with `LeaseHelper` to ensure consistency and correctness.
+
+### Proper parent / child recyclable relationships
+We recently released LeaseHelper, which helps manage leases for recyclable objects. It's particularly useful when one recyclable depends on another. A common pattern is that when the dependency is disposed you also want the owner to be disposed. A pitfall is that the owner itself may be independently disposed before the dependency.
+
+Below is the new and correct pattern:
+```
+    // If you want to ensure that the parent is disposed when the child is disposed, you can use LeaseHelper to track the relationship.
+    child.OnDisposed(LeaseHelper.TrackOwnerRelationship(parent, child), static tracker =>
+    {
+        // This check ensures that the parent is only disposed if it hasn't already been disposed.
+        if (tracker.IsOwnerValid) tracker.TryDisposeOwner();
+        tracker.Dispose();
+    });
+```
+Note how the code never stores the tracker as a field or variable. Instead, it is used directly in the `OnDisposed` callback. This ensures that the tracker is only alive for the duration of the callback and is disposed of immediately after use, ensuring proper lease management.
+
+It is possible to store the tracker as a field or variable if needed, but the lifetime management must be handled carefully to avoid lifetime management issues.
+
+There are likely many places in the codebase where this pattern is not followed. We need to audit the codebase and ensure that all parent/child relationships are using `LeaseHelper` correctly.
