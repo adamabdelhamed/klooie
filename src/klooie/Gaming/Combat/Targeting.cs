@@ -1,73 +1,47 @@
 ﻿namespace klooie.Gaming;
 
-public class TargetingOptions
-{
-    public bool HighlightTargets { get; set; }
-    public required GameCollider Source { get; set; }
-    public required Vision Vision { get; set; }
-    public string[]? TargetTags { get; set; }
-}
 
 public class Targeting : Recyclable
 {
     private static readonly TargetFilter targetFilter = new TargetFilter();
-
     public Recyclable? CurrentTargetLifetime { get; private set; }
 
     private Event<GameCollider?>? _targetChanged;
     private Event<GameCollider>? _targetAcquired;
 
-    private int visionLease = 0; // Lease for the Vision instance at subscription time.
-    private int colliderLease = 0; // Lease for the Source GameCollider at subscription time.
-
     public Event<GameCollider?> TargetChanged => _targetChanged ??= Event<GameCollider?>.Create();
     public Event<GameCollider> TargetAcquired => _targetAcquired ??= Event<GameCollider>.Create();
 
     public GameCollider? Target { get; private set; }
-    public TargetingOptions Options { get; private set; } = null!;
+    public bool HighlightTargets { get; set; }
+    public Vision Vision { get; set; }
+    public string[]? TargetTags { get; set; }
 
-    public void Bind(TargetingOptions options)
+    public void Bind(Vision v, string[] targetTags, bool highlightTargets)
     {
-        Options = options;
-        colliderLease = options.Source.Lease;
-        visionLease = options.Vision.Lease;
+        Vision = v;
+        TargetTags = targetTags;
+        HighlightTargets = highlightTargets;
 
-        options.Source.OnDisposed(this, DisposeMe);
+        Vision.VisibleObjectsChanged.Subscribe(this, static me => me.Evaluate(), this);
 
-        // Subscribe to vision's event; this = lifetime for safe cleanup
-        options.Vision.VisibleObjectsChanged.Subscribe(this, OnVisionChanged, this);
+        var ownershipTracker = LeaseHelper.TrackOwnerRelationship(this, Vision);
+        Vision.OnDisposed(ownershipTracker, static tr =>
+        {
+            if(tr.IsOwnerValid) tr.TryDisposeOwner();
+            tr.Dispose();
+        });
     }
 
-    private static void DisposeMe(object me)
+    private void Evaluate()
     {
-        var targeting = (Targeting)me;
-        targeting.ClearHighlightFilterFromCurrentTarget();
-        targeting.TryDispose();
-    }
-
-    private static void OnVisionChanged(object me)
-    {
-        var targeting = (Targeting)me;
-        // Defensive: Only act if Vision and Collider are still valid (don't check self)
-        if (!targeting.Options.Vision.IsStillValid(targeting.visionLease)) return;
-        if (!targeting.Options.Source.IsStillValid(targeting.colliderLease)) return;
-        targeting.Evaluate();
-    }
-
-    public void Evaluate()
-    {
-        // Defensive: Only act if Vision and Collider are still valid
-        if (!Options.Vision.IsStillValid(visionLease)) return;
-        if (!Options.Source.IsStillValid(colliderLease)) return;
-
-        if (!Options.Source.IsVisible)
-            return;
+        if (!Vision.Eye.IsVisible) return;
 
         VisuallyTrackedObject? best = null;
         float closestDistance = float.MaxValue;
-        for (int i = 0; i < Options.Vision.TrackedObjectsList.Count; i++)
+        for (int i = 0; i < Vision.TrackedObjectsList.Count; i++)
         {
-            VisuallyTrackedObject? tracked = Options.Vision.TrackedObjectsList[i];
+            VisuallyTrackedObject? tracked = Vision.TrackedObjectsList[i];
             var tgt = tracked.Target;
             if (!IsPotentialTarget(tgt)) continue;
 
@@ -84,12 +58,12 @@ public class Targeting : Recyclable
     public bool IsPotentialTarget(GameCollider candidate)
     {
         if (candidate == null) return false;
-        if (candidate == Options.Source) return false; // Don't target self
+        if (candidate.Velocity == this.Vision.Eye.Velocity) return false; // Don't target self
 
-        if (Options.TargetTags != null && Options.TargetTags.Length > 0)
+        if (TargetTags != null && TargetTags.Length > 0)
         {
             bool hasTag = false;
-            foreach (var tag in Options.TargetTags)
+            foreach (var tag in TargetTags)
             {
                 if (candidate.HasSimpleTag(tag))
                 {
@@ -118,7 +92,7 @@ public class Targeting : Recyclable
         CurrentTargetLifetime = newTarget == null ? null : DefaultRecyclablePool.Instance.Rent();
 
         // Add highlight filter to new target if needed
-        if (Options.HighlightTargets && newTarget != null)
+        if (HighlightTargets && newTarget != null)
         {
             if (!newTarget.HasFilters || !newTarget.Filters.Contains(targetFilter))
                 newTarget.Filters.Add(targetFilter);
@@ -157,17 +131,18 @@ public class Targeting : Recyclable
 
     protected override void OnReturn()
     {
-        base.OnReturn();
+        ClearHighlightFilterFromCurrentTarget();
         _targetChanged?.TryDispose();
         _targetAcquired?.TryDispose();
         _targetChanged = null;
         _targetAcquired = null;
         Target = null;
-        Options = null!;
-        visionLease = 0;
-        colliderLease = 0;
+        Vision = null;
+        TargetTags = null;
+        HighlightTargets = false;
         CurrentTargetLifetime?.TryDispose();
         CurrentTargetLifetime = null;
+        base.OnReturn();
     }
 }
 

@@ -21,7 +21,7 @@ public partial class Weapon : Recyclable, IObservableObject
 
     private Throttle? Debouncer { get; set; }
     public Targeting Targeting { get; private set; }
-    public GameCollider Source => Targeting.Options?.Vision?.Eye;
+    public GameCollider Source => Targeting?.Vision?.Eye;
     public partial int AmmoAmount { get; set; }
     private TimeSpan? lastFireTime;
     protected TimeSpan MinTimeBetweenShots { get; set; } = TimeSpan.FromSeconds(.1);
