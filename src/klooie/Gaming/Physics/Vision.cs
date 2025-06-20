@@ -43,6 +43,13 @@ public class Vision : Recyclable
         vision.CastingMode = CastingMode.SingleRay;
         vision.MaxMemoryTime = TimeSpan.FromSeconds(2);
         _visionInitiated?.Fire(vision);
+
+        eye.OnDisposed(LeaseHelper.TrackOwnerRelationship(vision, eye), static tracker =>
+        {
+            if (tracker.IsOwnerValid) tracker.TryDisposeOwner();
+            tracker.Dispose();
+        });
+
         if (autoScan)
         {
             Game.Current.InnerLoopAPIs.DelayIfValid(vision.ScanOffset, VisionDependencyState.Create(vision), ScanLoopBody);
@@ -305,7 +312,6 @@ public class VisionDependencyState : DelayState
     public static VisionDependencyState Create(Vision v)
     {
         var state = VisionDependencyStatePool.Instance.Rent();
-        v.Eye.OnDisposed(v,Recyclable.TryDisposeMe);
         state.Vision = v;
         state.AddDependency(v);
         state.AddDependency(v.Eye);
