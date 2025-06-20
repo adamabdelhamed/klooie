@@ -97,6 +97,12 @@ public partial class Weapon : Recyclable, IObservableObject
         }
     }
 
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Targeting = null;
+    }
+
 }
 
 public class WeaponElement : GameCollider
