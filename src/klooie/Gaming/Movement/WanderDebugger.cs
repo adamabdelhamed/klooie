@@ -22,13 +22,13 @@ public class WanderDebugger : Wander
     public bool HasCollidedInPastSecond => Game.Current.MainColliderGroup.Now - lastCollisionTime < TimeSpan.FromSeconds(1);
     public bool HasBeenEvaluatedInPastSecond => Game.Current.MainColliderGroup.Now - lastVelocityEvaluationTime < TimeSpan.FromSeconds(1);
 
-    protected void Construct(Vision vision, Func<Movement, RectF?>? curiosityPoint, Func<float> speed, bool autoBindToVision)
+    protected void Construct(Vision vision, Func<Movement, RectF?>? curiosityPoint, float speed, bool autoBindToVision)
     {
         base.Construct(vision, curiosityPoint, speed, autoBindToVision);
         Eye.Velocity.AfterEvaluate.Subscribe(this, static (me, eval) => me.OnAfterEvaluateVelocity(eval), this);
     }
 
-    public static WanderDebugger Create(Vision vision, Func<Movement, RectF?> curiosityPoint, Func<float> speed)
+    public static WanderDebugger Create(Vision vision, Func<Movement, RectF?> curiosityPoint, float speed)
     {
         var state = pool.Value.Rent();
         state.Construct(vision, curiosityPoint, speed);
@@ -75,7 +75,7 @@ public class WanderDebugger : Wander
                 continue;
             }
 
-            var speedPercentage = Influence.DeltaSpeed / Speed();
+            var speedPercentage = Influence.DeltaSpeed / BaseSpeed;
             control.IsVisible = true;
             var displayCharacter = poiAngle.Value.LineChar;
             var position = Eye.Bounds.Center.RadialOffset(poiAngle.Value, 2f);
