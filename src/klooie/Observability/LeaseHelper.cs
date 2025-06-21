@@ -30,6 +30,22 @@ public static class LeaseHelper
     /// <returns>A lease state representing the object and its current lease.</returns>
     public static LeaseState<TRecyclable> Track<TRecyclable>(TRecyclable recyclable) where TRecyclable : Recyclable
         => LeaseState<TRecyclable>.Create(recyclable);
+
+    /// <summary>
+    /// Updates the lease state of a recyclable object, recycling the old instance if necessary.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="toTrack"></param>
+    /// <param name="trackerReference"></param>
+    public static void Recycle<T>(T toTrack, ref LeaseState<T> trackerReference) where T : Recyclable
+    {
+        if (trackerReference != null)
+        {
+            trackerReference.Recycle(toTrack);
+            return;
+        }
+        trackerReference = LeaseHelper.Track(toTrack);
+    }
 }
 
 /// <summary>
@@ -148,6 +164,21 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
         ret.Recyclable = recyclable;
         ret.RecyclableLease = recyclable.Lease;
         return ret;
+    }
+
+    public void UnTrackAndDispose()
+    {
+        TryDisposeRecyclable();
+        TryDispose();
+    }
+
+
+
+    public void Recycle(TRecyclable replacement)
+    {
+        TryDisposeRecyclable();
+        RecyclableLease = replacement.Lease;
+        Recyclable = replacement;
     }
 
     /// <summary>
