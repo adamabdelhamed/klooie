@@ -20,16 +20,16 @@ public class Wander : Movement
     private static LazyPool<Wander> pool = new LazyPool<Wander>(() => new Wander());
 
     protected Wander() { }
-    public static Wander Create(Vision vision, Func<Movement, RectF?> curiosityPoint, Func<float> speed, bool autoBindToVision = true)
+    public static Wander Create(Vision vision, Func<Movement, RectF?> curiosityPoint, float baseSpeed, bool autoBindToVision = true)
     {
         var state = pool.Value.Rent();
-        state.Construct(vision, curiosityPoint, speed, autoBindToVision);
+        state.Construct(vision, curiosityPoint, baseSpeed, autoBindToVision);
         return state;
     }
 
-    protected void Construct(Vision vision, Func<Movement, RectF?> curiosityPoint, Func<float> speed, bool autoBindToVision)
+    protected void Construct(Vision vision, Func<Movement, RectF?> curiosityPoint, float baseSpeed, bool autoBindToVision)
     {
-        base.Construct(vision, curiosityPoint, speed);
+        base.Construct(vision, curiosityPoint, baseSpeed);
         Influence = new MotionInfluence() { Name = "Wander Influence", IsExclusive = true, };
         Weights = WanderWeights.Default;
         AngleScores = RecyclableListPool<AngleScore>.Instance.Rent();
@@ -252,14 +252,14 @@ public class Wander : Movement
 
     private float EvaluateSpeed(Angle chosenAngle, float confidence)
     {
-        if (Speed() == 0) throw new Exception("Zero Speed Yo");
+        if (BaseSpeed == 0) throw new Exception("Zero Speed Yo");
         var pointOfInterest = CuriosityPoint == null ? null : CuriosityPoint.Invoke(this);
         IsCurrentlyCloseEnoughToPointOfInterest = pointOfInterest.HasValue && Eye.Bounds.CalculateNormalizedDistanceTo(pointOfInterest.Value) <= CloseEnough;
 
         if (IsCurrentlyCloseEnoughToPointOfInterest) return 0;
 
         float minFactor = 0.2f;
-        return Speed() * (minFactor + (1f - minFactor) * Clamp01(confidence));
+        return BaseSpeed * (minFactor + (1f - minFactor) * Clamp01(confidence));
     }
 
     private RectF PredictRoundedPosition(Angle angle)
