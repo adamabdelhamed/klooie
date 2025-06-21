@@ -15,7 +15,7 @@ public class Targeting : Recyclable
     public GameCollider? Target { get; private set; }
     public bool HighlightTargets { get; set; }
     public Vision Vision { get; set; }
-    public string[]? TargetTags { get; set; }
+    public string[]? TargetTags { get; private set; }
 
     public void Bind(Vision v, string[] targetTags, bool highlightTargets)
     {
