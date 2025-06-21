@@ -90,7 +90,7 @@ public static class CollisionDetector
     private static Edge[] rayBuffer = null;
     public static bool HasLineOfSight<T>(this ICollidable from, ICollidable to, IList<T> obstacles) where T : ICollidable => GetLineOfSightObstruction(from, to, obstacles) == null;
 
-    public static ICollidable? GetLineOfSightObstruction<T>( this ICollidable from, ICollidable to, IList<T> obstacleControls, CastingMode castingMode = CastingMode.Rough, CollisionPrediction prediction = null) where T : ICollidable
+    public static ICollidable? GetLineOfSightObstruction<T>(this ICollidable from, ICollidable to, IList<T> obstacleControls, CastingMode castingMode = CastingMode.Rough, CollisionPrediction prediction = null) where T : ICollidable
     {
         var massBounds = from.Bounds;
         var colliders = ArrayPlusOnePool<T>.Instance.Rent();
@@ -116,8 +116,8 @@ public static class CollisionDetector
             }
         }
     }
- 
-    public static CollisionPrediction Predict<T>(ICollidable from,Angle angle,IList<T> colliders, float visibility,CastingMode mode,int bufferLen,CollisionPrediction prediction,List<Edge> edgesHitOutput = null) where T : ICollidable
+
+    public static CollisionPrediction Predict<T>(ICollidable from, Angle angle, IList<T> colliders, float visibility, CastingMode mode, int bufferLen, CollisionPrediction prediction, List<Edge> edgesHitOutput = null) where T : ICollidable
     {
         var movingObject = from.Bounds;
         prediction.Reset();
@@ -140,7 +140,7 @@ public static class CollisionDetector
         Edge closestEdge = default;
         float closestIntersectionX = 0;
         float closestIntersectionY = 0;
-   
+
         for (var i = 0; i < bufferLen; i++)
         {
             ICollidable obstacle = colliders[i];
@@ -155,8 +155,8 @@ public static class CollisionDetector
             singleObstacleEdgeBuffer[3] = obstacle.Bounds.RightEdge;
 
             EdgeComparerByDistance.Sort(movingObject, singleObstacleEdgeBuffer);
-           
-            for(var j = 0; j < singleObstacleEdgeBuffer.Length; j++)
+
+            for (var j = 0; j < singleObstacleEdgeBuffer.Length; j++)
             {
                 var edge = singleObstacleEdgeBuffer[j];
                 ProcessEdge(i, edge, rayCount, edgesHitOutput, visibility, ref closestIntersectionDistance, ref closestIntersectingObstacleIndex, ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
@@ -201,7 +201,7 @@ public static class CollisionDetector
             {
                 AddRay(rayBuffer, ref rayCount, new Edge(x, movingObject.Top, x + dx, movingObject.Top + dy));
                 AddRay(rayBuffer, ref rayCount, new Edge(x, movingObject.Bottom, x + dx, movingObject.Bottom + dy));
-                }
+            }
 
             for (var y = movingObject.Top + granularity; y < movingObject.Top + movingObject.Height; y += granularity)
             {
@@ -281,6 +281,62 @@ public static class CollisionDetector
     }
 
     public static bool TryFindIntersectionPoint(in Edge ray, in Edge stationaryEdge, out float x, out float y)
+    {
+        var x1 = ray.X1;
+        var y1 = ray.Y1;
+        var x2 = ray.X2;
+        var y2 = ray.Y2;
+
+        var x3 = stationaryEdge.X1;
+        var y3 = stationaryEdge.Y1;
+        var x4 = stationaryEdge.X2;
+        var y4 = stationaryEdge.Y2;
+        float dx1 = x2 - x1, dy1 = y2 - y1;
+        float dx2 = x4 - x3, dy2 = y4 - y3;
+
+        // Determinant (denominator)
+        float den = dx1 * dy2 - dy1 * dx2;
+
+        if (Math.Abs(den) < 1e-8f) // Prevents floating point precision issues
+        {
+            // Check if the segments are collinear
+            var det = (x1 - x3) * (y2 - y3) - (y1 - y3) * (x2 - x3);
+            if (Math.Abs(det) >= 1e-8f)
+            {
+                x = 0;
+                y = 0;
+                return false;
+            }
+            // Overlap check: (axis-aligned bounding box overlap)
+            if (Math.Max(x1, x2) < Math.Min(x3, x4) ||
+                Math.Max(x3, x4) < Math.Min(x1, x2) ||
+                Math.Max(y1, y2) < Math.Min(y3, y4) ||
+                Math.Max(y3, y4) < Math.Min(y1, y2))
+            {
+                x = 0; y = 0;
+                return false;
+            }
+            // Overlap (collinear): just pick an overlapping point
+            x = x3;
+            y = y3;
+            return true;
+        }
+
+        float t = ((x3 - x1) * dy2 - (y3 - y1) * dx2) / den;
+        float u = ((x3 - x1) * dy1 - (y3 - y1) * dx1) / den;
+
+        // Bounds check, using multiplications instead of Between helper
+        if (t >= -1e-5f && t <= 1 + 1e-5f && u >= -1e-5f && u <= 1 + 1e-5f)
+        {
+            x = x1 + t * dx1;
+            y = y1 + t * dy1;
+            return true;
+        }
+        x = 0; y = 0;
+        return false;
+    }
+
+    public static bool TryFindIntersectionPointOld(in Edge ray, in Edge stationaryEdge, out float x, out float y)
     {
         var x1 = ray.X1;
         var y1 = ray.Y1;
