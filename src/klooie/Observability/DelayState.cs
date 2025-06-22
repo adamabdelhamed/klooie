@@ -11,6 +11,8 @@ public class DelayState : Recyclable
     public Event<Recyclable> BeforeDisposeDependency => _beforeDisposeDependency ??= Event<Recyclable>.Create();
     public Recyclable MainDependency => Dependencies.Count > 0 && Dependencies.Items[0].IsRecyclableValid ? Dependencies.Items[0].Recyclable : null;
 
+    public int DependencyCount => Dependencies?.Count ?? 0;
+
     public bool AreAllDependenciesValid
     {
         get
@@ -26,6 +28,8 @@ public class DelayState : Recyclable
             return true;
         }
     }
+
+    public LeaseState<Recyclable> DependencyAt(int index) => Dependencies[index];
 
     public ILifetime[] ValidDependencies =>
         Dependencies?.Items
