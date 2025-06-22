@@ -53,7 +53,9 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
         if (type.IsGenericType)
         {
-            var baseName = type.Name.Substring(0, type.Name.IndexOf('`'));
+            var index = type.Name.IndexOf('`');
+            if (index < 0) return type.FullName;
+            var baseName = type.Name.Substring(0, index);
             var genericArgs = type.GetGenericArguments();
             var formattedArgs = string.Join(", ", Array.ConvertAll(genericArgs, GetFriendlyName));
             return $"{baseName}<{formattedArgs}>";
