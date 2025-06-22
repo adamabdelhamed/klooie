@@ -40,7 +40,7 @@ public sealed class UniformGrid
     private readonly Dictionary<GameCollider, UniformGridMembershipState> membershipStates = new Dictionary<GameCollider, UniformGridMembershipState>();
 
     public IEnumerable<KeyValuePair<UniformGridCell, ObstacleBuffer>> Buckets => _buckets;
-
+    public int Count { get; private set; }
     private uint _stamp;
     private void LoadCells(RectF b)
     {
@@ -88,6 +88,7 @@ public sealed class UniformGrid
             }
             list.WriteableBuffer.Add(obj);
         }
+        Count++;
     }
 
   
@@ -114,6 +115,7 @@ public sealed class UniformGrid
                 }
             }
         }
+        Count--;
     }
 
     public void Update(GameCollider obj)
