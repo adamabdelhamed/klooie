@@ -199,13 +199,43 @@ public sealed class Velocity : Recyclable
 
 }
 
-public class MotionInfluence : IEquatable<MotionInfluence>
+public class MotionInfluence : Recyclable, IEquatable<MotionInfluence>
 {
     public float DeltaSpeed;
     public Angle Angle;
-    public required string Name;
-    public required bool IsExclusive;
+    public string Name;
+    public bool IsExclusive;
 
     public bool Equals(MotionInfluence? other) => Name.Equals(other?.Name, StringComparison.OrdinalIgnoreCase);
-    
+
+    private static LazyPool<MotionInfluence> pool = new LazyPool<MotionInfluence>(() => new MotionInfluence());
+    private MotionInfluence() { }
+    public static MotionInfluence Create(string name, float deltaSpeed, Angle angle, bool isExclusive = false)
+    {
+        var ret = pool.Value.Rent();
+        ret.Name = name ?? throw new ArgumentNullException(nameof(name));
+        ret.DeltaSpeed = deltaSpeed;
+        ret.Angle = angle;
+        ret.IsExclusive = isExclusive;
+        return ret;
+    }
+
+    public static MotionInfluence Create(string name, bool isExclusive = false)
+    {
+        var ret = pool.Value.Rent();
+        ret.Name = name ?? throw new ArgumentNullException(nameof(name));
+        ret.DeltaSpeed = 0;
+        ret.Angle = Angle.Right;
+        ret.IsExclusive = isExclusive;
+        return ret;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Name = null;
+        DeltaSpeed = 0;
+        Angle = 0;
+        IsExclusive = false;
+    }
 }
