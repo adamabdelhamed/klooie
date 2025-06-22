@@ -1,8 +1,21 @@
 ﻿namespace klooie.Gaming;
 
-public partial class TextCollider : GameCollider
+public class TextCollider : GameCollider
 {
-    public partial ConsoleString Content { get; set; }
+
+    private ConsoleString content;
+    public ConsoleString Content
+    {
+        get => content;
+        set
+        {
+            if (content != value)
+            {
+                content = value;
+                ResizeMe();
+            }
+        }
+    }
 
     public TextCollider() : base(false) { }
 
@@ -11,18 +24,8 @@ public partial class TextCollider : GameCollider
         this.Content = content;
     }
 
-    protected override void OnInit()
-    {
-        base.OnInit();
-        ContentChanged.Sync(this, ResizeMe, this);
-    }
-
-    private static void ResizeMe(object me)
-    {
-        var _this = (TextCollider)me;
-        _this.ResizeTo(_this.Content?.Length ?? 0, 1);
-    }
-
+    private void ResizeMe() => ResizeTo(Content?.Length ?? 0, 1);
+    
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);
 }
 
