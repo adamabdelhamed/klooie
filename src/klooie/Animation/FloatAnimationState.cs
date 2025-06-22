@@ -51,7 +51,11 @@ public static partial  class Animator
 
         // --- Animation sequence helpers ---
         public static void StartForwardAnimation(object stateObj) => StartForwardAnimation((FloatAnimationState)stateObj);
-        public static void StartForwardAnimation(FloatAnimationState state) => Animator.AnimateInternal(state, AfterForward);
+        public static ILifetime StartForwardAnimation(FloatAnimationState state)
+        {
+            Animator.AnimateInternal(state, AfterForward);
+            return state;
+        }
 
         private static void AfterForward(object o)
         {

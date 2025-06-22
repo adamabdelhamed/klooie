@@ -90,6 +90,11 @@ public sealed partial class Camera : ConsolePanel
         return AnimateTo(dest.Offset(-Width / 2f, -Height / 2f), duration, ease, lt, delayProvider);
     }
 
+    public ILifetime PointAnimateToSync(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, IDelayProvider delayProvider = null)
+    {
+        return AnimateToSync(dest.Offset(-Width / 2f, -Height / 2f), duration, ease, lt, delayProvider);
+    }
+
     /// <summary>
     /// Animates the camera to the specified location 
     /// </summary>
@@ -103,6 +108,12 @@ public sealed partial class Camera : ConsolePanel
     {
         ease = ease ?? EasingFunctions.EaseInOut;
         return Animator.AnimateAsync(this, dest, duration, ease, delayProvider, animationLifetime: lt);
+    }
+
+    public ILifetime AnimateToSync(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, IDelayProvider delayProvider = null)
+    {
+        ease = ease ?? EasingFunctions.EaseInOut;
+        return Animator.AnimateSync(this, dest, duration, ease, delayProvider, animationLifetime: lt);
     }
 
     /// <summary>

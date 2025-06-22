@@ -14,7 +14,7 @@ public static partial class Animator
     public static Task AnimateAsync(this float from, float to, double duration, Action<float> setter, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = DeafultTargetFramesPerSecond)
         => AnimateAsync(FloatAnimationState.Create(from, to, duration, setter,easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond));
 
-    public static void Animate(this float from, float to, double duration, Action<float> setter, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = DeafultTargetFramesPerSecond)
+    public static ILifetime Animate(this float from, float to, double duration, Action<float> setter, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = DeafultTargetFramesPerSecond)
         => AnimateSync(FloatAnimationState.Create(from, to, duration, setter, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond));
 
     public static Task AnimateAsync<T>(this float from, float to, double duration,T target, Action<T,float> setter, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = DeafultTargetFramesPerSecond)
@@ -25,19 +25,19 @@ public static partial class Animator
 
     public static Task AnimateAsync(this ConsoleControl control, Func<RectF> destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
         => AnimateAsync(ConsoleControlAnimationState.Create(control, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond));
-    public static void AnimateSync(this ConsoleControl control, Func<RectF> destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
+    public static ILifetime AnimateSync(this ConsoleControl control, Func<RectF> destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
      => AnimateSync(ConsoleControlAnimationState.Create(control, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond));
 
     public static Task AnimateAsync(this Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
         => AnimateAsync(CameraAnimationState.Create(camera, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond));
 
-    public static void AnimateSync(this Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
+    public static ILifetime AnimateSync(this Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
         => AnimateSync(CameraAnimationState.Create(camera, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond));
 
     public static Task AnimateAsync(this RGB from, RGB to, double duration, Action<RGB> onColorChanged, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
         => AnimateAsync(RGBAnimationState.Create(from, to, duration, onColorChanged, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond));
 
-    public static void AnimateSync(this RGB from, RGB to, double duration, Action<RGB> onColorChanged, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
+    public static ILifetime AnimateSync(this RGB from, RGB to, double duration, Action<RGB> onColorChanged, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null, int targetFramesPerSecond = Animator.DeafultTargetFramesPerSecond)
       => AnimateSync(RGBAnimationState.Create(from, to, duration, onColorChanged, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond));
 
     private static Task AnimateAsync(FloatAnimationState state)
@@ -48,7 +48,7 @@ public static partial class Animator
         return task;
     }
 
-    private static void AnimateSync(FloatAnimationState state) 
+    private static ILifetime AnimateSync(FloatAnimationState state) 
             => FloatAnimationState.StartForwardAnimation(state);
    
     private static void AnimateInternal(FloatAnimationState state, Action<FloatAnimationState> onDone)
