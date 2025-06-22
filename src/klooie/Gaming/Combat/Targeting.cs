@@ -24,13 +24,6 @@ public class Targeting : Recyclable
         HighlightTargets = highlightTargets;
 
         Vision.VisibleObjectsChanged.Subscribe(this, static me => me.Evaluate(), this);
-
-        var ownershipTracker = LeaseHelper.TrackOwnerRelationship(this, Vision);
-        Vision.OnDisposed(ownershipTracker, static tr =>
-        {
-            if(tr.IsOwnerValid) tr.TryDisposeOwner();
-            tr.Dispose();
-        });
     }
 
     private void Evaluate()
