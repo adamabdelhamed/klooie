@@ -36,10 +36,10 @@ public sealed class UniformGrid
 {  
     private List<UniformGridCell> cellBuffer = new List<UniformGridCell>();
     public const float _cellSize = 100f;
-    private readonly Dictionary<UniformGridCell, ObstacleBuffer> _buckets = new Dictionary<UniformGridCell, ObstacleBuffer>();
+    private readonly Dictionary<UniformGridCell, RecyclableList<GameCollider>> _buckets = new Dictionary<UniformGridCell, RecyclableList<GameCollider>>();
     private readonly Dictionary<GameCollider, UniformGridMembershipState> membershipStates = new Dictionary<GameCollider, UniformGridMembershipState>();
 
-    public IEnumerable<KeyValuePair<UniformGridCell, ObstacleBuffer>> Buckets => _buckets;
+    public IEnumerable<KeyValuePair<UniformGridCell, RecyclableList<GameCollider>>> Buckets => _buckets;
     public int Count { get; private set; }
     private uint _stamp;
     private void LoadCells(RectF b)
@@ -84,9 +84,9 @@ public sealed class UniformGrid
             UniformGridCell cell = cellBuffer[i];
             if (!_buckets.TryGetValue(cell, out var list))
             {
-                _buckets[cell] = list = ObstacleBufferPool.Instance.Rent();
+                _buckets[cell] = list = RecyclableListPool<GameCollider>.Instance.Rent(100);
             }
-            list.WriteableBuffer.Add(obj);
+            list.Items.Add(obj);
         }
         Count++;
     }
@@ -107,8 +107,8 @@ public sealed class UniformGrid
             UniformGridCell cell = cellBuffer[i];
             if (_buckets.TryGetValue(cell, out var list))
             {
-                list.WriteableBuffer.Remove(obj);
-                if (list.WriteableBuffer.Count == 0)
+                list.Items.Remove(obj);
+                if (list.Items.Count == 0)
                 {
                     _buckets.Remove(cell);
                     list.TryDispose();
@@ -129,8 +129,8 @@ public sealed class UniformGrid
             UniformGridCell cell = cellBuffer[i];
             if (_buckets.TryGetValue(cell, out var list))
             {
-                list.WriteableBuffer.Remove(obj);
-                if (list.WriteableBuffer.Count == 0)
+                list.Items.Remove(obj);
+                if (list.Items.Count == 0)
                 {
                     _buckets.Remove(cell);
                     list.TryDispose();
@@ -145,9 +145,9 @@ public sealed class UniformGrid
             UniformGridCell cell = cellBuffer[i];
             if (!_buckets.TryGetValue(cell, out var list))
             {
-                _buckets[cell] = list = ObstacleBufferPool.Instance.Rent();
+                _buckets[cell] = list = RecyclableListPool<GameCollider>.Instance.Rent(100);
             }
-            list.WriteableBuffer.Add(obj);
+            list.Items.Add(obj);
         }
 
         membershipState.PreviousBounds = obj.Bounds;
@@ -162,9 +162,9 @@ public sealed class UniformGrid
             var cell = cellBuffer[i];
             if (_buckets.TryGetValue(cell, out var bucketBuffer))
             {
-                for (int j = 0; j < bucketBuffer.WriteableBuffer.Count; j++)
+                for (int j = 0; j < bucketBuffer.Items.Count; j++)
                 {
-                    var itemFromBucket = bucketBuffer.WriteableBuffer[j];
+                    var itemFromBucket = bucketBuffer.Items[j];
                     if (itemFromBucket.QueryStamp == _stamp) continue;
                     
                     outputBuffer.WriteableBuffer.Add(itemFromBucket);
@@ -185,9 +185,9 @@ public sealed class UniformGrid
             UniformGridCell cell = cellBuffer[i];
             if (_buckets.TryGetValue(cell, out var list))
             {
-                for (int j = 0; j < list.WriteableBuffer.Count; j++)
+                for (int j = 0; j < list.Items.Count; j++)
                 {
-                    GameCollider? obj = list.WriteableBuffer[j];
+                    GameCollider? obj = list.Items[j];
                     if (obj != except && obj.QueryStamp != _stamp)
                     {
                         buffer.WriteableBuffer.Add(obj);
@@ -203,9 +203,9 @@ public sealed class UniformGrid
         _stamp++;
         foreach(var list in _buckets.Values)
         { 
-            for (int j = 0; j < list.WriteableBuffer.Count; j++)
+            for (int j = 0; j < list.Items.Count; j++)
             {
-                GameCollider? obj = list.WriteableBuffer[j];
+                GameCollider? obj = list.Items[j];
                 if (obj.QueryStamp != _stamp)
                 {
                     buffer.WriteableBuffer.Add(obj);
