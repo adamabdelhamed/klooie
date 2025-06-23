@@ -3,6 +3,8 @@ namespace klooie.Gaming;
 
 public class FrameTaskScheduler : Recyclable
 {
+    private Event<IFrameTask>? _taskIsLate;
+    public Event<IFrameTask> TaskIsLate => _taskIsLate ??= Event<IFrameTask>.Create();
     public const int IdealFrameRate = 50;
 
     private RecyclableList<LeaseState<Recyclable>> queue;
@@ -66,7 +68,7 @@ public class FrameTaskScheduler : Recyclable
                 var now = Game.Current.MainColliderGroup.Now;
                 if (now - task.LastExecutionTime > TimeSpan.FromMilliseconds(Frequency))
                 {
-                    TaskIsLate(task);
+                    _taskIsLate?.Fire(task);
                 }
                 FrameDebugger.RegisterTask(task.Name);
                 task.Execute();
@@ -80,7 +82,6 @@ public class FrameTaskScheduler : Recyclable
         }
     }
 
-    protected virtual void TaskIsLate(IFrameTask task) { }
 
     protected override void OnReturn()
     {
