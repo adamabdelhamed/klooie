@@ -134,7 +134,7 @@ public class EventLoopTests
         var iters = 10;
         var delayMs = 10;
         var scope = new object();
-        loop.InnerLoopAPIs.Do(delayMs,scope, (s) => ++count == iters ? DoReturnType.Break : DoReturnType.Continue, s=> loop.Stop());
+        loop.InnerLoopAPIs.Do(delayMs, scope, (s) => ++count == iters ? DoReturnType.Break : DoReturnType.Continue, s => loop.Stop());
 
         var sw = Stopwatch.StartNew();
         loop.Run();
@@ -177,7 +177,7 @@ public class EventLoopTests
         var loop = new EventLoop();
         var obj = new object();
         var expectedDuration = 100;
-        loop.InnerLoopAPIs.Delay(expectedDuration,obj, o =>
+        loop.InnerLoopAPIs.Delay(expectedDuration, obj, o =>
         {
             Assert.AreSame(obj, o);
             loop.Stop();
