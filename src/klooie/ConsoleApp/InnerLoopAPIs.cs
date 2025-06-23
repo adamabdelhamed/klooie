@@ -3,11 +3,11 @@ namespace klooie;
 
 public partial class ForLoopLifetime : Recyclable
 {
-    public List<ForLoopState> forLoopStates;
+    public List<ForLoopStateBase> forLoopStates;
 
     public ForLoopLifetime()
     {
-        forLoopStates = new List<ForLoopState>();
+        forLoopStates = new List<ForLoopStateBase>();
     }
 
     protected override void OnReturn()
@@ -23,11 +23,11 @@ public partial class ForLoopLifetime : Recyclable
 
 public partial class DoLoopLifetime : Recyclable
 {
-    public List<DoLoopState> doLoopStates;
+    public List<DoLoopStateBase> doLoopStates;
 
     public DoLoopLifetime()
     {
-        doLoopStates = new List<DoLoopState>();
+        doLoopStates = new List<DoLoopStateBase>();
     }
 
     protected override void OnReturn()
@@ -96,9 +96,9 @@ public sealed class InnerLoopAPIs
     }
 
     private List<DelayState>? delayStates;
-    public void DelayIfValid(double delayMs, DelayState statefulScope, Action<object> then)
+    public void DelayIfValid<TState>(double delayMs, TState statefulScope, Action<TState> then) where TState : DelayState
     {
-        statefulScope.InnerAction = then;
+        statefulScope.InnerAction = o => then((TState)o);
 
         if(delayStates == null)
         {
@@ -106,7 +106,7 @@ public sealed class InnerLoopAPIs
             ConsoleApp.Current.OnDisposed(this, DisposeStates);
         }
         delayStates.Add(statefulScope);
-        Delay(delayMs, (object)statefulScope, InvokeDelayCallbackIfAllDependenciesAreValid);
+        Delay(delayMs, statefulScope, InvokeDelayCallbackIfAllDependenciesAreValid);
     }
 
     public void DelayThenDisposeAllDependencies(double delayMs, DelayState statefulScope)
@@ -124,12 +124,11 @@ public sealed class InnerLoopAPIs
         // It's not super critical since DisposeStates is only called at the end of the app, but we should defend against
         // it in case there are any unforseeable scenarios where DelayState objects are used across multiple app lifetimes.
         delayStates.Add(statefulScope);
-        Delay(delayMs, (object)statefulScope, DisposeAllDependneciesFromDelayState);
+        Delay(delayMs, statefulScope, DisposeAllDependneciesFromDelayState);
     }
 
-    private static void DisposeAllDependneciesFromDelayState(object ds)
+    private static void DisposeAllDependneciesFromDelayState(DelayState state)
     {
-        var state = (DelayState)ds;
         state.DisposeAllValidDependencies();
         state.TryDispose();
     }
@@ -146,9 +145,9 @@ public sealed class InnerLoopAPIs
         _this.delayStates = null;
     }
 
-    private static void InvokeDelayCallbackIfAllDependenciesAreValid(object ds)
+    private static void InvokeDelayCallbackIfAllDependenciesAreValid(DelayState ds)
     {
-        var state = (DelayState)ds;
+        var state = ds;
         if (state.AreAllDependenciesValid == false)
         {
             state.TryDispose();
@@ -157,53 +156,47 @@ public sealed class InnerLoopAPIs
         state.InnerAction?.Invoke(ds);
     }
 
-    public void Delay(double delayMs, object scope, Action<object>? then = null) => For(1, delayMs, scope, null, then);
+    public void Delay<TScope>(double delayMs, TScope scope, Action<TScope>? then = null)
+        => For(1, delayMs, scope, null, then);
 
     public void Delay(double delayMs, Action? then = null) => For(1, delayMs, null, then);
 
-    public void Do(double delayMs, object scope, Func<object, DoReturnType> action, Action<object>? then = null)
+    public void Do<TScope>(double delayMs, TScope scope, Func<TScope, DoReturnType> action, Action<TScope>? then = null)
     {
-        var loopState = DoLoopStatePool.Instance.Rent(out _);
-        loopState.actionO = action;
-        loopState.action = null;
+        var loopState = DoLoopState<TScope>.Rent(out _);
         loopState.lastIterationTime = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
-        loopState.state = scope;
-        loopState.then = null;
-        loopState.thenO = then;
+        loopState.scope = scope;
+        loopState.action = action;
+        loopState.then = then;
         EnsureDoImplIsRunning(loopState);
     }
 
     public void Do(double delayMs, Func<DoReturnType> action, Action? then = null)
     {
-        var loopState = DoLoopStatePool.Instance.Rent(out _);
+        var loopState = DoLoopState.Rent(out _);
         loopState.action = action;
-        loopState.actionO = null;
         loopState.lastIterationTime = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
-        loopState.state = null;
         loopState.then = then;
-        loopState.thenO = null;
         EnsureDoImplIsRunning(loopState);
     }
 
-    public void For(int length, double delayMs, object scope, Action<int, object> action, Action<object>? then = null)
+    public void For<TScope>(int length, double delayMs, TScope scope, Action<int, TScope> action, Action<TScope>? then = null)
     {
         if (length == 0)
         {
             then?.Invoke(scope);
             return;
         }
-        var loopState = ForLoopStatePool.Instance.Rent(out _);
+        var loopState = ForLoopState<TScope>.Rent(out _);
         loopState.length = length;
         loopState.lastIterationTime = 0;
         loopState.i = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
-        loopState.actionO = action;
-        loopState.action = null;
-        loopState.state = scope;
-        loopState.then = null;
-        loopState.thenO = then;
+        loopState.action = action;
+        loopState.scope = scope;
+        loopState.then = then;
         EnsureForImplIsRunning(loopState);
     }
 
@@ -214,26 +207,23 @@ public sealed class InnerLoopAPIs
             then?.Invoke();
             return;
         }
-        var loopState = ForLoopStatePool.Instance.Rent(out _);
+        var loopState = ForLoopState.Rent(out _);
         loopState.length = length;
         loopState.lastIterationTime = 0;
         loopState.i = 0;
         loopState.delay = (double)delayMs * Stopwatch.Frequency / 1000.0;
         loopState.action = action;
-        loopState.actionO = null;
-        loopState.state = null;
         loopState.then = then;
-        loopState.thenO = null;
         EnsureForImplIsRunning(loopState);
     }
 
-    private void EnsureDoImplIsRunning(DoLoopState loopState)
+    private void EnsureDoImplIsRunning(DoLoopStateBase loopState)
     {
         if (doLifetime == null || !doLifetime.IsStillValid(doLease)) InitDo();
         doLifetime.doLoopStates.Add(loopState);
     }
 
-    private void EnsureForImplIsRunning(ForLoopState loopState)
+    private void EnsureForImplIsRunning(ForLoopStateBase loopState)
     {
         if (forLifetime == null || !forLifetime.IsStillValid(forLease)) InitFor();
         forLifetime.forLoopStates.Add(loopState);
@@ -263,16 +253,14 @@ public sealed class InnerLoopAPIs
             var isTimeToIterate = Stopwatch.GetTimestamp() - loopState.lastIterationTime >= loopState.delay;
             if (!isTimeToIterate) continue;
 
-            var result = loopState.action?.Invoke();
-            result = result.HasValue ? result.Value : loopState.actionO?.Invoke(loopState.state);
+            var result = loopState.Execute();
             if (result.HasValue == false) throw new Exception("Do loop must return a value");
 
             loopState.lastIterationTime = Stopwatch.GetTimestamp();
 
             if (result == DoReturnType.Break)
             {
-                loopState.thenO?.Invoke(loopState.state);
-                loopState.then?.Invoke();
+                loopState.InvokeThen();
                 loopState.Dispose();
                 doLoopStates.RemoveAt(i);
                 i--;
@@ -299,8 +287,7 @@ public sealed class InnerLoopAPIs
 
             if (loopState.i < loopState.length)
             {
-                loopState?.actionO?.Invoke(loopState.i, loopState.state);
-                loopState?.action?.Invoke(loopState.i);
+                loopState.InvokeAction();
                 loopState.lastIterationTime = Stopwatch.GetTimestamp();
                 loopState.i++;
 
@@ -309,9 +296,7 @@ public sealed class InnerLoopAPIs
 
             if (loopState.i == loopState.length)
             {
-                loopState.thenO?.Invoke(loopState.state);
-                loopState.then?.Invoke();
-
+                loopState.InvokeThen();
                 loopState.Dispose();
                 forLoopStates.RemoveAt(iu);
                 iu--;
@@ -325,28 +310,121 @@ public sealed class InnerLoopAPIs
     }
 }
 
-public class ForLoopState : Recyclable
+public abstract class ForLoopStateBase : Recyclable
 {
     public long lastIterationTime;
     public double delay;
     public int i;
     public int length;
-    public object state;
-    public Action<int, object>? actionO;
-    public Action<int>? action;
-    public Action<object> thenO;
-    public Action then;
+    public abstract void InvokeAction();
+    public abstract void InvokeThen();
 }
 
-public class DoLoopState : Recyclable
+public class ForLoopState : ForLoopStateBase
+{
+    public Action<int>? action;
+    public Action? then;
+
+    public override void InvokeAction() => action?.Invoke(i);
+    public override void InvokeThen() => then?.Invoke();
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        action = null;
+        then = null;
+    }
+
+    private sealed class Pool : RecycleablePool<ForLoopState>
+    {
+        public static Pool? _instance;
+        public static Pool Instance => _instance ??= new Pool();
+        public override ForLoopState Factory() => new ForLoopState();
+    }
+    public static ForLoopState Rent(out int lease) => Pool.Instance.Rent(out lease);
+}
+
+public class ForLoopState<TScope> : ForLoopStateBase
+{
+    public TScope scope;
+    public Action<int, TScope>? action;
+    public Action<TScope>? then;
+
+    public override void InvokeAction() => action?.Invoke(i, scope);
+    public override void InvokeThen() => then?.Invoke(scope);
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        action = null;
+        then = null;
+        scope = default;
+    }
+
+    private sealed class Pool : RecycleablePool<ForLoopState<TScope>>
+    {
+        public static Pool? _instance;
+        public static Pool Instance => _instance ??= new Pool();
+        public override ForLoopState<TScope> Factory() => new ForLoopState<TScope>();
+    }
+    public static ForLoopState<TScope> Rent(out int lease) => Pool.Instance.Rent(out lease);
+}
+
+public abstract class DoLoopStateBase : Recyclable
 {
     public long lastIterationTime;
     public double delay;
-    public object? state;
-    public Func<object, DoReturnType> actionO;
+    public abstract DoReturnType? Execute();
+    public abstract void InvokeThen();
+}
+
+public class DoLoopState : DoLoopStateBase
+{
     public Func<DoReturnType>? action;
-    public Action<object>? thenO;
     public Action? then;
+
+    public override DoReturnType? Execute() => action?.Invoke();
+    public override void InvokeThen() => then?.Invoke();
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        action = null;
+        then = null;
+    }
+
+    private sealed class Pool : RecycleablePool<DoLoopState>
+    {
+        public static Pool? _instance;
+        public static Pool Instance => _instance ??= new Pool();
+        public override DoLoopState Factory() => new DoLoopState();
+    }
+    public static DoLoopState Rent(out int lease) => Pool.Instance.Rent(out lease);
+}
+
+public class DoLoopState<TScope> : DoLoopStateBase
+{
+    public TScope scope;
+    public Func<TScope, DoReturnType> action;
+    public Action<TScope>? then;
+
+    public override DoReturnType? Execute() => action?.Invoke(scope);
+    public override void InvokeThen() => then?.Invoke(scope);
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        action = null;
+        then = null;
+        scope = default;
+    }
+
+    private sealed class Pool : RecycleablePool<DoLoopState<TScope>>
+    {
+        public static Pool? _instance;
+        public static Pool Instance => _instance ??= new Pool();
+        public override DoLoopState<TScope> Factory() => new DoLoopState<TScope>();
+    }
+    public static DoLoopState<TScope> Rent(out int lease) => Pool.Instance.Rent(out lease);
 }
 
 public enum DoReturnType

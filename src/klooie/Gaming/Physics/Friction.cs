@@ -15,18 +15,18 @@ public sealed class Friction : Recyclable
         this.evalFrequency = evalFrequency;
         this.decay = decay;
         collider.OnDisposed(this, DisposeMe);
-        Execute(this);
+        var state = DelayState.Create(this);
+        state.AddDependency(collider);
+        state.AddDependency(collider.Velocity);
+        ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(this.evalFrequency, state, Execute);
     }
 
     private static void DisposeMe(object obj) => (obj as Friction).TryDispose();
 
-    private void Execute(object leaseObj)
+    private void Execute(DelayState state)
     {
-        var lease = leaseObj as int? ?? 0;
-        if (this.IsStillValid(lease) == false) return;
-        
         this.collider.Velocity.Speed *= this.decay;
         if (this.collider.Velocity.Speed < .1f) this.collider.Velocity.Speed = 0;
-        ConsoleApp.Current.InnerLoopAPIs.Delay(this.evalFrequency, lease, Execute);
+        ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(this.evalFrequency, DelayState.Create(this), Execute);
     }
 }
