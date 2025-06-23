@@ -107,6 +107,8 @@ public class FrameTaskScheduler : Recyclable
             queue.Dispose();
             queue = null;
         }
+        _taskIsLate?.Dispose();
+        _taskIsLate = null;
     }
 }
 
