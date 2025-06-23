@@ -3,15 +3,14 @@ namespace klooie.Gaming;
 
 public class FrameTaskScheduler : Recyclable
 {
-    private Event<IFrameTask>? _taskIsLate;
-    public Event<IFrameTask> TaskIsLate => _taskIsLate ??= Event<IFrameTask>.Create();
-    public const int IdealFrameRate = 50;
-
+    private Event<(IFrameTask,TimeSpan)>? _taskIsLate;
+    public Event<(IFrameTask, TimeSpan)> TaskIsLate => _taskIsLate ??= Event<(IFrameTask, TimeSpan)>.Create();
     private RecyclableList<LeaseState<Recyclable>> queue;
-    private double delayMs;
-    private double framesPerCycle;
+    private double taskAccumulator = 0;
 
     public float Frequency { get; private set; }
+    private TimeSpan frequencyTimeSpan;
+    public TimeSpan GracePeriod { get; set; }
 
     private static LazyPool<FrameTaskScheduler> pool = new LazyPool<FrameTaskScheduler>(() => new FrameTaskScheduler());
 
@@ -27,38 +26,36 @@ public class FrameTaskScheduler : Recyclable
     private void Init(float frequency)
     {
         Frequency = frequency;
+        frequencyTimeSpan = TimeSpan.FromMilliseconds(Frequency);
+        GracePeriod = TimeSpan.FromMilliseconds(Frequency * 0.1); // 10% grace period
         queue = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent();
-        CalculateTiming();
-        Game.Current.InnerLoopAPIs.DelayIfValid(delayMs, FrameTaskSchedulerState.Create(this), LoopBody);
+        ConsoleApp.Current.AfterPaint.Subscribe(this, static (me) => me.Process(), this);
     }
 
-    public void Enqueue(IFrameTask task)
+    public void Enqueue<T>(T task) where T : Recyclable, IFrameTask
     {
+        task.LastExecutionTime = Game.Current.MainColliderGroup.Now;
         queue.Items.Add(LeaseHelper.Track((Recyclable)task));
-    }
-
-    private void CalculateTiming()
-    {
-        delayMs = 1000.0 / IdealFrameRate;
-        if (Frequency < delayMs)
-        {
-            throw new ArgumentException("Frequency cannot be faster than the configured frame rate");
-        }
-        framesPerCycle = Math.Max(1, Frequency / delayMs);
-    }
-
-    private static void LoopBody(object obj)
-    {
-        var state = (FrameTaskSchedulerState)obj;
-        state.Scheduler.Process();
-        Game.Current.InnerLoopAPIs.DelayIfValid(state.Scheduler.delayMs, state, LoopBody);
     }
 
     private void Process()
     {
         if (queue.Count == 0) return;
-        int tasksPerTick = Math.Max(1, (int)Math.Ceiling(queue.Count / framesPerCycle));
-        for (int i = 0; i < tasksPerTick && queue.Count > 0; i++)
+
+        double frameDurationMs = GetCurrentFrameDurationMs();
+        double framesPerCycle = Frequency / frameDurationMs; // Recalculated each frame
+
+
+        double tasksPerFrame = queue.Count / framesPerCycle;
+        taskAccumulator += tasksPerFrame;
+
+        int tasksToRun = Math.Min((int)taskAccumulator, queue.Count);
+        taskAccumulator -= tasksToRun;
+
+        if (tasksToRun == 0) return;
+
+
+        for (int i = 0; i < tasksToRun && queue.Count > 0; i++)
         {
             var lease = queue[0];
             queue.Items.RemoveAt(0);
@@ -66,9 +63,10 @@ public class FrameTaskScheduler : Recyclable
             {
                 var task = (IFrameTask)lease.Recyclable!;
                 var now = Game.Current.MainColliderGroup.Now;
-                if (now - task.LastExecutionTime > TimeSpan.FromMilliseconds(Frequency))
+                var elapsed = now - task.LastExecutionTime;
+                if (elapsed > frequencyTimeSpan + GracePeriod)
                 {
-                    _taskIsLate?.Fire(task);
+                    _taskIsLate?.Fire((task,elapsed-frequencyTimeSpan));
                 }
                 FrameDebugger.RegisterTask(task.Name);
                 task.Execute();
@@ -82,6 +80,20 @@ public class FrameTaskScheduler : Recyclable
         }
     }
 
+    private double GetCurrentFrameDurationMs()
+    {
+        double fps;
+        // Avoid divide by zero in edge cases
+        if (Game.Current.MainColliderGroup.Now < TimeSpan.FromSeconds(2))
+        {
+            fps = LayoutRootPanel.MaxPaintRate * .85;
+        }
+        else
+        {
+            fps = Math.Max(ConsoleApp.Current.FramesPerSecond, 1);
+        }
+        return 1000.0 / fps;
+    }
 
     protected override void OnReturn()
     {
@@ -95,25 +107,6 @@ public class FrameTaskScheduler : Recyclable
             queue.Dispose();
             queue = null;
         }
-    }
-}
-
-public class FrameTaskSchedulerState : DelayState
-{
-    public FrameTaskScheduler Scheduler { get; private set; }
-
-    public static FrameTaskSchedulerState Create(FrameTaskScheduler scheduler)
-    {
-        var state = FrameTaskSchedulerStatePool.Instance.Rent();
-        state.Scheduler = scheduler;
-        state.AddDependency(scheduler);
-        return state;
-    }
-
-    protected override void OnReturn()
-    {
-        base.OnReturn();
-        Scheduler = null!;
     }
 }
 

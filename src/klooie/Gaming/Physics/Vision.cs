@@ -7,19 +7,6 @@ public class Vision : Recyclable, IFrameTask
     public const float DefaultAngularVisibility = 60;
     private static Event<Vision>? _visionInitiated;
     public static Event<Vision> VisionInitiated => _visionInitiated ??= Event<Vision>.Create();
-    private static FrameTaskScheduler? Scheduler;
-
-    private static void EnsureScheduler()
-    {
-        if (Scheduler != null) return;
-        Scheduler = FrameTaskScheduler.Create(667f);
-        ConsoleApp.Current.OnDisposed(static () =>
-        {
-            Scheduler?.TryDispose();
-            Scheduler = null;
-        });
-    }
-
 
     private Event? _visibleObjectsChanged;
     public Event VisibleObjectsChanged => _visibleObjectsChanged ??= Event.Create();
@@ -34,7 +21,6 @@ public class Vision : Recyclable, IFrameTask
     public float Range { get; set; } 
     public float AngularVisibility { get; set; } 
     public CastingMode CastingMode { get; set; }
-    public float AutoScanFrequency { get; set; }
     public float AngleStep {get;set;}
     public int AngleFuzz { get; set; }
     public  TimeSpan MaxMemoryTime { get; set; }
@@ -42,22 +28,16 @@ public class Vision : Recyclable, IFrameTask
     public Vision() { }
 
     private static Random random = new Random();
-    public static Vision Create(GameCollider eye, bool autoScan = true)
+    public static Vision Create(FrameTaskScheduler scheduler, GameCollider eye, bool autoScan = true)
     {
         var vision = VisionPool.Instance.Rent();
         vision.Eye = eye;
-        vision.AutoScanFrequency = 667f;
         vision.AngleStep = 5;
         vision.AngleFuzz = 2;
         vision.CastingMode = CastingMode.SingleRay;
         vision.MaxMemoryTime = TimeSpan.FromSeconds(2);
         _visionInitiated?.Fire(vision);
-
-        if (autoScan)
-        {
-            EnsureScheduler();
-            Scheduler!.Enqueue(vision);
-        }
+        scheduler.Enqueue(vision);
         return vision;
     }
 
