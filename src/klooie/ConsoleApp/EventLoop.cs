@@ -527,7 +527,7 @@ public class EventLoop : Recyclable
     private static void StaticSetResult(object obj) => ((TaskCompletionSource)obj).SetResult();
     */
 
-    public void Invoke(Func<Task> work) => Invoke(work, StaticFuncTaskWork);
+    public void Invoke(Func<Task> work) => Invoke<Func<Task>>(work, StaticFuncTaskWork);
     
 
     private static Task StaticFuncTaskWork(object arg) => (arg as Func<Task>)();
