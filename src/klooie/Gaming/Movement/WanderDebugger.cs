@@ -110,9 +110,8 @@ public class WanderDebugger : Wander
         Game.Current.InnerLoopAPIs.DelayIfValid(250, dependency, RemoveRunningLoopFilter);
     }
 
-    private static void RemoveRunningLoopFilter(object obj)
+    private static void RemoveRunningLoopFilter(DelayState state)
     {
-        var state = (DelayState)obj;
         var eye = (GameCollider)state.MainDependency;
         if (eye.Filters.Contains(LoopRunningFilter))
         {

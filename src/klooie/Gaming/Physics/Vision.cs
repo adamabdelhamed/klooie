@@ -62,9 +62,8 @@ public class Vision : Recyclable
     public Angle FieldOfViewEnd => Eye.Velocity.Angle.Add(AngularVisibility / 2f);
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
-    private static void ScanLoopBody(object obj)
+    private static void ScanLoopBody(VisionDependencyState state)
     {
-        var state = (VisionDependencyState)obj;
         FrameDebugger.RegisterTask(nameof(Vision));
         state.Vision.Scan();
         Game.Current.InnerLoopAPIs.DelayIfValid(state.Vision.AutoScanFrequency + state.Vision.ScanOffset, state, ScanLoopBody);

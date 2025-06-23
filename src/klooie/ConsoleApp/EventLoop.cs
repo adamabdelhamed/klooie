@@ -2,7 +2,7 @@
 namespace klooie;
 public class EventLoop : Recyclable
 {
-    private class SynchronizedEventPool  
+    private class SynchronizedEventPool
     {
         private Lock lockObject = new Lock();
         private SynchronizedEvent[] pool;
@@ -31,16 +31,22 @@ public class EventLoop : Recyclable
             }
         }
 
-        public void Return(SynchronizedEvent done)
+        public void Return(SynchronizedEventBase done)
         {
-            lock (lockObject)
+            if(done is not SynchronizedEvent se)
             {
                 done.Clean();
+                return; // don't pool generic events
+            }
+
+            lock (lockObject)
+            {
+                se.Clean();
                 for (var i = 0; i < pool.Length; i++)
                 {
                     if (pool[i] == null)
                     {
-                        pool[i] = done;
+                        pool[i] = se;
                         count++;
                         MaybeShrink();
                         return;
@@ -48,7 +54,7 @@ public class EventLoop : Recyclable
                 }
 
                 Grow();
-                pool[count++] = done;
+                pool[count++] = se;
             }
         }
 
@@ -78,20 +84,24 @@ public class EventLoop : Recyclable
         }
     }
 
-    private class SynchronizedEvent
+    private abstract class SynchronizedEventBase
+    {
+        public Task Task { get; protected set; }
+        public bool IsFinished => Task == null || (Task.IsCompleted || Task.IsFaulted || Task.IsCanceled);
+        public bool IsFailed => Task?.Exception != null;
+        public Exception Exception => Task?.Exception;
+        public abstract void Run();
+        public abstract void Clean();
+    }
+
+    private class SynchronizedEvent : SynchronizedEventBase
     {
         public object WorkState { get; set; }
         public Func<object,Task> AsyncWork { get;  set; }
         public SendOrPostCallback Callback { get; set; }
         public object CallbackState { get; set; }
-        public Task Task { get; private set; }
-        public bool IsFinished => Task == null || (Task.IsCompleted || Task.IsFaulted || Task.IsCanceled);
-        public bool IsFailed => Task?.Exception != null;
-        public Exception Exception => Task?.Exception;
 
-        public SynchronizedEvent() { }
-
-        public void Clean()
+        public override void Clean()
         {
             AsyncWork = null;
             Callback = null;
@@ -100,7 +110,30 @@ public class EventLoop : Recyclable
             CallbackState = null;
         }
 
-        public void Run()
+        public override void Run()
+        {
+            Task = AsyncWork?.Invoke(WorkState);
+            Callback?.Invoke(CallbackState);
+        }
+    }
+
+    private class SynchronizedEvent<TScope> : SynchronizedEventBase
+    {
+        public TScope WorkState { get; set; }
+        public Func<TScope, Task> AsyncWork { get; set; }
+        public SendOrPostCallback Callback { get; set; }
+        public TScope CallbackState { get; set; }
+
+        public override void Clean()
+        {
+            AsyncWork = null;
+            Callback = null;
+            WorkState = default;
+            CallbackState = default;
+            Task = null;
+        }
+
+        public override void Run()
         {
             Task = AsyncWork?.Invoke(WorkState);
             Callback?.Invoke(CallbackState);
@@ -172,8 +205,8 @@ public class EventLoop : Recyclable
     public bool IsRunning => runDeferred != null;
     public long Cycle { get; private set; }
     protected string Name { get; set; }
-    private List<SynchronizedEvent> workQueue = new List<SynchronizedEvent>();
-    private List<SynchronizedEvent> pendingWorkItems = new List<SynchronizedEvent>();
+    private List<SynchronizedEventBase> workQueue = new List<SynchronizedEventBase>();
+    private List<SynchronizedEventBase> pendingWorkItems = new List<SynchronizedEventBase>();
     private TaskCompletionSource<bool> runDeferred;
     private bool stopRequested;
     private CustomSyncContext syncContext;
@@ -247,7 +280,7 @@ public class EventLoop : Recyclable
             stopRequested = false;
             Cycle = -1;
             LoopStarted.Fire();
-            List<SynchronizedEvent> todoOnThisCycle = new List<SynchronizedEvent>();
+            List<SynchronizedEventBase> todoOnThisCycle = new List<SynchronizedEventBase>();
             while (stopRequested == false)
             {
                 if (Cycle == long.MaxValue)
@@ -448,6 +481,21 @@ public class EventLoop : Recyclable
         }
     }
 
+    public void InvokeNextCycle<TScope>(SendOrPostCallback callback, TScope state)
+    {
+        if (IsRunning == false && IsDrainingOrDrained)
+        {
+            return;
+        }
+        lock (workQueue)
+        {
+            var workItem = new SynchronizedEvent<TScope>();
+            workItem.Callback = callback;
+            workItem.CallbackState = state;
+            workQueue.Add(workItem);
+        }
+    }
+
     public Task InvokeAsync(Func<Task> work)
     {
         var tcs = new TaskCompletionSource();
@@ -485,6 +533,55 @@ public class EventLoop : Recyclable
     private static Task StaticFuncTaskWork(object arg) => (arg as Func<Task>)();
     
     public void Invoke(object o, Action a) => Invoke(o, StaticActionTaskWork);
+
+    public void Invoke<TScope>(TScope scope, Action<TScope> action)
+        => Invoke(scope, (s) => { action(s); return Task.CompletedTask; });
+
+    public void Invoke<TScope>(TScope workState, Func<TScope, Task> work)
+    {
+        if (IsRunning == false && IsDrainingOrDrained)
+        {
+            return;
+        }
+
+        if (Thread.CurrentThread == Thread)
+        {
+            var workItem = new SynchronizedEvent<TScope>();
+            workItem.WorkState = workState;
+            workItem.AsyncWork = work;
+            workItem.Run();
+            if (workItem.IsFinished == false)
+            {
+                pendingWorkItems.Add(workItem);
+            }
+            else if (workItem.IsFailed)
+            {
+                var handling = HandleWorkItemException(workItem.Exception, workItem);
+                if (handling == EventLoopExceptionHandling.Throw)
+                {
+                    throw new AggregateException(workItem.Exception);
+                }
+                else if (handling == EventLoopExceptionHandling.Stop)
+                {
+                    return;
+                }
+                else if (handling == EventLoopExceptionHandling.Swallow)
+                {
+                    // swallow
+                }
+            }
+        }
+        else
+        {
+            lock (workQueue)
+            {
+                var workItem = new SynchronizedEvent<TScope>();
+                workItem.WorkState = workState;
+                workItem.AsyncWork = work;
+                workQueue.Add(workItem);
+            }
+        }
+    }
     
 
     private static Task StaticActionTaskWork(object arg)
@@ -544,7 +641,7 @@ public class EventLoop : Recyclable
         }
     }
 
-    private EventLoopExceptionHandling HandleWorkItemException(Exception ex, SynchronizedEvent workItem)
+    private EventLoopExceptionHandling HandleWorkItemException(Exception ex, SynchronizedEventBase workItem)
     {
         var cleaned = ex.Clean();
 

@@ -88,9 +88,8 @@ public static partial class Animator
         ProcessAnimationFrame(frame);
     }
 
-    private static void ProcessAnimationFrame(object stateObj)
+    private static void ProcessAnimationFrame(AnimationFrameState frameState)
     {
-        var frameState = (AnimationFrameState)stateObj;
         if (frameState.I == frameState.NumberOfFrames - 1)
         {
             frameState.Dispose();
