@@ -37,7 +37,8 @@ public class WanderLogicTests
     {
         Game.Current.GamePanel.Background = new RGB(50, 50, 50);
         var mover = AddMoverAndObstacles(moverPosition, curiosityPoint, obstaclePositions);
-        var vision = Vision.Create(mover, autoScan: false);
+        var scheduler = FrameTaskScheduler.Create(1000);
+        var vision = Vision.Create(scheduler, mover, autoScan: false);
         vision.Range = 15;
         vision.Scan();
         var visionFilter = new VisionFilter(vision);

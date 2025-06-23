@@ -24,7 +24,8 @@ public class VisionTests
     private static async Task SetupVisionTest(UITestManager context, RectF moverPosition)
     {
         var mover = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
-        var vision = Vision.Create(mover, autoScan: false);
+        var scheduler = FrameTaskScheduler.Create(1000);
+        var vision = Vision.Create(scheduler, mover, autoScan: false);
         vision.Range = 15;
    
         var visionFilter = new VisionFilter(vision);
