@@ -1,12 +1,24 @@
 ﻿using System.Runtime.CompilerServices;
 
 namespace klooie.Gaming;
-public class Vision : Recyclable
+public class Vision : Recyclable, IFrameTask
 {
     public const float DefaultRange = 20;
     public const float DefaultAngularVisibility = 60;
     private static Event<Vision>? _visionInitiated;
     public static Event<Vision> VisionInitiated => _visionInitiated ??= Event<Vision>.Create();
+    private static FrameTaskScheduler? Scheduler;
+
+    private static void EnsureScheduler()
+    {
+        if (Scheduler != null) return;
+        Scheduler = FrameTaskScheduler.Create(667f);
+        ConsoleApp.Current.OnDisposed(static () =>
+        {
+            Scheduler?.TryDispose();
+            Scheduler = null;
+        });
+    }
 
 
     private Event? _visibleObjectsChanged;
@@ -21,17 +33,15 @@ public class Vision : Recyclable
     public GameCollider Eye { get; private set; } = null!;
     public float Range { get; set; } 
     public float AngularVisibility { get; set; } 
-    public float ScanOffset { get; set; }
     public CastingMode CastingMode { get; set; }
     public float AutoScanFrequency { get; set; }
     public float AngleStep {get;set;}
     public int AngleFuzz { get; set; }
     public  TimeSpan MaxMemoryTime { get; set; }
+    public TimeSpan LastExecutionTime { get; set; }
     public Vision() { }
 
     private static Random random = new Random();
-    private static int NextScanOffsetBase = 0;
-    private const int MinScanSpacing = 30; // ms (set as desired)
     public static Vision Create(GameCollider eye, bool autoScan = true)
     {
         var vision = VisionPool.Instance.Rent();
@@ -39,14 +49,14 @@ public class Vision : Recyclable
         vision.AutoScanFrequency = 667f;
         vision.AngleStep = 5;
         vision.AngleFuzz = 2;
-        vision.ScanOffset = (NextScanOffsetBase++ * MinScanSpacing) % vision.AutoScanFrequency;
         vision.CastingMode = CastingMode.SingleRay;
         vision.MaxMemoryTime = TimeSpan.FromSeconds(2);
         _visionInitiated?.Fire(vision);
 
         if (autoScan)
         {
-            Game.Current.InnerLoopAPIs.DelayIfValid(vision.ScanOffset, VisionDependencyState.Create(vision), ScanLoopBody);
+            EnsureScheduler();
+            Scheduler!.Enqueue(vision);
         }
         return vision;
     }
@@ -60,15 +70,6 @@ public class Vision : Recyclable
 
     public Angle FieldOfViewStart => Eye.Velocity.Angle.Add(-AngularVisibility / 2f);
     public Angle FieldOfViewEnd => Eye.Velocity.Angle.Add(AngularVisibility / 2f);
-
-    [method: MethodImpl(MethodImplOptions.NoInlining)]
-    private static void ScanLoopBody(object obj)
-    {
-        var state = (VisionDependencyState)obj;
-        FrameDebugger.RegisterTask(nameof(Vision));
-        state.Vision.Scan();
-        Game.Current.InnerLoopAPIs.DelayIfValid(state.Vision.AutoScanFrequency + state.Vision.ScanOffset, state, ScanLoopBody);
-    }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     public void Scan()
@@ -257,6 +258,9 @@ public class Vision : Recyclable
         }
     }
 
+    string IFrameTask.Name => nameof(Vision);
+    void IFrameTask.Execute() => Scan();
+
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     private bool IsIgnoredByFilter(GameCollider potentialTarget)
     {
@@ -283,6 +287,7 @@ public class Vision : Recyclable
         TrackedObjectsList.Clear();
         _visibleObjectsChanged?.TryDispose();
         _visibleObjectsChanged = null;
+        LastExecutionTime = TimeSpan.Zero;
     }
 }
 
