@@ -57,9 +57,8 @@ public static partial  class Animator
             return state;
         }
 
-        private static void AfterForward(object o)
+        private static void AfterForward(FloatAnimationState state)
         {
-            var state = (FloatAnimationState)o;
             if (state.AutoReverse)
             {
                 if (state.AutoReverseDelay > 0)
@@ -77,18 +76,16 @@ public static partial  class Animator
             }
         }
 
-        private static void StartReverse(object o)
+        private static void StartReverse(FloatAnimationState state)
         {
-            var state = (FloatAnimationState)o;
             var temp = state.From;
             state.From = state.To;
             state.To = temp;
             AnimateInternal(state, AfterReverse);
         }
 
-        private static void AfterReverse(object o)
+        private static void AfterReverse(FloatAnimationState state)
         {
-            var state = (FloatAnimationState)o;
             if (state.AutoReverseDelay > 0)
             {
                 ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.AutoReverseDelay, state, FinishReverse);
@@ -99,9 +96,8 @@ public static partial  class Animator
             }
         }
 
-        private static void FinishReverse(object o)
+        private static void FinishReverse(FloatAnimationState state)
         {
-            var state = (FloatAnimationState)o;
             state.From = state.OriginalFrom;
             state.To = state.OriginalTo;
             CompleteOrLoop(state);
