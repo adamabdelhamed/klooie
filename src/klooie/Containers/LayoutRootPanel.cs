@@ -33,7 +33,7 @@ public partial class LayoutRootPanel : ConsolePanel
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
         ResizeTo(lastConsoleWidth, lastConsoleHeight);
-        ConsoleApp.Current!.EndOfCycle.Subscribe(DebounceResize, this);
+        ConsoleApp.Current!.EndOfCycle.SubscribeThrottled(DebounceResize, this, MaxPaintRate);
         ConsoleApp.Current.EndOfCycle.SubscribeThrottled(DrainPaints, this, MaxPaintRate);
         DescendentAdded.Subscribe(OnDescendentAdded, this);
         OnDisposed(RestoreConsoleState);

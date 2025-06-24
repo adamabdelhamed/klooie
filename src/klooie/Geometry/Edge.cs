@@ -1,4 +1,6 @@
-﻿namespace klooie;
+﻿using System.Runtime.CompilerServices;
+
+namespace klooie;
 
 public readonly struct Edge
 {
@@ -28,6 +30,7 @@ public readonly struct Edge
         Y2 = y2;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float CalculateDistanceTo(float x, float y)
     {
         // Project the point (x, y) onto the edge and calculate the perpendicular distance

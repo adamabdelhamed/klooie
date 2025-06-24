@@ -43,6 +43,7 @@ public partial class DoLoopLifetime : Recyclable
 
 public sealed class InnerLoopAPIs
 {
+    private const int MaxForLoopInvocationsPerSecond = 1000;
     private EventLoop parent;
     private ForLoopLifetime forLifetime;
     private int forLease;
@@ -232,7 +233,7 @@ public sealed class InnerLoopAPIs
     public void InitFor()
     {
         forLifetime = ForLoopLifetimePool.Instance.Rent(out forLease);
-        parent.EndOfCycle.Subscribe(forLifetime, ForImpl, forLifetime);
+        parent.EndOfCycle.SubscribeThrottled(forLifetime, ForImpl, forLifetime, MaxForLoopInvocationsPerSecond);
     }
 
     public void InitDo()

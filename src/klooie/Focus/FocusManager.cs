@@ -241,45 +241,34 @@ public partial class FocusManager : Recyclable,  IObservableObject
         StackDepth = 1;
         ConsoleApp.Current.LayoutRoot.DescendentAdded.SubscribeWithPriority(Add, ConsoleApp.Current);
         ConsoleApp.Current.LayoutRoot.DescendentRemoved.SubscribeWithPriority(Remove, ConsoleApp.Current);
-        ConsoleApp.Current.EndOfCycle.Subscribe(Cycle, ConsoleApp.Current);
+        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(CheckForKeyboardInput, ConsoleApp.Current, (int)Math.Round(1000f / MinTimeBetweenKeyPresses.TotalMilliseconds));
     }
 
-    private void Cycle()
+    private void CheckForKeyboardInput()
     {
-
-        // Check if enough time has passed since the last key check
-        var now = Stopwatch.GetTimestamp();
-        var delta = now - lastCycleThrottlerCheck;
-        if (delta >= CycleThrottlerIntervalTicks)
+        if (ConsoleProvider.Current.KeyAvailable)
         {
-            lastCycleThrottlerCheck = now;
+            var info = ConsoleProvider.Current.ReadKey(true);
 
-            if (ConsoleProvider.Current.KeyAvailable)
+            var effectiveMinTimeBetweenKeyPresses = MinTimeBetweenKeyPresses;
+            if (KeyThrottlingEnabled && info.Key == lastKey && DateTime.UtcNow - lastKeyPressTime < effectiveMinTimeBetweenKeyPresses)
             {
-                var info = ConsoleProvider.Current.ReadKey(true);
-
-                var effectiveMinTimeBetweenKeyPresses = MinTimeBetweenKeyPresses;
-                if (KeyThrottlingEnabled && info.Key == lastKey && DateTime.UtcNow - lastKeyPressTime < effectiveMinTimeBetweenKeyPresses)
-                {
-                    // The user is holding the key down and throttling is enabled
-                    OnKeyInputThrottled.Fire();
-                }
-                else
-                {
-                    lastKeyPressTime = DateTime.UtcNow;
-                    lastKey = info.Key;
-                    HandleKeyInput(info);
-                }
+                // The user is holding the key down and throttling is enabled
+                OnKeyInputThrottled.Fire();
+            }
+            else
+            {
+                lastKeyPressTime = DateTime.UtcNow;
+                lastKey = info.Key;
+                HandleKeyInput(info);
             }
         }
 
-        if (sendKeys.Count > 0)
+        while (sendKeys.Count > 0)
         {
             var request = sendKeys.Dequeue();
-
             HandleKeyInput(request.Info);
             request.TaskSource.SetResult(true);
-
         }
     }
 

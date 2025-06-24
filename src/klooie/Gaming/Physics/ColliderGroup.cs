@@ -45,7 +45,8 @@ public sealed class ColliderGroup
         colliderBuffer = ObstacleBufferPool.Instance.Rent();
         lastExecuteTime = TimeSpan.Zero;
         spatialIndex = new UniformGrid();
-        ConsoleApp.Current?.Invoke(ExecuteAsync);
+        this.stopwatch.Start();
+        Game.Current.EndOfCycle.SubscribeThrottled(Tick, lt, 200);
         ConsoleApp.Current?.OnDisposed(Cleanup);
     }
 
@@ -70,27 +71,20 @@ public sealed class ColliderGroup
 
     public TimeSpan Now => stopwatch.Elapsed;
     private IStopwatch stopwatch;
-    private async Task ExecuteAsync()
-    {
-        stopwatch.Start();
-        while (lt != null)
-        {
-            await Task.Yield();
-            if (PauseManager?.IsPaused == true)
-            {
-                stopwatch.Stop();
-                while (PauseManager.IsPaused)
-                {
-                    await Task.Yield();
-                }
-                stopwatch.Start();
-            }
-            Tick();
-        }
-    }
 
     public void Tick()
     {
+        /*
+        if(PauseManager?.IsPaused == true)
+        {
+            stopwatch.Stop();
+            return;
+        }
+        else if(stopwatch.IsRunning)
+        {
+            stopwatch.Start();
+        }
+        */
         UpdateTime();
         colliderBuffer.WriteableBuffer.Clear();
         spatialIndex.EnumerateAll(colliderBuffer);

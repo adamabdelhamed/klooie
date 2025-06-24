@@ -154,7 +154,7 @@ public static class CollisionDetector
             singleObstacleEdgeBuffer[2] = obstacle.Bounds.LeftEdge;
             singleObstacleEdgeBuffer[3] = obstacle.Bounds.RightEdge;
 
-            EdgeComparerByDistance.Sort(movingObject, singleObstacleEdgeBuffer);
+            Sort4ElementEdgeSpan(movingObject, singleObstacleEdgeBuffer);
 
             for (var j = 0; j < singleObstacleEdgeBuffer.Length; j++)
             {
@@ -335,6 +335,38 @@ public static class CollisionDetector
         x = 0; y = 0;
         return false;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Sort4ElementEdgeSpan(RectF rect, Span<Edge> edges)
+    {
+        float cx = rect.CenterX, cy = rect.CenterY;
+        Span<float> d = stackalloc float[4];
+        for (int i = 0; i < 4; i++)
+        {
+            d[i] = edges[i].CalculateDistanceTo(cx, cy);
+        }
+
+
+        if (d[0] > d[1]) Swap(edges, d, 0, 1);
+        if (d[1] > d[2]) Swap(edges, d, 1, 2);
+        if (d[2] > d[3]) Swap(edges, d, 2, 3);
+        if (d[0] > d[1]) Swap(edges, d, 0, 1);
+        if (d[1] > d[2]) Swap(edges, d, 1, 2);
+        if (d[0] > d[1]) Swap(edges, d, 0, 1);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Swap(Span<Edge> edges, Span<float> d, int i, int j)
+    {
+        // Swap distances
+        float tempD = d[i];
+        d[i] = d[j];
+        d[j] = tempD;
+        // Swap edges
+        Edge tempE = edges[i];
+        edges[i] = edges[j];
+        edges[j] = tempE;
+    }
 }
 
 public class ArrayPlusOnePool<T> : RecycleablePool<ArrayPlusOne<T>> where T : ICollidable
@@ -443,29 +475,5 @@ public class ArrayPlusOne<T> : Recyclable, IList<ICollidable> where T : ICollida
     {
         throw new NotImplementedException();
     }
-}
-
-public static class EdgeComparerByDistance 
-{
-    private static float cx, cy;
-
-    private static Comparison<Edge> comparison = new Comparison<Edge>(Compare);
-
-    public static void Sort(RectF rect, Span<Edge> edges)
-    {
-        /*
-        // Commented out because it's killing the CPU, but bring it back if you ever suspect corrupt memory reads that lead to Edge sorting.
-        for (int i = 0; i < edges.Length; i++)
-        {
-            var e = edges[i];
-            GeometryGuard.ValidateFloats(e.X1, e.Y1, e.X2, e.Y2);
-        }
-        */
-        cx = rect.CenterX;
-        cy = rect.CenterY;
-        edges.Sort(comparison);
-    }
-
-    private static int Compare(Edge a, Edge b)
-        => a.CalculateDistanceTo(cx, cy).CompareTo(b.CalculateDistanceTo(cx, cy));
+    
 }
