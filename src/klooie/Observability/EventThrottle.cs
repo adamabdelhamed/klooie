@@ -27,8 +27,6 @@ public static class EventThrottleExtensions
             minTicksBetweenCycles = (long)(Stopwatch.Frequency / this.maxCyclesPerSecond);
         }
 
-        protected static void DisposeMe(object o) => ((Recyclable)o).TryDispose();
-
         protected bool CanExecute()
         {
             var now = Stopwatch.GetTimestamp();
@@ -51,26 +49,14 @@ public static class EventThrottleExtensions
     private sealed class EventThrottle : EventThrottleBase
     {
         private Action handler;
-        private Action<object> scopedHandler;
-        private object scope;
+
         public static EventThrottle Create(Event e, Action handler, ILifetime lifetime, int maxCyclesPerSecond)
         {
             var inst = Pool.Instance.Rent();
             inst.Bind(maxCyclesPerSecond);
             inst.handler = handler;
-            e.Subscribe(inst, Throttle, lifetime);
-            lifetime.OnDisposed(inst, DisposeMe);
-            return inst;
-        }
-
-        public static EventThrottle Create(Event e, object scope, Action<object> handler, ILifetime lifetime, int maxCyclesPerSecond)
-        {
-            var inst = Pool.Instance.Rent();
-            inst.Bind(maxCyclesPerSecond);
-            inst.scopedHandler = handler;
-            inst.scope = scope;
-            e.Subscribe(inst, ThrottleScoped, lifetime);
-            lifetime.OnDisposed(inst, DisposeMe);
+            e.Subscribe(inst, static me => me.Throttle(), lifetime);
+            lifetime.OnDisposed(inst, TryDisposeMe);
             return inst;
         }
 
@@ -78,22 +64,12 @@ public static class EventThrottleExtensions
         {
             base.OnReturn();
             handler = null;
-            scopedHandler = null;
-            scope = null;
         }
 
-        private static void Throttle(object me)
+        private void Throttle()
         {
-            var self = (EventThrottle)me;
-            if (!self.CanExecute()) return;
-            self.handler.Invoke();
-        }
-
-        private static void ThrottleScoped(object me)
-        {
-            var self = (EventThrottle)me;
-            if (!self.CanExecute()) return;
-            self.scopedHandler.Invoke(self.scope);
+            if (!CanExecute()) return;
+            handler.Invoke();
         }
 
         private sealed class Pool : RecycleablePool<EventThrottle>
@@ -114,7 +90,7 @@ public static class EventThrottleExtensions
             inst.Bind(maxCyclesPerSecond);
             inst.handler = handler;
             e.Subscribe<ArgEventThrottle<TArg>>(inst, Throttle, lifetime);
-            lifetime.OnDisposed(inst, DisposeMe);
+            lifetime.OnDisposed(inst, TryDisposeMe);
             return inst;
         }
 
@@ -150,7 +126,7 @@ public static class EventThrottleExtensions
             inst.scopedHandler = handler;
             inst.scope = scope;
             e.Subscribe<EventThrottle<TScope>>(inst, ThrottleScoped, lifetime);
-            lifetime.OnDisposed(inst, DisposeMe);
+            lifetime.OnDisposed(inst, TryDisposeMe);
             return inst;
         }
 
@@ -187,7 +163,7 @@ public static class EventThrottleExtensions
             inst.scopedHandler = handler;
             inst.scope = scope;
             e.Subscribe<ScopedAndArgEventThrottle<TScope, TArg>>(inst, ThrottleScoped, lifetime);
-            lifetime.OnDisposed(inst, DisposeMe);
+            lifetime.OnDisposed(inst, TryDisposeMe);
             return inst;
         }
 

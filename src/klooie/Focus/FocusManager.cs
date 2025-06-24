@@ -239,9 +239,9 @@ public partial class FocusManager : Recyclable,  IObservableObject
         focusStack = new List<FocusContext>();
         focusStack.Add(new FocusContext());
         StackDepth = 1;
-        ConsoleApp.Current.LayoutRoot.DescendentAdded.SubscribeWithPriority(Add, ConsoleApp.Current);
-        ConsoleApp.Current.LayoutRoot.DescendentRemoved.SubscribeWithPriority(Remove, ConsoleApp.Current);
-        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(CheckForKeyboardInput, ConsoleApp.Current, (int)Math.Round(1000f / MinTimeBetweenKeyPresses.TotalMilliseconds));
+        ConsoleApp.Current.LayoutRoot.DescendentAdded.SubscribeWithPriority(this, static (me,added) => me.Add(added), ConsoleApp.Current);
+        ConsoleApp.Current.LayoutRoot.DescendentRemoved.SubscribeWithPriority(this, static (me, removed) => me.Remove(removed), ConsoleApp.Current);
+        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(this, static me => me.CheckForKeyboardInput(), ConsoleApp.Current, (int)Math.Round(1000f / MinTimeBetweenKeyPresses.TotalMilliseconds));
     }
 
     private void CheckForKeyboardInput()

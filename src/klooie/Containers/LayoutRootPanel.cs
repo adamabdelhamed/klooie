@@ -33,9 +33,9 @@ public partial class LayoutRootPanel : ConsolePanel
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
         ResizeTo(lastConsoleWidth, lastConsoleHeight);
-        ConsoleApp.Current!.EndOfCycle.SubscribeThrottled(DebounceResize, this, MaxPaintRate);
-        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(DrainPaints, this, MaxPaintRate);
-        DescendentAdded.Subscribe(OnDescendentAdded, this);
+        ConsoleApp.Current!.EndOfCycle.SubscribeThrottled(this, static me => me.DebounceResize(), this, MaxPaintRate);
+        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(this, static me => me.DrainPaints(), this, MaxPaintRate);
+        DescendentAdded.Subscribe(this, static (me,added) => me.OnDescendentAdded(added), this);
         OnDisposed(RestoreConsoleState);
         FocusStackDepth = 1;
     }

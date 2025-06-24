@@ -46,7 +46,7 @@ public sealed class ColliderGroup
         lastExecuteTime = TimeSpan.Zero;
         spatialIndex = new UniformGrid();
         this.stopwatch.Start();
-        Game.Current.EndOfCycle.SubscribeThrottled(Tick, lt, 200);
+        Game.Current.AfterPaint.Subscribe(Tick, lt);
         ConsoleApp.Current?.OnDisposed(Cleanup);
     }
 
@@ -85,6 +85,7 @@ public sealed class ColliderGroup
             stopwatch.Start();
         }
         */
+        FrameDebugger.RegisterTask(nameof(ColliderGroup));
         UpdateTime();
         colliderBuffer.WriteableBuffer.Clear();
         spatialIndex.EnumerateAll(colliderBuffer);
