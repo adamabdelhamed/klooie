@@ -3,6 +3,7 @@ using klooie.Gaming;
 using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -24,7 +25,7 @@ public class VisionTests
     private static async Task SetupVisionTest(UITestManager context, RectF moverPosition)
     {
         var mover = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
-        var scheduler = FrameTaskScheduler.Create(1000);
+        var scheduler = FrameTaskScheduler.Create(TimeSpan.FromSeconds(1));
         var vision = Vision.Create(scheduler, mover, autoScan: false);
         vision.Range = 15;
    

@@ -24,7 +24,6 @@ public class Vision : Recyclable, IFrameTask
     public float AngleStep {get;set;}
     public int AngleFuzz { get; set; }
     public  TimeSpan MaxMemoryTime { get; set; }
-    public TimeSpan LastExecutionTime { get; set; }
     public Vision() { }
 
     private static Random random = new Random();
@@ -267,7 +266,6 @@ public class Vision : Recyclable, IFrameTask
         TrackedObjectsList.Clear();
         _visibleObjectsChanged?.TryDispose();
         _visibleObjectsChanged = null;
-        LastExecutionTime = TimeSpan.Zero;
     }
 }
 
