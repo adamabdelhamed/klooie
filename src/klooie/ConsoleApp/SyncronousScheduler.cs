@@ -43,6 +43,8 @@ public sealed class SyncronousScheduler
         pausedTime = null;
     }
 
+    public void Delay<TScope>(double delayMs, TScope state, Action<TScope> callback) => EnsureDelayLoopIsRunning(StatefulWorkItem<TScope>.Create(state, callback, delayMs));
+    public void Delay(double delayMs, Action callback) => EnsureDelayLoopIsRunning(StatelessWorkItem.Create(callback, delayMs));
 
     public void DelayIfValid<TState>(double delayMs, TState statefulScope, Action<TState> callback) where TState : DelayState
     {
@@ -55,25 +57,6 @@ public sealed class SyncronousScheduler
         var delayStateInstance = DelayIfValidInstance<TState>.Create(callback, statefulScope);
         Delay(delayMs, delayStateInstance, InvokeDelayCallbackIfAllDependenciesAreValid);
     }
-
-    private static void InvokeDelayCallbackIfAllDependenciesAreValid<TState>(DelayIfValidInstance<TState> delayIfValidInstance) where TState : DelayState
-    {
-        try
-        {
-            if (delayIfValidInstance.DelayState.AreAllDependenciesValid == false)
-            {
-                delayIfValidInstance.DelayState.TryDispose();
-                return;
-            }
-            delayIfValidInstance.Callback.Invoke(delayIfValidInstance.DelayState);
-        }
-        finally
-        {
-            delayIfValidInstance.Dispose();
-        }
-    }
-
-   
 
     public void DelayThenDisposeAllDependencies(double delayMs, DelayState statefulScope)
     {
@@ -93,6 +76,23 @@ public sealed class SyncronousScheduler
         Delay(delayMs, statefulScope, DisposeAllDependneciesFromDelayState);
     }
 
+    private static void InvokeDelayCallbackIfAllDependenciesAreValid<TState>(DelayIfValidInstance<TState> delayIfValidInstance) where TState : DelayState
+    {
+        try
+        {
+            if (delayIfValidInstance.DelayState.AreAllDependenciesValid == false)
+            {
+                delayIfValidInstance.DelayState.TryDispose();
+                return;
+            }
+            delayIfValidInstance.Callback.Invoke(delayIfValidInstance.DelayState);
+        }
+        finally
+        {
+            delayIfValidInstance.Dispose();
+        }
+    }
+
     private static void DisposeAllDependneciesFromDelayState(DelayState state)
     {
         state.DisposeAllValidDependencies();
@@ -110,10 +110,6 @@ public sealed class SyncronousScheduler
         _this.delayStates.Clear();
         _this.delayStates = null;
     }
-
-
-    public void Delay<TScope>(double delayMs, TScope state, Action<TScope> callback) => EnsureDelayLoopIsRunning(StatefulWorkItem<TScope>.Create(state, callback, delayMs));
-    public void Delay(double delayMs, Action callback) => EnsureDelayLoopIsRunning(StatelessWorkItem.Create(callback, delayMs));
 
     private void EnsureDelayLoopIsRunning(ScheduledWorkItem loopState)
     {
@@ -151,8 +147,7 @@ public sealed class SyncronousScheduler
         }
     }
 
-    private class DelayIfValidInstance<TState> : Recyclable
-       where TState : DelayState
+    private class DelayIfValidInstance<TState> : Recyclable where TState : DelayState
     {
         public Action<TState> Callback { get; set; }
         public TState DelayState { get; set; }
