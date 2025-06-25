@@ -16,16 +16,16 @@ public static partial class Animator
 
         private static LazyPool<RGBAnimationState> pool = new LazyPool<RGBAnimationState>(() => new RGBAnimationState());
 
-        public static RGBAnimationState Create(RGB from, RGB to, double duration, Action<RGB> onColorChanged , EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime, int targetFramesPerSecond)
+        public static RGBAnimationState Create(RGB from, RGB to, double duration, Action<RGB> onColorChanged , EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
         {
             var ret = pool.Value.Rent();
-            ret.Construct(from, to, onColorChanged, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond);
+            ret.Construct(from, to, onColorChanged, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime);
             return ret;
         }
 
-        protected void Construct(RGB from, RGB to,Action<RGB> onColorChanged, double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime, int targetFramesPerSecond)
+        protected void Construct(RGB from, RGB to,Action<RGB> onColorChanged, double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
         {
-            base.Construct(0, 1, duration, this, SetColors, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime, targetFramesPerSecond);
+            base.Construct(0, 1, duration, this, SetColors, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime);
             this.From = from;
             this.To = to;
             this.OnColorChanged = onColorChanged ?? throw new ArgumentNullException(nameof(onColorChanged));

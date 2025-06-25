@@ -2,7 +2,7 @@
 
 public partial class LayoutRootPanel : ConsolePanel
 {
-    public const int MaxPaintRate = Animator.DeafultTargetFramesPerSecond * 3;
+    public const int MaxPaintRate = 30;
     private Event _onWindowResized, _afterPaint;
     private int lastConsoleWidth, lastConsoleHeight;
     private List<TaskCompletionSource> paintRequests;

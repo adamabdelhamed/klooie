@@ -12,7 +12,6 @@ public static partial class Animator
     {
         public FloatAnimationState AnimationState { get; set; }
         public float NumberOfFrames { get; set; }
-        public TimeSpan TimeBetweenFrames { get; set; }
         public float InitialValue { get; set; }
         public float Delta { get; set; }
         public long StartTime { get; set; }
@@ -32,7 +31,6 @@ public static partial class Animator
             base.OnInit();
             AnimationState = null;
             NumberOfFrames = 0;
-            TimeBetweenFrames = TimeSpan.Zero;
             InitialValue = 0;
             Delta = 0;
             StartTime = 0;

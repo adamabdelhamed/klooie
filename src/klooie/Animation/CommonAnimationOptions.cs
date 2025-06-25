@@ -5,7 +5,6 @@ public abstract class CommonAnimationState : DelayState
 {
     public double Duration { get; private set; }
     public EasingFunction EasingFunction { get; private set; }
-    public IDelayProvider DelayProvider { get; private set; }
     public bool AutoReverse { get; private set; }
     private int LoopLease { get; set; }
     public ILifetime Loop { get; private set; }
@@ -13,8 +12,6 @@ public abstract class CommonAnimationState : DelayState
 
     private int AnimationLifetimeLease { get; set; }
     public ILifetime? AnimationLifetime { get; private set; }
-    public int TargetFramesPerSecond { get; private set; }
-
     public bool LoopShouldContinue => Loop != null && Loop.IsStillValid(LoopLease) && AnimationShouldContinue;
     public bool AnimationShouldContinue => AnimationLifetime == null || AnimationLifetime.IsStillValid(AnimationLifetimeLease);
 
@@ -22,19 +19,17 @@ public abstract class CommonAnimationState : DelayState
     protected CommonAnimationState() { }
 
 
-    protected void Construct(double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, ILifetime? animationLifetime, int targetFramesPerSecond)
+    protected void Construct(double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime loop, ILifetime? animationLifetime)
     {
         AddDependency(this);
         Duration = duration;
         EasingFunction = easingFunction ?? EasingFunctions.Linear;
-        DelayProvider = delayProvider ?? Animator.DefaultDelayProvider;
         AutoReverse = autoReverse;
         AutoReverseDelay = autoReverseDelay;
         Loop = loop;
         LoopLease = loop?.Lease ?? 0;
         AnimationLifetime = animationLifetime;
         AnimationLifetimeLease = animationLifetime?.Lease ?? 0;
-        TargetFramesPerSecond = targetFramesPerSecond;
     }
 
 
@@ -42,7 +37,6 @@ public abstract class CommonAnimationState : DelayState
     {
         base.OnReturn();
         LoopLease = 0;
-        DelayProvider = null;
         AnimationLifetime = null;
         AnimationLifetimeLease = 0;
         EasingFunction = null;
