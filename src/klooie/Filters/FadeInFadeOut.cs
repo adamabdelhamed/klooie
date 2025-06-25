@@ -17,7 +17,7 @@ public static class FadeEx
         var filter = FadeInFilter.Create(c, bg);
         c.Filters.Add(filter);
         Animator.Animate(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, delayProvider);
-        ConsoleApp.Current.InnerLoopAPIs.DelayThenDisposeAllDependencies(duration, DelayState.Create(filter));
+        ConsoleApp.Current.Scheduler.DelayThenDisposeAllDependencies(duration, DelayState.Create(filter));
     }
 
     public static async Task FadeOut(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, IDelayProvider delayProvider = null, RGB? bg = null)
@@ -34,7 +34,7 @@ public static class FadeEx
         var filter = FadeOutFilter.Create(c, bg);
         c.Filters.Add(filter);
         Animator.Animate(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, delayProvider);
-        ConsoleApp.Current.InnerLoopAPIs.DelayThenDisposeAllDependencies(duration, DelayState.Create(filter));
+        ConsoleApp.Current.Scheduler.DelayThenDisposeAllDependencies(duration, DelayState.Create(filter));
         return filter;
     }
 }

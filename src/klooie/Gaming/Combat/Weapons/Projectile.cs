@@ -67,7 +67,7 @@ public class ProjectileRule : IRule
         shrapnel.Velocity.Speed = 50;
         shrapnel.Velocity.Angle = angle;
         Game.Current.GamePanel.Add(shrapnel);
-        Game.Current.InnerLoopAPIs.Delay(random.Next(200,500), shrapnel, DisposeShrapnel);
+        Game.Current.Scheduler.Delay(random.Next(200,500), shrapnel, DisposeShrapnel);
     }
 
     private static void DisposeShrapnel(object obj) => ((Recyclable)obj).TryDispose("Delay Disposal");

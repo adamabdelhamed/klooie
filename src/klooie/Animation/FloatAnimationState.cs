@@ -63,7 +63,7 @@ public static partial  class Animator
             {
                 if (state.AutoReverseDelay > 0)
                 {
-                    ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.AutoReverseDelay, state, StartReverse);
+                    ConsoleApp.Current.Scheduler.DelayIfValid(state.AutoReverseDelay, state, StartReverse);
                 }
                 else
                 {
@@ -88,7 +88,7 @@ public static partial  class Animator
         {
             if (state.AutoReverseDelay > 0)
             {
-                ConsoleApp.Current.InnerLoopAPIs.DelayIfValid(state.AutoReverseDelay, state, FinishReverse);
+                ConsoleApp.Current.Scheduler.DelayIfValid(state.AutoReverseDelay, state, FinishReverse);
             }
             else
             {

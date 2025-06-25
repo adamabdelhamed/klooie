@@ -64,7 +64,7 @@ public class EventLoopTests
     {
         var loop = new EventLoop();
         var expectedDuration = 100;
-        loop.InnerLoopAPIs.Delay(expectedDuration, loop.Stop);
+        loop.Scheduler.Delay(expectedDuration, loop.Stop);
 
         var sw = Stopwatch.StartNew();
         loop.Run();
@@ -86,7 +86,7 @@ public class EventLoopTests
         var loop = new EventLoop();
         var obj = new object();
         var expectedDuration = 100;
-        loop.InnerLoopAPIs.Delay(expectedDuration, obj, o =>
+        loop.Scheduler.Delay(expectedDuration, obj, o =>
         {
             Assert.AreSame(obj, o);
             loop.Stop();

@@ -210,7 +210,7 @@ public class EventLoop : Recyclable
     private TaskCompletionSource<bool> runDeferred;
     private bool stopRequested;
     private CustomSyncContext syncContext;
-    public InnerLoopAPIs InnerLoopAPIs { get; private init; }
+    public SyncronousScheduler Scheduler { get; private init; }
     public bool IsDrainingOrDrained { get; private set; }
 
 
@@ -219,7 +219,7 @@ public class EventLoop : Recyclable
 
      public EventLoop()
     {
-        InnerLoopAPIs = new InnerLoopAPIs(this);
+        Scheduler = new SyncronousScheduler(this);
     }
 
     /// <summary>

@@ -32,7 +32,7 @@ public class InnerLoopAPITests
 
         loop.Invoke(() =>
         {
-            loop.InnerLoopAPIs.Delay(iterationStandardDelay, () =>
+            loop.Scheduler.Delay(iterationStandardDelay, () =>
             {
                 Console.WriteLine($"InnerLoopAPIs.Delay {NowString()}");
                 times.Add(Stopwatch.GetTimestamp());

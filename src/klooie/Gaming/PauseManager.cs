@@ -6,20 +6,20 @@ public sealed class PauseManager : IDelayProvider
 
     public bool IsPaused
     {
-        get => Game.Current.InnerLoopAPIs.IsPaused;
+        get => Game.Current.Scheduler.IsPaused;
         set
         {
             if (value == IsPaused) return;
 
             if (value)
             {
-                Game.Current.InnerLoopAPIs.Pause();
+                Game.Current.Scheduler.Pause();
                 pauseLifetime = DefaultRecyclablePool.Instance.Rent();
                 OnPaused.Fire(pauseLifetime);
             }
             else
             {
-                Game.Current.InnerLoopAPIs.Resume();
+                Game.Current.Scheduler.Resume();
                 pauseLifetime?.Dispose();
                 pauseLifetime = null;
             }
@@ -33,7 +33,7 @@ public sealed class PauseManager : IDelayProvider
         if (float.IsNaN(ms)) throw new ArgumentException("Delay time is not a number");
         if (ms <= 0) throw new ArgumentException("Delay time must be greater than zero");
         var tcs = new TaskCompletionSource();
-        ConsoleApp.Current.InnerLoopAPIs.Delay(ms, tcs, SetResult);
+        ConsoleApp.Current.Scheduler.Delay(ms, tcs, SetResult);
         return tcs.Task;
     }
 

@@ -1,17 +1,16 @@
 ﻿using System.Diagnostics;
 namespace klooie;
 
-public sealed class InnerLoopAPIs
+public sealed class SyncronousScheduler
 {
     private const int MaxForLoopInvocationsPerSecond = 1000;
     private EventLoop parent;
     private LeaseState<SchedulerLoopLifetime> schedulerLoopLease;
-    private int forLease;
     private long? pausedTime;
     private List<DelayState>? delayStates;
     public bool IsPaused => pausedTime.HasValue;
 
-    internal InnerLoopAPIs(EventLoop parent)
+    internal SyncronousScheduler(EventLoop parent)
     {
         this.parent = parent;
         parent.OnDisposed(Cleanup);
@@ -102,7 +101,7 @@ public sealed class InnerLoopAPIs
 
     private static void DisposeStates(object innerLoopObs)
     {
-        var _this = (InnerLoopAPIs)innerLoopObs;
+        var _this = (SyncronousScheduler)innerLoopObs;
         if (_this.delayStates == null) return;
         foreach (var ds in _this.delayStates)
         {

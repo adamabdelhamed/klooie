@@ -216,7 +216,7 @@ public static class Splatter
 
     private static void Finish(FinishSplatterState finishState)
     {
-        ConsoleApp.Current.InnerLoopAPIs.Delay(finishState.Options.SplatterTime, finishState, Step1);
+        ConsoleApp.Current.Scheduler.Delay(finishState.Options.SplatterTime, finishState, Step1);
     }
 
     private static void Step1(object stateObj)
@@ -232,7 +232,7 @@ public static class Splatter
         state.Velocity.Angle = PseudoRandom.Next(80, 100);
         state.Velocity.Speed = 25;
 
-        ConsoleApp.Current.InnerLoopAPIs.Delay(50, state, Step2);        
+        ConsoleApp.Current.Scheduler.Delay(50, state, Step2);        
     }
 
     private static void Step2(object stateObj)
@@ -240,7 +240,7 @@ public static class Splatter
         var state = (FinishSplatterState)stateObj;
         if (state.SplatterElement == null) return;
         state.Velocity.Speed = 50;
-        ConsoleApp.Current.InnerLoopAPIs.Delay(50, state, Step3);
+        ConsoleApp.Current.Scheduler.Delay(50, state, Step3);
     }
 
     private static void Step3(object stateObj)
@@ -248,7 +248,7 @@ public static class Splatter
         var state = (FinishSplatterState)stateObj;
         if (state.SplatterElement == null) return;
         state.Velocity.Speed = 100;
-        ConsoleApp.Current.InnerLoopAPIs.Delay(50, state, Step4);
+        ConsoleApp.Current.Scheduler.Delay(50, state, Step4);
     }
 
     private static void Step4(object stateObj)
@@ -256,7 +256,7 @@ public static class Splatter
         var state = (FinishSplatterState)stateObj;
         if (state.SplatterElement == null) return;
         state.Velocity.Speed = 200;
-        ConsoleApp.Current.InnerLoopAPIs.Delay(2000, state, FinalStep);
+        ConsoleApp.Current.Scheduler.Delay(2000, state, FinalStep);
     }
 
     private static void FinalStep(object stateObj)
