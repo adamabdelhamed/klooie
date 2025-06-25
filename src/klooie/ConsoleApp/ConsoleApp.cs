@@ -19,7 +19,7 @@ public class ConsoleApp : EventLoop
 
     public Event AfterPaint => layoutRoot.AfterPaint;
 
-
+    public SyncronousScheduler Scheduler { get; private init; }
     /// <summary>
     /// When key throttling is enabled this lets you set the minimum time that must
     /// elapse before we forward a key press to the app, provided it is the same key
@@ -121,6 +121,7 @@ public class ConsoleApp : EventLoop
 
     public ConsoleApp()
     {
+        Scheduler = new SyncronousScheduler(this);
         Invoke(Startup);
     }
 

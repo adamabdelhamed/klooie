@@ -3,14 +3,13 @@ namespace klooie;
 
 public sealed class SyncronousScheduler
 {
-    private const int MaxForLoopInvocationsPerSecond = 1000 / LayoutRootPanel.MaxPaintRate;
-    private EventLoop parent;
+    private ConsoleApp parent;
     private LeaseState<SchedulerLoopLifetime> schedulerLoopLease;
     private long? pausedTime;
     private List<DelayState>? delayStates;
     public bool IsPaused => pausedTime.HasValue;
 
-    internal SyncronousScheduler(EventLoop parent)
+    internal SyncronousScheduler(ConsoleApp parent)
     {
         this.parent = parent;
         parent.OnDisposed(Cleanup);
@@ -121,7 +120,7 @@ public sealed class SyncronousScheduler
     {
         var loopLifetime = SchedulerLoopLifetime.Create();
         schedulerLoopLease = LeaseHelper.Track(loopLifetime);
-        parent.EndOfCycle.SubscribeThrottled(loopLifetime, Process, loopLifetime, MaxForLoopInvocationsPerSecond);
+        parent.AfterPaint.Subscribe(loopLifetime, Process, loopLifetime);
     }
 
     private void Process(SchedulerLoopLifetime loopLifetime)
@@ -134,7 +133,7 @@ public sealed class SyncronousScheduler
 
             var isTimeToIterate = Stopwatch.GetTimestamp() - delayState.TimeAddedToSchedule >= delayState.DelayTicks;
             if (!isTimeToIterate) continue;
-
+            FrameDebugger.RegisterTask("ScheduledWork");
             delayState.InvokeCallback();
             delayState.Dispose();
             pendingDelayStates.Items.RemoveAt(i);

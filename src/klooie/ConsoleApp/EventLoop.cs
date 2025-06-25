@@ -210,17 +210,13 @@ public class EventLoop : Recyclable
     private TaskCompletionSource<bool> runDeferred;
     private bool stopRequested;
     private CustomSyncContext syncContext;
-    public SyncronousScheduler Scheduler { get; private init; }
     public bool IsDrainingOrDrained { get; private set; }
 
 
     private bool runMode;
     private Task runTask;
 
-     public EventLoop()
-    {
-        Scheduler = new SyncronousScheduler(this);
-    }
+    public EventLoop() { }
 
     /// <summary>
     /// Runs the event loop using the current thread

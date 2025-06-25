@@ -51,6 +51,7 @@ public partial class Weapon : Recyclable, IObservableObject
         if (AmmoAmount == 0 || Source == null) return;
 
         lastFireTime = Game.Current.MainColliderGroup.Now;
+        FrameDebugger.RegisterTask("FireWeapon");
         FireInternal(alt);
         AmmoAmount--;
         OnFire.Fire(this);

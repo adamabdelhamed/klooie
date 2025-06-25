@@ -36,7 +36,7 @@ public class Recyclable : ILifetime
 
     public Task AsTask() => endedTaskCompletionSource?.Task ?? (endedTaskCompletionSource = new TaskCompletionSource()).Task;
 
-    public static void TryDisposeMe(object me) => ((Recyclable)me).TryDispose("Recyclable.TryDisposeMe");
+    public static void TryDisposeMe(Recyclable me) => me.TryDispose("Recyclable.TryDisposeMe");
 
     public bool TryDispose(int lease, string? reason = null)
     {

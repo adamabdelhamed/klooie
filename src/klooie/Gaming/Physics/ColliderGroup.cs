@@ -85,7 +85,6 @@ public sealed class ColliderGroup
             stopwatch.Start();
         }
         */
-        FrameDebugger.RegisterTask(nameof(ColliderGroup));
         UpdateTime();
         colliderBuffer.WriteableBuffer.Clear();
         spatialIndex.EnumerateAll(colliderBuffer);

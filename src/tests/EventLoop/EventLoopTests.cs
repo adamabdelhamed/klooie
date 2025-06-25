@@ -62,9 +62,14 @@ public class EventLoopTests
     [TestMethod]
     public void EventLoop_Delay()
     {
-        var loop = new EventLoop();
-        var expectedDuration = 100;
-        loop.Scheduler.Delay(expectedDuration, loop.Stop);
+        TestContextHelper.GlobalSetup();
+        var loop = new ConsoleApp();
+        var expectedDuration = 5f *  1000 / LayoutRootPanel.MaxPaintRate;
+        loop.Invoke(() =>
+        {
+            loop.Scheduler.Delay(expectedDuration, loop.Stop);
+        });
+        
 
         var sw = Stopwatch.StartNew();
         loop.Run();
@@ -83,7 +88,8 @@ public class EventLoopTests
     [TestMethod]
     public void EventLoop_DelayScoped()
     {
-        var loop = new EventLoop();
+        TestContextHelper.GlobalSetup();
+        var loop = new ConsoleApp();
         var obj = new object();
         var expectedDuration = 100;
         loop.Scheduler.Delay(expectedDuration, obj, o =>
