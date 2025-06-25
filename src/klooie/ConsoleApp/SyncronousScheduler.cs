@@ -3,7 +3,7 @@ namespace klooie;
 
 public sealed class SyncronousScheduler
 {
-    private const int MaxForLoopInvocationsPerSecond = 1000;
+    private const int MaxForLoopInvocationsPerSecond = 1000 / LayoutRootPanel.MaxPaintRate;
     private EventLoop parent;
     private LeaseState<SchedulerLoopLifetime> schedulerLoopLease;
     private long? pausedTime;
