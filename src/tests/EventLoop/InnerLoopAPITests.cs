@@ -21,8 +21,7 @@ public class InnerLoopAPITests
     {
         Start = Stopwatch.GetTimestamp();
         var totalTestMilliseconds = 1000.0;
-        var iterations = 10;
-        var iterationStandardDelay = totalTestMilliseconds / iterations;
+        var iterationStandardDelay = totalTestMilliseconds;
 
         // Constants for pause and resume timings
         var pauseDelay = ConsoleMath.Round(totalTestMilliseconds / 4);
@@ -33,11 +32,12 @@ public class InnerLoopAPITests
 
         loop.Invoke(() =>
         {
-            loop.InnerLoopAPIs.For(iterations, iterationStandardDelay, (i) =>
+            loop.InnerLoopAPIs.Delay(iterationStandardDelay, () =>
             {
-                Console.WriteLine($"InnerLoopAPIs.For iteration {i} at {NowString()}");
+                Console.WriteLine($"InnerLoopAPIs.Delay {NowString()}");
                 times.Add(Stopwatch.GetTimestamp());
-            }, loop.Stop);
+                loop.Stop();
+            });
         });
 
         loop.Invoke(async () =>
