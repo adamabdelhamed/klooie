@@ -2,7 +2,6 @@
 
 public class DelayState : Recyclable
 {
-    internal Action<object> InnerAction;
     // Tracks the lease of each dependency so that validity checks and
     // disposals use the captured lease instead of the current one
     protected RecyclableList<LeaseState<Recyclable>> Dependencies;
@@ -99,7 +98,6 @@ public class DelayState : Recyclable
             Dependencies.Dispose();
             Dependencies = null;
         }
-        InnerAction = null;
         _beforeDisposeDependency?.TryDispose();
         _beforeDisposeDependency = null;
     }

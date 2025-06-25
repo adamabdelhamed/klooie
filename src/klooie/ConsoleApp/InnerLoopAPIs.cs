@@ -97,17 +97,57 @@ public sealed class InnerLoopAPIs
     }
 
     private List<DelayState>? delayStates;
-    public void DelayIfValid<TState>(double delayMs, TState statefulScope, Action<TState> then) where TState : DelayState
+    public void DelayIfValid<TState>(double delayMs, TState statefulScope, Action<TState> callback) where TState : DelayState
     {
-        statefulScope.InnerAction = o => then((TState)o);
-
         if(delayStates == null)
         {
             delayStates = new List<DelayState>();
             ConsoleApp.Current.OnDisposed(this, DisposeStates);
         }
         delayStates.Add(statefulScope);
-        Delay(delayMs, statefulScope, InvokeDelayCallbackIfAllDependenciesAreValid);
+        var delayStateInstance = DelayIfValidInstance<TState>.Create(callback, statefulScope);
+        Delay(delayMs, delayStateInstance, InvokeDelayCallbackIfAllDependenciesAreValid);
+    }
+
+    private static void InvokeDelayCallbackIfAllDependenciesAreValid<TState>(DelayIfValidInstance<TState> delayIfValidInstance) where TState : DelayState
+    {
+        try
+        {
+            if (delayIfValidInstance.DelayState.AreAllDependenciesValid == false)
+            {
+                delayIfValidInstance.DelayState.TryDispose();
+                return;
+            }
+            delayIfValidInstance.Callback.Invoke(delayIfValidInstance.DelayState);
+        }
+        finally
+        {
+            delayIfValidInstance.Dispose();
+        }
+    }
+
+    private class DelayIfValidInstance<TState> : Recyclable
+        where TState : DelayState
+    {
+        public Action<TState> Callback { get; set; }
+        public TState DelayState { get; set; }
+
+
+        private static LazyPool<DelayIfValidInstance<TState>> pool = new LazyPool<DelayIfValidInstance<TState>>(() => new DelayIfValidInstance<TState>());
+        private DelayIfValidInstance() { }
+        public static DelayIfValidInstance<TState> Create(Action<TState> callback, TState state)
+        {
+            var instance = pool.Value.Rent();
+            instance.Callback = callback;
+            instance.DelayState = state;
+            return instance;
+        }
+        protected override void OnReturn()
+        {
+            base.OnReturn();
+            Callback = null;
+            DelayState = null;
+        }
     }
 
     public void DelayThenDisposeAllDependencies(double delayMs, DelayState statefulScope)
@@ -146,16 +186,7 @@ public sealed class InnerLoopAPIs
         _this.delayStates = null;
     }
 
-    private static void InvokeDelayCallbackIfAllDependenciesAreValid(DelayState ds)
-    {
-        var state = ds;
-        if (state.AreAllDependenciesValid == false)
-        {
-            state.TryDispose();
-            return;
-        }
-        state.InnerAction?.Invoke(ds);
-    }
+
 
     public void Delay<TScope>(double delayMs, TScope scope, Action<TScope>? then = null)
         => For(1, delayMs, scope, null, then);
