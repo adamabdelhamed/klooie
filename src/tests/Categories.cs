@@ -2,6 +2,7 @@
 {
     public static class Categories
     {
+        public const string EventLoop = "EventLoop";
         public const string ConsoleApp = "ConsoleApp";
         public const string Theming = "Theming";
         public const string Geometry = "Geometry";
