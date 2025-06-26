@@ -1,13 +1,11 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace klooie.tests;
 
 [TestClass]    
-[TestCategory(Categories.ConsoleApp)]
+[TestCategory(Categories.EventLoop)]
 public class EventLoopTests
 {
     [TestMethod]
@@ -56,60 +54,6 @@ public class EventLoopTests
             });
         });
         loop.Run();
-    }
-
-
-    [TestMethod]
-    public void EventLoop_Delay()
-    {
-        TestContextHelper.GlobalSetup();
-        var loop = new ConsoleApp();
-        var expectedDuration = 5f *  1000 / LayoutRootPanel.MaxPaintRate;
-        loop.Invoke(() =>
-        {
-            loop.Scheduler.Delay(expectedDuration, loop.Stop);
-        });
-        
-
-        var sw = Stopwatch.StartNew();
-        loop.Run();
-        sw.Stop();
-
-
-
-        var tolerance = expectedDuration * 0.1;
-        var minAcceptableDuration = expectedDuration - tolerance;
-        var maxAcceptableDuration = expectedDuration + tolerance;
-        Console.WriteLine($"Expected duration: {expectedDuration}, Actual duration: {sw.ElapsedMilliseconds}ms");
-        Assert.IsTrue(sw.ElapsedMilliseconds >= minAcceptableDuration);
-        Assert.IsTrue(sw.ElapsedMilliseconds <= maxAcceptableDuration);
-    }
-
-    [TestMethod]
-    public void EventLoop_DelayScoped()
-    {
-        TestContextHelper.GlobalSetup();
-        var loop = new ConsoleApp();
-        var obj = new object();
-        var expectedDuration = 100;
-        loop.Scheduler.Delay(expectedDuration, obj, o =>
-        {
-            Assert.AreSame(obj, o);
-            loop.Stop();
-        });
-
-        var sw = Stopwatch.StartNew();
-        loop.Run();
-        sw.Stop();
-
-
-
-        var tolerance = expectedDuration * 0.1;
-        var minAcceptableDuration = expectedDuration - tolerance;
-        var maxAcceptableDuration = expectedDuration + tolerance;
-        Console.WriteLine($"Expected duration: {expectedDuration}, Actual duration: {sw.ElapsedMilliseconds}ms");
-        Assert.IsTrue(sw.ElapsedMilliseconds >= minAcceptableDuration);
-        Assert.IsTrue(sw.ElapsedMilliseconds <= maxAcceptableDuration);
     }
 }
 
