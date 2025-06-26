@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 namespace klooie;
 internal class SubscriberCollection
 {
-    private static Stack<SubscriberCollection> collectionLightPool = new Stack<SubscriberCollection>();
-    private static Stack<SubscriberEntry> entryLightPool = new Stack<SubscriberEntry>();
+    private static Stack<SubscriberCollection> collectionLightPool = new Stack<SubscriberCollection>(100);
+    private static Stack<SubscriberEntry> entryLightPool = new Stack<SubscriberEntry>(100);
 
-    private List<SubscriberEntry> entries = new List<SubscriberEntry>();
+    private List<SubscriberEntry> entries = new List<SubscriberEntry>(100);
     public int Count => RefreshAndCountActiveEntries();
     public static SubscriberCollection Create() => collectionLightPool.Count > 0 ? collectionLightPool.Pop() : new SubscriberCollection();
 

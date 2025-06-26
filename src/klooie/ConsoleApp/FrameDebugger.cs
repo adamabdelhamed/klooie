@@ -61,7 +61,7 @@ public sealed class FrameDebugger
     private void BeginFrame()
     {
         _currentFrameStart = Stopwatch.GetTimestamp();
-        _currentTaskCounts = new Dictionary<string, int>();
+        _currentTaskCounts = new Dictionary<string, int>(97);
     }
 
     public static void RegisterTask(string name)

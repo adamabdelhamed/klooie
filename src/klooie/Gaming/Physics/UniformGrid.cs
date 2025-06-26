@@ -36,8 +36,8 @@ public sealed class UniformGrid
 {  
     private List<UniformGridCell> cellBuffer = new List<UniformGridCell>();
     public const float _cellSize = 100f;
-    private readonly Dictionary<UniformGridCell, RecyclableList<GameCollider>> _buckets = new Dictionary<UniformGridCell, RecyclableList<GameCollider>>();
-    private readonly Dictionary<GameCollider, UniformGridMembershipState> membershipStates = new Dictionary<GameCollider, UniformGridMembershipState>();
+    private readonly Dictionary<UniformGridCell, RecyclableList<GameCollider>> _buckets = new Dictionary<UniformGridCell, RecyclableList<GameCollider>>(199);
+    private readonly Dictionary<GameCollider, UniformGridMembershipState> membershipStates = new Dictionary<GameCollider, UniformGridMembershipState>(199);
 
     public IEnumerable<KeyValuePair<UniformGridCell, RecyclableList<GameCollider>>> Buckets => _buckets;
     public int Count { get; private set; }

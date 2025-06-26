@@ -32,9 +32,9 @@ public class Wander : Movement
         base.Construct(vision, curiosityPoint, baseSpeed);
         Influence = MotionInfluence.Create("Wander Influence", true);
         Weights = WanderWeights.Default;
-        AngleScores = RecyclableListPool<AngleScore>.Instance.Rent();
-        LastFewAngles = RecyclableListPool<Angle>.Instance.Rent();
-        LastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent();
+        AngleScores = RecyclableListPool<AngleScore>.Instance.Rent(100);
+        LastFewAngles = RecyclableListPool<Angle>.Instance.Rent(10);
+        LastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent(10);
         CloseEnough = 1;
         Velocity.AddInfluence(Influence);
         IsStuck = false; // Reset stuck state

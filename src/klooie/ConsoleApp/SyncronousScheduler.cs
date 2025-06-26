@@ -131,8 +131,8 @@ public sealed class SyncronousScheduler
         {
             var delayState = pendingDelayStates.Items[i];
 
-            var isTimeToIterate = Stopwatch.GetTimestamp() - delayState.TimeAddedToSchedule >= delayState.DelayTicks;
-            if (!isTimeToIterate) continue;
+            var isDue = delayState.TimeUntilDue <= TimeSpan.Zero;
+            if (isDue == false) continue;
             FrameDebugger.RegisterTask("ScheduledWork");
             delayState.InvokeCallback();
             delayState.Dispose();
@@ -173,7 +173,12 @@ public sealed class SyncronousScheduler
     {
         public double DelayTicks { get; protected set; }
         internal double TimeAddedToSchedule;
+        public TimeSpan TimeUntilDue => TimeSpan.FromTicks((long)(DelayTicks - (Stopwatch.GetTimestamp() - TimeAddedToSchedule)));
         public abstract void InvokeCallback();
+        public override string ToString()
+        {
+            return Math.Round(TimeUntilDue.TotalMilliseconds) + "ms until due";
+        }
     }
 
     private class StatelessWorkItem : ScheduledWorkItem

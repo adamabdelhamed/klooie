@@ -17,6 +17,13 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
 
     private static LazyPool<RecyclableSampleProvider> pool = new LazyPool<RecyclableSampleProvider>(() => new RecyclableSampleProvider());
 
+    public static RecyclableSampleProvider Create(EventLoop eventLoop, CachedSound sound, VolumeKnob masterKnob, VolumeKnob? sampleKnob, ILifetime? loopLifetime, bool loop)
+    {
+        var ret = pool.Value.Rent();
+        ret.Construct(eventLoop, sound, masterKnob, sampleKnob, loopLifetime, loop);
+        return ret;
+    }
+
     protected virtual void Construct(EventLoop eventLoop, CachedSound sound, VolumeKnob masterKnob, VolumeKnob? sampleKnob, ILifetime? loopLifetime, bool loop)
     {
         this.eventLoop = eventLoop ?? throw new ArgumentNullException(nameof(eventLoop));
@@ -58,13 +65,6 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
         {
             effectiveVolume = 1f; // Clamp to maximum volume
         }
-    }
-
-    public static RecyclableSampleProvider Create(EventLoop eventLoop, CachedSound sound, VolumeKnob masterKnob, VolumeKnob? sampleKnob, ILifetime? loopLifetime, bool loop)
-    {
-        var ret = pool.Value.Rent();
-        ret.Construct(eventLoop, sound, masterKnob, sampleKnob, loopLifetime, loop);
-        return ret;
     }
 
     public int Read(float[] buffer, int offset, int count)
@@ -150,5 +150,7 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
         sampleKnob?.TryDispose();
         sampleKnob = null;
         masterKnob = null;
+        effectiveVolume = 0f;
+        effectivePan = 0f;
     }
 }
