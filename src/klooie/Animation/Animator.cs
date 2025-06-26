@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
-using klooie.Gaming;
 namespace klooie;
 
 /// <summary>
@@ -26,10 +25,10 @@ public static partial class Animator
     public static ILifetime AnimateSync(this ConsoleControl control, Func<RectF> destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
      => AnimateSync(ConsoleControlAnimationState.Create(control, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static Task AnimateAsync(this Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+    public static Task AnimateAsync(this Gaming.Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
         => AnimateAsync(CameraAnimationState.Create(camera, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static ILifetime AnimateSync(this Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+    public static ILifetime AnimateSync(this Gaming.Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
         => AnimateSync(CameraAnimationState.Create(camera, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime));
 
     public static Task AnimateAsync(this RGB from, RGB to, double duration, Action<RGB> onColorChanged, EasingFunction easingFunction = null, IDelayProvider delayProvider = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
@@ -80,7 +79,7 @@ public static partial class Animator
         frame.StartTime = Stopwatch.GetTimestamp();
         frame.I = -1;
         frame.OnDisposed(state, onDone);
-        Game.Current.AfterPaint.Subscribe(frame, static f => ProcessAnimationFrame(f), frame);
+        ConsoleApp.Current.AfterPaint.Subscribe(frame, static f => ProcessAnimationFrame(f), frame);
         ProcessAnimationFrame(frame);
     }
 
