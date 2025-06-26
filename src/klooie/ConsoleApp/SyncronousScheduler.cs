@@ -146,13 +146,13 @@ public sealed class SyncronousScheduler
         }
     }
 
-    private class DelayIfValidInstance<TState> : Recyclable where TState : DelayState
+    internal class DelayIfValidInstance<TState> : Recyclable where TState : DelayState
     {
         public Action<TState> Callback { get; set; }
         public TState DelayState { get; set; }
 
 
-        private static LazyPool<DelayIfValidInstance<TState>> pool = new LazyPool<DelayIfValidInstance<TState>>(() => new DelayIfValidInstance<TState>());
+        internal static LazyPool<DelayIfValidInstance<TState>> pool = new LazyPool<DelayIfValidInstance<TState>>(() => new DelayIfValidInstance<TState>());
         private DelayIfValidInstance() { }
         public static DelayIfValidInstance<TState> Create(Action<TState> callback, TState state)
         {
@@ -169,7 +169,7 @@ public sealed class SyncronousScheduler
         }
     }
 
-    private abstract class ScheduledWorkItem : Recyclable
+    internal abstract class ScheduledWorkItem : Recyclable
     {
         public double DelayTicks { get; protected set; }
         internal double TimeAddedToSchedule;
@@ -181,10 +181,10 @@ public sealed class SyncronousScheduler
         }
     }
 
-    private class StatelessWorkItem : ScheduledWorkItem
+    internal class StatelessWorkItem : ScheduledWorkItem
     {
         private Action Callback;
-        private static LazyPool<StatelessWorkItem> pool = new LazyPool<StatelessWorkItem>(() => new StatelessWorkItem());
+        internal static LazyPool<StatelessWorkItem> pool = new LazyPool<StatelessWorkItem>(() => new StatelessWorkItem());
         private StatelessWorkItem() { }
         public static StatelessWorkItem Create(Action callback, double delay)
         {
@@ -202,14 +202,14 @@ public sealed class SyncronousScheduler
         }
     }
 
-    private class StatefulWorkItem<TScope> : ScheduledWorkItem
+    internal class StatefulWorkItem<TScope> : ScheduledWorkItem
     {
         private TScope State;
         private Action<TScope>? Callback;
         public override void InvokeCallback() => Callback?.Invoke(State);
         private StatefulWorkItem() { }
 
-        private static LazyPool<StatefulWorkItem<TScope>> pool = new LazyPool<StatefulWorkItem<TScope>>(() => new StatefulWorkItem<TScope>());
+        internal static LazyPool<StatefulWorkItem<TScope>> pool = new LazyPool<StatefulWorkItem<TScope>>(() => new StatefulWorkItem<TScope>());
         public static StatefulWorkItem<TScope> Create(TScope state, Action<TScope> callback, double delay)
         {
             var instance = pool.Value.Rent();
