@@ -5,7 +5,7 @@ public class RecyclableList<T> : Recyclable, System.Collections.IEnumerable
     private List<T> _items;
     public List<T> Items => _items;
 
-    public RecyclableList()
+    internal RecyclableList()
     {
         _items =  new List<T>();
     }
@@ -45,7 +45,6 @@ public class RecyclableListPool<T> : RecycleablePool<RecyclableList<T>>
 
     public override RecyclableList<T> Factory() => new RecyclableList<T>();
 
-    // New method to rent with capacity
     public RecyclableList<T> Rent(int requiredCapacity)
     {
         var list = Rent();
