@@ -79,6 +79,11 @@ public sealed class SyncronousScheduler
     {
         try
         {
+            if(delayIfValidInstance.Lease.IsRecyclableValid == false)
+            {
+                return;
+            }
+
             if (delayIfValidInstance.DelayState.AreAllDependenciesValid == false)
             {
                 delayIfValidInstance.DelayState.TryDispose();
@@ -151,6 +156,7 @@ public sealed class SyncronousScheduler
         public Action<TState> Callback { get; set; }
         public TState DelayState { get; set; }
 
+        public LeaseState<TState> Lease { get; private set; }
 
         internal static LazyPool<DelayIfValidInstance<TState>> pool = new LazyPool<DelayIfValidInstance<TState>>(() => new DelayIfValidInstance<TState>());
         private DelayIfValidInstance() { }
@@ -159,11 +165,13 @@ public sealed class SyncronousScheduler
             var instance = pool.Value.Rent();
             instance.Callback = callback;
             instance.DelayState = state;
+            instance.Lease = LeaseHelper.Track(state);
             return instance;
         }
         protected override void OnReturn()
         {
             base.OnReturn();
+            Lease.Dispose();
             Callback = null;
             DelayState = null;
         }
