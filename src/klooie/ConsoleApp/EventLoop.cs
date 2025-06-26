@@ -5,11 +5,29 @@ public class EventLoop : Recyclable
     private class SynchronizedEventPool
     {
         private Lock lockObject = new Lock();
-        private SynchronizedEvent[] pool;
+        private SynchronizedEventBase[] pool;
         private int count;
         public SynchronizedEventPool()
         {
-            pool = new SynchronizedEvent[5];
+            pool = new SynchronizedEventBase[500];
+        }
+
+        public SynchronizedEvent<T> Rent<T>()
+        {
+            lock (lockObject)
+            {
+                for (var i = 0; i < pool.Length; i++)
+                {
+                    if (pool[i] != null && pool[i] is SynchronizedEvent<T>)
+                    {
+                        var ret = pool[i];
+                        pool[i] = null;
+                        count--;
+                        return (SynchronizedEvent<T>)ret;
+                    }
+                }
+                return new SynchronizedEvent<T>();
+            }
         }
 
         public SynchronizedEvent Get()
@@ -18,13 +36,12 @@ public class EventLoop : Recyclable
             {
                 for (var i = 0; i < pool.Length; i++)
                 {
-                    if (pool[i] != null)
+                    if (pool[i] != null && pool[i] is SynchronizedEvent)
                     {
                         var ret = pool[i];
                         pool[i] = null;
                         count--;
-                        MaybeShrink();
-                        return ret;
+                        return (SynchronizedEvent)ret;
                     }
                 }
                 return new SynchronizedEvent();
@@ -33,28 +50,21 @@ public class EventLoop : Recyclable
 
         public void Return(SynchronizedEventBase done)
         {
-            if(done is not SynchronizedEvent se)
-            {
-                done.Clean();
-                return; // don't pool generic events
-            }
-
             lock (lockObject)
             {
-                se.Clean();
+                done.Clean();
                 for (var i = 0; i < pool.Length; i++)
                 {
                     if (pool[i] == null)
                     {
-                        pool[i] = se;
+                        pool[i] = done;
                         count++;
-                        MaybeShrink();
                         return;
                     }
                 }
 
                 Grow();
-                pool[count++] = se;
+                pool[count++] = done;
             }
         }
 
@@ -65,24 +75,8 @@ public class EventLoop : Recyclable
             Array.Copy(tmp, pool, tmp.Length);
         }
 
-        private void MaybeShrink()
-        {
-            if (count == 0) return;
-            if(count <= pool.Length * .15)
-            {
-                var tmp = pool;
-                pool = new SynchronizedEvent[count * 2];
-                var newI = 0;
-                for(var i = 0; i < tmp.Length; i++)
-                {
-                    if(tmp[i] != null)
-                    {
-                        pool[newI++] = tmp[i];
-                    }
-                }
-            }
-        }
     }
+
 
     private abstract class SynchronizedEventBase
     {
@@ -485,7 +479,7 @@ public class EventLoop : Recyclable
         }
         lock (workQueue)
         {
-            var workItem = new SynchronizedEvent<TScope>();
+            var workItem = pool.Rent<TScope>();
             workItem.Callback = callback;
             workItem.CallbackState = state;
             workQueue.Add(workItem);
@@ -542,7 +536,7 @@ public class EventLoop : Recyclable
 
         if (Thread.CurrentThread == Thread)
         {
-            var workItem = new SynchronizedEvent<TScope>();
+            var workItem = pool.Rent<TScope>();
             workItem.WorkState = workState;
             workItem.AsyncWork = work;
             workItem.Run();
@@ -571,7 +565,7 @@ public class EventLoop : Recyclable
         {
             lock (workQueue)
             {
-                var workItem = new SynchronizedEvent<TScope>();
+                var workItem = pool.Rent<TScope>();
                 workItem.WorkState = workState;
                 workItem.AsyncWork = work;
                 workQueue.Add(workItem);
