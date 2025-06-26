@@ -42,9 +42,12 @@ public class DelayState : Recyclable
         Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent();
     }
 
+    internal static LazyPool<DelayState> pool = new LazyPool<DelayState>(() => new DelayState());
+    protected DelayState() { }
+
     public static DelayState Create(ILifetime dependency)
     {
-        var ret = DelayStatePool.Instance.Rent();
+        var ret = pool.Value.Rent();
         ret.AddDependency(dependency);
         return ret;
     }
@@ -61,7 +64,7 @@ public class DelayState : Recyclable
 
     public static DelayState Create(RecyclableList<ILifetime> dependencies)
     {
-        var ret = DelayStatePool.Instance.Rent();
+        var ret = pool.Value.Rent();
         ret.Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent(dependencies.Count);
         for (int i = 0; i < dependencies.Count; i++)
         {
