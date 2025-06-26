@@ -39,7 +39,7 @@ public class DelayState : Recyclable
     protected override void OnInit()
     {
         base.OnInit();
-        Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent();
+        Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent(10);
     }
 
     internal static LazyPool<DelayState> pool = new LazyPool<DelayState>(() => new DelayState());
