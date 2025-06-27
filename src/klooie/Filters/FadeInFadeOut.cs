@@ -4,31 +4,43 @@ namespace klooie;
 
 public static class FadeEx
 {
-    public static async Task FadeIn(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, PauseManager pauseManager = null, RGB? bg = null)
+    public static async Task<IConsoleControlFilter> FadeIn(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, PauseManager pauseManager = null, RGB? bg = null)
     {
         easingFunction = easingFunction ?? EasingFunctions.Linear;
         var filter = FadeInFilter.Create(c, bg);
 
         c.Filters.Add(filter);
         await Animator.AnimateAsync(0,percentage, duration, filter, static (state, percentage) =>  state.Percentage = percentage, easingFunction, pauseManager);
-        filter.Dispose();
+        if (percentage == 1)
+        {
+            filter.Dispose();
+        }
+        return filter;
     }
-    public static void FadeInSync(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, PauseManager pauseManager = null, RGB? bg = null)
+    public static IConsoleControlFilter FadeInSync(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, PauseManager pauseManager = null, RGB? bg = null)
     {
         easingFunction = easingFunction ?? EasingFunctions.Linear;
         var filter = FadeInFilter.Create(c, bg);
         c.Filters.Add(filter);
         Animator.Animate(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, pauseManager);
-        (pauseManager?.Scheduler ?? ConsoleApp.Current.Scheduler).DelayThenDisposeAllDependencies(duration, DelayState.Create(filter));
+        if (percentage == 1)
+        {
+            (pauseManager?.Scheduler ?? ConsoleApp.Current.Scheduler).DelayThenDisposeAllDependencies(duration, DelayState.Create(filter));
+        }
+        return filter;
     }
 
-    public static async Task FadeOut(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, PauseManager pauseManager = null, RGB? bg = null)
+    public static async Task<IConsoleControlFilter> FadeOut(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, PauseManager pauseManager = null, RGB? bg = null)
     {
         easingFunction = easingFunction ?? EasingFunctions.Linear;
         var filter = FadeOutFilter.Create(c, bg);
         c.Filters.Add(filter);
         await Animator.AnimateAsync(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, pauseManager);
-        filter.Dispose();
+        if(percentage == 1)
+        {
+            filter.Dispose();
+        }
+        return filter;
     }
     public static IConsoleControlFilter FadeOutSync(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, PauseManager pauseManager = null, RGB? bg = null)
     {
@@ -36,7 +48,10 @@ public static class FadeEx
         var filter = FadeOutFilter.Create(c, bg);
         c.Filters.Add(filter);
         Animator.Animate(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, pauseManager);
-        (pauseManager?.Scheduler ?? ConsoleApp.Current.Scheduler).DelayThenDisposeAllDependencies(duration, DelayState.Create(filter));
+        if (percentage == 1)
+        {
+            (pauseManager?.Scheduler ?? ConsoleApp.Current.Scheduler).DelayThenDisposeAllDependencies(duration, DelayState.Create(filter));
+        }
         return filter;
     }
 }
