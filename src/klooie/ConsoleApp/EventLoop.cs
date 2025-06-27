@@ -194,8 +194,6 @@ public class EventLoop : Recyclable
     public long Sends => syncContext.Sends;
 
     public long AsyncContinuations => Posts + Sends;
-
-    public ThreadPriority Priority { get; set; } = ThreadPriority.AboveNormal;
     public bool IsRunning => runDeferred != null;
     public long Cycle { get; private set; }
     protected string Name { get; set; }
