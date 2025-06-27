@@ -18,7 +18,7 @@ public sealed class Friction : Recyclable
         var state = DelayState.Create(this);
         state.AddDependency(collider);
         state.AddDependency(collider.Velocity);
-        ConsoleApp.Current.Scheduler.DelayIfValid(this.evalFrequency, state, Execute);
+        Game.Current.PausableScheduler.DelayIfValid(this.evalFrequency, state, Execute);
     }
 
     private static void DisposeMe(object obj) => (obj as Friction).TryDispose();
@@ -27,6 +27,6 @@ public sealed class Friction : Recyclable
     {
         this.collider.Velocity.Speed *= this.decay;
         if (this.collider.Velocity.Speed < .1f) this.collider.Velocity.Speed = 0;
-        ConsoleApp.Current.Scheduler.DelayIfValid(this.evalFrequency, DelayState.Create(this), Execute);
+        Game.Current.PausableScheduler.DelayIfValid(this.evalFrequency, DelayState.Create(this), Execute);
     }
 }

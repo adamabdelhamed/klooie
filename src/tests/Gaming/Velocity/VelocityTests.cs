@@ -39,7 +39,7 @@ public class VelocityTests
         try
         { 
             var stopwatch = new TestStopwatch();
-            var group = new ColliderGroup(testLt, stopwatch);
+            var group = new ColliderGroup(testLt, null, stopwatch);
             var c1 = new GameCollider(0, 0, 1, 1, connectToMainColliderGroup: false);
             c1.ConnectToGroup(group);
             c1.Velocity.Speed = 0;
@@ -73,7 +73,7 @@ public class VelocityTests
         try
         {
             var stopwatch = new TestStopwatch();
-            var group = new ColliderGroup(testLt, stopwatch);
+            var group = new ColliderGroup(testLt, null, stopwatch);
             var c1 = new GameCollider(0, 0, 1, 1, connectToMainColliderGroup: false);
             c1.ConnectToGroup(group);
             c1.Velocity.Speed = 0;
@@ -109,7 +109,7 @@ public class VelocityTests
             var sceneBounds = new RectF(0, 0, 500, 500);
             var r = new Random(420);
             var stopwatch = new TestStopwatch();
-            var group = new ColliderGroup(testLt, stopwatch);
+            var group = new ColliderGroup(testLt, null, stopwatch);
 
             var left = new GameCollider(connectToMainColliderGroup: false);
             left.ConnectToGroup(group);

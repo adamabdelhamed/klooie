@@ -19,7 +19,7 @@ public class HitDetectionTests
         var testLt = DefaultRecyclablePool.Instance.Rent();
         try
         { 
-            var group = new ColliderGroup(testLt);
+            var group = new ColliderGroup(testLt, null);
 
             var from = new GameCollider(new RectF(0, 0, 1, 1), false);
             from.ConnectToGroup(group);

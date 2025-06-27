@@ -34,9 +34,8 @@ public sealed class ColliderGroup
   
     public float SpeedRatio { get; set; } = 1;
 
-    internal PauseManager? PauseManager { get; set; }
 
-    public ColliderGroup(ILifetime lt, IStopwatch stopwatch = null)
+    public ColliderGroup(ILifetime lt, PauseManager? pauseManager, IStopwatch stopwatch = null)
     {
         this.lt = lt;
         lt.OnDisposed(() => this.lt = null);
@@ -46,8 +45,15 @@ public sealed class ColliderGroup
         lastExecuteTime = TimeSpan.Zero;
         spatialIndex = new UniformGrid();
         this.stopwatch.Start();
-        Game.Current?.AfterPaint?.Subscribe(Tick, lt);
+        pauseManager?.OnPaused.Subscribe(this, static (me,pauseLt) => me.HandlePause(pauseLt), lt);
+        Game.Current?.AfterPaint?.SubscribePaused(pauseManager, Tick, lt);
         ConsoleApp.Current?.OnDisposed(Cleanup);
+    }
+
+    private void HandlePause(ILifetime pauseLt)
+    {
+        stopwatch.Stop();
+        pauseLt.OnDisposed(this, static (me) => me.stopwatch.Start());
     }
 
     private void Cleanup()
@@ -74,17 +80,6 @@ public sealed class ColliderGroup
 
     public void Tick()
     {
-        /*
-        if(PauseManager?.IsPaused == true)
-        {
-            stopwatch.Stop();
-            return;
-        }
-        else if(stopwatch.IsRunning)
-        {
-            stopwatch.Start();
-        }
-        */
         UpdateTime();
         colliderBuffer.WriteableBuffer.Clear();
         spatialIndex.EnumerateAll(colliderBuffer);

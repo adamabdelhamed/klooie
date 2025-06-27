@@ -107,7 +107,7 @@ public class WanderDebugger : Wander
         
         Eye.Filters.Insert(0, LoopRunningFilter);
         var dependency = DelayState.Create(Eye);
-        Game.Current.Scheduler.DelayIfValid(250, dependency, RemoveRunningLoopFilter);
+        Game.Current.PausableScheduler.DelayIfValid(250, dependency, RemoveRunningLoopFilter);
     }
 
     private static void RemoveRunningLoopFilter(DelayState state)

@@ -20,7 +20,7 @@ public class ProjectileRule : IRule
     {
         if (collision.MovingObject is Projectile == false || collision.ColliderHit is Projectile == false) return;
 
-        shrapnelGroup = shrapnelGroup ?? new ColliderGroup(Game.Current);
+        shrapnelGroup = shrapnelGroup ?? new ColliderGroup(Game.Current, Game.Current.PauseManager);
         var a = (Projectile)collision.MovingObject;
         var b = (Projectile)collision.ColliderHit;
 
@@ -67,10 +67,9 @@ public class ProjectileRule : IRule
         shrapnel.Velocity.Speed = 50;
         shrapnel.Velocity.Angle = angle;
         Game.Current.GamePanel.Add(shrapnel);
-        Game.Current.Scheduler.Delay(random.Next(200,500), shrapnel, DisposeShrapnel);
+        Game.Current.PausableScheduler.Delay(random.Next(200,500), shrapnel, Recyclable.TryDisposeMe);
     }
 
-    private static void DisposeShrapnel(object obj) => ((Recyclable)obj).TryDispose("Delay Disposal");
 
 
     private static void OnVisionInitiated(Vision vision)

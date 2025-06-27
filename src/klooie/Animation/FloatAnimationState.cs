@@ -1,4 +1,5 @@
-﻿using System;
+﻿using klooie.Gaming;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,17 +22,17 @@ public static partial  class Animator
         public virtual void Set(float percentage) => Setter(percentage);
         protected FloatAnimationState() { }
         private static LazyPool<FloatAnimationState> pool = new LazyPool<FloatAnimationState>(() => new FloatAnimationState());
-        public static FloatAnimationState Create(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, SyncronousScheduler scheduler, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
+        public static FloatAnimationState Create(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, PauseManager pauseManager, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
         {
             var ret = pool.Value.Rent();
-            ret.Construct(from, to, duration,setter, easingFunction, scheduler, autoReverse , autoReverseDelay, loop , animationLifetime);
+            ret.Construct(from, to, duration,setter, easingFunction, pauseManager, autoReverse , autoReverseDelay, loop , animationLifetime);
             return ret;
         }
  
-        protected void Construct(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, SyncronousScheduler scheduler, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
+        protected void Construct(float from, float to, double duration, Action<float> setter, EasingFunction easingFunction, PauseManager pauseManager, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
         {
             AddDependency(this);
-            base.Construct(duration, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime);
+            base.Construct(duration, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime);
             From = from;
             To = to;
             OriginalFrom = from;
@@ -132,16 +133,16 @@ public static partial  class Animator
 
         public override void Set(float percentage) => Setter(Target, percentage);
         private static LazyPool<FloatAnimationState<T>> pool = new LazyPool<FloatAnimationState<T>>(() => new FloatAnimationState<T>());
-        public static FloatAnimationState<T> Create(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, SyncronousScheduler scheduler, bool autoReverse, float autoReverseDelay, ILifetime loop, ILifetime? animationLifetime)
+        public static FloatAnimationState<T> Create(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, PauseManager pauseManager, bool autoReverse, float autoReverseDelay, ILifetime loop, ILifetime? animationLifetime)
         {
             var ret = pool.Value.Rent();
-            ret.Construct(from, to, duration, target, setter, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime);
+            ret.Construct(from, to, duration, target, setter, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime);
             return ret;
         }
 
-        protected void Construct(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, SyncronousScheduler scheduler, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
+        protected void Construct(float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction, PauseManager pauseManager, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
         {
-            base.Construct(from, to, duration, null, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime);
+            base.Construct(from, to, duration, null, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime);
             Target = target;
             Setter = setter;
         }

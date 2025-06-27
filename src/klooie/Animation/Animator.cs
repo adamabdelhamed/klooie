@@ -1,3 +1,4 @@
+using klooie.Gaming;
 using System.Diagnostics;
 using System.Threading.Tasks;
 namespace klooie;
@@ -8,34 +9,34 @@ namespace klooie;
 public static partial class Animator
 {
 
-    public static Task AnimateAsync(this float from, float to, double duration, Action<float> setter, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-        => AnimateAsync(FloatAnimationState.Create(from, to, duration, setter,easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static Task AnimateAsync(this float from, float to, double duration, Action<float> setter, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+        => AnimateAsync(FloatAnimationState.Create(from, to, duration, setter,easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static ILifetime Animate(this float from, float to, double duration, Action<float> setter, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-        => AnimateSync(FloatAnimationState.Create(from, to, duration, setter, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static ILifetime Animate(this float from, float to, double duration, Action<float> setter, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+        => AnimateSync(FloatAnimationState.Create(from, to, duration, setter, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static Task AnimateAsync<T>(this float from, float to, double duration,T target, Action<T,float> setter, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-        => AnimateAsync(FloatAnimationState<T>.Create(from, to, duration,target, setter, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static Task AnimateAsync<T>(this float from, float to, double duration,T target, Action<T,float> setter, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+        => AnimateAsync(FloatAnimationState<T>.Create(from, to, duration,target, setter, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static ILifetime Animate<T>(this float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-        => AnimateSync(FloatAnimationState<T>.Create(from, to, duration, target, setter, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static ILifetime Animate<T>(this float from, float to, double duration, T target, Action<T, float> setter, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+        => AnimateSync(FloatAnimationState<T>.Create(from, to, duration, target, setter, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static Task AnimateAsync(this ConsoleControl control, Func<RectF> destination, double duration = 500, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-        => AnimateAsync(ConsoleControlAnimationState.Create(control, destination, duration, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
-    public static ILifetime AnimateSync(this ConsoleControl control, Func<RectF> destination, double duration = 500, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-     => AnimateSync(ConsoleControlAnimationState.Create(control, destination, duration, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static Task AnimateAsync(this ConsoleControl control, Func<RectF> destination, double duration = 500, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+        => AnimateAsync(ConsoleControlAnimationState.Create(control, destination, duration, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static ILifetime AnimateSync(this ConsoleControl control, Func<RectF> destination, double duration = 500, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+     => AnimateSync(ConsoleControlAnimationState.Create(control, destination, duration, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static Task AnimateAsync(this Gaming.Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-        => AnimateAsync(CameraAnimationState.Create(camera, destination, duration, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static Task AnimateAsync(this Gaming.Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+        => AnimateAsync(CameraAnimationState.Create(camera, destination, duration, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static ILifetime AnimateSync(this Gaming.Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-        => AnimateSync(CameraAnimationState.Create(camera, destination, duration, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static ILifetime AnimateSync(this Gaming.Camera camera, LocF destination, double duration = 500, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+        => AnimateSync(CameraAnimationState.Create(camera, destination, duration, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static Task AnimateAsync(this RGB from, RGB to, double duration, Action<RGB> onColorChanged, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-        => AnimateAsync(RGBAnimationState.Create(from, to, duration, onColorChanged, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static Task AnimateAsync(this RGB from, RGB to, double duration, Action<RGB> onColorChanged, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+        => AnimateAsync(RGBAnimationState.Create(from, to, duration, onColorChanged, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
 
-    public static ILifetime AnimateSync(this RGB from, RGB to, double duration, Action<RGB> onColorChanged, EasingFunction easingFunction = null, SyncronousScheduler scheduler = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
-      => AnimateSync(RGBAnimationState.Create(from, to, duration, onColorChanged, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime));
+    public static ILifetime AnimateSync(this RGB from, RGB to, double duration, Action<RGB> onColorChanged, EasingFunction easingFunction = null, PauseManager pauseManager = null, bool autoReverse = false, float autoReverseDelay = 0, ILifetime? loop = null, ILifetime? animationLifetime = null)
+      => AnimateSync(RGBAnimationState.Create(from, to, duration, onColorChanged, easingFunction, pauseManager, autoReverse, autoReverseDelay, loop, animationLifetime));
 
     private static Task AnimateAsync(FloatAnimationState state)
     {
@@ -79,7 +80,16 @@ public static partial class Animator
         frame.StartTime = Stopwatch.GetTimestamp();
         frame.I = -1;
         frame.OnDisposed(state, onDone);
-        ConsoleApp.Current.AfterPaint.Subscribe(frame, static f => ProcessAnimationFrame(f), frame);
+
+        if (state.PauseManager != null)
+        {
+            ConsoleApp.Current.AfterPaint.SubscribePaused(state.PauseManager, frame, static f => ProcessAnimationFrame(f), frame);
+            if (state.PauseManager.IsPaused) return;// don't start the animation if paused
+        }
+        else
+        {
+            ConsoleApp.Current.AfterPaint.Subscribe(frame, static f => ProcessAnimationFrame(f), frame);
+        }
         ProcessAnimationFrame(frame);
     }
 

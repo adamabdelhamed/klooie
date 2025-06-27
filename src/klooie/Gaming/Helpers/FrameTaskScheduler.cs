@@ -12,10 +12,14 @@ public class FrameTaskScheduler : Recyclable
 
     private static LazyPool<FrameTaskScheduler> pool = new LazyPool<FrameTaskScheduler>(() => new FrameTaskScheduler());
     TimeSpan? currentPassStartTime;
+
+    private PauseManager? pauseManager;
+
     private FrameTaskScheduler() { }
-    public static FrameTaskScheduler Create(TimeSpan frequency)
+    public static FrameTaskScheduler Create(TimeSpan frequency, PauseManager? pauseManager = null)
     {
         var sched = pool.Value.Rent();
+        sched.pauseManager = pauseManager;
         sched.Init(frequency);
         return sched;
     }
@@ -25,7 +29,23 @@ public class FrameTaskScheduler : Recyclable
         Frequency = frequency;
         pendingForCurrentFrequencyPeriod = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent();
         readyForNextFrequencyPeriod = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent();
-        ConsoleApp.Current.AfterPaint.Subscribe(this, static (me) => me.Process(), this);
+        if (pauseManager != null)
+        {
+            ConsoleApp.Current.AfterPaint.SubscribePaused(pauseManager, this, static (me) => me.Process(), this);
+            pauseManager.OnPaused.Subscribe(this, static (me, lt) =>
+            {
+                me.currentPassStartTime = null;
+                if (me.pendingForCurrentFrequencyPeriod.Count > 0)
+                {
+                    me.readyForNextFrequencyPeriod.Items.AddRange(me.pendingForCurrentFrequencyPeriod.Items);
+                    me.pendingForCurrentFrequencyPeriod.Items.Clear();
+                }
+            }, this);
+        }
+        else
+        {
+            ConsoleApp.Current.AfterPaint.Subscribe(this, static (me) => me.Process(), this);
+        }
     }
 
     public void Enqueue<T>(T task) where T : Recyclable, IFrameTask

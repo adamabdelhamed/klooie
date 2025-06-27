@@ -15,6 +15,9 @@ public class Game : ConsoleApp
     private EventBroadcaster eventBroadcaster;
     private RuleManager ruleManager;
     private PauseManager pauseManager;
+
+    public PauseManager PauseManager => pauseManager;
+
     public SyncronousScheduler PausableScheduler { get; private set; }
     private ColliderGroup mainColliderGroup;
  
@@ -137,7 +140,7 @@ public class Game : ConsoleApp
     protected override async Task Startup()
     {
         PaintEnabled = false;
-        this.mainColliderGroup = new ColliderGroup(this) { PauseManager = this.pauseManager };
+        this.mainColliderGroup = new ColliderGroup(this, pauseManager);
         this.ruleManager = new RuleManager(RuleProvider);
         await ruleManager.Startup();
         Publish(ReadyEventId);

@@ -1,4 +1,6 @@
-﻿namespace klooie;
+﻿using klooie.Gaming;
+
+namespace klooie;
 
 
 public abstract class CommonAnimationState : DelayState
@@ -14,13 +16,13 @@ public abstract class CommonAnimationState : DelayState
     public ILifetime? AnimationLifetime { get; private set; }
     public bool LoopShouldContinue => Loop != null && Loop.IsStillValid(LoopLease) && AnimationShouldContinue;
     public bool AnimationShouldContinue => AnimationLifetime == null || AnimationLifetime.IsStillValid(AnimationLifetimeLease);
-    public SyncronousScheduler Scheduler { get; set; }
+    public PauseManager? PauseManager { get; set; }
 
     public TaskCompletionSource? Tcs { get; set; }
     protected CommonAnimationState() { }
 
 
-    protected void Construct(double duration, EasingFunction easingFunction, SyncronousScheduler scheduler, bool autoReverse, float autoReverseDelay, ILifetime loop, ILifetime? animationLifetime)
+    protected void Construct(double duration, EasingFunction easingFunction, PauseManager pauseManager, bool autoReverse, float autoReverseDelay, ILifetime loop, ILifetime? animationLifetime)
     {
         AddDependency(this);
         Duration = duration;
@@ -31,7 +33,7 @@ public abstract class CommonAnimationState : DelayState
         LoopLease = loop?.Lease ?? 0;
         AnimationLifetime = animationLifetime;
         AnimationLifetimeLease = animationLifetime?.Lease ?? 0;
-        Scheduler = scheduler ?? ConsoleApp.Current.Scheduler;
+        PauseManager = pauseManager;
     }
 
 
