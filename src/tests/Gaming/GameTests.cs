@@ -169,7 +169,7 @@ public class GameTests
         var expected = period *.5f;
         var minExpected = period * .48f;
         var maxExpected = period * .58f;
-        var gameTask = Game.Current.Delay(period);
+ 
         var wallClockTask = Task.Delay(period);
 
         Assert.IsFalse(Game.Current.IsPaused);
@@ -203,7 +203,7 @@ public class GameTests
         var expected = period *.5f;
         var minExpected = period * .48f;
         var maxExpected = period * .58f;
-        var gameTask = Game.Current.Delay(period);
+ 
         var wallClockTask = Task.Delay(period);
 
         await Task.Delay(period/2);

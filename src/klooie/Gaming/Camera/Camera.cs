@@ -85,14 +85,14 @@ public sealed partial class Camera : ConsolePanel
     /// <param name="lt">a lifetime that can be used to cancel the animation</param>
     /// <param name="delayProvider">the delay provider to use</param>
     /// <returns>an async task that completes when the animation is finished or cancelled</returns>
-    public Task PointAnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, IDelayProvider delayProvider = null)
+    public Task PointAnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, SyncronousScheduler scheduler = null)
     {
-        return AnimateTo(dest.Offset(-Width / 2f, -Height / 2f), duration, ease, lt, delayProvider);
+        return AnimateTo(dest.Offset(-Width / 2f, -Height / 2f), duration, ease, lt, scheduler);
     }
 
-    public ILifetime PointAnimateToSync(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, IDelayProvider delayProvider = null)
+    public ILifetime PointAnimateToSync(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, SyncronousScheduler scheduler = null)
     {
-        return AnimateToSync(dest.Offset(-Width / 2f, -Height / 2f), duration, ease, lt, delayProvider);
+        return AnimateToSync(dest.Offset(-Width / 2f, -Height / 2f), duration, ease, lt, scheduler);
     }
 
     /// <summary>
@@ -104,16 +104,16 @@ public sealed partial class Camera : ConsolePanel
     /// <param name="lt">a lifetime that can be used to cancel the animation</param>
     /// <param name="delayProvider">the delay provider to use</param>
     /// <returns>an async task that completes when the animation is finished or cancelled</returns>
-    public Task AnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, IDelayProvider delayProvider = null)
+    public Task AnimateTo(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, SyncronousScheduler scheduler = null)
     {
         ease = ease ?? EasingFunctions.EaseInOut;
-        return Animator.AnimateAsync(this, dest, duration, ease, delayProvider, animationLifetime: lt);
+        return Animator.AnimateAsync(this, dest, duration, ease, scheduler, animationLifetime: lt);
     }
 
-    public ILifetime AnimateToSync(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, IDelayProvider delayProvider = null)
+    public ILifetime AnimateToSync(LocF dest, float duration = 1000, EasingFunction ease = null, ILifetime lt = null, SyncronousScheduler scheduler = null)
     {
         ease = ease ?? EasingFunctions.EaseInOut;
-        return Animator.AnimateSync(this, dest, duration, ease, delayProvider, animationLifetime: lt);
+        return Animator.AnimateSync(this, dest, duration, ease, scheduler, animationLifetime: lt);
     }
 
     /// <summary>

@@ -42,6 +42,13 @@ public sealed class SyncronousScheduler
         pausedTime = null;
     }
 
+    public Task Delay(double delayMs)
+    {
+        var tcs = new TaskCompletionSource();
+        Delay(delayMs, tcs, static tcs => tcs.SetResult());
+        return tcs.Task;
+    }
+
     public void Delay<TScope>(double delayMs, TScope state, Action<TScope> callback) => EnsureDelayLoopIsRunning(StatefulWorkItem<TScope>.Create(state, callback, delayMs));
     public void Delay(double delayMs, Action callback) => EnsureDelayLoopIsRunning(StatelessWorkItem.Create(callback, delayMs));
 

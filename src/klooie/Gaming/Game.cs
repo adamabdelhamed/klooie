@@ -5,7 +5,7 @@ namespace klooie.Gaming;
 /// <summary>
 /// The base class for a game built with klooie. These games are event driven.
 /// </summary>
-public class Game : ConsoleApp, IDelayProvider
+public class Game : ConsoleApp
 {
     /// <summary>
     /// The id for the Ready event that fires after all initial rules are executed
@@ -15,6 +15,7 @@ public class Game : ConsoleApp, IDelayProvider
     private EventBroadcaster eventBroadcaster;
     private RuleManager ruleManager;
     private PauseManager pauseManager;
+    public SyncronousScheduler PausableScheduler { get; private set; }
     private ColliderGroup mainColliderGroup;
  
 
@@ -125,6 +126,7 @@ public class Game : ConsoleApp, IDelayProvider
     {
         this.eventBroadcaster = new EventBroadcaster();
         this.pauseManager = new PauseManager();
+        this.PausableScheduler = new SyncronousScheduler(this);
         RuleVariables = new SpecialReverseDictionary();
     }
 
@@ -143,21 +145,6 @@ public class Game : ConsoleApp, IDelayProvider
         await RequestPaintAsync();
     }
 
-
-
-    /// <summary>
-    /// implements a pause aware delay action
-    /// </summary>
-    /// <param name="ms">the amount of time in ms to delay</param>
-    /// <returns>a task</returns>
-    public Task Delay(double ms) => pauseManager.Delay(ms);
-
-    /// <summary>
-    /// implements a pause aware delay action
-    /// </summary>
-    /// <param name="timeout">the amount of time to delay</param>
-    /// <returns>a task</returns>
-    public Task Delay(TimeSpan timeout) => pauseManager.Delay(timeout);
 
     protected override void OnReturn()
     {

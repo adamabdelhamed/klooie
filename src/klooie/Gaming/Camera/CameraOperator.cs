@@ -21,13 +21,12 @@ public sealed class CameraOperator : Recyclable
     /// <param name="focalVelocity">the velocity of the control to focus on</param>
     /// <param name="delayProvider">the delay provider to use for animated movements</param>
     /// <param name="movements">the movements this operator knows how to perform</param>
-    public CameraOperator(Camera camera, ConsoleControl focalElement, Velocity focalVelocity, IDelayProvider delayProvider, params CameraMovement[] movements)
+    public CameraOperator(Camera camera, ConsoleControl focalElement, Velocity focalVelocity, params CameraMovement[] movements)
     {
         if (focalElement == null || focalVelocity == null) throw new ArgumentNullException("focalElement and focalVelocity cannot be null");
 
         foreach (CameraMovement m in movements)
         {
-            m.DelayProvider = delayProvider;
             m.SituationDetected.Subscribe(async (p) => await OnSituationDetected(m, p), this);
             OnDisposed(m, TryDisposeMe);
             m.Camera = camera;

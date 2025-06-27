@@ -53,10 +53,6 @@ public abstract class CameraMovement : Recyclable
     /// </summary>
     public bool IsOutOfBounds => Camera.CameraBounds.OverlapPercentage(FocalElement.Bounds) < 1;
 
-    /// <summary>
-    /// Gets the delay provider that derived classes should use for all async delays
-    /// </summary>
-    public IDelayProvider DelayProvider { get; internal set; }
 
     /// <summary>
     /// Initialized your movement. It is not safe to operate the camera during this call.
@@ -71,7 +67,6 @@ public abstract class CameraMovement : Recyclable
         MovementLifetime = null;
         FocalElement = null;
         FocalVelocity = null;
-        DelayProvider = null;
         Camera = null;
     }
 }

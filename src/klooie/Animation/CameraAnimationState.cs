@@ -13,16 +13,16 @@ public static partial class Animator
 
         private static LazyPool<CameraAnimationState> pool = new LazyPool<CameraAnimationState>(() => new CameraAnimationState());
 
-        public static CameraAnimationState Create(Camera camera, LocF destination, double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
+        public static CameraAnimationState Create(Camera camera, LocF destination, double duration, EasingFunction easingFunction, SyncronousScheduler scheduler, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
         {
             var ret = pool.Value.Rent();
-            ret.Construct(camera, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime);
+            ret.Construct(camera, destination, duration, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime);
             return ret;
         }
 
-        protected void Construct(Camera camera, LocF destination, double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
+        protected void Construct(Camera camera, LocF destination, double duration, EasingFunction easingFunction, SyncronousScheduler scheduler, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
         {
-            base.Construct(0, 1, duration, this, SetLocation, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime);
+            base.Construct(0, 1, duration, this, SetLocation, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime);
             Camera = camera ?? throw new ArgumentNullException(nameof(camera));
             Destination = destination;
             StartX = camera.CameraLocation.Left;

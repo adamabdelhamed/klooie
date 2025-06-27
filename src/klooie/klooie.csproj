@@ -46,4 +46,8 @@
   <ItemGroup>
       <ProjectReference Include="..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Gaming\Effects\" />
+  </ItemGroup>
 </Project>

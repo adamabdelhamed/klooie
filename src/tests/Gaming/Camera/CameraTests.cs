@@ -24,7 +24,7 @@ public class CameraTests
             Game.Current.GamePanel.Background = new RGB(20, 35, 20);
             PlaceBackgroundTexture();
             var fc = camera.Add(new TextCollider("focal point".ToGreen()));
-            var cameraOperator = new CameraOperator(camera, fc, fc.Velocity, Game.Current, new AlwaysCenteredMovement());
+            var cameraOperator = new CameraOperator(camera, fc, fc.Velocity, new AlwaysCenteredMovement());
 
             fc.MoveTo(Game.Current.GameBounds.Left, Game.Current.GameBounds.Top);
             await context.PaintAndRecordKeyFrameAsync();
@@ -61,19 +61,19 @@ public class CameraTests
             camera.EnableKeyboardPanning();
 
             await Game.Current.SendKey(System.ConsoleKey.RightArrow);
-            await Game.Current.Delay(2000);
+            await Game.Current.PausableScheduler.Delay(2000);
             if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
 
             await Game.Current.SendKey(System.ConsoleKey.DownArrow);
-            await Game.Current.Delay(2000);
+            await Game.Current.PausableScheduler.Delay(2000);
             if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
 
             await Game.Current.SendKey(System.ConsoleKey.LeftArrow);
-            await Game.Current.Delay(2000);
+            await Game.Current.PausableScheduler.Delay(2000);
             if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
 
             await Game.Current.SendKey(System.ConsoleKey.UpArrow);
-            await Game.Current.Delay(2000);
+            await Game.Current.PausableScheduler.Delay(2000);
             if (mode == UITestMode.KeyFramesVerified) await context.PaintAndRecordKeyFrameAsync();
 
             Game.Current.Stop();

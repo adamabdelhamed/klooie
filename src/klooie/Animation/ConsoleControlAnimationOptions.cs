@@ -16,16 +16,16 @@ public static partial class Animator
 
         private static LazyPool<ConsoleControlAnimationState> pool = new LazyPool<ConsoleControlAnimationState>(() => new ConsoleControlAnimationState());
 
-        public static ConsoleControlAnimationState Create(ConsoleControl control, Func<RectF> destination, double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
+        public static ConsoleControlAnimationState Create(ConsoleControl control, Func<RectF> destination, double duration, EasingFunction easingFunction, SyncronousScheduler scheduler, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
         {
             var ret = pool.Value.Rent();
-            ret.Construct(control, destination, duration, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime);
+            ret.Construct(control, destination, duration, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime);
             return ret;
         }
 
-        protected void Construct(ConsoleControl control, Func<RectF> destination, double duration, EasingFunction easingFunction, IDelayProvider delayProvider, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
+        protected void Construct(ConsoleControl control, Func<RectF> destination, double duration, EasingFunction easingFunction, SyncronousScheduler scheduler, bool autoReverse, float autoReverseDelay, ILifetime? loop, ILifetime? animationLifetime)
         {
-            base.Construct(0, 1, duration, this, SetBounds, easingFunction, delayProvider, autoReverse, autoReverseDelay, loop, animationLifetime);
+            base.Construct(0, 1, duration, this, SetBounds, easingFunction, scheduler, autoReverse, autoReverseDelay, loop, animationLifetime);
             Control = control ?? throw new ArgumentNullException(nameof(control));
             Destination = destination ?? throw new ArgumentNullException(nameof(destination));
             StartX = control.Left;

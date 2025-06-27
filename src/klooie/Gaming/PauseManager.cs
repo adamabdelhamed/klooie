@@ -1,5 +1,5 @@
 ﻿namespace klooie.Gaming;
-public sealed class PauseManager : IDelayProvider
+public sealed class PauseManager
 {
     private Recyclable? pauseLifetime;
     public Event<ILifetime> OnPaused { get; private set; } = Event<ILifetime>.Create();
