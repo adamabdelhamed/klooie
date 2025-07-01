@@ -6,6 +6,9 @@ public class Pistol : Weapon
     public Func<float> AngleVariation { get; set; } = () => 0;
     public Angle LastFireAngle { get; private set; }
 
+
+    public static Pistol Create() => PistolPool.Instance.Rent();
+
     public override void FireInternal(bool alt)
     {
         LastFireAngle = CalculateAngleToTarget().Add(AngleVariation());
