@@ -34,7 +34,7 @@ public partial class Weapon : Recyclable, IObservableObject
         lastFireTime = null;
     }
 
-    public void Bind(Targeting targeting)
+    public virtual void Bind(Targeting targeting)
     {
         if (Targeting != null) throw new InvalidOperationException("Targeting already bound");
         this.Targeting = targeting;
