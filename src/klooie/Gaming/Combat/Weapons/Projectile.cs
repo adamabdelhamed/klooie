@@ -97,7 +97,7 @@ public class Projectile : WeaponElement
     public ConsoleCharacter Pen { get; set; } = DefaultPen;
     public float Range { get; set; } = 150;
     private RectF startLocation;
-    public void Bind(Weapon w, float speed, Angle angle)
+    public void Bind(Weapon w, float speed, Angle angle, float? x = null, float? y = null)
     {
         if(w.Source == null) throw new InvalidOperationException("Weapon source is null");
         if(w.Source.Velocity == null) throw new InvalidOperationException("Weapon source velocity is null");
@@ -105,7 +105,7 @@ public class Projectile : WeaponElement
         CompositionMode = CompositionMode.BlendBackground;
         Velocity.Angle = angle;
         AddHolderSpeedToProjectileSpeedIfNeeded(speed, angle);
-        if (TryPlace(w, angle))
+        if (TryPlace(w, angle, x, y))
         {
             Velocity.OnCollision.Subscribe(this, OnCollision, this);
             BoundsChanged.Subscribe(this, EnforceRangeStatic, this);
@@ -121,10 +121,12 @@ public class Projectile : WeaponElement
         }
     }
 
-    private bool TryPlace(Weapon w, Angle angle)
+    private bool TryPlace(Weapon w, Angle angle, float? x = null, float? y = null)
     {
         this.ResizeTo(1, 1);
-        this.MoveTo(w.Source.CenterX() - (Width / 2f), w.Source.CenterY() - (Height / 2f), w.Source.ZIndex);
+        x = x.HasValue ? x.Value : w.Source.CenterX() - (Width / 2f);
+        y = y.HasValue ? y.Value : w.Source.CenterY() - (Height / 2f);
+        this.MoveTo(x.Value, y.Value, w.Source.ZIndex);
         var offset = this.RadialOffset(angle, 1.5f, false);
         this.MoveTo(offset.Left, offset.Top);
         startLocation = this.Bounds;
