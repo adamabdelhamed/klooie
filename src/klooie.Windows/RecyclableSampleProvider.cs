@@ -54,8 +54,8 @@ internal class RecyclableSampleProvider : Recyclable, ISampleProvider
 
     private void OnVolumeChanged()
     {
-        float master = (float)Math.Pow(masterKnob.Volume, 1.5f);
-        float sample = (float)Math.Pow(sampleKnob?.Volume ?? 1, 1.5f);
+        float master = (float)Math.Pow(masterKnob.Volume, 1.2f);
+        float sample = (float)Math.Pow(sampleKnob?.Volume ?? 1, 1.2f);
         effectiveVolume = master * sample;
         if (effectiveVolume < 0.0001f)
         {
