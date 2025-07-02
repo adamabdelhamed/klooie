@@ -17,12 +17,18 @@
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
     <ProjectReference Include="..\klooie\klooie.csproj" />
-    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Debug'">
-      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Debug\net9.0\PowerArgs.dll</HintPath>
-    </Reference>
-    <Reference Include="PowerArgs" Condition=" '$(Configuration)' == 'Release'">
-      <HintPath>..\..\..\PowerArgs\PowerArgs\bin\Release\net9.0\PowerArgs.dll</HintPath>
-    </Reference>
   </ItemGroup>
+  <PropertyGroup>
+    <!-- Prefer PowerArgs from super-repo if present, otherwise use klooie's own submodule -->
+    <Klooie_PowerArgs_Path Condition="Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+    <Klooie_PowerArgs_Path Condition="!Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+  </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="$(Klooie_PowerArgs_Path)" />
+  </ItemGroup>
 </Project>
