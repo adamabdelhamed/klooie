@@ -173,6 +173,7 @@ public sealed class ColliderGroup
 
     private void ProcessCollision(GameCollider item, float expectedTravelDistance)
     {
+        var originalLocation = item.Bounds;
         var encroachment = GetCloseToColliderWeAreCollidingWith(item);
 
 
@@ -186,6 +187,16 @@ public sealed class ColliderGroup
             OnCollision.Fire(collision);
             item.Velocity?._onCollision?.Fire(collision);
             if (spatialIndex.IsExpired(item)) return;
+
+            // If the item that got hit is no longer alive then we can try to move this item
+            // as if they never touched.
+            if (item.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.DoNothing &&
+                collision.ColliderHitLeaseState.IsRecyclableValid == false && 
+                collision.MovingObjectLeaseState.IsRecyclableValid == true && 
+                TryMoveIfWouldNotCauseTouching(item, originalLocation.RadialOffset(item.Velocity.angle, expectedTravelDistance, normalized: false), RGB.Red))
+            {
+                    return;
+            }
         }
         finally
         {
