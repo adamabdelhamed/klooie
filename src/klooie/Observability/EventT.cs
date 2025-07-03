@@ -33,7 +33,7 @@ public class Event<T> : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ArgsSubscription<T>.Create(handler);
         Subscribers.Track(subscription);
-        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
 
     }
     public void Subscribe<TScope>(TScope scope, Action<TScope,T> handler, ILifetime lifetimeManager)
@@ -41,7 +41,7 @@ public class Event<T> : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedArgsSubscription<TScope, T>.Create(scope, handler);
         Subscribers.Track(subscription);
-        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ public class Event<T> : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ArgsSubscription<T>.Create(handler);
         Subscribers.TrackWithPriority(subscription);
-        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ public class Event<T> : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedArgsSubscription<TScope, T>.Create(scope, handler);
         Subscribers.TrackWithPriority(subscription);
-        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
 

@@ -38,8 +38,7 @@ public class Event : Recyclable
         if(lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ActionSubscription.Create(handler);
         Subscribers.Track(subscription);
-        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
-
+        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     // NEW OR MODIFIED CODE: Overload that accepts a scope object
@@ -55,7 +54,7 @@ public class Event : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
         Subscribers.Track(subscription);
-        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease=> lease.UnTrackAndDispose());
     }
 
     /// <summary>
@@ -69,7 +68,7 @@ public class Event : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ActionSubscription.Create(handler);
         Subscribers.TrackWithPriority(subscription);
-        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     /// <summary>
@@ -80,7 +79,7 @@ public class Event : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
         Subscribers.TrackWithPriority(subscription);
-        lifetimeManager.OnDisposed(subscription, TryDisposeMe);
+        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     /// <summary>
