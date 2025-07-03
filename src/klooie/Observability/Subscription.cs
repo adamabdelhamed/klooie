@@ -135,3 +135,124 @@ internal sealed class ScopedArgsSubscription<TScope, TArgs> : ArgsSubscription<T
         Scope = default(TScope);
     }
 }
+
+internal sealed class OnceActionSubscription : Subscription
+{
+    private static LazyPool<OnceActionSubscription> pool = new LazyPool<OnceActionSubscription>(() => new OnceActionSubscription());
+
+    private Action? callback;
+
+    private OnceActionSubscription() { }
+
+    public static OnceActionSubscription Create(Action callback)
+    {
+        var sub = pool.Value.Rent();
+        sub.callback = callback;
+        return sub;
+    }
+
+    public override void Notify()
+    {
+        try { callback?.Invoke(); }
+        finally
+        {
+            Dispose();
+        }
+    }
+
+    protected override void OnReturn()
+    { 
+        callback = null;
+    }
+}
+
+internal sealed class OnceScopedSubscription<T> : Subscription
+{
+    private static LazyPool<OnceScopedSubscription<T>> pool = new LazyPool<OnceScopedSubscription<T>>(() => new OnceScopedSubscription<T>());
+
+    private Action<T>? callback;
+    private T scope;
+
+    private OnceScopedSubscription() { }
+
+    public static OnceScopedSubscription<T> Create(T scope, Action<T> callback)
+    {
+        var sub = pool.Value.Rent();
+        sub.scope = scope;
+        sub.callback = callback;
+        return sub;
+    }
+
+    public override void Notify()
+    {
+        try { callback?.Invoke(scope); }
+        finally { Dispose(); }
+    }
+
+    protected override void OnReturn()
+    {
+        callback = null;
+        scope = default!;
+    }
+}
+
+internal sealed class OnceArgsSubscription<TArgs> : ArgsSubscription<TArgs>
+{
+    private static LazyPool<OnceArgsSubscription<TArgs>> pool = new LazyPool<OnceArgsSubscription<TArgs>>(() => new OnceArgsSubscription<TArgs>());
+
+    private Action<TArgs>? callback;
+
+    private OnceArgsSubscription() { }
+
+    public static OnceArgsSubscription<TArgs> Create(Action<TArgs> callback)
+    {
+        var sub = pool.Value.Rent();
+        sub.callback = callback;
+        return sub;
+    }
+
+    public override void Notify()
+    {
+        try { callback?.Invoke(Args); }
+        finally { Dispose(); }
+    }
+
+    protected override void OnReturn()
+    {
+        callback = null;
+        Args = default!;
+    }
+}
+
+
+internal sealed class OnceScopedArgsSubscription<TScope, TArgs> : ArgsSubscription<TArgs>
+{
+    private static LazyPool<OnceScopedArgsSubscription<TScope, TArgs>> pool =
+        new LazyPool<OnceScopedArgsSubscription<TScope, TArgs>>(() => new OnceScopedArgsSubscription<TScope, TArgs>());
+
+    private Action<TScope, TArgs>? callback;
+    private TScope scope;
+
+    private OnceScopedArgsSubscription() { }
+
+    public static OnceScopedArgsSubscription<TScope, TArgs> Create(TScope scope, Action<TScope, TArgs> callback)
+    {
+        var sub = pool.Value.Rent();
+        sub.scope = scope;
+        sub.callback = callback;
+        return sub;
+    }
+
+    public override void Notify()
+    {
+        try { callback?.Invoke(scope, Args); }
+        finally { Dispose(); }
+    }
+
+    protected override void OnReturn()
+    {
+        callback = null;
+        scope = default!;
+        Args = default!;
+    }
+}

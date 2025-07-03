@@ -38,6 +38,7 @@ public class Event : Recyclable
         if(lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ActionSubscription.Create(handler);
         Subscribers.Track(subscription);
+        // Use a Lease to make sure we don't double dispose the subscription in case the lifetimeManager outlives the event.
         lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
@@ -54,6 +55,7 @@ public class Event : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
         Subscribers.Track(subscription);
+        // Use a Lease to make sure we don't double dispose the subscription in case the lifetimeManager outlives the event.
         lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease=> lease.UnTrackAndDispose());
     }
 
@@ -68,6 +70,7 @@ public class Event : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ActionSubscription.Create(handler);
         Subscribers.TrackWithPriority(subscription);
+        // Use a Lease to make sure we don't double dispose the subscription in case the lifetimeManager outlives the event.
         lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
@@ -79,6 +82,7 @@ public class Event : Recyclable
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
         Subscribers.TrackWithPriority(subscription);
+        // Use a Lease to make sure we don't double dispose the subscription in case the lifetimeManager outlives the event.
         lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
@@ -129,38 +133,9 @@ public class Event : Recyclable
     /// Subscribes to the event for one notification and then immediately unsubscribes so your callback will only be called at most once
     /// </summary>
     /// <param name="handler">The action to run when the event fires</param>
-    public void SubscribeOnce(Action handler)
-    {
-        var lt = DefaultRecyclablePool.Instance.Rent();
-        bool fired = false;
-        Action wrappedHandler = null;
-        wrappedHandler = () =>
-        {
-            if (fired) return;
-            fired = true;
-            try { handler(); }
-            finally { lt.Dispose(); }
-        };
-        Subscribe(wrappedHandler, lt);
-    }
-    public void SubscribeOnce<TScope>(TScope scope, Action<TScope> handler)
-    {
-        Action wrappedAction = null;
-        var lt = DefaultRecyclablePool.Instance.Rent();
-        wrappedAction = () =>
-        {
-            try
-            {
-                handler(scope);
-            }
-            finally
-            {
-                lt.Dispose();
-            }
-        };
-
-        Subscribe(wrappedAction, lt);
-    }
+    public void SubscribeOnce(Action handler) => Subscribers.Track(OnceActionSubscription.Create(handler));
+    
+    public void SubscribeOnce<TScope>(TScope scope, Action<TScope> handler) => Subscribers.Track(OnceScopedSubscription<TScope>.Create(scope, handler));
 
     /// <summary>
     /// Creates a lifetime that will end the next time this

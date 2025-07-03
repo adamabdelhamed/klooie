@@ -75,39 +75,8 @@ public class Event<T> : Recyclable
     /// Subscribes to the event for one notification and then immediately unsubscribes so your callback will only be called at most once
     /// </summary>
     /// <param name="handler">The action to run when the event fires</param>
-    public void SubscribeOnce(Action<T> handler)
-    {
-        var lt = DefaultRecyclablePool.Instance.Rent();
-        bool fired = false;
-        Action<T> wrappedHandler = null;
-        wrappedHandler = (arg) =>
-        {
-            if (fired) return;
-            fired = true;
-            try { handler(arg); }
-            finally { lt.Dispose(); }
-        };
-        Subscribe(wrappedHandler, lt);
-    }
-
-    public void SubscribeOnce<TScope>(TScope scope, Action<TScope,T> handler)
-    {
-        Action<T> wrappedAction = null;
-        var lt = DefaultRecyclablePool.Instance.Rent();
-        wrappedAction = (arg) =>
-        {
-            try
-            {
-                handler(scope, arg);
-            }
-            finally
-            {
-                lt.Dispose();
-            }
-        };
-
-        Subscribe(wrappedAction, lt);
-    }
+    public void SubscribeOnce(Action<T> handler) => Subscribers.Track(OnceArgsSubscription<T>.Create(handler));
+    public void SubscribeOnce<TScope>(TScope scope, Action<TScope,T> handler) => Subscribers.Track(OnceScopedArgsSubscription<TScope, T>.Create(scope, handler));
 
     public Recyclable CreateNextFireLifetime()
     {
