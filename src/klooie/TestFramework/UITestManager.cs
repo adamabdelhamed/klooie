@@ -24,15 +24,23 @@ public sealed class UITestManager
     {
         get
         {
-            var gitRoot = Assembly.GetExecutingAssembly().Location;
-            while (Directory.Exists(Path.Combine(gitRoot, ".git")) == false)
+            var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            while (!string.IsNullOrEmpty(dir))
             {
-                gitRoot = Path.GetDirectoryName(gitRoot);
+                var gitDirPath = Path.Combine(dir, ".git");
+                if (Directory.Exists(gitDirPath) || File.Exists(gitDirPath))
+                {
+                    // Found .git directory or file (submodules have a file here)
+                    return dir;
+                }
+                dir = Path.GetDirectoryName(dir);
             }
 
-            return gitRoot;
+            throw new InvalidOperationException("Could not find a .git directory or file in any parent folder.");
         }
     }
+
 
     private string CurrentTestFYIRootPath => Path.Combine(GitRootPath, "FYI", testId);
     private string CurrentTestLKGRootPath => Path.Combine(GitRootPath, "LKGCliResults", testId);
