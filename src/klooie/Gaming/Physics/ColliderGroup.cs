@@ -329,7 +329,7 @@ public sealed class ColliderGroup
         return encroachment;
     }
 
-    private bool TryMoveIfWouldNotCauseTouching(GameCollider item, RectF proposedBounds, RGB color)
+    public bool TryMoveIfWouldNotCauseTouching(GameCollider item, RectF proposedBounds, RGB color)
     {
         if (WouldCauseTouching(item, proposedBounds, out GameCollider preventer) == false)
         {
