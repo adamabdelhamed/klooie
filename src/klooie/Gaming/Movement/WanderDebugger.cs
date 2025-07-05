@@ -31,7 +31,7 @@ public class WanderDebugger : Wander
     public static WanderDebugger Create(Vision vision, Func<Movement, RectF?> curiosityPoint, float speed)
     {
         var state = pool.Value.Rent();
-        state.Construct(vision, curiosityPoint, speed);
+        state.Construct(vision, curiosityPoint, speed, true);
         return state;
     }
 
