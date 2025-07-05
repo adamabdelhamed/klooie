@@ -1,6 +1,7 @@
 ﻿namespace klooie;
 internal static class GeometryGuard
 {
+    /*
     public static void ValidateFloat(float value)
     {
         int bits = BitConverter.SingleToInt32Bits(value);
@@ -41,4 +42,5 @@ internal static class GeometryGuard
         ValidateFloat(c);
         ValidateFloat(d);
     }
+    */
 }

@@ -53,7 +53,7 @@ public readonly struct Angle
     /// <param name="val">the value of the angle</param>
     public Angle(float val)
     {
-        GeometryGuard.ValidateFloat(val);
+       // GeometryGuard.ValidateFloat(val);
         Value = val % 360f;
         if(Value < 0)
         {

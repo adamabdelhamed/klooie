@@ -32,7 +32,7 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
 
     public RectF(float x, float y, float w, float h)
     {
-        GeometryGuard.ValidateFloats(x, y, w, h);
+       // GeometryGuard.ValidateFloats(x, y, w, h);
         this.Left = x;
         this.Top = y;
         this.Width = w;
