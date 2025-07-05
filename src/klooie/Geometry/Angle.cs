@@ -330,24 +330,13 @@ public readonly struct Angle
 
     public static IEnumerable<Angle> Enumerate360Angles(Angle initialAngle, int increments = 20)
     {
-        var opposite = initialAngle.Opposite();
-
-        for (var i = 1; i <= increments; i++)
+        yield return initialAngle;
+        for (var i = 1; i < increments; i++)
         {
-            if (i == 1)
-            {
-                yield return initialAngle;
-            }
-            else if (i == 1)
-            {
-                yield return opposite;
-            }
-            else
-            {
-                var increment = 180f * i / increments;
-                yield return initialAngle.Add(increment);
-                yield return initialAngle.Add(-increment);
-            }
+            var increment = 180f * i / increments;
+            yield return initialAngle.Add(increment);
+            yield return initialAngle.Add(-increment);
         }
+        yield return initialAngle.Add(180); // 180°
     }
 }
