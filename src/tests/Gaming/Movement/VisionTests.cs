@@ -18,15 +18,27 @@ public class VisionTests
     [TestCategory(Categories.Quarantined)]
     public void VisionTestBasic() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified, 60, 30, async (context) =>
     {
-        await SetupVisionTest(context, new RectF(30, 15, 2, 1));
+        await SetupVisionTest(context, new RectF(30, 15, 2, 1), false);
         Game.Current.Stop();
     });
 
-    private static async Task SetupVisionTest(UITestManager context, RectF moverPosition)
+    [TestMethod]
+    public void VisionTestPerfect() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.KeyFramesVerified, 60, 30, async (context) =>
+    {
+        await SetupVisionTest(context, new RectF(30, 15, 2, 1), true);
+        Game.Current.Stop();
+    });
+
+    private static async Task SetupVisionTest(UITestManager context, RectF moverPosition, bool perfect)
     {
         var mover = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
         var scheduler = FrameTaskScheduler.Create(TimeSpan.FromSeconds(1));
         var vision = Vision.Create(scheduler, mover, autoScan: false);
+        if(perfect)
+        {
+            vision.AngleStep = 1;
+            vision.MaxMemoryTime = TimeSpan.FromSeconds(0);
+        }
         vision.Range = 15;
    
         var visionFilter = new VisionFilter(vision);
