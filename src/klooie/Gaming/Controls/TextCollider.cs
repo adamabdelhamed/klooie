@@ -27,6 +27,12 @@ public class TextCollider : GameCollider
     private void ResizeMe() => ResizeTo(Content?.Length ?? 0, 1);
     
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        content = null;
+    }
 }
 
 public partial class CharCollider : GameCollider
