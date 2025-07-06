@@ -18,6 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\klooie\klooie.csproj" />
+    <ProjectReference Include="..\tests\tests.csproj" />
     <ProjectReference Include="..\klooie.Windows\klooie.Windows.csproj" />
     <ProjectReference Include="..\klooie.Analyzers\klooie.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.13.0" GeneratePathProperty="true" PrivateAssets="all" />
