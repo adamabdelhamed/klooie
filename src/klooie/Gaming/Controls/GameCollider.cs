@@ -12,6 +12,8 @@ public class GameCollider : ConsoleControl
     internal virtual bool AutoAddToColliderGroup => true;
     public virtual bool CanMoveTo(RectF bounds) => true;
 
+    private float lastSpeed;
+
     // Only used by UniformGrid to avoid allocations in a callback. The grid
     // passes a collider as the object to the callback, so we can use this
     // to lookup the grid that the collider is in. This allows the callback
@@ -54,7 +56,11 @@ public class GameCollider : ConsoleControl
 
     private static void UpdateLastEvalTime(GameCollider collider)
     {
-      //  collider.lastEvalTime = (float)collider.ColliderGroup.Now.TotalSeconds;
+        if (collider.lastSpeed == 0 && collider.Velocity.Speed > 0)
+        {
+            collider.lastEvalTime = (float)collider.ColliderGroup.Now.TotalSeconds;
+        }
+        collider.lastSpeed = collider.Velocity.Speed;
     }
 
     public GameCollider(RectF bounds, bool connectToMainColliderGroup = true) : this(connectToMainColliderGroup) => this.Bounds = bounds;
