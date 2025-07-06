@@ -15,6 +15,8 @@ public class FrameTaskScheduler : Recyclable
 
     private PauseManager? pauseManager;
 
+    public int TotalTasks => pendingForCurrentFrequencyPeriod.Count + readyForNextFrequencyPeriod.Count;
+
     private FrameTaskScheduler() { }
     public static FrameTaskScheduler Create(TimeSpan frequency, PauseManager? pauseManager = null)
     {
@@ -63,18 +65,18 @@ public class FrameTaskScheduler : Recyclable
         {
             currentPassStartTime = now;
 
+            // Check lateness
+            var grace = .25 * TotalTasks;
+            if (pendingForCurrentFrequencyPeriod.Count > grace)
+            {
+                _taskIsLate?.Fire(pendingForCurrentFrequencyPeriod.Count);
+            }
+
             // Move all ready tasks to pending for this period
             if (readyForNextFrequencyPeriod.Count > 0)
             {
                 pendingForCurrentFrequencyPeriod.Items.AddRange(readyForNextFrequencyPeriod.Items);
                 readyForNextFrequencyPeriod.Items.Clear();
-            }
-
-            // Check lateness
-            var grace = .025 * (pendingForCurrentFrequencyPeriod.Count + readyForNextFrequencyPeriod.Count);
-            if (pendingForCurrentFrequencyPeriod.Count > grace)
-            {
-                _taskIsLate?.Fire(pendingForCurrentFrequencyPeriod.Count);
             }
         }
 
