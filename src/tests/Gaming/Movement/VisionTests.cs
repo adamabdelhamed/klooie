@@ -39,6 +39,10 @@ public class VisionTests
             vision.AngleStep = 1;
             vision.MaxMemoryTime = TimeSpan.FromSeconds(0);
         }
+        else
+        {
+            vision.AngleFuzz = 0;// remove randomness for testing
+        }
         vision.Range = 15;
    
         var visionFilter = new VisionFilter(vision);
