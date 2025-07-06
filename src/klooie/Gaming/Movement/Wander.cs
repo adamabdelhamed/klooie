@@ -292,9 +292,7 @@ public class Wander : Movement
             if (!prediction.CollisionPredicted)
                 return MaxCollisionHorizon; // safe path
 
-            return (Velocity.Speed > 0)
-             ? prediction.LKGD / Velocity.Speed
-             : float.MaxValue;
+            return Velocity.Speed > 0 ? prediction.LKGD / Velocity.Speed : 0;
         }
         finally
         {
