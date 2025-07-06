@@ -25,8 +25,6 @@ public class Vision : Recyclable, IFrameTask
     public int AngleFuzz { get; set; }
     public  TimeSpan MaxMemoryTime { get; set; }
     public Vision() { }
-
-    private static Random random = new Random();
     public static Vision Create(FrameTaskScheduler scheduler, GameCollider eye, bool autoScan = true)
     {
         var vision = VisionPool.Instance.Rent();

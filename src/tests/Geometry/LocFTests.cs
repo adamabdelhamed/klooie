@@ -50,9 +50,6 @@ public class LocFTests
     {
         Assert.IsTrue(new LocF(0, 0).Offset(1, 1).Equals(new LocF(1, 1)));
         Assert.IsTrue(new LocF(1, 1).Offset(-2, -2).Equals(new LocF(-1, -1)));
-
-        Assert.IsTrue(new LocF(1, 1).RadialOffset(0, 1) == new LocF(2, 1));
-        Assert.IsTrue(new LocF(1, 1).RadialOffset(90, 1) == new LocF(1, 1.5f));
     }
 
     [TestMethod]

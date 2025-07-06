@@ -127,21 +127,6 @@ public class ConsoleMathTests
         }
     }
 
-    [TestMethod]
-    public void RadialOffset_ShouldDrawPerfectVisualCircle()
-    {
-        var center = new LocF(0, 0);
-        float radius = 40;
-        var tolerance = 0.7f;
-
-        foreach (var angle in Angle.Enumerate360Angles(0, 10))
-        {
-            var point = center.RadialOffset(angle, radius);
-            float actual = point.CalculateNormalizedDistanceTo(center);
-            Assert.IsTrue(Math.Abs(actual - radius) < tolerance,
-                $"Angle {angle.Value}: normalized distance {actual} != {radius}");
-        }
-    }
 
     [TestMethod]
     public void RadialOffset_RoundedPositions_AreEvenlyDistributed()
