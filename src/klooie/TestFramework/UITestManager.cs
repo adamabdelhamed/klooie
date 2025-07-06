@@ -55,7 +55,10 @@ public sealed class UITestManager
 
     public UITestManager(ConsoleApp app, string testId, UITestMode mode)
     {
-        if(mode == UITestMode.HeadOnly)
+        if (Assembly.GetEntryAssembly().GetName().Name != "testhost") mode = UITestMode.HeadOnly;
+
+        this.mode = mode;
+        if (mode == UITestMode.HeadOnly)
         {
             ConsoleProvider.Current = new StdConsoleProvider();
             return;
@@ -63,7 +66,6 @@ public sealed class UITestManager
 
         this.testId = testId;
         this.app = app;
-        this.mode = mode;
 
         if (mode != UITestMode.Headless)
         {
