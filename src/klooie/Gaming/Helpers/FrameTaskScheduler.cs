@@ -57,36 +57,36 @@ public class FrameTaskScheduler : Recyclable
     private void Process()
     {
         var now = Game.Current.MainColliderGroup.Now;
-        if (!currentPassStartTime.HasValue || now - currentPassStartTime.Value > Frequency || pendingForCurrentFrequencyPeriod.Count == 0)
-        {
-            if (readyForNextFrequencyPeriod.Count == 0) return;
 
+        // Only proceed if it's the start of a new frequency period
+        if (!currentPassStartTime.HasValue || now - currentPassStartTime.Value >= Frequency)
+        {
+            currentPassStartTime = now;
+
+            // Move all ready tasks to pending for this period
+            if (readyForNextFrequencyPeriod.Count > 0)
+            {
+                pendingForCurrentFrequencyPeriod.Items.AddRange(readyForNextFrequencyPeriod.Items);
+                readyForNextFrequencyPeriod.Items.Clear();
+            }
+
+            // Check lateness
             var grace = .025 * (pendingForCurrentFrequencyPeriod.Count + readyForNextFrequencyPeriod.Count);
             if (pendingForCurrentFrequencyPeriod.Count > grace)
             {
                 _taskIsLate?.Fire(pendingForCurrentFrequencyPeriod.Count);
             }
-            currentPassStartTime = now;
-            pendingForCurrentFrequencyPeriod.Items.AddRange(readyForNextFrequencyPeriod.Items);
-            readyForNextFrequencyPeriod.Items.Clear();
         }
 
-        // Now check if there is work to do
+        // No processing if there are no tasks to run
         if (pendingForCurrentFrequencyPeriod.Count == 0)
-        {
-            // No tasks left after replenish, nothing to do this frame
             return;
-        }
-        int processed = 0;
-        var totalTasksPerFrequency = pendingForCurrentFrequencyPeriod.Count + readyForNextFrequencyPeriod.Count;
-        var framesPerFrequency = LayoutRootPanel.MaxPaintRate * (Frequency.TotalMilliseconds / 1000.0);
-        var tasksPerFrame = (int)Math.Ceiling(.98f * totalTasksPerFrequency / framesPerFrequency); // err on the side of being a little late to make sure we maximize the use of every frame
 
-        var remainingAfterThisFrame = pendingForCurrentFrequencyPeriod.Count - tasksPerFrame;
-        if(remainingAfterThisFrame < tasksPerFrame * .1f)
-        {
-            tasksPerFrame += remainingAfterThisFrame;
-        }
+        // Compute number of tasks to run *this frame*
+        int processed = 0;
+        var totalTasksPerFrequency = pendingForCurrentFrequencyPeriod.Count;
+        var framesPerFrequency = LayoutRootPanel.MaxPaintRate * (Frequency.TotalMilliseconds / 1000.0);
+        var tasksPerFrame = (int)Math.Ceiling(.98f * totalTasksPerFrequency / framesPerFrequency);
 
         while (processed < tasksPerFrame && pendingForCurrentFrequencyPeriod.Count > 0)
         {
@@ -107,7 +107,7 @@ public class FrameTaskScheduler : Recyclable
             }
             else
             {
-                lease.TryDispose(); 
+                lease.TryDispose();
             }
             processed++;
         }
