@@ -182,5 +182,32 @@ public class ConsoleApp : EventLoop
 
     public Task SendKey(ConsoleKeyInfo key) => focus.SendKey(key);
     public Task SendKey(ConsoleKey key, bool shift = false, bool alt = false, bool control = false) => SendKey(key.KeyInfo(shift, alt, control));
+
+    private LogTail logTail;
+    public void WriteLine(ConsoleString s)
+    {
+        if (logTail == null) EnsureLogTailInitialized();
+        logTail.WriteLine(s);
+    }
+    public void WriteLine(string s)
+    {
+        if (logTail == null) EnsureLogTailInitialized();
+        logTail?.WriteLine(s);
+    }
+
+    private void EnsureLogTailInitialized()
+    {
+        if (logTail != null) return;
+
+        logTail = LogTail.Create();
+        LayoutRoot.Add(logTail).DockToBottom(padding: 1).DockToRight(padding: 2);
+        logTail.ZIndex = int.MaxValue;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        logTail = null;
+    }
 }
 
