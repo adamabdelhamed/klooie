@@ -21,17 +21,18 @@ public class Walk : Movement
 
     private RectF? currentPointOfInterest;
 
+    public virtual RectF? GetPointOfInterest() => null;
     protected Walk() { }
-    public static Walk Create(Vision vision, Func<Movement, RectF?> pointOfInterestFunction, float baseSpeed, bool autoBindToVision = true)
+    public static Walk Create(Vision vision, float baseSpeed, bool autoBindToVision = true)
     {
         var state = pool.Value.Rent();
-        state.Construct(vision, pointOfInterestFunction, baseSpeed, autoBindToVision);
+        state.Construct(vision, baseSpeed, autoBindToVision);
         return state;
     }
 
-    protected void Construct(Vision vision, Func<Movement, RectF?> pointOfInterestFunction, float baseSpeed, bool autoBindToVision)
+    protected void Construct(Vision vision, float baseSpeed, bool autoBindToVision)
     {
-        base.Construct(vision, pointOfInterestFunction, baseSpeed);
+        base.Construct(vision, baseSpeed);
         Influence = MotionInfluence.Create("Wander Influence", true);
         Weights = WanderWeights.Default;
         AngleScores = RecyclableListPool<AngleScore>.Instance.Rent(100);
@@ -59,7 +60,7 @@ public class Walk : Movement
 
     public  RecyclableList<AngleScore> AdjustSpeedAndVelocity(out WanderWeights weights)
     {
-        currentPointOfInterest = PointOfInterestFunction != null ? PointOfInterestFunction(this) : null;
+        currentPointOfInterest = GetPointOfInterest();
         ComputeScores();
         weights = OptimizeWeights();
         ConsiderEmergencyMode();

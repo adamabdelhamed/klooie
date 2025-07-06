@@ -29,17 +29,11 @@ public class WalkingTests
             game.LayoutRoot.Background = new RGB(15, 0, 0);
 
             int currentPointOfInterestIndex = 0;
-            var pointsOfInterest = new[]
-            {
-                game.GameBounds.Center.Offset(35, 0).ToRect(4,2),
-                game.GameBounds.Center.Offset(-35, 0).ToRect(4,2),
-                game.GameBounds.Center.Offset(0, 17.5f).ToRect(4,2),
-                game.GameBounds.Center.Offset(0, -17.5f).ToRect(4,2)
-            };
+      
 
             var pointOfInterestCollider = game.GamePanel.Add(GameColliderPool.Instance.Rent());
-            pointOfInterestCollider.MoveTo(pointsOfInterest[0].Left, pointsOfInterest[0].Top);
-            pointOfInterestCollider.ResizeTo(pointsOfInterest[0].Width, pointsOfInterest[0].Height);
+            pointOfInterestCollider.MoveTo(WalkWithCustomPointsOfInterest.pointsOfInterest[0].Left, WalkWithCustomPointsOfInterest.pointsOfInterest[0].Top);
+            pointOfInterestCollider.ResizeTo(WalkWithCustomPointsOfInterest.pointsOfInterest[0].Width, WalkWithCustomPointsOfInterest.pointsOfInterest[0].Height);
             pointOfInterestCollider.Background = RGB.Green;
 
             var scheduler = FrameTaskScheduler.Create(TimeSpan.FromSeconds(.25f), Game.Current.PauseManager);
@@ -52,25 +46,25 @@ public class WalkingTests
             var visionFilter = new VisionFilter(vision);
             vision.AngleStep = 1;
             vision.MaxMemoryTime = TimeSpan.FromSeconds(0);
-            var walkFunction = Walk.Create(vision, (wander) => pointsOfInterest[currentPointOfInterestIndex], 80);
+            var walkFunction = WalkWithCustomPointsOfInterest.Create(vision, 80);
 
             AddObstacles(game, visionFilter);
 
             Game.Current.AfterPaint.Subscribe(() =>
             {
-                if (walker.CalculateNormalizedDistanceTo(pointsOfInterest[currentPointOfInterestIndex]) < 2)
+                if (walker.CalculateNormalizedDistanceTo(WalkWithCustomPointsOfInterest.pointsOfInterest[currentPointOfInterestIndex]) < 2)
                 {
                     currentPointOfInterestIndex++;
-                    if (currentPointOfInterestIndex >= pointsOfInterest.Length)
+                    if (currentPointOfInterestIndex >= WalkWithCustomPointsOfInterest.pointsOfInterest.Length)
                     {
                         Game.Current.Stop();
                     }
                     pointOfInterestCollider.Dispose();
                     pointOfInterestCollider = game.GamePanel.Add(GameColliderPool.Instance.Rent());
-                    pointOfInterestCollider.MoveTo(pointsOfInterest[currentPointOfInterestIndex].Left, pointsOfInterest[currentPointOfInterestIndex].Top);
-                    pointOfInterestCollider.ResizeTo(pointsOfInterest[currentPointOfInterestIndex].Width, pointsOfInterest[currentPointOfInterestIndex].Height);
+                    pointOfInterestCollider.MoveTo(walkFunction.GetPointOfInterest().Value.Left, walkFunction.GetPointOfInterest().Value.Top);
+                    pointOfInterestCollider.ResizeTo(walkFunction.GetPointOfInterest().Value.Width, walkFunction.GetPointOfInterest().Value.Height);
                     pointOfInterestCollider.Background = RGB.Green;
-                    Console.WriteLine($"Reached point of interest {pointsOfInterest[currentPointOfInterestIndex - 1]}");
+                    Console.WriteLine($"Reached point of interest {walkFunction.GetPointOfInterest().Value}");
                 }
 
             }, Game.Current);
@@ -95,3 +89,26 @@ public class WalkingTests
     }
 }
     
+public class WalkWithCustomPointsOfInterest : Walk
+{
+    public static RectF[] pointsOfInterest =>
+    [
+        Game.Current.GameBounds.Center.Offset(35, 0).ToRect(4,2),
+        Game.Current.GameBounds.Center.Offset(-35, 0).ToRect(4,2),
+        Game.Current.GameBounds.Center.Offset(0, 17.5f).ToRect(4,2),
+        Game.Current.GameBounds.Center.Offset(0, -17.5f).ToRect(4,2)
+    ];
+
+    public int CurrentPointOfInterestIndex { get; private set; } = 0;
+    protected WalkWithCustomPointsOfInterest() { }
+    private static LazyPool<WalkWithCustomPointsOfInterest> pool = new LazyPool<WalkWithCustomPointsOfInterest>(() => new WalkWithCustomPointsOfInterest());
+    public static WalkWithCustomPointsOfInterest Create(Vision vision, float speed = 1)
+    {
+        var state = pool.Value.Rent();
+        state.Construct(vision, speed, true);
+        state.CurrentPointOfInterestIndex = 0;
+        return state;
+    }
+
+    public override RectF? GetPointOfInterest() => pointsOfInterest[CurrentPointOfInterestIndex];
+}

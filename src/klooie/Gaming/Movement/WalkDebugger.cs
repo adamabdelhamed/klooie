@@ -22,16 +22,16 @@ public class DebuggableWalk : Walk
     public bool HasCollidedInPastSecond => Game.Current.MainColliderGroup.Now - lastCollisionTime < TimeSpan.FromSeconds(1);
     public bool HasBeenEvaluatedInPastSecond => Game.Current.MainColliderGroup.Now - lastVelocityEvaluationTime < TimeSpan.FromSeconds(1);
 
-    protected void Construct(Vision vision, Func<Movement, RectF?>? pointOfInterestFunction, float speed, bool autoBindToVision)
+    protected void Construct(Vision vision, float speed, bool autoBindToVision)
     {
-        base.Construct(vision, pointOfInterestFunction, speed, autoBindToVision);
+        base.Construct(vision, speed, autoBindToVision);
         Eye.Velocity.AfterEvaluate.Subscribe(this, static (me, eval) => me.OnAfterEvaluateVelocity(eval), this);
     }
 
-    public static DebuggableWalk Create(Vision vision, Func<Movement, RectF?> pointOfInterestFunction, float speed)
+    public static DebuggableWalk Create(Vision vision, float speed)
     {
         var state = pool.Value.Rent();
-        state.Construct(vision, pointOfInterestFunction, speed, true);
+        state.Construct(vision, speed, true);
         return state;
     }
 
