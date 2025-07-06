@@ -54,7 +54,7 @@ public class GameCollider : ConsoleControl
 
     private static void UpdateLastEvalTime(GameCollider collider)
     {
-        collider.lastEvalTime = (float)collider.ColliderGroup.Now.TotalSeconds;
+      //  collider.lastEvalTime = (float)collider.ColliderGroup.Now.TotalSeconds;
     }
 
     public GameCollider(RectF bounds, bool connectToMainColliderGroup = true) : this(connectToMainColliderGroup) => this.Bounds = bounds;
