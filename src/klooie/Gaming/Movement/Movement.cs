@@ -11,7 +11,7 @@ public interface IMovement
     Vision Vision { get; }
     GameCollider Eye { get; }
     Velocity Velocity { get; }
-    Func<Movement, RectF?> CuriosityPoint { get; set; }
+    Func<Movement, RectF?> PointOfInterestFunction { get; set; }
     public float BaseSpeed { get; set; }
 }
 
@@ -21,7 +21,7 @@ public abstract class Movement : DelayState, IMovement
     public Vision Vision { get; private set; }
     public Velocity Velocity => Eye.Velocity;
     public GameCollider Eye => Vision?.Eye;
-    public Func<Movement, RectF?> CuriosityPoint { get; set; }
+    public Func<Movement, RectF?> PointOfInterestFunction { get; set; }
     protected Movement() { }
 
     protected virtual void Construct(Vision vision, Func<Movement, RectF?> curiosityPoint, float baseSpeed)
@@ -31,7 +31,7 @@ public abstract class Movement : DelayState, IMovement
         AddDependency(vision.Eye);
         AddDependency(vision.Eye.Velocity);
         Vision = vision;
-        CuriosityPoint = curiosityPoint;
+        PointOfInterestFunction = curiosityPoint;
         BaseSpeed = baseSpeed;
     }
 
@@ -39,7 +39,7 @@ public abstract class Movement : DelayState, IMovement
     {
         base.OnReturn();
         Vision = null;
-        CuriosityPoint = null;
+        PointOfInterestFunction = null;
         BaseSpeed = 0;
     }
 }

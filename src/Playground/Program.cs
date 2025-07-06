@@ -1,1 +1,3 @@
-﻿Console.WriteLine("Hello, World!");
+﻿using tests.Gaming.Movement;
+
+new WalkingTests().Movement_WalkToPointsOfInterest();

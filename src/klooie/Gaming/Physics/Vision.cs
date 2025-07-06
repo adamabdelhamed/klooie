@@ -56,7 +56,7 @@ public class Vision : Recyclable, IFrameTask
         RemoveStaleTrackedObjects();
         if (Eye.IsVisible == false) return;
         var buffer = ObstacleBufferPool.Instance.Rent();
-        Eye.ColliderGroup.SpacialIndex.Query(Eye.Bounds.SweptAABB(Eye.Bounds.RadialOffset(Eye.Velocity.Angle, Range)), buffer);
+        Eye.ColliderGroup.SpacialIndex.Query(Eye.Bounds.SweptAABB(Eye.Bounds.Grow(.5f).RadialOffset(Eye.Velocity.Angle, Range*1.2f)), buffer);
         FilterObstacles(buffer);
         try
         {
@@ -80,27 +80,29 @@ public class Vision : Recyclable, IFrameTask
         
         for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
         {
-            var distance = Eye.CalculateNormalizedDistanceTo(buffer.WriteableBuffer[i]);
+            var candidate = buffer.WriteableBuffer[i];
+            if (candidate == Eye) continue; 
+            var distance = Eye.CalculateNormalizedDistanceTo(candidate);
             if (distance > Range) continue;
 
-            var angle = Eye.CalculateAngleTo(buffer.WriteableBuffer[i]);
-            var angleDiff = Eye.Velocity.Angle.DiffShortest(angle);
-            if (angleDiff > AngularVisibility) continue;
+            if (distance > 2f)
+            {
+                var angle = Eye.CalculateAngleTo(candidate);
+                var angleDiff = Eye.Velocity.Angle.DiffShortest(angle);
+                if (angleDiff > AngularVisibility) continue;
+            }
 
             var prediction = CollisionPredictionPool.Instance.Rent();
-            var obstruction = CollisionDetector.GetLineOfSightObstruction(Eye, buffer.WriteableBuffer[i], buffer.WriteableBuffer, CastingMode.Precise, prediction) as GameCollider;
+            var obstruction = CollisionDetector.GetLineOfSightObstruction(Eye, candidate, buffer.WriteableBuffer, CastingMode.SingleRay, prediction) as GameCollider;
             VisuallyTrackedObject? target = null;
-            if (obstruction != null || TryIgnorePotentialTargetIgnorable(buffer.WriteableBuffer[i], out target))
+            if (obstruction != null || TryIgnorePotentialTargetIgnorable(candidate, out target))
             {
-                if (target != null)
-                {
-                    throw new InvalidOperationException($"Target was present in visible objects, but should have been marked as stale.");
-                }
+                if (target != null) throw new InvalidOperationException($"Target was present in visible objects, but should have been marked as stale.");
                 prediction.TryDispose();
                 continue;
             }
 
-            var newItem =  VisuallyTrackedObject.Create(buffer.WriteableBuffer[i], prediction, prediction.LKGD, distance);
+            var newItem =  VisuallyTrackedObject.Create(candidate, prediction, prediction.LKGD, distance);
             TrackedObjectsDictionary.Add(newItem.Target, newItem);
             TrackedObjectsList.Add(newItem);
         }
@@ -243,6 +245,7 @@ public class Vision : Recyclable, IFrameTask
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     private bool IsIgnoredByFilter(GameCollider potentialTarget)
     {
+        if(potentialTarget == Eye)return true;
         targetFilterContext.Reset(potentialTarget);
         _targetBeingEvaluated?.Fire(targetFilterContext);
         return targetFilterContext.Ignored;
@@ -364,7 +367,7 @@ public class VisionFilter : IConsoleControlFilter
         }
 
         var ageSeconds = (float)vto.TimeSinceLastSeen.TotalSeconds;
-        var staleness =  ageSeconds / (float)Vision.MaxMemoryTime.TotalSeconds;
+        var staleness = Vision.MaxMemoryTime == TimeSpan.Zero ? 0 :  ageSeconds / (float)Vision.MaxMemoryTime.TotalSeconds;
 
         bitmap.Fill(SeenNow.ToOther(NotSeen, staleness)); 
     }

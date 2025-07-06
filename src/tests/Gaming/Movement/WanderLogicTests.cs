@@ -88,9 +88,9 @@ public class WanderLogicTests
             {
                 stack.Add(new ConsoleStringRenderer($"Inertia Score: {score.Inertia}    Weight: {weights.InertiaWeight}".ToConsoleString(LabelColor(score.Inertia))));
             }
-            if(weights.CuriosityWeight > 0)
+            if(weights.PointOfInterestWeight > 0)
             {
-                stack.Add(new ConsoleStringRenderer($"Curiosity Point: {curiosityPoint?.ToString() ?? "None"}".ToConsoleString(LabelColor(score.Curiosity))));
+                stack.Add(new ConsoleStringRenderer($"Curiosity Point: {curiosityPoint?.ToString() ?? "None"}".ToConsoleString(LabelColor(score.PointOfInterest))));
             }
             stack.Add(new ConsoleStringRenderer($"Total Score: {score.GetTotal(weights)}".ToConsoleString(lineColor))); // Use the same color as the line for visual tie-in
             await context.PaintAndRecordKeyFrameAsync();

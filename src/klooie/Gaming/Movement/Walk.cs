@@ -22,16 +22,16 @@ public class Walk : Movement
     private RectF? currentPointOfInterest;
 
     protected Walk() { }
-    public static Walk Create(Vision vision, Func<Movement, RectF?> curiosityPoint, float baseSpeed, bool autoBindToVision = true)
+    public static Walk Create(Vision vision, Func<Movement, RectF?> pointOfInterestFunction, float baseSpeed, bool autoBindToVision = true)
     {
         var state = pool.Value.Rent();
-        state.Construct(vision, curiosityPoint, baseSpeed, autoBindToVision);
+        state.Construct(vision, pointOfInterestFunction, baseSpeed, autoBindToVision);
         return state;
     }
 
-    protected void Construct(Vision vision, Func<Movement, RectF?> curiosityPoint, float baseSpeed, bool autoBindToVision)
+    protected void Construct(Vision vision, Func<Movement, RectF?> pointOfInterestFunction, float baseSpeed, bool autoBindToVision)
     {
-        base.Construct(vision, curiosityPoint, baseSpeed);
+        base.Construct(vision, pointOfInterestFunction, baseSpeed);
         Influence = MotionInfluence.Create("Wander Influence", true);
         Weights = WanderWeights.Default;
         AngleScores = RecyclableListPool<AngleScore>.Instance.Rent(100);
@@ -59,7 +59,7 @@ public class Walk : Movement
 
     public  RecyclableList<AngleScore> AdjustSpeedAndVelocity(out WanderWeights weights)
     {
-        currentPointOfInterest = CuriosityPoint != null ? CuriosityPoint(this) : null;
+        currentPointOfInterest = PointOfInterestFunction != null ? PointOfInterestFunction(this) : null;
         ComputeScores();
         weights = OptimizeWeights();
         ConsiderEmergencyMode();
@@ -116,14 +116,14 @@ public class Walk : Movement
 
         if(currentPointOfInterest.HasValue == false)
         {
-            weights.CuriosityWeight = 0f; // No point of interest, no curiosity
+            weights.PointOfInterestWeight = 0f; // No point of interest
         }
 
         if (minCollision > 0.8f && collisionSpread < 0.1f)
         {
             // if there is little risk of collision then reduce its weight
             weights.CollisionWeight = 0f;
-            weights.CuriosityWeight *= 2;
+            weights.PointOfInterestWeight *= 2;
         }
 
         weights.InertiaWeight = weights.InertiaWeight * LastFewAngles.Count / (float)MaxHistory; // More inertia if we have more history
@@ -161,19 +161,19 @@ public class Walk : Movement
     {
         var inertiaAngle = AverageAngle(LastFewAngles.Items, Velocity.Angle);
 
-        Angle? curiosityAngle = null;
+        Angle? pointOfInterestAngle = null;
 
         if (currentPointOfInterest.HasValue)
         {
-            curiosityAngle = Eye.CalculateAngleTo(currentPointOfInterest.Value);
+            pointOfInterestAngle = Eye.CalculateAngleTo(currentPointOfInterest.Value);
 #if DEBUG
-            (this as DebuggableWalk)?.HighlightAngle("CuriosityAngle", () => curiosityAngle, RGB.Magenta);
+            (this as DebuggableWalk)?.HighlightAngle("PointOfInterestAngle", () => pointOfInterestAngle, RGB.Magenta);
 #endif
         }
         else
         {
 #if DEBUG
-            (this as DebuggableWalk)?.HighlightAngle("CuriosityAngle", () => null, RGB.Magenta);
+            (this as DebuggableWalk)?.HighlightAngle("PointOfInterestAngle", () => null, RGB.Magenta);
 #endif
         }
         
@@ -183,12 +183,12 @@ public class Walk : Movement
         float travelCompleted = 0f;
 
         Angle baseAngle = Velocity.Angle;
-        if (curiosityAngle.HasValue && !IsCurrentlyCloseEnoughToPointOfInterest)
+        if (pointOfInterestAngle.HasValue && !IsCurrentlyCloseEnoughToPointOfInterest)
         {
-            baseAngle = curiosityAngle.Value;
+            baseAngle = pointOfInterestAngle.Value;
         }
 
-        ScoreAngle(inertiaAngle, curiosityAngle, baseAngle); // score the current angle first
+        ScoreAngle(inertiaAngle, pointOfInterestAngle, baseAngle); // score the current angle first
 
         float travelPerStep = 2f;
 
@@ -198,18 +198,18 @@ public class Walk : Movement
             var rightCandidate = baseAngle.Add(travelPerStep + travelCompleted);
             travelCompleted += travelPerStep;
 
-            ScoreAngle(inertiaAngle, curiosityAngle, leftCandidate);
-            ScoreAngle(inertiaAngle, curiosityAngle, rightCandidate);
+            ScoreAngle(inertiaAngle, pointOfInterestAngle, leftCandidate);
+            ScoreAngle(inertiaAngle, pointOfInterestAngle, rightCandidate);
         }
     }
 
-    private void ScoreAngle(Angle inertiaAngle, Angle? curiosityAngle, Angle candidate)
+    private void ScoreAngle(Angle inertiaAngle, Angle? pointOfInterestAngle, Angle candidate)
     {
         // Compute raw components
         float rawCollision = PredictCollision(candidate);
         float rawInertia = candidate.DiffShortest(inertiaAngle);
         float rawForward = candidate.DiffShortest(Velocity.Angle);
-        float rawCuriosity = curiosityAngle.HasValue ? candidate.DiffShortest(curiosityAngle.Value) : Vision.AngularVisibility;
+        float rawPointOfInterest = pointOfInterestAngle.HasValue ? candidate.DiffShortest(pointOfInterestAngle.Value) : Vision.AngularVisibility;
 
         // Normalise [0,1]
         float normCollision = DangerClamp(rawCollision);
@@ -226,9 +226,9 @@ public class Walk : Movement
         normCollision *= repulsionPenalty;
         float normInertia = 1f - Clamp01(rawInertia / 180);            // smaller deviation -> better
         float normForward = 1f - Clamp01(rawForward / 90);
-        float normCuriosity = 1f - Clamp01(rawCuriosity / 180);
+        float normPointOfInterest = 1f - Clamp01(rawPointOfInterest / 180);
 
-        var score = new AngleScore(candidate, normCollision, normInertia, normForward, normCuriosity);
+        var score = new AngleScore(candidate, normCollision, normInertia, normForward, normPointOfInterest);
         AngleScores.Items.Add(score);
     }
 
@@ -355,30 +355,30 @@ public class Walk : Movement
 public readonly struct AngleScore
 {
     public readonly Angle Angle;
-    public readonly float Collision, Inertia, Forward, Curiosity;
-    public AngleScore(Angle angle, float collision, float inertia, float forward, float curiosity)
+    public readonly float Collision, Inertia, Forward, PointOfInterest;
+    public AngleScore(Angle angle, float collision, float inertia, float forward, float pointOfInterest)
     {
         Angle = angle;
         Collision = collision;
         Inertia = inertia;
         Forward = forward;
-        Curiosity = curiosity;
+        PointOfInterest = pointOfInterest;
     }
     public float GetTotal(WanderWeights w)
     {
-        float sumWeights = w.CollisionWeight + w.InertiaWeight + w.ForwardWeight + w.CuriosityWeight;
+        float sumWeights = w.CollisionWeight + w.InertiaWeight + w.ForwardWeight + w.PointOfInterestWeight;
         if (sumWeights <= 0f) sumWeights = 1f;
         return (
             Collision * w.CollisionWeight +
             Inertia * w.InertiaWeight +
             Forward * w.ForwardWeight +
-            Curiosity * w.CuriosityWeight
+            PointOfInterest * w.PointOfInterestWeight
         ) / sumWeights;
     }
 
     public override string ToString()
     {
-        return $"Angle: {Angle}, Collision: {Collision}, Inertia: {Inertia}, Forward: {Forward}, Curiosity: {Curiosity}";
+        return $"Angle: {Angle}, Collision: {Collision}, Inertia: {Inertia}, Forward: {Forward}, PointOfInterest: {PointOfInterest}";
     }
 }
 
@@ -392,13 +392,13 @@ public struct WanderWeights
     public float CollisionWeight;
     public float InertiaWeight;
     public float ForwardWeight;
-    public float CuriosityWeight;
+    public float PointOfInterestWeight;
 
     public static readonly WanderWeights Default = new WanderWeights
     {
         CollisionWeight = 2.5f,
         InertiaWeight = 0.1f,
         ForwardWeight = 0.05f,
-        CuriosityWeight = 0.3f
+        PointOfInterestWeight = 0.3f
     };
 }
