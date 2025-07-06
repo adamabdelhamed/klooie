@@ -85,23 +85,11 @@ public readonly struct LocF
         return new LocF(x2, y2);
     }
 
-    public LocF RadialOffset(Angle angle, float distance, bool normalized = true)
+    public LocF RadialOffset(Angle angle, float radius, float aspectRatio = 2.0f)
     {
-        if (normalized)
-        {
-            distance = ConsoleMath.NormalizeQuantity(distance, angle.Value);
-        }
-        var forward = angle.Value > 270 || angle.Value < 90;
-        var up = angle.Value > 180;
-
-        // convert to radians
-        angle = (float)(angle.Value * Math.PI / 180);
-        float dy = (float)Math.Abs(distance * Math.Sin(angle.Value));
-        float dx = (float)Math.Sqrt((distance * distance) - (dy * dy));
-
-        float x2 = forward ? Left + dx : Left - dx;
-        float y2 = up ? Top - dy : Top + dy;
-
+        float rad = angle.Value * MathF.PI / 180;
+        float x2 = Left + radius * MathF.Cos(rad);
+        float y2 = Top + radius * MathF.Sin(rad) / aspectRatio;
         return new LocF(x2, y2);
     }
 
