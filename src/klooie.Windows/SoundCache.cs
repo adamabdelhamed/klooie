@@ -38,9 +38,9 @@ internal sealed class CachedSound
     public int SampleCount { get; }
     public WaveFormat WaveFormat { get; }
 
-    private const int ExpectedSampleRate = 44100;
-    private const int ExpectedChannels = 2;
-    private const int ExpectedBitsPerSample = 16;
+    public const int ExpectedSampleRate = 44100;
+    public const int ExpectedChannels = 2;
+    public const int ExpectedBitsPerSample = 16;
 
     public CachedSound(Func<Stream> streamFactory)
     {

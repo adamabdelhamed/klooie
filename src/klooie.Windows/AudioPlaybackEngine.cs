@@ -1,4 +1,6 @@
-﻿using NAudio.Wave;
+﻿using klooie.Gaming;
+using NAudio.CoreAudioApi;
+using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System.Diagnostics;
 
@@ -23,7 +25,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             var sw = Stopwatch.StartNew();
             MasterVolume = VolumeKnob.Create();
             mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
-            outputDevice = new WaveOutEvent();
+            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 100); // Try 10–40ms
             outputDevice.Init(mixer);
             outputDevice.Play();
             soundCache = new SoundCache(LoadSounds());
@@ -43,6 +45,23 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null) 
         => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
 
+    public SynthVoiceProvider PlayTimedNote(float frequencyHz, double durationSeconds, SynthPatch patch, VolumeKnob? knob = null)
+    {
+        patch.Velocity = knob?.Volume ?? 1f;
+        var voice = SynthVoiceProvider.Create(frequencyHz, durationSeconds, patch, MasterVolume, knob);
+        mixer.AddMixerInput(voice);
+        var scheduler = Game.Current?.PausableScheduler ?? ConsoleApp.Current.Scheduler;
+        scheduler.Delay(durationSeconds * 1000, voice.ReleaseNote);
+        return voice;
+    }
+
+    public SynthVoiceProvider PlaySustainedNote(float frequencyHz, SynthPatch patch, VolumeKnob? knob = null)
+    {
+        patch.Velocity = knob?.Volume ?? 1f;
+        var voice = SynthVoiceProvider.Create(frequencyHz, durationSeconds: double.MaxValue, patch, MasterVolume, knob);
+        mixer.AddMixerInput(voice);
+        return voice;
+    }
 
     private void AddMixerInput(RecyclableSampleProvider? sample)
     {
