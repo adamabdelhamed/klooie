@@ -5,7 +5,7 @@ namespace klooie.Gaming;
 public class Wander : Movement
 {
     private const float MaxCollisionHorizon = 1.25f;   // seconds – > this long = perfectly safe
-
+    private const int MaxHistory = 10; // How many angles to keep in history for inertia calculation
     public MotionInfluence Influence { get; private set; }
     public RecyclableList<Angle> LastFewAngles;
     public RecyclableList<RectF> LastFewRoundedBounds;
@@ -18,6 +18,8 @@ public class Wander : Movement
     public bool IsCurrentlyCloseEnoughToPointOfInterest;
 
     private static LazyPool<Wander> pool = new LazyPool<Wander>(() => new Wander());
+
+    private RectF? currentPointOfInterest;
 
     protected Wander() { }
     public static Wander Create(Vision vision, Func<Movement, RectF?> curiosityPoint, float baseSpeed, bool autoBindToVision = true)
@@ -52,31 +54,31 @@ public class Wander : Movement
             return;
         }
         FrameDebugger.RegisterTask(nameof(Wander));
-        var scores = AdjustSpeedAndVelocity();
-        //onNewScoresAvailable?.Fire(scores.Items);
+        var scores = AdjustSpeedAndVelocity(out _);
     }
 
-    public  RecyclableList<AngleScore> AdjustSpeedAndVelocity()
+    public  RecyclableList<AngleScore> AdjustSpeedAndVelocity(out WanderWeights weights)
     {
+        currentPointOfInterest = CuriosityPoint != null ? CuriosityPoint(this) : null;
         ComputeScores();
+        weights = OptimizeWeights();
         ConsiderEmergencyMode();
         // pick best angle
         AngleScore best = AngleScores[0];
         for (int i = 1; i < AngleScores.Count; i++)
         {
-            if (AngleScores[i].Total > best.Total)
+            if (AngleScores[i].GetTotal(weights) > best.GetTotal(weights))
             {
                 best = AngleScores[i];
             }
         }
         var angle = best.Angle;
-        var speed = EvaluateSpeed(angle, best.Total);
-
+        var speed = EvaluateSpeed(angle, best.GetTotal(weights));
         Influence.Angle = angle;
         Influence.DeltaSpeed = speed;
 #if DEBUG
 
-        if(Velocity.ContainsInfluence(Influence) == false) throw new InvalidOperationException("Wander Influence not found in Velocity influences. This is a bug in the code, please report it.");
+        if (Velocity.ContainsInfluence(Influence) == false) throw new InvalidOperationException("Wander Influence not found in Velocity influences. This is a bug in the code, please report it.");
         (this as WanderDebugger)?.HighlightAngle("BestAngle", () => angle, RGB.Green);
         (this as WanderDebugger)?.ApplyMovingFreeFilter();
 #endif
@@ -84,18 +86,48 @@ public class Wander : Movement
 
         // Update inertia history
         LastFewAngles.Items.Add(angle);
-        if (LastFewAngles.Count > 10) LastFewAngles.Items.RemoveAt(0);
+        if (LastFewAngles.Count > MaxHistory) LastFewAngles.Items.RemoveAt(0);
 
         var rounded = Eye.Bounds.Round();
-
         LastFewRoundedBounds.Items.Add(rounded);
-        if (LastFewRoundedBounds.Count > 10)
-            LastFewRoundedBounds.Items.RemoveAt(0);
+        if (LastFewRoundedBounds.Count > MaxHistory) LastFewRoundedBounds.Items.RemoveAt(0);
 #if DEBUG
         (this as WanderDebugger)?.RefreshLoopRunningFilter();
 #endif
 
         return AngleScores;
+    }
+
+    private WanderWeights OptimizeWeights()
+    {
+        WanderWeights weights;
+        float minCollision = float.MaxValue, maxCollision = float.MinValue, sumCollision = 0f;
+        for (int i = 0; i < AngleScores.Count; i++)
+        {
+            float c = AngleScores[i].Collision;
+            if (c < minCollision) minCollision = c;
+            if (c > maxCollision) maxCollision = c;
+            sumCollision += c;
+        }
+        float avgCollision = sumCollision / AngleScores.Count;
+        float collisionSpread = maxCollision - minCollision;
+
+        weights = Weights; 
+
+        if(currentPointOfInterest.HasValue == false)
+        {
+            weights.CuriosityWeight = 0f; // No point of interest, no curiosity
+        }
+
+        if (minCollision > 0.8f && collisionSpread < 0.1f)
+        {
+            // if there is little risk of collision then reduce its weight
+            weights.CollisionWeight = 0f;
+            weights.CuriosityWeight *= 2;
+        }
+
+        weights.InertiaWeight = weights.InertiaWeight * LastFewAngles.Count / (float)MaxHistory; // More inertia if we have more history
+        return weights;
     }
 
     // --- Private helpers -------------------------------------------------------------------
@@ -130,26 +162,24 @@ public class Wander : Movement
         var inertiaAngle = AverageAngle(LastFewAngles.Items, Velocity.Angle);
 
         Angle? curiosityAngle = null;
-        if (CuriosityPoint != null)
+
+        if (currentPointOfInterest.HasValue)
         {
-            var target = CuriosityPoint(this);
-            if (target.HasValue)
-            {
-                curiosityAngle = Eye.CalculateAngleTo(target.Value);
+            curiosityAngle = Eye.CalculateAngleTo(currentPointOfInterest.Value);
 #if DEBUG
-                (this as WanderDebugger)?.HighlightAngle("CuriosityAngle", () => curiosityAngle, RGB.Magenta);
+            (this as WanderDebugger)?.HighlightAngle("CuriosityAngle", () => curiosityAngle, RGB.Magenta);
 #endif
-            }
-            else
-            {
-#if DEBUG
-                (this as WanderDebugger)?.HighlightAngle("CuriosityAngle", () => null, RGB.Magenta);
-#endif
-            }
         }
+        else
+        {
+#if DEBUG
+            (this as WanderDebugger)?.HighlightAngle("CuriosityAngle", () => null, RGB.Magenta);
+#endif
+        }
+        
 
         AngleScores.Items.Clear();
-        var totalAngularTravel = 180f;
+        var totalAngularTravel = 225f;
         float travelCompleted = 0f;
 
         Angle baseAngle = Velocity.Angle;
@@ -160,8 +190,7 @@ public class Wander : Movement
 
         ScoreAngle(inertiaAngle, curiosityAngle, baseAngle); // score the current angle first
 
-        float travelPerStep = 12f;
-        travelPerStep = 6f + (18f - 6f) * (AngleScores.Count > 0 ? AngleScores[0].Total : 0.5f);
+        float travelPerStep = 2f;
 
         while (travelCompleted < totalAngularTravel)
         {
@@ -199,27 +228,7 @@ public class Wander : Movement
         float normForward = 1f - Clamp01(rawForward / 90);
         float normCuriosity = 1f - Clamp01(rawCuriosity / 180);
 
-        float inertiaWeight = Weights.InertiaWeight;
-        float curiosityWeight = Weights.CuriosityWeight;
-        if (LastFewAngles.Count == 0)
-        {
-            normInertia = 0f;          // Could be any value—weight will be zero
-            inertiaWeight = 0f;
-        }
-
-        if (curiosityAngle.HasValue == false)
-        {
-            normCuriosity = 0f;       // No curiosity point, so no curiosity score
-            curiosityWeight = 0f; // No curiosity point, so no curiosity score
-        }
-
-        var score = new AngleScore(candidate, normCollision, normInertia, normForward, normCuriosity, new WanderWeights()
-        {
-            CollisionWeight = Weights.CollisionWeight,
-            InertiaWeight = inertiaWeight,
-            ForwardWeight = Weights.ForwardWeight,
-            CuriosityWeight = curiosityWeight
-        });
+        var score = new AngleScore(candidate, normCollision, normInertia, normForward, normCuriosity);
         AngleScores.Items.Add(score);
     }
 
@@ -236,7 +245,7 @@ public class Wander : Movement
 
     // We are single threaded so it's safe
     private static HashSet<RectF> sharedUniqueModeHashSet = new HashSet<RectF>();
-    private bool CalculateIsStuck(int window = 5, int maxUnique = 4)
+    private bool CalculateIsStuck(int window = 5, int maxUnique = 3)
     {
         if (IsCurrentlyCloseEnoughToPointOfInterest) return false;
         if (LastFewRoundedBounds.Count < window) return false;
@@ -253,8 +262,7 @@ public class Wander : Movement
     private float EvaluateSpeed(Angle chosenAngle, float confidence)
     {
         if (BaseSpeed == 0) throw new Exception("Zero Speed Yo");
-        var pointOfInterest = CuriosityPoint == null ? null : CuriosityPoint.Invoke(this);
-        IsCurrentlyCloseEnoughToPointOfInterest = pointOfInterest.HasValue && Eye.Bounds.CalculateNormalizedDistanceTo(pointOfInterest.Value) <= CloseEnough;
+        IsCurrentlyCloseEnoughToPointOfInterest = currentPointOfInterest.HasValue && Eye.Bounds.CalculateNormalizedDistanceTo(currentPointOfInterest.Value) <= CloseEnough;
 
         if (IsCurrentlyCloseEnoughToPointOfInterest) return 0;
 
@@ -285,7 +293,7 @@ public class Wander : Movement
                 angle,
                 buffer.WriteableBuffer,
                 Vision.Range,
-                CastingMode.Rough,
+                CastingMode.Precise,
                 buffer.WriteableBuffer.Count,
                 prediction);
 
@@ -347,30 +355,30 @@ public class Wander : Movement
 public readonly struct AngleScore
 {
     public readonly Angle Angle;
-    public readonly float Collision;   // 1 means no imminent collision
-    public readonly float Inertia;     // 1 means perfectly aligned with recent direction
-    public readonly float Forward;     // 1 means continues roughly forward
-    public readonly float Curiosity;   // 1 means directly towards curiosity point (if any)
-    public readonly float Total;       // Weighted sum of the four components (already in [0,1] by design)
-    public readonly WanderWeights Weights; // Weights used to compute the score
-    public AngleScore(Angle angle, float collision, float inertia, float forward, float curiosity, WanderWeights w)
+    public readonly float Collision, Inertia, Forward, Curiosity;
+    public AngleScore(Angle angle, float collision, float inertia, float forward, float curiosity)
     {
-        Weights = w;
         Angle = angle;
         Collision = collision;
         Inertia = inertia;
         Forward = forward;
         Curiosity = curiosity;
-
+    }
+    public float GetTotal(WanderWeights w)
+    {
         float sumWeights = w.CollisionWeight + w.InertiaWeight + w.ForwardWeight + w.CuriosityWeight;
-        if (sumWeights <= 0f) sumWeights = 1f; // avoid divide by zero
-
-        Total = (
+        if (sumWeights <= 0f) sumWeights = 1f;
+        return (
             Collision * w.CollisionWeight +
             Inertia * w.InertiaWeight +
             Forward * w.ForwardWeight +
             Curiosity * w.CuriosityWeight
         ) / sumWeights;
+    }
+
+    public override string ToString()
+    {
+        return $"Angle: {Angle}, Collision: {Collision}, Inertia: {Inertia}, Forward: {Forward}, Curiosity: {Curiosity}";
     }
 }
 
@@ -388,9 +396,9 @@ public struct WanderWeights
 
     public static readonly WanderWeights Default = new WanderWeights
     {
-        CollisionWeight = 1.10f,
-        InertiaWeight = 0.2f,
-        ForwardWeight = 0.15f,
-        CuriosityWeight = 0.7f
+        CollisionWeight = 2.5f,
+        InertiaWeight = 0.1f,
+        ForwardWeight = 0.05f,
+        CuriosityWeight = 0.3f
     };
 }

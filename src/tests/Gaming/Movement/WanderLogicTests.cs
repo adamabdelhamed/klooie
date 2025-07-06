@@ -48,16 +48,16 @@ public class WanderLogicTests
 
         var state = Wander.Create(vision, (s) => curiosityPoint,  1, autoBindToVision: false);
         mover.Velocity.Speed = 20;
-        var scores = state.AdjustSpeedAndVelocity();
+        var scores = state.AdjustSpeedAndVelocity(out WanderWeights weights);
         mover.Velocity.Speed = 0;
-        var maxScore = scores.Items.Max(s => s.Total);
+        var maxScore = scores.Items.Max(s => s.GetTotal(weights));
 
         int z = -1;
         foreach (var score in scores.Items)
         {
             var seen = new HashSet<Loc>();
-            var isMax = score.Total == maxScore;
-            var lineColor = ColorForScore(score.Total, isMax);
+            var isMax = score.GetTotal(weights) == maxScore;
+            var lineColor = ColorForScore(score.GetTotal(weights), isMax);
             var lineStart = moverPosition.TopLeft;
             var lineEnd = moverPosition.TopLeft.RadialOffset(score.Angle, vision.Range);
             var bufferLength = ConsoleBitmap.DefineLineBuffered(
@@ -81,18 +81,18 @@ public class WanderLogicTests
             RGB LabelColor(float val) => RGB.White.ToOther(RGB.Green, val);
 
             var stack = Game.Current.GamePanel.Add(new StackPanel() {   AutoSize = StackPanel.AutoSizeMode.Both }).DockToBottom().DockToRight();
-            stack.Add(new ConsoleStringRenderer($"Angle: {score.Angle} degrees".ToConsoleString(LabelColor(score.Total))));
-            stack.Add(new ConsoleStringRenderer($"Collision Score: {score.Collision}    Weight: {score.Weights.CollisionWeight}".ToConsoleString(LabelColor(score.Collision))));
-            stack.Add(new ConsoleStringRenderer($"Forward Score: {score.Forward}    Weight: {score.Weights.ForwardWeight}".ToConsoleString(LabelColor(score.Forward))));
-            if (score.Weights.InertiaWeight > 0)
+            stack.Add(new ConsoleStringRenderer($"Angle: {score.Angle} degrees".ToConsoleString(LabelColor(score.GetTotal(weights)))));
+            stack.Add(new ConsoleStringRenderer($"Collision Score: {score.Collision}    Weight: {weights.CollisionWeight}".ToConsoleString(LabelColor(score.Collision))));
+            stack.Add(new ConsoleStringRenderer($"Forward Score: {score.Forward}    Weight: {weights.ForwardWeight}".ToConsoleString(LabelColor(score.Forward))));
+            if (weights.InertiaWeight > 0)
             {
-                stack.Add(new ConsoleStringRenderer($"Inertia Score: {score.Inertia}    Weight: {score.Weights.InertiaWeight}".ToConsoleString(LabelColor(score.Inertia))));
+                stack.Add(new ConsoleStringRenderer($"Inertia Score: {score.Inertia}    Weight: {weights.InertiaWeight}".ToConsoleString(LabelColor(score.Inertia))));
             }
-            if(score.Weights.CuriosityWeight > 0)
+            if(weights.CuriosityWeight > 0)
             {
                 stack.Add(new ConsoleStringRenderer($"Curiosity Point: {curiosityPoint?.ToString() ?? "None"}".ToConsoleString(LabelColor(score.Curiosity))));
             }
-            stack.Add(new ConsoleStringRenderer($"Total Score: {score.Total}".ToConsoleString(lineColor))); // Use the same color as the line for visual tie-in
+            stack.Add(new ConsoleStringRenderer($"Total Score: {score.GetTotal(weights)}".ToConsoleString(lineColor))); // Use the same color as the line for visual tie-in
             await context.PaintAndRecordKeyFrameAsync();
             stack.Dispose();
         }
