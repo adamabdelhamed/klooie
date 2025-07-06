@@ -52,7 +52,7 @@ public class WalkingTests
             var visionFilter = new VisionFilter(vision);
             vision.AngleStep = 1;
             vision.MaxMemoryTime = TimeSpan.FromSeconds(0);
-            var walkFunction = Wander.Create(vision, (wander) => pointsOfInterest[currentPointOfInterestIndex], 80);
+            var walkFunction = Walk.Create(vision, (wander) => pointsOfInterest[currentPointOfInterestIndex], 80);
 
             AddObstacles(game, visionFilter);
 

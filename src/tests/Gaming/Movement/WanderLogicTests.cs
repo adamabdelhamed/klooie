@@ -46,7 +46,7 @@ public class WanderLogicTests
 
         await context.PaintAndRecordKeyFrameAsync();
 
-        var state = Wander.Create(vision, (s) => curiosityPoint,  1, autoBindToVision: false);
+        var state = Walk.Create(vision, (s) => curiosityPoint,  1, autoBindToVision: false);
         mover.Velocity.Speed = 20;
         var scores = state.AdjustSpeedAndVelocity(out WanderWeights weights);
         mover.Velocity.Speed = 0;

@@ -2,7 +2,7 @@
 
 namespace klooie.Gaming;
 
-public class Wander : Movement
+public class Walk : Movement
 {
     private const float MaxCollisionHorizon = 1.25f;   // seconds – > this long = perfectly safe
     private const int MaxHistory = 10; // How many angles to keep in history for inertia calculation
@@ -17,12 +17,12 @@ public class Wander : Movement
 
     public bool IsCurrentlyCloseEnoughToPointOfInterest;
 
-    private static LazyPool<Wander> pool = new LazyPool<Wander>(() => new Wander());
+    private static LazyPool<Walk> pool = new LazyPool<Walk>(() => new Walk());
 
     private RectF? currentPointOfInterest;
 
-    protected Wander() { }
-    public static Wander Create(Vision vision, Func<Movement, RectF?> curiosityPoint, float baseSpeed, bool autoBindToVision = true)
+    protected Walk() { }
+    public static Walk Create(Vision vision, Func<Movement, RectF?> curiosityPoint, float baseSpeed, bool autoBindToVision = true)
     {
         var state = pool.Value.Rent();
         state.Construct(vision, curiosityPoint, baseSpeed, autoBindToVision);
@@ -53,7 +53,7 @@ public class Wander : Movement
             TryDispose();
             return;
         }
-        FrameDebugger.RegisterTask(nameof(Wander));
+        FrameDebugger.RegisterTask(nameof(Walk));
         var scores = AdjustSpeedAndVelocity(out _);
     }
 
@@ -79,8 +79,8 @@ public class Wander : Movement
 #if DEBUG
 
         if (Velocity.ContainsInfluence(Influence) == false) throw new InvalidOperationException("Wander Influence not found in Velocity influences. This is a bug in the code, please report it.");
-        (this as WanderDebugger)?.HighlightAngle("BestAngle", () => angle, RGB.Green);
-        (this as WanderDebugger)?.ApplyMovingFreeFilter();
+        (this as DebuggableWalk)?.HighlightAngle("BestAngle", () => angle, RGB.Green);
+        (this as DebuggableWalk)?.ApplyMovingFreeFilter();
 #endif
 
 
@@ -92,7 +92,7 @@ public class Wander : Movement
         LastFewRoundedBounds.Items.Add(rounded);
         if (LastFewRoundedBounds.Count > MaxHistory) LastFewRoundedBounds.Items.RemoveAt(0);
 #if DEBUG
-        (this as WanderDebugger)?.RefreshLoopRunningFilter();
+        (this as DebuggableWalk)?.RefreshLoopRunningFilter();
 #endif
 
         return AngleScores;
@@ -139,7 +139,7 @@ public class Wander : Movement
         {
             IsStuck = true;
 #if DEBUG
-            (this as WanderDebugger)?.ApplyStuckFilter();
+            (this as DebuggableWalk)?.ApplyStuckFilter();
 #endif
             LastFewAngles.Items.Clear();
             LastFewRoundedBounds.Items.Clear();
@@ -148,7 +148,7 @@ public class Wander : Movement
         {
             IsStuck = false;
 #if DEBUG
-            (this as WanderDebugger)?.ClearStuckFilter();
+            (this as DebuggableWalk)?.ClearStuckFilter();
 #endif
         }
     }
@@ -167,13 +167,13 @@ public class Wander : Movement
         {
             curiosityAngle = Eye.CalculateAngleTo(currentPointOfInterest.Value);
 #if DEBUG
-            (this as WanderDebugger)?.HighlightAngle("CuriosityAngle", () => curiosityAngle, RGB.Magenta);
+            (this as DebuggableWalk)?.HighlightAngle("CuriosityAngle", () => curiosityAngle, RGB.Magenta);
 #endif
         }
         else
         {
 #if DEBUG
-            (this as WanderDebugger)?.HighlightAngle("CuriosityAngle", () => null, RGB.Magenta);
+            (this as DebuggableWalk)?.HighlightAngle("CuriosityAngle", () => null, RGB.Magenta);
 #endif
         }
         

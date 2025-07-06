@@ -3,7 +3,7 @@ using PowerArgs;
 
 #if DEBUG
 namespace klooie.Gaming;
-public class WanderDebugger : Wander
+public class DebuggableWalk : Walk
 {
     private static readonly BackgroundColorFilter StuckFilter = new BackgroundColorFilter(RGB.Orange);
     private static readonly BackgroundColorFilter HasMovedRecentlyFilter = new BackgroundColorFilter(RGB.Green);
@@ -12,7 +12,7 @@ public class WanderDebugger : Wander
     private static readonly BackgroundColorFilter IsAtPointOfInterestFilter = new BackgroundColorFilter(RGB.Magenta);
     private static readonly BackgroundColorFilter StaleEvaluationFilter = new BackgroundColorFilter(RGB.Gray);
 
-    private static LazyPool<WanderDebugger> pool = new LazyPool<WanderDebugger>(() => new WanderDebugger());
+    private static LazyPool<DebuggableWalk> pool = new LazyPool<DebuggableWalk>(() => new DebuggableWalk());
     private Dictionary<string, (PixelControl Control, Func<Angle?> AngleFunction, RGB Color)> angleHighlights = new Dictionary<string, (PixelControl Control, Func<Angle?> AngleFunction, RGB Color)>();
 
     private TimeSpan lastMoveTime;
@@ -28,7 +28,7 @@ public class WanderDebugger : Wander
         Eye.Velocity.AfterEvaluate.Subscribe(this, static (me, eval) => me.OnAfterEvaluateVelocity(eval), this);
     }
 
-    public static WanderDebugger Create(Vision vision, Func<Movement, RectF?> curiosityPoint, float speed)
+    public static DebuggableWalk Create(Vision vision, Func<Movement, RectF?> curiosityPoint, float speed)
     {
         var state = pool.Value.Rent();
         state.Construct(vision, curiosityPoint, speed, true);
