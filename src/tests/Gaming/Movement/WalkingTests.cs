@@ -4,7 +4,6 @@ using klooie.tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PowerArgs;
 using System;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace tests.Gaming.Movement;
@@ -28,9 +27,6 @@ public class WalkingTests
             var game = Game.Current;
             game.LayoutRoot.Background = new RGB(15, 0, 0);
 
-            int currentPointOfInterestIndex = 0;
-      
-
             var pointOfInterestCollider = game.GamePanel.Add(GameColliderPool.Instance.Rent());
             pointOfInterestCollider.MoveTo(WalkWithCustomPointsOfInterest.pointsOfInterest[0].Left, WalkWithCustomPointsOfInterest.pointsOfInterest[0].Top);
             pointOfInterestCollider.ResizeTo(WalkWithCustomPointsOfInterest.pointsOfInterest[0].Width, WalkWithCustomPointsOfInterest.pointsOfInterest[0].Height);
@@ -52,10 +48,10 @@ public class WalkingTests
 
             Game.Current.AfterPaint.Subscribe(() =>
             {
-                if (walker.CalculateNormalizedDistanceTo(WalkWithCustomPointsOfInterest.pointsOfInterest[currentPointOfInterestIndex]) < 2)
+                if (walker.CalculateNormalizedDistanceTo(WalkWithCustomPointsOfInterest.pointsOfInterest[walkFunction.CurrentPointOfInterestIndex]) < 2)
                 {
-                    currentPointOfInterestIndex++;
-                    if (currentPointOfInterestIndex >= WalkWithCustomPointsOfInterest.pointsOfInterest.Length)
+                    walkFunction.CurrentPointOfInterestIndex++;
+                    if (walkFunction.CurrentPointOfInterestIndex >= WalkWithCustomPointsOfInterest.pointsOfInterest.Length)
                     {
                         Game.Current.Stop();
                     }
@@ -99,7 +95,7 @@ public class WalkWithCustomPointsOfInterest : Walk
         Game.Current.GameBounds.Center.Offset(0, -17.5f).ToRect(4,2)
     ];
 
-    public int CurrentPointOfInterestIndex { get; private set; } = 0;
+    public int CurrentPointOfInterestIndex { get; set; } = 0;
     protected WalkWithCustomPointsOfInterest() { }
     private static LazyPool<WalkWithCustomPointsOfInterest> pool = new LazyPool<WalkWithCustomPointsOfInterest>(() => new WalkWithCustomPointsOfInterest());
     public static WalkWithCustomPointsOfInterest Create(Vision vision, float speed = 1)
