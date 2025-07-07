@@ -25,7 +25,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             var sw = Stopwatch.StartNew();
             MasterVolume = VolumeKnob.Create();
             mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
-            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 100); // Try 10–40ms
+            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 30);
             outputDevice.Init(mixer);
             outputDevice.Play();
             soundCache = new SoundCache(LoadSounds());

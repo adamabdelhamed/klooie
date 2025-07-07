@@ -7,11 +7,13 @@ public class MIDIInput : Recyclable
 
     private Event<MidiEvent>? midiFired;
     public Event<MidiEvent> EventFired => midiFired ??= Event<MidiEvent>.Create();
-
+    private MidiInMessageEventArgs currentEventArgs;
     protected MIDIInput() { }
+    private Lock lck = new();
 
     private static LazyPool<MIDIInput> pool = new(() => new MIDIInput());
 
+    private ConsoleApp app;
     public static MIDIInput Create(string midiInProductName)
     {
         var ret = pool.Value.Rent();
@@ -32,6 +34,8 @@ public class MIDIInput : Recyclable
 
     private void Construct(string midiInProductName)
     {
+        app = ConsoleApp.Current;
+        if(app == null) throw new InvalidOperationException("MIDIInput requires a ConsoleApp to be running. Please start a ConsoleApp before using MIDIInput.");
         for (var i = 0; i < MidiIn.NumberOfDevices; i++)
         {
             var deviceInfo = MidiIn.DeviceInfo(i);
@@ -46,7 +50,20 @@ public class MIDIInput : Recyclable
         if (midiIn == null) throw new IOException($"Did not find midi input '{midiInProductName}'");
     }
 
-    private void OnMidiMessageReceived(object sender, MidiInMessageEventArgs e) => EventFired.Fire(e.MidiEvent);
+    private void OnMidiMessageReceived(object sender, MidiInMessageEventArgs e)
+    {
+        lock (lck)
+        {
+            currentEventArgs = e;
+        }
+        app.Invoke(this, static (me) =>
+        {
+            lock (me.lck)
+            {
+                me.EventFired.Fire(me.currentEventArgs.MidiEvent);
+            }
+        });
+    }
 
     protected override void OnReturn()
     {

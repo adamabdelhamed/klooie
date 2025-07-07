@@ -3,13 +3,21 @@ namespace klooie;
 
 public sealed class SyncronousScheduler
 {
+    public enum ExecutionMode
+    {
+        AfterPaint,
+        EndOfCycle
+    }
+
     private ConsoleApp parent;
     private LeaseState<SchedulerLoopLifetime> schedulerLoopLease;
     private long? pausedTime;
     private List<DelayState>? delayStates;
     public bool IsPaused => pausedTime.HasValue;
 
-    internal SyncronousScheduler(ConsoleApp parent)
+    public ExecutionMode Mode { get; set; } = SyncronousScheduler.ExecutionMode.AfterPaint;
+
+    public SyncronousScheduler(ConsoleApp parent)
     {
         this.parent = parent;
         parent.OnDisposed(Cleanup);
@@ -132,7 +140,18 @@ public sealed class SyncronousScheduler
     {
         var loopLifetime = SchedulerLoopLifetime.Create();
         schedulerLoopLease = LeaseHelper.Track(loopLifetime);
-        parent.EndOfCycle.Subscribe(loopLifetime, Process, loopLifetime);
+        if (Mode == ExecutionMode.AfterPaint)
+        {
+            parent.AfterPaint.Subscribe(loopLifetime, Process, loopLifetime);
+        }
+        else if(Mode == ExecutionMode.EndOfCycle)
+        {
+            parent.EndOfCycle.Subscribe(loopLifetime, Process, loopLifetime);
+        }
+        else
+        {
+            throw new ArgumentException("Invalid ExecutionMode specified for SyncronousScheduler", nameof(Mode));
+        }
     }
 
     private void Process(SchedulerLoopLifetime loopLifetime)

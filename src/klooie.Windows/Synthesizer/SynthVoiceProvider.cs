@@ -28,7 +28,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider
     private int pluckLength = 0;
     private int pluckWriteIndex = 0;
     private bool isDone;
-
+    private ConsoleApp app;
     public static readonly LazyPool<SynthVoiceProvider> _pool = new(() => new SynthVoiceProvider());
 
     private SynthVoiceProvider() { }
@@ -36,6 +36,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider
     public static SynthVoiceProvider Create(float frequencyHz, SynthPatch patch, VolumeKnob master, VolumeKnob? knob)
     {
         var ret = _pool.Value.Rent();
+        ret.app = ConsoleApp.Current ?? throw new InvalidOperationException("SynthVoiceProvider requires a ConsoleApp to be running. Please start a ConsoleApp before using SynthVoiceProvider.");
         ret.frequency = frequencyHz;
         ret.sampleRate = waveFormat.SampleRate;
         ret.time = 0;
@@ -77,7 +78,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider
     {
         if (isDone)
         {
-            Dispose();
+            app.Invoke(this, Recyclable.TryDisposeMe);
             return 0;
         }
         int samplesWritten = 0;
