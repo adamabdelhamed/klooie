@@ -18,7 +18,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     private EventLoop eventLoop;
     private SoundCache soundCache;
     public VolumeKnob MasterVolume { get; set; }
-    public static EventLoop EventLoop { get; private set; }
+    public EventLoop EventLoop => eventLoop;
 
     public long SamplesRendered => scheduledSynthProvider.SamplesRendered;
 
@@ -27,7 +27,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         try
         {
             eventLoop = ConsoleApp.Current;
-            EventLoop = eventLoop;
+            SoundProvider.Current= this;
             if (eventLoop == null) throw new InvalidOperationException("AudioPlaybackEngine requires an event loop to be set. Please set EventLoop.Current before creating an instance of AudioPlaybackEngine.");
             var sw = Stopwatch.StartNew();
             MasterVolume = VolumeKnob.Create();
@@ -58,7 +58,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public IReleasableNote PlayTimedNote(float frequencyHz, double durationSeconds, SynthPatch patch, VolumeKnob? knob = null)
     {
         patch.Velocity = knob?.Volume ?? 1f;
-        var voice = SynthVoiceProvider.Create(frequencyHz, patch, MasterVolume, knob);
+        var source = SynthSignalSource.Create(frequencyHz, patch, MasterVolume, knob);
+        var voice = SynthVoiceProvider.Create(source);
         mixer.AddMixerInput(voice);
         var scheduler = Game.Current?.PausableScheduler ?? ConsoleApp.Current.Scheduler;
         scheduler.Delay(durationSeconds * 1000, voice.ReleaseNote);
@@ -68,7 +69,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public IReleasableNote PlaySustainedNote(float frequencyHz, SynthPatch patch, VolumeKnob? knob = null)
     {
         patch.Velocity = knob?.Volume ?? 1f;
-        var voice = SynthVoiceProvider.Create(frequencyHz, patch, MasterVolume, knob);
+        var source = SynthSignalSource.Create(frequencyHz, patch, MasterVolume, knob);
+        var voice = SynthVoiceProvider.Create(source);
         mixer.AddMixerInput(voice);
         return voice;
     }
@@ -84,7 +86,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         var knob = VolumeKnob.Create();
         knob.Volume = velocity;
         var p = patch ?? SynthPatches.CreateBass();
-        var voice = SynthVoiceProvider.Create(freq, p, MasterVolume, knob);
+        var source = SynthSignalSource.Create(freq, p, MasterVolume, knob);
+        var voice = SynthVoiceProvider.Create(source);
         scheduledSynthProvider.ScheduleNote(ScheduledNoteEvent.Create(startSample, durationSeconds,  voice));
     }
     private void AddMixerInput(RecyclableSampleProvider? sample)
@@ -219,7 +222,7 @@ public class ScheduledSynthProvider : ISampleProvider
             samplesPlayed += read / channels;
 
             // Check if voice is done
-            bool done = voice.isDone;
+            bool done = voice.IsDone;
             if (done)
             {
                 voice.Dispose();
