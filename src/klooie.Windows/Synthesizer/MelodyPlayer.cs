@@ -1,6 +1,6 @@
 ﻿using klooie.Gaming;
 
-namespace klooie.Windows.Synthesizer;
+namespace klooie;
 public static class MelodyPlayer
 {
     public static ILifetime Play(AudioPlaybackEngine engine, Melody melody)

@@ -1,6 +1,6 @@
 ﻿using NAudio.Midi;
 
-namespace klooie.Windows;
+namespace klooie;
 public class MIDIInput : Recyclable
 {
     private MidiIn midiIn;
