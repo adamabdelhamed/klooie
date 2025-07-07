@@ -20,7 +20,6 @@ public static class MelodyPlayer
                 knob.Volume = volume;
                 var patch = SynthPatches.CreateBass();
                 long startSample = scheduleZero + (long)Math.Round(note.Start.TotalSeconds * AudioPlaybackEngine.SampleRate);
-
                 engine.ScheduleSynthNote(note.MidiNode, startSample, note.Duration.TotalSeconds, note.Velocity, patch);
             }
             return ret;
