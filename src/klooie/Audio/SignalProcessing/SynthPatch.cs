@@ -56,10 +56,46 @@ public class SynthPatch : Recyclable
     public float DriftAmountCents;   // how wide it wobbles (cents = 1/100 semitone)
     public float Velocity; // default full velocity
 
+    public List<IEffect>? Effects = new List<IEffect>();
+
     protected override void OnReturn()
     {
         base.OnReturn();
+        for(var i = 0; i < Effects?.Count; i++)
+        {
+            if (Effects[i] is Recyclable r)
+            {
+                r.TryDispose();
+            }
+        }
+        Effects.Clear();
         Envelope.Dispose();
         Envelope = null!;
     }
 }
+
+public static class SynthPatchExtensions
+{
+    public static SynthPatch WithEffect(this SynthPatch patch, IEffect effect)
+    {
+        patch.Effects ??= new List<IEffect>();
+        patch.Effects.Add(effect);
+        return patch;
+    }
+
+    public static SynthPatch WithReverb(this SynthPatch patch, float feedback = 0.78f, float diffusion = 0.5f, float wet = 0.3f, float dry = 0.7f)
+        => patch.WithEffect(ReverbEffect.Create(feedback, diffusion, wet, dry));
+
+    public static SynthPatch WithDelay(this SynthPatch patch, int delaySamples, float feedback = .3f, float mix = .4f)
+        => patch.WithEffect(DelayEffect.Create(delaySamples, feedback, mix));
+
+    public static SynthPatch WithChorus(this SynthPatch patch, int delayMs = 22, int depthMs = 7, float rateHz = 0.22f, float mix = 0.19f)
+        => patch.WithEffect(StereoChorusEffect.Create(delayMs, depthMs, rateHz, mix));
+}
+
+public interface IEffect
+{
+    // Process a mono sample (or stereo, if you want!)
+    float Process(float input, int frameIndex);
+}
+

@@ -90,6 +90,16 @@ public class SynthSignalSource : Recyclable
         if (patch.EnableDistortion)
             pipeline.Add(DistortionStage);
         pipeline.Add(EnvelopeStage);
+
+
+        // After all core DSP, add effect stages
+        if (patch.Effects != null)
+        {
+            foreach (var effect in patch.Effects)
+            {
+                pipeline.Add(effect.Process);
+            }
+        }
     }
 
     // ---- DSP Pipeline delegate signature ----

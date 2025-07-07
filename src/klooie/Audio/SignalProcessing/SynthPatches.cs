@@ -46,4 +46,29 @@ public static class SynthPatches
         ret.Envelope.Release = 0.4;
         return ret;
     }
+
+    public static SynthPatch CreateAnalogPad()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.Saw;
+        patch.EnablePitchDrift = true;
+        patch.DriftFrequencyHz = 0.3f;   // Slow drift
+        patch.DriftAmountCents = 7f;     // Light chorus
+        patch.SubOscLevel = 0.5f;
+        patch.SubOscOctaveOffset = -1; // Lower octave
+        patch.EnableLowPassFilter = true;
+        patch.FilterBaseAlpha = 0.012f;   // Smooth highs
+        patch.FilterMaxAlpha = 0.05f;
+
+        patch.Envelope.Attack = 0.23;
+        patch.Envelope.Decay = 1.3;
+        patch.Envelope.Sustain = 0.85;
+        patch.Envelope.Release = 1.6;
+
+        // Add chorus and reverb effects
+        patch.WithEffect(StereoChorusEffect.Create(delayMs: 22, depthMs: 7, rateHz: 0.22f, mix: 0.19f));
+        patch.WithReverb(feedback: 0.73f, diffusion: 0.52f, wet: 0.26f, dry: 0.74f);
+
+        return patch;
+    }
 }
