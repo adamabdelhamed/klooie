@@ -2,8 +2,6 @@
 
 namespace klooie;
 
-
-
 public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
 {
     private SynthSignalSource source;

@@ -1,98 +1,156 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace klooie;
+
 public class SynthSignalSource : Recyclable
 {
     private static readonly LazyPool<SynthSignalSource> _pool = new(() => new SynthSignalSource());
 
+    // DSP & signal state
     private float frequency;
     private double sampleRate;
     private float time;
-    private float filteredSample = 0f;
+    private float filteredSample;
     private SynthPatch patch;
 
     private float driftPhase;
     private float driftPhaseIncrement;
     private float driftRandomOffset;
     private float[]? pluckBuffer;
-    private int pluckLength = 0;
-    private int pluckWriteIndex = 0;
+    private int pluckLength;
+    private int pluckWriteIndex;
     public bool isDone;
     protected VolumeKnob masterKnob;
     protected VolumeKnob? sampleKnob;
     protected float effectiveVolume;
     protected float effectivePan;
 
+    private List<SignalProcess> pipeline;
+
     public ADSREnvelope Envelope => patch.Envelope;
     public bool IsDone => isDone;
-    public void ReleaseNote() => Envelope.ReleaseNote(time);
-    private SynthSignalSource() { }
+
+    private static int _globalId = 1;
+    public int Id { get; private set; }
+
+    public virtual void ReleaseNote() => Envelope.ReleaseNote(time);
+
+    protected SynthSignalSource() { }
 
     public static SynthSignalSource Create(float frequencyHz, SynthPatch patch, VolumeKnob master, VolumeKnob? knob)
     {
         var ret = _pool.Value.Rent();
-        ret.frequency = frequencyHz;
-        ret.sampleRate = 44100;
-        ret.time = 0;
-        ret.filteredSample = 0;
-        ret.InitVolume(master, knob);
-        knob.Dispose();
-        ret.patch = patch;
-        ret.isDone = false;
-
-        patch.Envelope.Trigger(0, ret.sampleRate);
-
-        if (patch.EnablePitchDrift)
-        {
-            ret.driftPhase = 0;
-            ret.driftPhaseIncrement = (float)(2 * Math.PI * patch.DriftFrequencyHz / ret.sampleRate);
-            ret.driftRandomOffset = Random.Shared.NextSingle() * (2 * MathF.PI);
-        }
-
-        if (patch.Waveform == WaveformType.PluckedString)
-        {
-            int delaySamples = (int)(44100 / frequencyHz);
-            ret.pluckBuffer = new float[delaySamples];
-            ret.pluckLength = delaySamples;
-            ret.pluckWriteIndex = 0;
-
-            for (int i = 0; i < delaySamples; i++)
-            {
-                ret.pluckBuffer[i] = (float)(Random.Shared.NextDouble() * 2.0 - 1.0);
-            }
-        }
-
+        ret.Id = Interlocked.Increment(ref _globalId);
+        ret.Construct(frequencyHz, patch, master, knob);
         return ret;
     }
 
-
-    private float ApplyDistortion(float sample, float amount)
+    protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, VolumeKnob? knob)
     {
-        // amount: 0 = clean, 1 = full drive
-        float drive = 1f + (10f - 1f) * amount;
-        return MathF.Tanh(sample * drive);
+        frequency = frequencyHz;
+        sampleRate = 44100;
+        time = 0;
+        filteredSample = 0;
+        this.patch = patch;
+        isDone = false;
+        driftPhase = 0f;
+        driftPhaseIncrement = (float)(2 * Math.PI * patch.DriftFrequencyHz / sampleRate);
+        driftRandomOffset = Random.Shared.NextSingle() * (2 * MathF.PI);
+
+        InitVolume(master, knob);
+        knob?.Dispose();
+
+        patch.Envelope.Trigger(0, sampleRate);
+
+        // Pluck buffer if needed
+        pluckBuffer = null;
+        pluckLength = 0;
+        pluckWriteIndex = 0;
+        if (patch.Waveform == WaveformType.PluckedString)
+        {
+            int delaySamples = (int)(sampleRate / frequencyHz);
+            pluckBuffer = new float[delaySamples];
+            pluckLength = delaySamples;
+            pluckWriteIndex = 0;
+            for (int i = 0; i < delaySamples; i++)
+                pluckBuffer[i] = (float)(Random.Shared.NextDouble() * 2.0 - 1.0);
+        }
+
+        // Build DSP pipeline
+        pipeline = new List<SignalProcess>();
+        pipeline.Add(OscillatorStage);
+        if (patch.EnableSubOsc)
+            pipeline.Add(SubOscillatorStage);
+        if (patch.EnableTransient)
+            pipeline.Add(TransientStage);
+        if (patch.EnableLowPassFilter)
+            pipeline.Add(LowPassFilterStage);
+        if (patch.EnableDistortion)
+            pipeline.Add(DistortionStage);
+        pipeline.Add(EnvelopeStage);
     }
+
+    // ---- DSP Pipeline delegate signature ----
+    public delegate float SignalProcess(float input, int frameIndex);
+
+    // ---- Pipeline stages: all instance methods, no capturing lambdas ----
+
+    private float OscillatorStage(float input, int frameIndex)
+    {
+        return Oscillate(time);
+    }
+
+    private float SubOscillatorStage(float input, int frameIndex)
+    {
+        float subTime = time * (float)Math.Pow(2, patch.SubOscOctaveOffset);
+        return input + Oscillate(subTime, WaveformType.Sine) * patch.SubOscLevel;
+    }
+
+    private float TransientStage(float input, int frameIndex)
+    {
+        return time < patch.TransientDurationSeconds
+            ? input + (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f
+            : input;
+    }
+
+    private float LowPassFilterStage(float input, int frameIndex)
+    {
+        float dynamicFactor = patch.EnableDynamicFilter ? patch.Velocity : 1f;
+        float alpha = patch.FilterBaseAlpha + dynamicFactor * (patch.FilterMaxAlpha - patch.FilterBaseAlpha);
+        alpha = Math.Clamp(alpha, 0f, 1f);
+        filteredSample += alpha * (input - filteredSample);
+        return filteredSample;
+    }
+
+    private float DistortionStage(float input, int frameIndex)
+    {
+        float amount = patch.DistortionAmount * patch.Velocity;
+        float drive = 1f + (10f - 1f) * amount;
+        return MathF.Tanh(input * drive);
+    }
+
+    private float EnvelopeStage(float input, int frameIndex)
+    {
+        return input * patch.Envelope.GetLevel(time);
+    }
+
+    // ---- Feature logic ----
 
     private float Oscillate(float t, WaveformType? overrideWave = null)
     {
         float driftedFrequency = frequency;
-
         if (patch.EnablePitchDrift)
         {
             float cents = patch.DriftAmountCents * MathF.Sin(driftPhase + driftRandomOffset);
             float multiplier = MathF.Pow(2f, cents / 1200f); // cents to ratio
             driftedFrequency *= multiplier;
         }
-
         driftPhase += driftPhaseIncrement;
 
         double phase = 2 * Math.PI * driftedFrequency * t;
         var wave = overrideWave ?? patch.Waveform;
-
         return wave switch
         {
             WaveformType.Sine => (float)Math.Sin(phase),
@@ -109,17 +167,13 @@ public class SynthSignalSource : Recyclable
     {
         if (pluckBuffer == null || pluckLength == 0)
             return 0;
-
         int nextIndex = (pluckWriteIndex + 1) % pluckLength;
         float current = pluckBuffer[pluckWriteIndex];
         float next = pluckBuffer[nextIndex];
-
-        float damping = 0.98f; // lower = more damping, less buzz
+        float damping = 0.98f;
         float newSample = damping * 0.5f * (current + next);
-
         pluckBuffer[pluckWriteIndex] = newSample;
         pluckWriteIndex = nextIndex;
-
         return current;
     }
 
@@ -127,11 +181,9 @@ public class SynthSignalSource : Recyclable
     {
         masterKnob = master ?? throw new ArgumentNullException(nameof(master));
         sampleKnob = sample;
-
         master.VolumeChanged.Subscribe(this, static (me, v) => me.OnVolumeChanged(), this);
         sample?.VolumeChanged.Subscribe(this, static (me, v) => me.OnVolumeChanged(), this);
         sample?.PanChanged.Subscribe(this, static (me, v) => me.OnPanChanged(), this);
-
         OnVolumeChanged();
         OnPanChanged();
     }
@@ -159,7 +211,7 @@ public class SynthSignalSource : Recyclable
         base.OnReturn();
     }
 
-    public int Render(float[] buffer, int offset, int count)
+    public virtual int Render(float[] buffer, int offset, int count)
     {
         if (isDone)
         {
@@ -168,59 +220,33 @@ public class SynthSignalSource : Recyclable
         }
 
         int samplesWritten = 0;
+        float localTime = time;
         for (int n = 0; n < count; n += 2)
         {
-            float level = patch.Envelope.GetLevel(time);
+            time = localTime;
 
-            if (level <= 0.0001f && patch.Envelope.IsDone(time))
+            float sample = 0f;
+            for (int s = 0; s < pipeline.Count; s++)
+                sample = pipeline[s](sample, n / 2);
+
+            float finalSample = Math.Clamp(sample * effectiveVolume, -1f, 1f);
+
+            buffer[offset + n] = finalSample;
+            buffer[offset + n + 1] = finalSample;
+
+            localTime += 1f / (float)sampleRate;
+            samplesWritten += 2;
+
+            if (Envelope.IsDone(time))
             {
                 isDone = true;
                 break;
             }
-
-            float sample = Oscillate(time);
-
-            if (patch.EnableSubOsc)
-            {
-                float subTime = time * (float)Math.Pow(2, patch.SubOscOctaveOffset);
-                sample += Oscillate(subTime, overrideWave: WaveformType.Sine) * patch.SubOscLevel;
-            }
-
-            if (patch.EnableTransient && time < patch.TransientDurationSeconds)
-            {
-                sample += (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f;
-            }
-
-            if (patch.EnableLowPassFilter)
-            {
-                float dynamicFactor = patch.EnableDynamicFilter ? patch.Velocity : 1f;
-                float alpha = patch.FilterBaseAlpha + dynamicFactor * (patch.FilterMaxAlpha - patch.FilterBaseAlpha);
-                alpha = Math.Clamp(alpha, 0f, 1f);
-                filteredSample += alpha * (sample - filteredSample);
-                sample = filteredSample;
-            }
-
-            float finalSample = sample * level * effectiveVolume;
-
-            if (patch.EnableDistortion)
-            {
-                float dynamicDistortion = patch.DistortionAmount * patch.Velocity;
-                finalSample = ApplyDistortion(finalSample, dynamicDistortion);
-            }
-
-            finalSample = Math.Clamp(finalSample, -1f, 1f);
-            buffer[offset + n] = finalSample;
-            buffer[offset + n + 1] = finalSample;
-
-            time += 1f / (float)sampleRate;
-            samplesWritten += 2;
         }
 
         // Zero the rest of the buffer if not fully filled
         for (int i = offset + samplesWritten; i < offset + count; i++)
-        {
             buffer[i] = 0f;
-        }
 
         return samplesWritten;
     }

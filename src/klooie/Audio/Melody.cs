@@ -27,15 +27,9 @@ public class Melody
         }
     }
 
-    public void AddNote(int midiNode, TimeSpan start, TimeSpan duration, int velocity)
+    public void AddNote(int midiNode, TimeSpan start, TimeSpan duration, int velocity, SynthPatch? patch)
     {
-        Notes.Add(new Note { MidiNode = midiNode, Start = start, Duration = duration, Velocity = velocity });
-    }
-
-    public void AddNoteAfterLast(int midiNode, TimeSpan delay, TimeSpan duration, int velocity)
-    {
-        TimeSpan start = Notes.LastOrDefault()?.Start + Notes.LastOrDefault()?.Duration + delay ?? TimeSpan.Zero;
-        Notes.Add(new Note { MidiNode = midiNode, Start = start, Duration = duration, Velocity = velocity });
+        Notes.Add(new Note { MidiNode = midiNode, Start = start, Duration = duration, Velocity = velocity, Patch = patch });
     }
 }
 
@@ -45,4 +39,5 @@ public class Note
     public TimeSpan Start { get; set; }
     public TimeSpan Duration { get; set; }
     public int Velocity { get; set; }
+    public SynthPatch? Patch { get; set; }
 }

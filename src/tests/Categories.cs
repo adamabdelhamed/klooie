@@ -12,6 +12,7 @@
         public const string Observability = "Observability";
         public const string MemoryManagement = "Memory";
         public const string Slow = "Slow";
+        public const string Audio = "Audio";
         public const string Quarantined = "Quarantined";
 
     }
