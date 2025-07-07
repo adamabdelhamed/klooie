@@ -38,10 +38,6 @@ internal sealed class CachedSound
     public int SampleCount { get; }
     public WaveFormat WaveFormat { get; }
 
-    public const int ExpectedSampleRate = 44100;
-    public const int ExpectedChannels = 2;
-    public const int ExpectedBitsPerSample = 16;
-
     public CachedSound(Func<Stream> streamFactory)
     {
         using var stream = streamFactory();
@@ -49,20 +45,20 @@ internal sealed class CachedSound
 
         // Guard: Check format
         var wf = reader.WaveFormat;
-        if (wf.SampleRate != ExpectedSampleRate ||
-            wf.Channels != ExpectedChannels ||
-            wf.BitsPerSample != ExpectedBitsPerSample ||
+        if (wf.SampleRate != SoundProvider.SampleRate ||
+            wf.Channels != SoundProvider.ChannelCount ||
+            wf.BitsPerSample != SoundProvider.BitsPerSample ||
             wf.Encoding != WaveFormatEncoding.Pcm)
         {
             throw new InvalidOperationException(
-                $"WAV format mismatch. Expected {ExpectedChannels}ch, {ExpectedSampleRate}Hz, {ExpectedBitsPerSample}-bit PCM. " +
+                $"WAV format mismatch. Expected {SoundProvider.ChannelCount}ch, {SoundProvider.SampleRate}Hz, {SoundProvider.BitsPerSample}-bit PCM. " +
                 $"Got {wf.Channels}ch, {wf.SampleRate}Hz, {wf.BitsPerSample}-bit {wf.Encoding}.");
         }
 
         WaveFormat = wf;
 
         // Calculate total sample count (bytes / 2 bytes per sample / channels)
-        long totalSamples = reader.Length / (ExpectedBitsPerSample / 8);
+        long totalSamples = reader.Length / (SoundProvider.BitsPerSample / 8);
         int sampleCount = checked((int)totalSamples);
 
         // NAudio provides ToSampleProvider() for float conversion
