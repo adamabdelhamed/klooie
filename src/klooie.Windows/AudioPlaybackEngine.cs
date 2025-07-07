@@ -20,6 +20,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public VolumeKnob MasterVolume { get; set; }
     public static EventLoop EventLoop { get; private set; }
 
+    public long SamplesRendered => scheduledSynthProvider.SamplesRendered;
 
     public AudioPlaybackEngine()
     {
@@ -39,7 +40,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             outputDevice.Play();
             soundCache = new SoundCache(LoadSounds());
             sw.Stop();
-            LogSoundLoaded(sw.ElapsedMilliseconds);
+            LogSoundLoaded(sw.ElapsedMilliseconds);  
         }
         catch (Exception ex)
         {
@@ -54,7 +55,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null) 
         => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
 
-    public SynthVoiceProvider PlayTimedNote(float frequencyHz, double durationSeconds, SynthPatch patch, VolumeKnob? knob = null)
+    public IReleasableNote PlayTimedNote(float frequencyHz, double durationSeconds, SynthPatch patch, VolumeKnob? knob = null)
     {
         patch.Velocity = knob?.Volume ?? 1f;
         var voice = SynthVoiceProvider.Create(frequencyHz, patch, MasterVolume, knob);
@@ -64,7 +65,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         return voice;
     }
 
-    public SynthVoiceProvider PlaySustainedNote(float frequencyHz, SynthPatch patch, VolumeKnob? knob = null)
+    public IReleasableNote PlaySustainedNote(float frequencyHz, SynthPatch patch, VolumeKnob? knob = null)
     {
         patch.Velocity = knob?.Volume ?? 1f;
         var voice = SynthVoiceProvider.Create(frequencyHz, patch, MasterVolume, knob);
@@ -79,19 +80,12 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     float velocity = 1.0f,
     SynthPatch patch = null)
     {
-        scheduledSynthProvider.ScheduleNote(new ScheduledNoteEvent
-        {
-            StartSample = startSample,
-            DurationSeconds = durationSeconds,
-            VoiceFactory = () =>
-            {
-                float freq = MIDIInput.MidiNoteToFrequency(midiNote);
-                var knob = VolumeKnob.Create();
-                knob.Volume = velocity;
-                var p = patch ?? SynthPatches.CreateBass();
-                return SynthVoiceProvider.Create(freq, p, MasterVolume, knob);
-            }
-        });
+        float freq = MIDIInput.MidiNoteToFrequency(midiNote);
+        var knob = VolumeKnob.Create();
+        knob.Volume = velocity;
+        var p = patch ?? SynthPatches.CreateBass();
+        var voice = SynthVoiceProvider.Create(freq, p, MasterVolume, knob);
+        scheduledSynthProvider.ScheduleNote(ScheduledNoteEvent.Create(startSample, durationSeconds,  voice));
     }
     private void AddMixerInput(RecyclableSampleProvider? sample)
     {
@@ -126,18 +120,30 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     protected virtual void LogSoundLoaded(long elapsedMilliseconds) { }
 }
 
-public class ScheduledNoteEvent
+public class ScheduledNoteEvent : Recyclable
 {
     public long StartSample; // Absolute sample offset
-    public Func<ISampleProvider> VoiceFactory; // Create the synth note/voice
+    public SynthVoiceProvider Voice; 
     public double DurationSeconds;
+
+    private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
+    protected ScheduledNoteEvent() { }
+    public static ScheduledNoteEvent Create(long startSample, double durationSeconds, SynthVoiceProvider voice)
+    {
+        var ret = pool.Value.Rent();
+        ret.StartSample = startSample;
+        ret.DurationSeconds = durationSeconds;
+        ret.Voice = voice;
+        return ret;
+    }
+
 }
 
 public class ScheduledSynthProvider : ISampleProvider
 {
     private readonly WaveFormat waveFormat;
     private readonly ConcurrentQueue<ScheduledNoteEvent> scheduledNotes = new();
-    private readonly List<(ISampleProvider Voice, long StartSample, int SamplesPlayed, long ReleaseSample, bool Released)> activeVoices = new();
+    private readonly List<(SynthVoiceProvider Voice, long StartSample, int SamplesPlayed, long ReleaseSample, bool Released)> activeVoices = new();
     private long samplesRendered = 0;
 
     public long SamplesRendered => samplesRendered;
@@ -160,10 +166,11 @@ public class ScheduledSynthProvider : ISampleProvider
         while (scheduledNotes.TryPeek(out var note) && note.StartSample < bufferEnd)
         {
             scheduledNotes.TryDequeue(out note);
-            var voice = note.VoiceFactory();
+            var voice = note.Voice;
             int durSamples = (int)(note.DurationSeconds * waveFormat.SampleRate);
             long releaseSample = note.StartSample + durSamples;
             activeVoices.Add((voice, note.StartSample, 0, releaseSample, false));
+            note.Dispose();
         }
 
         Array.Clear(buffer, offset, count);
@@ -194,8 +201,7 @@ public class ScheduledSynthProvider : ISampleProvider
             // Release note if needed
             if (!released && voiceAbsoluteSample >= releaseSample)
             {
-                if (voice is SynthVoiceProvider svp)
-                    svp.ReleaseNote();
+                voice.ReleaseNote();
                 released = true;
             }
 
@@ -213,11 +219,16 @@ public class ScheduledSynthProvider : ISampleProvider
             samplesPlayed += read / channels;
 
             // Check if voice is done
-            bool done = voice is SynthVoiceProvider svpDone ? svpDone.isDone : false;
+            bool done = voice.isDone;
             if (done)
+            {
+                voice.Dispose();
                 activeVoices.RemoveAt(v);
+            }
             else
+            {
                 activeVoices[v] = (voice, startSample, samplesPlayed, releaseSample, released);
+            }
         }
 
         System.Buffers.ArrayPool<float>.Shared.Return(scratch);

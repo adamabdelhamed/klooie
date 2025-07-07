@@ -12,7 +12,7 @@ public abstract class RecyclableAudioProvider : Recyclable, ISampleProvider
     public abstract WaveFormat WaveFormat { get; }
     public abstract int Read(float[] buffer, int offset, int count);
 
-    public virtual void InitVolume(VolumeKnob master, VolumeKnob? sample)
+    public void InitVolume(VolumeKnob master, VolumeKnob? sample)
     {
         masterKnob = master ?? throw new ArgumentNullException(nameof(master));
         sampleKnob = sample;
