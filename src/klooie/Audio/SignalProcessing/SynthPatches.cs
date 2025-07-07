@@ -71,4 +71,82 @@ public static class SynthPatches
 
         return patch;
     }
+
+    public static SynthPatch CreateLead()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.Saw;
+        patch.EnablePitchDrift = true;
+        patch.DriftFrequencyHz = 0.2f;
+        patch.DriftAmountCents = 3f;
+        patch.EnableLowPassFilter = true;
+        patch.FilterAlpha = 0.03f;
+        patch.EnableDistortion = true;
+        patch.DistortionAmount = 0.3f;
+        patch.Envelope.Attack = 0.01;
+        patch.Envelope.Decay = 0.15;
+        patch.Envelope.Sustain = 0.6;
+        patch.Envelope.Release = 0.25;
+        patch.WithChorus();
+        patch.WithReverb();
+        return patch;
+    }
+
+    public static SynthPatch CreateKick()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.Sine;
+        patch.EnableTransient = true;
+        patch.TransientDurationSeconds = 0.005f;
+        patch.EnableDistortion = true;
+        patch.DistortionAmount = 0.3f;
+        patch.Envelope.Attack = 0.0;
+        patch.Envelope.Decay = 0.1;
+        patch.Envelope.Sustain = 0.0;
+        patch.Envelope.Release = 0.1;
+        patch.WithHighPass(20f);
+        return patch;
+    }
+
+    public static SynthPatch CreateSnare()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.Noise;
+        patch.EnableTransient = true;
+        patch.TransientDurationSeconds = 0.005f;
+        patch.EnableLowPassFilter = true;
+        patch.FilterAlpha = 0.2f;
+        patch.EnableDistortion = true;
+        patch.DistortionAmount = 0.4f;
+        patch.Envelope.Attack = 0.0;
+        patch.Envelope.Decay = 0.1;
+        patch.Envelope.Sustain = 0.0;
+        patch.Envelope.Release = 0.2;
+        patch.WithHighPass(1000f);
+        patch.WithReverb();
+        return patch;
+    }
+
+    public static SynthPatch CreateRhythmicPad()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.Saw;
+        patch.EnablePitchDrift = true;
+        patch.DriftFrequencyHz = 0.15f;
+        patch.DriftAmountCents = 5f;
+        patch.EnableSubOsc = true;
+        patch.SubOscLevel = 0.5f;
+        patch.SubOscOctaveOffset = -1;
+        patch.EnableLowPassFilter = true;
+        patch.FilterBaseAlpha = 0.015f;
+        patch.FilterMaxAlpha = 0.05f;
+        patch.EnableDynamicFilter = true;
+        patch.Envelope.Attack = 0.5;
+        patch.Envelope.Decay = 1.0;
+        patch.Envelope.Sustain = 0.75;
+        patch.Envelope.Release = 1.5;
+        patch.WithTremolo(depth: 0.5f, rateHz: 5f);
+        patch.WithReverb();
+        return patch;
+    }
 }

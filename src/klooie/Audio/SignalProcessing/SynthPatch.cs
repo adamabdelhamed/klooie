@@ -91,6 +91,12 @@ public static class SynthPatchExtensions
 
     public static SynthPatch WithChorus(this SynthPatch patch, int delayMs = 22, int depthMs = 7, float rateHz = 0.22f, float mix = 0.19f)
         => patch.WithEffect(StereoChorusEffect.Create(delayMs, depthMs, rateHz, mix));
+
+    public static SynthPatch WithTremolo(this SynthPatch patch, float depth = 0.5f, float rateHz = 5f)
+        => patch.WithEffect(TremoloEffect.Create(depth, rateHz));
+
+    public static SynthPatch WithHighPass(this SynthPatch patch, float cutoffHz = 200f)
+        => patch.WithEffect(HighPassFilterEffect.Create(cutoffHz));
 }
 
 public interface IEffect
