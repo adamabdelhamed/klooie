@@ -1,7 +1,12 @@
 ﻿namespace klooie;
 
-public class ADSREnvelope
+public class ADSREnvelope : Recyclable
 {
+    private ADSREnvelope() { }
+    private static LazyPool<ADSREnvelope> _pool = new(() => new ADSREnvelope());
+
+    public static ADSREnvelope Create() => _pool.Value.Rent();
+
     public double Attack;   // seconds
     public double Decay;    // seconds
     public double Sustain;  // 0.0–1.0
@@ -11,6 +16,19 @@ public class ADSREnvelope
     private double? noteOffTime;
     private double sampleRate;
     private bool isReleased;
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Attack = 0;
+        Decay = 0;
+        Sustain = 0;
+        Release = 0;
+        noteOnTime = 0;
+        noteOffTime = null;
+        sampleRate = 0;
+        isReleased = false;
+    }
 
     public void Trigger(double currentTime, double sampleRate)
     {

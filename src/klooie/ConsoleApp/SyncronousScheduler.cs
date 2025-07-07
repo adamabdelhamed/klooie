@@ -132,7 +132,7 @@ public sealed class SyncronousScheduler
     {
         var loopLifetime = SchedulerLoopLifetime.Create();
         schedulerLoopLease = LeaseHelper.Track(loopLifetime);
-        parent.AfterPaint.Subscribe(loopLifetime, Process, loopLifetime);
+        parent.EndOfCycle.Subscribe(loopLifetime, Process, loopLifetime);
     }
 
     private void Process(SchedulerLoopLifetime loopLifetime)

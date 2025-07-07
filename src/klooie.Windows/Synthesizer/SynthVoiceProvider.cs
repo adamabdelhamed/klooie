@@ -15,8 +15,7 @@ public enum WaveformType
 public class SynthVoiceProvider : RecyclableAudioProvider
 {
     private float frequency;
-    private double durationSeconds;
-    private WaveFormat waveFormat;
+    private static WaveFormat waveFormat = new WaveFormat(CachedSound.ExpectedSampleRate, CachedSound.ExpectedBitsPerSample, CachedSound.ExpectedChannels);
     private double sampleRate;
     private float time;
     private float filteredSample = 0f;
@@ -29,23 +28,22 @@ public class SynthVoiceProvider : RecyclableAudioProvider
     private int pluckLength = 0;
     private int pluckWriteIndex = 0;
     private bool isDone;
-    private double initialPhase;  
 
-    private static readonly LazyPool<SynthVoiceProvider> _pool = new(() => new SynthVoiceProvider());
+    public static readonly LazyPool<SynthVoiceProvider> _pool = new(() => new SynthVoiceProvider());
 
-    public static SynthVoiceProvider Create(float frequencyHz, double durationSeconds, SynthPatch patch, VolumeKnob master, VolumeKnob? sample)
+    private SynthVoiceProvider() { }
+
+    public static SynthVoiceProvider Create(float frequencyHz, SynthPatch patch, VolumeKnob master, VolumeKnob? knob)
     {
         var ret = _pool.Value.Rent();
         ret.frequency = frequencyHz;
-        ret.durationSeconds = durationSeconds;
-        ret.waveFormat = new WaveFormat(CachedSound.ExpectedSampleRate, CachedSound.ExpectedBitsPerSample, CachedSound.ExpectedChannels);
-        ret.sampleRate = ret.waveFormat.SampleRate;
+        ret.sampleRate = waveFormat.SampleRate;
         ret.time = 0;
         ret.filteredSample = 0;
-        ret.InitVolume(master, sample);
+        ret.InitVolume(master, knob);
         ret.patch = patch;
         ret.isDone = false;
-        ret.initialPhase = Random.Shared.NextDouble() * 2 * Math.PI;
+
         patch.Envelope.Trigger(0, ret.sampleRate);
 
         if (patch.EnablePitchDrift)
@@ -57,7 +55,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider
 
         if (patch.Waveform == WaveformType.PluckedString)
         {
-            int delaySamples = (int)(ret.waveFormat.SampleRate / frequencyHz);
+            int delaySamples = (int)(waveFormat.SampleRate / frequencyHz);
             ret.pluckBuffer = new float[delaySamples];
             ret.pluckLength = delaySamples;
             ret.pluckWriteIndex = 0;
@@ -77,8 +75,12 @@ public class SynthVoiceProvider : RecyclableAudioProvider
 
     public override int Read(float[] buffer, int offset, int count)
     {
+        if (isDone)
+        {
+            Dispose();
+            return 0;
+        }
         int samplesWritten = 0;
-
         for (int n = 0; n < count; n += 2)
         {
             float level = patch.Envelope.GetLevel(time);
@@ -161,7 +163,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider
 
         driftPhase += driftPhaseIncrement;
 
-        double phase = 2 * Math.PI * driftedFrequency * t + initialPhase;
+        double phase = 2 * Math.PI * driftedFrequency * t;
         var wave = overrideWave ?? patch.Waveform;
 
         return wave switch
@@ -198,6 +200,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider
     {
         time = 0;
         isDone = true; // critical: prevent use-after-return
+        patch.Dispose();
         patch = null!;
         pluckBuffer = null;
         pluckLength = 0;
@@ -206,94 +209,105 @@ public class SynthVoiceProvider : RecyclableAudioProvider
     }
 }
 
-public class SynthPatch
+public class SynthPatch : Recyclable
 {
+
+    private SynthPatch() { }
+    private static LazyPool<SynthPatch> _pool = new(() => new SynthPatch());
+    public static SynthPatch Create()
+    {
+        var patch = _pool.Value.Rent();
+        patch.Waveform = WaveformType.Sine; // default waveform
+        patch.Envelope = ADSREnvelope.Create();
+        patch.EnableTransient = false;
+        patch.TransientDurationSeconds = 0.01f; // default transient duration
+        patch.EnableLowPassFilter = false;
+        patch.FilterAlpha = 0.05f; // default filter alpha
+        patch.EnableDynamicFilter = false;
+        patch.FilterBaseAlpha = 0.01f; // default base alpha
+        patch.FilterMaxAlpha = 0.2f; // default max alpha
+        patch.EnableSubOsc = false; // default sub-oscillator disabled
+        patch.SubOscLevel = 0.5f; // default sub-oscillator level
+        patch.SubOscOctaveOffset = -1; // default sub-oscillator one octave below
+        patch.EnableDistortion = false; // default distortion disabled
+        patch.DistortionAmount = 0.8f; // default distortion amount
+        patch.EnablePitchDrift = false; // default pitch drift disabled
+        patch.DriftFrequencyHz = 0.5f; // default drift frequency
+        patch.DriftAmountCents = 5f; // default drift amount in cents
+        patch.Velocity = 1f; // default velocity
+        return patch;
+    }
+
     public WaveformType Waveform;
-    public ADSREnvelope Envelope = new();
-    public bool EnableTransient = false;
-    public float TransientDurationSeconds = 0.01f;
-    public bool EnableLowPassFilter = false;
-    public float FilterAlpha = 0.05f;
+    public ADSREnvelope Envelope;
+    public bool EnableTransient;
+    public float TransientDurationSeconds;
+    public bool EnableLowPassFilter;
+    public float FilterAlpha;
 
-    public bool EnableDynamicFilter = false;
-    public float FilterBaseAlpha = 0.01f;
-    public float FilterMaxAlpha = 0.2f;
+    public bool EnableDynamicFilter;
+    public float FilterBaseAlpha;
+    public float FilterMaxAlpha;
 
-    public bool EnableSubOsc = false;
-    public float SubOscLevel = 0.5f; // 0 = silent, 1 = same as main
-    public int SubOscOctaveOffset = -1; // usually -1 for one octave below
+    public bool EnableSubOsc;
+    public float SubOscLevel; // 0 = silent, 1 = same as main
+    public int SubOscOctaveOffset; // usually -1 for one octave below
 
-    public bool EnableDistortion = false;
-    public float DistortionAmount = 0.8f; // 0 = clean, 1 = hard clip
+    public bool EnableDistortion;
+    public float DistortionAmount; // 0 = clean, 1 = hard clip
 
-    public bool EnablePitchDrift = false;
-    public float DriftFrequencyHz = 0.5f; // how fast the pitch wobbles
-    public float DriftAmountCents = 5f;   // how wide it wobbles (cents = 1/100 semitone)
-    public float Velocity = 1f; // default full velocity
+    public bool EnablePitchDrift;
+    public float DriftFrequencyHz; // how fast the pitch wobbles
+    public float DriftAmountCents;   // how wide it wobbles (cents = 1/100 semitone)
+    public float Velocity; // default full velocity
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Envelope.Dispose();
+        Envelope = null!;
+    }
 }
 
 public static class SynthPatches
 {
-    public static SynthPatch Guitar => new SynthPatch
+    public static SynthPatch CreateGuitar()
     {
-        Waveform = WaveformType.PluckedString, // New waveform
-        EnableTransient = false,               // Let the pluck algorithm handle the burst
-        EnableLowPassFilter = true,            // Smooth the highs
-        EnableDynamicFilter = false,           // Keep static filtering for simplicity
-        FilterAlpha = 0.02f,
+        var ret = SynthPatch.Create();
+        ret.Waveform = WaveformType.PluckedString; // New waveform
+        ret.EnableTransient = false;               // Let the pluck algorithm handle the burst
+        ret.EnableLowPassFilter = true;            // Smooth the highs
+        ret.EnableDynamicFilter = false;           // Keep static filtering for simplicity
+        ret.FilterAlpha = 0.02f;
+        ret.EnableSubOsc = false;                  // Skip for realism
+        ret.EnableDistortion = false;              // Turn off harshness
+        ret.EnablePitchDrift = false;              // Plucked strings are stable
+        ret.TransientDurationSeconds = 0.01f;      // Ignored here but safe to leave
+        ret.Envelope.Attack = 0.005;
+        ret.Envelope.Decay = 0.1;
+        ret.Envelope.Sustain = 0.25;
+        ret.Envelope.Release = 0.4;
+        return ret;
+    }
 
-        EnableSubOsc = false,                  // Skip for realism
-        EnableDistortion = false,              // Turn off harshness
-        EnablePitchDrift = false,              // Plucked strings are stable
-
-        TransientDurationSeconds = 0.01f,      // Ignored here but safe to leave
-        Envelope = new ADSREnvelope
-        {
-            Attack = 0.005,
-            Decay = 0.1,
-            Sustain = 0.25,
-            Release = 0.4
-        }
-    };
-
-    public static SynthPatch Bass => new SynthPatch
+    public static SynthPatch CreateBass()
     {
-        Waveform = WaveformType.Sine,
-        EnableTransient = false,
-
-        EnableLowPassFilter = true,
-        EnableDynamicFilter = false,
-        FilterAlpha = 0.01f, // Let more mids through post-distortion
-
-        EnableSubOsc = true,
-        SubOscLevel = 0.6f,
-        SubOscOctaveOffset = -1,
-
-        EnableDistortion = true,
-        DistortionAmount = 0.2f, // Just enough for growl
-
-        EnablePitchDrift = false,
-
-        Envelope = new ADSREnvelope
-        {
-            Attack = 0.005,
-            Decay = 0.12,
-            Sustain = 0.5,   // Increase sustain to avoid piano dropoff
-            Release = 0.4
-        }
-    };
-
-    public static SynthPatch Sine => new SynthPatch
-    {
-        Waveform = WaveformType.Sine,
-        EnableTransient = false,
-        EnableLowPassFilter = false,
-        Envelope = new ADSREnvelope
-        {
-            Attack = 0.01,
-            Decay = 0.1,
-            Sustain = 0.9,
-            Release = 0.3
-        }
-    };
+        var ret = SynthPatch.Create();
+        ret.Waveform = WaveformType.Sine; // Smooth bass sound
+        ret.EnableTransient = false; // No transient burst needed
+        ret.EnableLowPassFilter = true; // Smooth out highs
+        ret.EnableDynamicFilter = false; // Keep static filtering
+        ret.FilterAlpha = 0.01f; // Let more mids through post-distortion
+        ret.EnableSubOsc = true; // Add sub-oscillator for depth
+        ret.SubOscLevel = 0.6f; // Moderate sub-oscillator level
+        ret.SubOscOctaveOffset = -1; // One octave below
+        ret.EnableDistortion = true; // Add some growl
+        ret.DistortionAmount = 0.2f; // Just enough for growl
+        ret.EnablePitchDrift = false; // Stable bass
+        ret.Envelope.Attack = 0.005;
+        ret.Envelope.Decay = 0.12;
+        ret.Envelope.Sustain = 0.5; // Increase sustain to avoid piano dropoff
+        ret.Envelope.Release = 0.4;
+        return ret;
+    }
 }

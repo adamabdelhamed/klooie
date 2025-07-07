@@ -48,7 +48,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public SynthVoiceProvider PlayTimedNote(float frequencyHz, double durationSeconds, SynthPatch patch, VolumeKnob? knob = null)
     {
         patch.Velocity = knob?.Volume ?? 1f;
-        var voice = SynthVoiceProvider.Create(frequencyHz, durationSeconds, patch, MasterVolume, knob);
+        var voice = SynthVoiceProvider.Create(frequencyHz, patch, MasterVolume, knob);
         mixer.AddMixerInput(voice);
         var scheduler = Game.Current?.PausableScheduler ?? ConsoleApp.Current.Scheduler;
         scheduler.Delay(durationSeconds * 1000, voice.ReleaseNote);
@@ -58,7 +58,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public SynthVoiceProvider PlaySustainedNote(float frequencyHz, SynthPatch patch, VolumeKnob? knob = null)
     {
         patch.Velocity = knob?.Volume ?? 1f;
-        var voice = SynthVoiceProvider.Create(frequencyHz, durationSeconds: double.MaxValue, patch, MasterVolume, knob);
+        var voice = SynthVoiceProvider.Create(frequencyHz, patch, MasterVolume, knob);
         mixer.AddMixerInput(voice);
         return voice;
     }
