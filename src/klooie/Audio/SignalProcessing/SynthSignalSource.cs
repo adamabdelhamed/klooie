@@ -77,9 +77,7 @@ public class SynthSignalSource : Recyclable
         return MathF.Tanh(sample * drive);
     }
 
-
-
-    private float Osc(float t, WaveformType? overrideWave = null)
+    private float Oscillate(float t, WaveformType? overrideWave = null)
     {
         float driftedFrequency = frequency;
 
@@ -180,12 +178,12 @@ public class SynthSignalSource : Recyclable
                 break;
             }
 
-            float sample = Osc(time);
+            float sample = Oscillate(time);
 
             if (patch.EnableSubOsc)
             {
                 float subTime = time * (float)Math.Pow(2, patch.SubOscOctaveOffset);
-                sample += Osc(subTime, overrideWave: WaveformType.Sine) * patch.SubOscLevel;
+                sample += Oscillate(subTime, overrideWave: WaveformType.Sine) * patch.SubOscLevel;
             }
 
             if (patch.EnableTransient && time < patch.TransientDurationSeconds)
