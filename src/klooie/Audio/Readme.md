@@ -50,3 +50,21 @@ public class SoundSample : ConsoleApp
 }
 
 ```
+
+### Synthesizer patches and effects
+
+Klooie ships with several ready-made synthesizer patches that can be used when
+playing procedural music.  Each patch is a recyclable object so creating notes
+incurs almost no runtime allocation.  A patch can also be extended with effects
+that follow the same pattern.
+
+```csharp
+var lead = SynthPatches.CreateLead().WithTremolo();
+var pad  = SynthPatches.CreateRhythmicPad();
+var kick = SynthPatches.CreateKick();
+var snare = SynthPatches.CreateSnare();
+```
+
+Effects such as reverb, delay, stereo chorus, tremolo and a high pass filter can
+be chained via extension methods like `WithReverb()` or `WithHighPass()`.
+```
