@@ -27,8 +27,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider
     private float[]? pluckBuffer;
     private int pluckLength = 0;
     private int pluckWriteIndex = 0;
-    private bool isDone;
-    private ConsoleApp app;
+    public bool isDone;
     public static readonly LazyPool<SynthVoiceProvider> _pool = new(() => new SynthVoiceProvider());
 
     private SynthVoiceProvider() { }
@@ -36,7 +35,6 @@ public class SynthVoiceProvider : RecyclableAudioProvider
     public static SynthVoiceProvider Create(float frequencyHz, SynthPatch patch, VolumeKnob master, VolumeKnob? knob)
     {
         var ret = _pool.Value.Rent();
-        ret.app = ConsoleApp.Current ?? throw new InvalidOperationException("SynthVoiceProvider requires a ConsoleApp to be running. Please start a ConsoleApp before using SynthVoiceProvider.");
         ret.frequency = frequencyHz;
         ret.sampleRate = waveFormat.SampleRate;
         ret.time = 0;
@@ -78,15 +76,15 @@ public class SynthVoiceProvider : RecyclableAudioProvider
     {
         if (isDone)
         {
-            app.Invoke(this, Recyclable.TryDisposeMe);
+            AudioPlaybackEngine.EventLoop.Invoke(this, Recyclable.TryDisposeMe);
             return 0;
         }
+
         int samplesWritten = 0;
         for (int n = 0; n < count; n += 2)
         {
             float level = patch.Envelope.GetLevel(time);
 
-            // Only mark done if level is *actually* silent for some time
             if (level <= 0.0001f && patch.Envelope.IsDone(time))
             {
                 isDone = true;
@@ -137,8 +135,9 @@ public class SynthVoiceProvider : RecyclableAudioProvider
             buffer[i] = 0f;
         }
 
-        return count;
+        return samplesWritten;
     }
+
 
 
 
