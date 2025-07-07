@@ -6,12 +6,12 @@ namespace klooie;
 
 public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
 {
-    private ISignalSource source;
+    private SynthSignalSource source;
     public static readonly LazyPool<SynthVoiceProvider> _pool = new(() => new SynthVoiceProvider());
     public bool IsDone => source.IsDone;
     private SynthVoiceProvider() { }
 
-    public static SynthVoiceProvider Create(ISignalSource source)
+    public static SynthVoiceProvider Create(SynthSignalSource source)
     {
         var ret = _pool.Value.Rent();
         ret.source = source;
@@ -29,7 +29,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
 
     protected override void OnReturn()
     {
-        (source as Recyclable)?.TryDispose();
+        source?.TryDispose();
         source = null;
         base.OnReturn();
     }

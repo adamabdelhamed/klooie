@@ -1,24 +1,11 @@
-﻿using Microsoft.VisualBasic;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public interface ISignalSource
-{
-    /// <summary>
-    /// Render the next buffer of audio. No side-effects on audio engine.
-    /// </summary>
-    int Render(float[] buffer, int offset, int sampleCount);
-    ADSREnvelope Envelope { get; }
-    bool IsDone { get; }
-
-    void ReleaseNote();
-}
-
-public class SynthSignalSource : Recyclable, ISignalSource
+public class SynthSignalSource : Recyclable
 {
     private static readonly LazyPool<SynthSignalSource> _pool = new(() => new SynthSignalSource());
 
