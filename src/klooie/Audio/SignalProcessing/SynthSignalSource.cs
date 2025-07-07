@@ -79,7 +79,7 @@ public class SynthSignalSource : Recyclable
         }
 
         // Build DSP pipeline
-        pipeline = new List<SignalProcess>();
+        pipeline = pipeline ?? new List<SignalProcess>(20);
         pipeline.Add(OscillatorStage);
         if (patch.EnableSubOsc)
             pipeline.Add(SubOscillatorStage);
@@ -218,6 +218,7 @@ public class SynthSignalSource : Recyclable
         masterKnob = null;
         effectiveVolume = 0f;
         effectivePan = 0f;
+        pipeline?.Clear();   
         base.OnReturn();
     }
 
