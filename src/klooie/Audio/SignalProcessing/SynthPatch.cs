@@ -20,11 +20,7 @@ public interface ISynthPatch
     int Velocity { get; }
     RecyclableList<IEffect> Effects { get; }
 
-    void SpawnVoices(
-        float frequencyHz,
-        VolumeKnob master,
-        VolumeKnob? sampleKnob,
-        List<SynthSignalSource> outVoices);
+    void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices);
 }
 
 public class SynthPatch : Recyclable, ISynthPatch
@@ -63,19 +59,12 @@ public class SynthPatch : Recyclable, ISynthPatch
         base.OnReturn();
         for(var i = 0; i < Effects?.Count; i++)
         {
-            if (Effects[i] is Recyclable r)
-            {
-                r.TryDispose();
-            }
+            if (Effects[i] is Recyclable r) r.TryDispose();
         }
         Effects.Dispose();
     }
 
-    public virtual void SpawnVoices(
-         float frequencyHz,
-         VolumeKnob master,
-         VolumeKnob? sampleKnob,
-         List<SynthSignalSource> outVoices)
+    public virtual void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices)
     {
         var innerVoice = SynthSignalSource.Create(frequencyHz, this, master, sampleKnob);
         this.OnDisposed(innerVoice, Recyclable.TryDisposeMe);
@@ -114,7 +103,8 @@ public static class SynthPatchExtensions
 
     public static SynthPatch WithDistortion(this SynthPatch patch, float drive = 6f, float stageRatio = 0.6f, float bias = 0.15f)
         => patch.WithEffect(DistortionEffect.Create(drive, stageRatio, bias));
-
+    public static SynthPatch WithAggroDistortion(this SynthPatch patch, float drive = 12f, float stageRatio = 0.8f, float bias = 0.12f)
+    => patch.WithEffect(AggroDistortionEffect.Create(drive, stageRatio, bias));
     public static SynthPatch WithVolume(this SynthPatch patch, float volume = 1.0f)
      => patch.WithEffect(VolumeEffect.Create(volume));
 
@@ -166,6 +156,22 @@ public static class SynthPatchExtensions
         patch.WithEffect(EnvelopeEffect.Create(attackMs, decayMs, sustainLevel, releaseMs));
         return patch;
     }
+
+    public static SynthPatch WithToneStack(this SynthPatch patch,
+                                       float bass = 1f,
+                                       float mid = 1f,
+                                       float treble = 1f)
+    => patch.WithEffect(ToneStackEffect.Create(bass, mid, treble));
+
+    public static SynthPatch WithPresenceShelf(this SynthPatch p, float presenceDb = +3f)
+    => p.WithEffect(PresenceShelfEffect.Create(presenceDb));
+
+    public static SynthPatch WithPickTransient(this SynthPatch p,
+                                           float dur = .005f, float gain = .6f)
+    => p.WithEffect(PickTransientEffect.Create(dur, gain));
+
+    public static SynthPatch WithDCBlocker(this SynthPatch p)
+    => p.WithEffect(DCBlockerEffect.Create());
 }
 
 public interface IEffect

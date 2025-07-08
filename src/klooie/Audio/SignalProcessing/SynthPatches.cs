@@ -68,14 +68,6 @@ public static class SynthPatches
         .WithReverb()
         .WithEffect(EnvelopeEffect.Create(0.5f, 1.0f, 0.75f, 1.5f));
 
-    public static ISynthPatch CreateRockGuitar() => UnisonPatch.Create(3, 7f, 0.8f, SynthPatch.Create()
-        .WithWaveForm(WaveformType.Saw)
-        .WithPitchDrift(0.5f, 4f)
-        .WithLowPass(0.02f)
-        .WithEffect(NoiseGateEffect.Create(releaseMs: 140f))
-        .WithDistortion(10)
-        .WithEffect(CabinetEffect.Create())
-        .WithChorus(delayMs: 22, depthMs: 10, rateHz: 0.23f, mix: 0.28f)
-        .WithReverb(feedback: 0.70f, diffusion: 0.52f, wet: 0.28f, dry: 0.68f)
-        .WithEffect(EnvelopeEffect.Create(0.012f, 0.18f, 0.75f, 0.9f)));
+    public static ISynthPatch CreateRockGuitar()
+            => AmpedRockGuitarPatch.Create();
 }
