@@ -63,6 +63,11 @@ var lead = SynthPatches.CreateLead().WithTremolo();
 var pad  = SynthPatches.CreateRhythmicPad();
 var kick = SynthPatches.CreateKick();
 var snare = SynthPatches.CreateSnare();
+var clean  = SynthPatches.CreateCleanElectricGuitar();
+var crunch = SynthPatches.CreateCrunchElectricGuitar();
+var drive  = SynthPatches.CreateOverdriveElectricGuitar();
+var chorus = SynthPatches.CreateChorusElectricGuitar();
+var ambient = SynthPatches.CreateAmbientElectricGuitar();
 ```
 
 Effects such as reverb, delay, stereo chorus, tremolo and a high pass filter can
