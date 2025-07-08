@@ -8,7 +8,6 @@ namespace klooie;
 
 public interface ISynthPatch
 {
-    ADSREnvelope Envelope { get; }
     WaveformType Waveform { get; }
     float DriftFrequencyHz { get; }
     float DriftAmountCents { get; }
@@ -16,15 +15,10 @@ public interface ISynthPatch
     bool EnableSubOsc { get; }
     int SubOscOctaveOffset { get; }
     float SubOscLevel { get; }
-    bool EnableLowPassFilter { get; }
-    float FilterAlpha { get; }
-    bool EnableDynamicFilter { get; }
-    float FilterBaseAlpha { get; }
-    float FilterMaxAlpha { get; }
     bool EnableTransient { get; }
     float TransientDurationSeconds { get; }
     float Velocity { get; }
-    List<IEffect>? Effects { get; }
+    RecyclableList<IEffect> Effects { get; }
 
     void SpawnVoices(
         float frequencyHz,
@@ -41,14 +35,8 @@ public class SynthPatch : Recyclable, ISynthPatch
     {
         var patch = _pool.Value.Rent();
         patch.Waveform = WaveformType.Sine; // default waveform
-        patch.Envelope = ADSREnvelope.Create();
         patch.EnableTransient = false;
         patch.TransientDurationSeconds = 0.01f; // default transient duration
-        patch.EnableLowPassFilter = false;
-        patch.FilterAlpha = 0.05f; // default filter alpha
-        patch.EnableDynamicFilter = false;
-        patch.FilterBaseAlpha = 0.01f; // default base alpha
-        patch.FilterMaxAlpha = 0.2f; // default max alpha
         patch.EnableSubOsc = false; // default sub-oscillator disabled
         patch.SubOscLevel = 0.5f; // default sub-oscillator level
         patch.SubOscOctaveOffset = -1; // default sub-oscillator one octave below
@@ -60,15 +48,8 @@ public class SynthPatch : Recyclable, ISynthPatch
     }
 
     public WaveformType Waveform { get; set; }
-    public ADSREnvelope Envelope { get; set; }
     public bool EnableTransient { get; set; }
     public float TransientDurationSeconds { get; set; }
-    public bool EnableLowPassFilter { get; set; }
-    public float FilterAlpha { get; set; }
-
-    public bool EnableDynamicFilter { get; set; }
-    public float FilterBaseAlpha { get; set; }
-    public float FilterMaxAlpha { get; set; }
 
     public bool EnableSubOsc { get; set; }
     public float SubOscLevel { get; set; } // 0 = silent, 1 = same as main
@@ -80,7 +61,7 @@ public class SynthPatch : Recyclable, ISynthPatch
     public float DriftAmountCents { get; set; }   // how wide it wobbles (cents = 1/100 semitone)
     public float Velocity { get; set; } // default full velocity
 
-    public List<IEffect>? Effects { get; set; } = new List<IEffect>();
+    public RecyclableList<IEffect> Effects { get; set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
     protected override void OnReturn()
     {
@@ -92,9 +73,7 @@ public class SynthPatch : Recyclable, ISynthPatch
                 r.TryDispose();
             }
         }
-        Effects.Clear();
-        Envelope.Dispose();
-        Envelope = null!;
+        Effects.Dispose();
     }
 
     public virtual void SpawnVoices(
@@ -113,8 +92,7 @@ public static class SynthPatchExtensions
 {
     public static SynthPatch WithEffect(this SynthPatch patch, IEffect effect)
     {
-        patch.Effects ??= new List<IEffect>();
-        patch.Effects.Add(effect);
+        patch.Effects.Items.Add(effect);
         return patch;
     }
 
@@ -140,6 +118,7 @@ public static class SynthPatchExtensions
 public interface IEffect
 {
     // Process a mono sample (or stereo, if you want!)
-    float Process(float input, int frameIndex);
+    float Process(float input, int frameIndex, float time);
+    IEffect Clone();
 }
 

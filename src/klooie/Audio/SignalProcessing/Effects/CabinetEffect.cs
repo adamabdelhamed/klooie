@@ -30,7 +30,9 @@ class CabinetEffect : Recyclable, IEffect
         return fx;
     }
 
-    public float Process(float x, int frame)
+    public IEffect Clone() => Create();
+
+    public float Process(float x, int frame, float time)
     {
         x = Biquad.Process(ref low, bl0, bl1, bl2, al1, al2, x);
         x = Biquad.Process(ref mid, bm0, bm1, bm2, am1, am2, x);

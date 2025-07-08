@@ -29,7 +29,15 @@ public class SynthSignalSource : Recyclable
 
     private List<SignalProcess> pipeline;
 
-    public ADSREnvelope Envelope => patch.Envelope;
+    public ADSREnvelope Envelope
+    {
+        get
+        {
+            var envelopeEffect = patch.Effects[patch.Effects.Count - 1] as EnvelopeEffect;
+            if(envelopeEffect == null) throw new InvalidOperationException("Last effect must be EnvelopeEffect");
+            return envelopeEffect.Envelope;
+        }
+    }
     public bool IsDone => isDone;
 
     private static int _globalId = 1;
@@ -62,7 +70,7 @@ public class SynthSignalSource : Recyclable
         InitVolume(master, knob);
         knob?.Dispose();
 
-        patch.Envelope.Trigger(0, sampleRate);
+        Envelope.Trigger(0, sampleRate);
 
         // Pluck buffer if needed
         pluckBuffer = null;
@@ -85,58 +93,41 @@ public class SynthSignalSource : Recyclable
             pipeline.Add(SubOscillatorStage);
         if (patch.EnableTransient)
             pipeline.Add(TransientStage);
-        if (patch.EnableLowPassFilter)
-            pipeline.Add(LowPassFilterStage);
 
 
         // After all core DSP, add effect stages
         if (patch.Effects != null)
         {
-            foreach (var effect in patch.Effects)
+            foreach (var effect in patch.Effects.Items)
             {
                 pipeline.Add(effect.Process);
             }
         }
-
-        pipeline.Add(EnvelopeStage);
     }
 
     // ---- DSP Pipeline delegate signature ----
-    public delegate float SignalProcess(float input, int frameIndex);
+    public delegate float SignalProcess(float input, int frameIndex, float time);
 
     // ---- Pipeline stages: all instance methods, no capturing lambdas ----
 
-    private float OscillatorStage(float input, int frameIndex)
+    private float OscillatorStage(float input, int frameIndex, float time)
     {
         return Oscillate(time);
     }
 
-    private float SubOscillatorStage(float input, int frameIndex)
+    private float SubOscillatorStage(float input, int frameIndex, float time)
     {
         float subTime = time * (float)Math.Pow(2, patch.SubOscOctaveOffset);
         return input + Oscillate(subTime, WaveformType.Sine) * patch.SubOscLevel;
     }
 
-    private float TransientStage(float input, int frameIndex)
+    private float TransientStage(float input, int frameIndex, float time)
     {
         return time < patch.TransientDurationSeconds
             ? input + (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f
             : input;
     }
-
-    private float LowPassFilterStage(float input, int frameIndex)
-    {
-        float dynamicFactor = patch.EnableDynamicFilter ? patch.Velocity : 1f;
-        float alpha = patch.FilterBaseAlpha + dynamicFactor * (patch.FilterMaxAlpha - patch.FilterBaseAlpha);
-        alpha = Math.Clamp(alpha, 0f, 1f);
-        filteredSample += alpha * (input - filteredSample);
-        return filteredSample;
-    }
-
-    private float EnvelopeStage(float input, int frameIndex)
-    {
-        return input * patch.Envelope.GetLevel(time);
-    }
+ 
 
     // ---- Feature logic ----
 
@@ -230,7 +221,7 @@ public class SynthSignalSource : Recyclable
 
             float sample = 0f;
             for (int s = 0; s < pipeline.Count; s++)
-                sample = pipeline[s](sample, n / 2);
+                sample = pipeline[s](sample, n / 2, time);
 
             float finalSample = Math.Clamp(sample * effectiveVolume, -1f, 1f);
 

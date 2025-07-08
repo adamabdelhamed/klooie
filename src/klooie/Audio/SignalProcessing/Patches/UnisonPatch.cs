@@ -15,8 +15,6 @@ public class UnisonPatch : Recyclable, ISynthPatch
 
     private static LazyPool<UnisonPatch> _pool = new(() => new UnisonPatch());
 
-    public ADSREnvelope Envelope => basePatch.Envelope;
-
     public WaveformType Waveform => basePatch.Waveform;
 
     public float DriftFrequencyHz => basePatch.DriftFrequencyHz;
@@ -31,24 +29,13 @@ public class UnisonPatch : Recyclable, ISynthPatch
 
     public float SubOscLevel => basePatch.SubOscLevel;
 
-    public bool EnableLowPassFilter => basePatch.EnableLowPassFilter;
-
-    public float FilterAlpha => basePatch.FilterAlpha;
-
-    public bool EnableDynamicFilter => basePatch.EnableDynamicFilter;
-
-    public float FilterBaseAlpha => basePatch.FilterBaseAlpha;
-
-    public float FilterMaxAlpha => basePatch.FilterMaxAlpha;
-
     public bool EnableTransient => basePatch.EnableTransient;
 
     public float TransientDurationSeconds => basePatch.TransientDurationSeconds;
 
     public float Velocity => basePatch.Velocity;
-
-    private List<IEffect> effects;
-    public List<IEffect>? Effects => effects;
+    
+    public RecyclableList<IEffect> Effects { get; private set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
     private UnisonPatch() { }
 
@@ -99,10 +86,6 @@ public class UnisonPatch : Recyclable, ISynthPatch
             nestedKnob.Pan = pan;
 
             var nestedPatch = SynthPatch.Create();
-            nestedPatch.Envelope.Attack = basePatch.Envelope.Attack;
-            nestedPatch.Envelope.Decay = basePatch.Envelope.Decay;
-            nestedPatch.Envelope.Sustain = basePatch.Envelope.Sustain;
-            nestedPatch.Envelope.Release = basePatch.Envelope.Release;
             nestedPatch.Waveform = basePatch.Waveform;
             nestedPatch.DriftFrequencyHz = basePatch.DriftFrequencyHz;
             nestedPatch.DriftAmountCents = basePatch.DriftAmountCents;
@@ -110,15 +93,15 @@ public class UnisonPatch : Recyclable, ISynthPatch
             nestedPatch.EnableSubOsc = basePatch.EnableSubOsc;
             nestedPatch.SubOscOctaveOffset = basePatch.SubOscOctaveOffset;
             nestedPatch.SubOscLevel = basePatch.SubOscLevel;
-            nestedPatch.EnableLowPassFilter = basePatch.EnableLowPassFilter;
-            nestedPatch.FilterAlpha = basePatch.FilterAlpha;
-            nestedPatch.EnableDynamicFilter = basePatch.EnableDynamicFilter;
-            nestedPatch.FilterBaseAlpha = basePatch.FilterBaseAlpha;
-            nestedPatch.FilterMaxAlpha = basePatch.FilterMaxAlpha;
             nestedPatch.EnableTransient = basePatch.EnableTransient;
             nestedPatch.EnableTransient = nestedPatch.EnableTransient;
             nestedPatch.TransientDurationSeconds = basePatch.TransientDurationSeconds;
             nestedPatch.Velocity = basePatch.Velocity;
+            
+            for(var j = 0; j < basePatch.Effects?.Count; j++)
+            {
+                nestedPatch.Effects.Items.Add(basePatch.Effects[j].Clone());
+            }
 
             outVoices.Add(SynthSignalSource.Create(detunedFreq, nestedPatch, master, nestedKnob));
         }

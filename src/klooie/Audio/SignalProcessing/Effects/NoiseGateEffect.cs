@@ -11,6 +11,7 @@ class NoiseGateEffect : Recyclable, IEffect
     int lookPos;
 
     float openThresh, closeThresh;
+    float attackMs, releaseMs;
     float env, rise, fall;
     bool open;
 
@@ -22,6 +23,8 @@ class NoiseGateEffect : Recyclable, IEffect
         float attackMs = 2f, float releaseMs = 60f)
     {
         var fx = _pool.Value.Rent();
+        fx.attackMs = attackMs;
+        fx.releaseMs = releaseMs;
         fx.openThresh = openThresh;
         fx.closeThresh = closeThresh;
         fx.rise = 1f - MathF.Exp(-1f / (attackMs * 0.001f * SoundProvider.SampleRate));
@@ -33,7 +36,9 @@ class NoiseGateEffect : Recyclable, IEffect
         return fx;
     }
 
-    public float Process(float input, int frame)
+    public IEffect Clone() => NoiseGateEffect.Create(openThresh, closeThresh, attackMs, releaseMs);
+
+    public float Process(float input, int frame, float time)
     {
         // write current sample into look-ahead ring
         lookBuf[lookPos] = input;

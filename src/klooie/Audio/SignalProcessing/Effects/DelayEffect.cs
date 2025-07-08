@@ -27,7 +27,13 @@ public class DelayEffect : Recyclable, IEffect
         pos = 0;
     }
 
-    public float Process(float input, int frameIndex)
+    public IEffect Clone()
+    {
+        var ret= Create(buffer.Length, feedback, mix);
+        return ret;
+    }
+
+    public float Process(float input, int frameIndex, float time)
     {
         float delayed = buffer[pos];
         float output = (1 - mix) * input + mix * delayed;

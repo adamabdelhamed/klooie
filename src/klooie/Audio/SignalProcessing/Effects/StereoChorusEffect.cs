@@ -12,20 +12,25 @@ public class StereoChorusEffect : Recyclable, IEffect
     private int delaySamples, depthSamples;
     private float rateHz, mix;
     private float phase;
+    private int delayMs, depthMs;
 
     private static LazyPool<StereoChorusEffect> _pool = new(() => new StereoChorusEffect());
     protected StereoChorusEffect() { }
-    public static StereoChorusEffect Create(int delayMs = 20, int depthMs = 6, float rateHz = 0.4f, float mix = 0.3f, int sampleRate = 44100)
+    public static StereoChorusEffect Create(int delayMs = 20, int depthMs = 6, float rateHz = 0.4f, float mix = 0.3f)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(delayMs, depthMs, rateHz, mix, sampleRate);
+        ret.Construct(delayMs, depthMs, rateHz, mix);
         return ret;
     }
 
-    protected void Construct(int delayMs = 20, int depthMs = 6, float rateHz = 0.4f, float mix = 0.3f, int sampleRate = 44100)
+    public IEffect Clone() => Create(delayMs, depthMs, rateHz, mix);
+
+    protected void Construct(int delayMs = 20, int depthMs = 6, float rateHz = 0.4f, float mix = 0.3f)
     {
-        delaySamples = (int)(delayMs * sampleRate / 1000);
-        depthSamples = (int)(depthMs * sampleRate / 1000);
+        this.delayMs = delayMs;
+        this.depthMs = depthMs;
+        delaySamples = (int)(delayMs * SoundProvider.SampleRate / 1000);
+        depthSamples = (int)(depthMs * SoundProvider.SampleRate / 1000);
         bufferL = new float[delaySamples + depthSamples + 2];
         bufferR = new float[delaySamples + depthSamples + 2];
         this.rateHz = rateHz;
@@ -34,7 +39,7 @@ public class StereoChorusEffect : Recyclable, IEffect
         phase = 0f;
     }
 
-    public float Process(float input, int frameIndex)
+    public float Process(float input, int frameIndex, float time)
     {
         // Mono version: pan modulation and width not shown; can be extended
         float mod = (float)Math.Sin(phase) * depthSamples;

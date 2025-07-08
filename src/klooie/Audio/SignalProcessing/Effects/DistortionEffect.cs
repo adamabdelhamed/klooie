@@ -12,8 +12,10 @@ class DistortionEffect : Recyclable, IEffect
     float lpOut;   // simple 1-pole LP to anti-alias
     float prevIn;
 
-    static readonly LazyPool<DistortionEffect> _pool =
-        new(() => new DistortionEffect());
+    private float stageRatio;
+
+    private DistortionEffect() { }
+    static readonly LazyPool<DistortionEffect> _pool = new(() => new DistortionEffect());
 
     public static DistortionEffect Create(
         float drive = 6f, // overall gain
@@ -27,7 +29,13 @@ class DistortionEffect : Recyclable, IEffect
         fx.bias = bias;
         fx.prevIn = 0f;
         fx.lpOut = 0f;
+        fx.stageRatio = stageRatio;
         return fx;
+    }
+
+    public IEffect Clone()
+    {
+        return Create(gain1, stageRatio, bias);
     }
 
     // one-pole LP at ~9 kHz (post-distortion, base SR)
@@ -35,7 +43,7 @@ class DistortionEffect : Recyclable, IEffect
 
     static float SoftClip(float x) => MathF.Tanh(x);
 
-    public float Process(float input, int frameIdx)
+    public float Process(float input, int frameIdx, float time)
     {
         // ---- 2× oversampling (linear) -------------------------------------
         float mid = 0.5f * (input + prevIn);
@@ -61,6 +69,7 @@ class DistortionEffect : Recyclable, IEffect
     protected override void OnReturn()
     {
         prevIn = lpOut = 0f;
+        gain1 = gain2 = gain3 = bias = 0f;
         base.OnReturn();
     }
 }

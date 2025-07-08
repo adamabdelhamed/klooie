@@ -89,7 +89,7 @@ public class ReverbEffect : Recyclable, IEffect
 {
     private CombFilter[] combs;
     private AllPassFilter[] allpasses;
-    private float wet, dry;
+    private float feedback, diffusion, wet, dry;
 
     // Some classic reverb delay times (in samples, for 44.1kHz sample rate)
     private static readonly int[] combDelays = { 1557, 1617, 1491, 1422 };
@@ -106,6 +106,8 @@ public class ReverbEffect : Recyclable, IEffect
 
     protected void Construct(float feedback = 0.78f, float diffusion = 0.5f, float wet = 0.3f, float dry = 0.7f)
     {
+        this.feedback = feedback;
+        this.diffusion = diffusion;
         // Allocate combs
         combs = new CombFilter[combDelays.Length];
         for (int i = 0; i < combs.Length; i++)
@@ -120,7 +122,9 @@ public class ReverbEffect : Recyclable, IEffect
         this.dry = dry;
     }
 
-    public float Process(float input, int frameIndex)
+    public IEffect Clone() => Create(feedback, diffusion, wet, dry);
+
+    public float Process(float input, int frameIndex, float time)
     {
         // Mix combs in parallel
         float combOut = 0f;

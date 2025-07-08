@@ -6,27 +6,31 @@ public class HighPassFilterEffect : Recyclable, IEffect
     private float prevInput;
     private float prevOutput;
     private float alpha;
+    private float cutoffHz;
 
     private static readonly LazyPool<HighPassFilterEffect> _pool = new(() => new HighPassFilterEffect());
     protected HighPassFilterEffect() { }
 
-    public static HighPassFilterEffect Create(float cutoffHz = 200f, int sampleRate = SoundProvider.SampleRate)
+    public static HighPassFilterEffect Create(float cutoffHz = 200f)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(cutoffHz, sampleRate);
+        ret.Construct(cutoffHz);
         return ret;
     }
 
-    protected void Construct(float cutoffHz, int sampleRate)
+    protected void Construct(float cutoffHz)
     {
-        float dt = 1f / sampleRate;
+        float dt = 1f / SoundProvider.SampleRate;
         float rc = 1f / (2f * MathF.PI * cutoffHz);
         alpha = rc / (rc + dt);
         prevInput = 0f;
         prevOutput = 0f;
+        this.cutoffHz = cutoffHz;
     }
 
-    public float Process(float input, int frameIndex)
+    public IEffect Clone() => HighPassFilterEffect.Create(cutoffHz);
+
+    public float Process(float input, int frameIndex, float time)
     {
         float output = alpha * (prevOutput + input - prevInput);
         prevInput = input;
