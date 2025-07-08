@@ -1,14 +1,24 @@
 ﻿namespace klooie;
-public class Melody
+public class Melody : Recyclable
 {
     public List<Note> Notes { get; set; } = new();
+    private Melody() { }
 
-    public Melody() { }
-
-    public Melody(IEnumerable<Note> notes)
+    private static LazyPool<Melody> _pool = new(() => new Melody());
+    public static Melody Create(IEnumerable<Note> notes)
     {
-        Notes.AddRange(notes);
+        var melody = _pool.Value.Rent();
+        melody.Notes.AddRange(notes);
+        return melody;
     }
+
+    public static Melody Create()
+    {
+        var melody = _pool.Value.Rent();
+        return melody;
+    }
+
+
 
     public TimeSpan Duration
     {
@@ -30,6 +40,12 @@ public class Melody
     public void AddNote(int midiNode, TimeSpan start, TimeSpan duration, int velocity, ISynthPatch? patch)
     {
         Notes.Add(new Note { MidiNode = midiNode, Start = start, Duration = duration, Velocity = velocity, Patch = patch });
+    }
+
+    protected override void OnReturn()
+    {
+        Notes.Clear();
+        base.OnReturn();
     }
 }
 

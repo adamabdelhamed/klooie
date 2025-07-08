@@ -33,17 +33,16 @@ public class UnisonPatch : Recyclable, ISynthPatch
 
     public float TransientDurationSeconds => basePatch.TransientDurationSeconds;
 
-    public float Velocity => basePatch.Velocity;
+    public int Velocity => basePatch.Velocity;
     
     public RecyclableList<IEffect> Effects { get; private set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
     private UnisonPatch() { }
 
-    public static UnisonPatch Create(
-        ISynthPatch basePatch,
-        int numVoices = 2,
-        float detuneCents = 6f,
-        float panSpread = 0.8f)
+    public static UnisonPatch Create(int numVoices,
+        float detuneCents,
+        float panSpread,
+        ISynthPatch basePatch)
     {
         var patch = _pool.Value.Rent();
         patch.Construct(basePatch, numVoices, detuneCents, panSpread);

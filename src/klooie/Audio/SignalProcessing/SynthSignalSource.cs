@@ -55,6 +55,17 @@ public class SynthSignalSource : Recyclable
         return ret;
     }
 
+    private static Comparison<IEffect> EnvelopesAtTheEndSortComparison = (a, b) =>
+    {
+        if (a is EnvelopeEffect && b is EnvelopeEffect)
+            return 0;
+        if (a is EnvelopeEffect)
+            return 1;
+        if (b is EnvelopeEffect)
+            return -1;
+        return 0;
+    };
+
     protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, VolumeKnob? knob)
     {
         frequency = frequencyHz;
@@ -62,6 +73,7 @@ public class SynthSignalSource : Recyclable
         time = 0;
         filteredSample = 0;
         this.patch = patch;
+        this.patch.Effects.Items.Sort(EnvelopesAtTheEndSortComparison);
         isDone = false;
         driftPhase = 0f;
         driftPhaseIncrement = (float)(2 * Math.PI * patch.DriftFrequencyHz / sampleRate);

@@ -222,7 +222,7 @@ public class ScheduledSynthProviderTests
 
     static Melody CreateEpicTune()
     {
-        var loop = new Melody();
+        var loop = Melody.Create();
 
         // --- timing helpers ---
         const double sixteenth = 0.125;       // 120 BPM ⇒ 16th-note = 0.125 s

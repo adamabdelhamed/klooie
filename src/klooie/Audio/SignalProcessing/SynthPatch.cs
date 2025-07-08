@@ -17,7 +17,7 @@ public interface ISynthPatch
     float SubOscLevel { get; }
     bool EnableTransient { get; }
     float TransientDurationSeconds { get; }
-    float Velocity { get; }
+    int Velocity { get; }
     RecyclableList<IEffect> Effects { get; }
 
     void SpawnVoices(
@@ -34,16 +34,11 @@ public class SynthPatch : Recyclable, ISynthPatch
     public static SynthPatch Create()
     {
         var patch = _pool.Value.Rent();
-        patch.Waveform = WaveformType.Sine; // default waveform
+        patch.Waveform = WaveformType.Sine; 
         patch.EnableTransient = false;
-        patch.TransientDurationSeconds = 0.01f; // default transient duration
-        patch.EnableSubOsc = false; // default sub-oscillator disabled
-        patch.SubOscLevel = 0.5f; // default sub-oscillator level
-        patch.SubOscOctaveOffset = -1; // default sub-oscillator one octave below
-        patch.EnablePitchDrift = false; // default pitch drift disabled
-        patch.DriftFrequencyHz = 0.5f; // default drift frequency
-        patch.DriftAmountCents = 5f; // default drift amount in cents
-        patch.Velocity = 1f; // default velocity
+        patch.EnableSubOsc = false;
+        patch.EnablePitchDrift = false; 
+        patch.Velocity = 127;
         return patch;
     }
 
@@ -52,14 +47,14 @@ public class SynthPatch : Recyclable, ISynthPatch
     public float TransientDurationSeconds { get; set; }
 
     public bool EnableSubOsc { get; set; }
-    public float SubOscLevel { get; set; } // 0 = silent, 1 = same as main
-    public int SubOscOctaveOffset { get; set; } // usually -1 for one octave below
+    public float SubOscLevel { get; set; }  
+    public int SubOscOctaveOffset { get; set; }  
 
 
     public bool EnablePitchDrift { get; set; }
-    public float DriftFrequencyHz { get; set; } // how fast the pitch wobbles
-    public float DriftAmountCents { get; set; }   // how wide it wobbles (cents = 1/100 semitone)
-    public float Velocity { get; set; } // default full velocity
+    public float DriftFrequencyHz { get; set; }  
+    public float DriftAmountCents { get; set; }    
+    public int Velocity { get; set; }  
 
     public RecyclableList<IEffect> Effects { get; set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
@@ -96,6 +91,9 @@ public static class SynthPatchExtensions
         return patch;
     }
 
+    public static SynthPatch WithCabinet(this SynthPatch patch)
+        => patch.WithEffect(CabinetEffect.Create());
+
     public static SynthPatch WithReverb(this SynthPatch patch, float feedback = 0.78f, float diffusion = 0.5f, float wet = 0.3f, float dry = 0.7f)
         => patch.WithEffect(ReverbEffect.Create(feedback, diffusion, wet, dry));
 
@@ -111,8 +109,63 @@ public static class SynthPatchExtensions
     public static SynthPatch WithHighPass(this SynthPatch patch, float cutoffHz = 200f)
         => patch.WithEffect(HighPassFilterEffect.Create(cutoffHz));
 
+    public static SynthPatch WithLowPass(this SynthPatch patch, float alpha)
+        => patch.WithEffect(LowPassFilterEffect.Create(alpha));
+
     public static SynthPatch WithDistortion(this SynthPatch patch, float drive = 6f, float stageRatio = 0.6f, float bias = 0.15f)
         => patch.WithEffect(DistortionEffect.Create(drive, stageRatio, bias));
+
+    public static SynthPatch WithVolume(this SynthPatch patch, float volume = 1.0f)
+     => patch.WithEffect(VolumeEffect.Create(volume));
+
+    public static SynthPatch WithNoiseGate(this SynthPatch patch, float openThresh = 0.05f, float closeThresh = 0.04f, float attackMs = 2f, float releaseMs = 60f) 
+        => patch.WithEffect(NoiseGateEffect.Create(openThresh, closeThresh, attackMs, releaseMs));
+
+    public static SynthPatch WithTransient(this SynthPatch patch, float transientDurationSeconds = .01f)
+    {
+        patch.EnableTransient = true;
+        patch.TransientDurationSeconds = transientDurationSeconds;
+        return patch;
+    }
+
+    public static SynthPatch WithPitchDrift(this SynthPatch patch, float driftFrequencyHz = 0.5f, float driftAmountCents = 5f)
+    {
+        patch.EnablePitchDrift = true;
+        patch.DriftFrequencyHz = driftFrequencyHz;
+        patch.DriftAmountCents = driftAmountCents;
+        return patch;
+    }
+
+    public static SynthPatch WithSubOscillator(this SynthPatch patch, float subOscLevel = .5f, int subOscOctaveOffset = -1)
+    {
+        patch.SubOscLevel = subOscLevel;
+        patch.SubOscOctaveOffset = subOscOctaveOffset; 
+        return patch;
+    }
+
+    public static SynthPatch WithWaveForm(this SynthPatch patch, WaveformType waveform)
+    {
+        patch.Waveform = waveform;
+        return patch;
+    }
+
+    public static SynthPatch WithFadeIn(this SynthPatch patch, float durationSeconds = 1.5f)
+    {
+        patch.WithEffect(FadeInEffect.Create(durationSeconds));
+        return patch;
+    }
+
+    public static SynthPatch WithFadeOut(this SynthPatch patch, float durationSeconds = 1.5f)
+    {
+        patch.WithEffect(FadeOutEffect.Create(durationSeconds));
+        return patch;
+    }
+
+    public static SynthPatch WithEnvelope(this SynthPatch patch, double attackMs, double decayMs, double sustainLevel, double releaseMs)
+    {
+        patch.WithEffect(EnvelopeEffect.Create(attackMs, decayMs, sustainLevel, releaseMs));
+        return patch;
+    }
 }
 
 public interface IEffect
