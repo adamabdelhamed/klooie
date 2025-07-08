@@ -149,4 +149,86 @@ public static class SynthPatches
         patch.WithReverb();
         return patch;
     }
+
+    public static SynthPatch CreateCleanElectricGuitar()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.PluckedString;
+        patch.EnableLowPassFilter = true;
+        patch.FilterAlpha = 0.015f;
+        patch.EnableDistortion = false;
+        patch.Envelope.Attack = 0.002;
+        patch.Envelope.Decay = 0.1;
+        patch.Envelope.Sustain = 0.35;
+        patch.Envelope.Release = 0.45;
+        patch.WithChorus(delayMs: 22, depthMs: 7, rateHz: 0.25f, mix: 0.25f);
+        patch.WithReverb(feedback: 0.65f, diffusion: 0.52f, wet: 0.3f, dry: 0.7f);
+        return patch;
+    }
+
+    public static SynthPatch CreateCrunchElectricGuitar()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.PluckedString;
+        patch.EnableLowPassFilter = true;
+        patch.FilterAlpha = 0.03f;
+        patch.EnableDistortion = true;
+        patch.DistortionAmount = 0.35f;
+        patch.Envelope.Attack = 0.005;
+        patch.Envelope.Decay = 0.15;
+        patch.Envelope.Sustain = 0.3f;
+        patch.Envelope.Release = 0.35;
+        patch.WithChorus();
+        patch.WithReverb();
+        return patch;
+    }
+
+    public static SynthPatch CreateOverdriveElectricGuitar()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.PluckedString;
+        patch.EnableLowPassFilter = true;
+        patch.FilterAlpha = 0.04f;
+        patch.EnableDistortion = true;
+        patch.DistortionAmount = 0.6f;
+        patch.Envelope.Attack = 0.002;
+        patch.Envelope.Decay = 0.2;
+        patch.Envelope.Sustain = 0.3f;
+        patch.Envelope.Release = 0.4;
+        patch.WithHighPass(80f);
+        patch.WithReverb(feedback: 0.72f, diffusion: 0.55f, wet: 0.32f, dry: 0.68f);
+        return patch;
+    }
+
+    public static SynthPatch CreateChorusElectricGuitar()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.PluckedString;
+        patch.EnableLowPassFilter = true;
+        patch.FilterAlpha = 0.02f;
+        patch.EnableDistortion = false;
+        patch.Envelope.Attack = 0.005;
+        patch.Envelope.Decay = 0.15;
+        patch.Envelope.Sustain = 0.3f;
+        patch.Envelope.Release = 0.5f;
+        patch.WithEffect(StereoChorusEffect.Create(delayMs: 25, depthMs: 9, rateHz: 0.35f, mix: 0.5f));
+        patch.WithReverb(feedback: 0.7f, diffusion: 0.5f, wet: 0.3f, dry: 0.7f);
+        return patch;
+    }
+
+    public static SynthPatch CreateAmbientElectricGuitar()
+    {
+        var patch = SynthPatch.Create();
+        patch.Waveform = WaveformType.PluckedString;
+        patch.EnableLowPassFilter = true;
+        patch.FilterAlpha = 0.02f;
+        patch.EnableDistortion = false;
+        patch.Envelope.Attack = 0.01;
+        patch.Envelope.Decay = 0.2;
+        patch.Envelope.Sustain = 0.6f;
+        patch.Envelope.Release = 1.2;
+        patch.WithDelay((int)(SoundProvider.SampleRate * 0.25), feedback: 0.4f, mix: 0.35f);
+        patch.WithReverb(feedback: 0.85f, diffusion: 0.6f, wet: 0.4f, dry: 0.6f);
+        return patch;
+    }
 }
