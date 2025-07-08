@@ -25,9 +25,10 @@ public interface ISoundProvider
     void Resume();
     void ClearCache();
     long SamplesRendered { get; }
-    public IReleasableNote? PlayTimedNote(float frequencyHz, double durationSeconds, SynthPatch patch, VolumeKnob? knob = null);
-    public IReleasableNote? PlaySustainedNote(float frequencyHz, SynthPatch patch, VolumeKnob? knob = null);
-    public void ScheduleSynthNote(int midiNote, long startSample, double durationSeconds, float velocity = 1.0f, SynthPatch patch = null);
+    RecyclableList<IReleasableNote> PlaySustainedNote(Note note, VolumeKnob? knob);
+    void PlayTimedNote(Note note, VolumeKnob? knob = null);
+    void Play(List<Note> notes);
+    public void ScheduleSynthNote(int midiNote, long startSample, double durationSeconds, float velocity = 1.0f, ISynthPatch patch = null);
     EventLoop EventLoop { get; }
 }
 
@@ -41,19 +42,27 @@ public class NoOpSoundProvider : ISoundProvider
     public void Resume() { }
     public void ClearCache() { }
     public long SamplesRendered => 0;
-    public IReleasableNote? PlayTimedNote(float frequencyHz, double durationSeconds, SynthPatch patch, VolumeKnob? knob = null)
-    {
-        return null;
-    }
+   
 
-    public IReleasableNote? PlaySustainedNote(float frequencyHz, SynthPatch patch, VolumeKnob? knob = null)
-    {
-        return null;
-    }
 
-    public void ScheduleSynthNote(int midiNote, long startSample, double durationSeconds, float velocity = 1.0f, SynthPatch patch = null)
+    public void ScheduleSynthNote(int midiNote, long startSample, double durationSeconds, float velocity = 1.0f, ISynthPatch patch = null)
     {
         // No-op implementation
+    }
+
+    public void Play(List<Note> notes)
+    {
+
+    }
+
+    public RecyclableList<IReleasableNote> PlaySustainedNote(Note note, VolumeKnob? knob)
+    {
+        return RecyclableListPool<IReleasableNote>.Instance.Rent();
+    }
+
+    public void PlayTimedNote(Note note, VolumeKnob? knob = null)
+    {
+        throw new NotImplementedException();
     }
 }
 

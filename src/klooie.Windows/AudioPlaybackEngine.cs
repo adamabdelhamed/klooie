@@ -34,7 +34,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
             mixer = new MixingSampleProvider(new ISampleProvider[] { sfxMixer, scheduledSynthProvider }) { ReadFully = true };
 
-            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 300);
+            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 200);
             outputDevice.Init(mixer);
             outputDevice.Play();
             soundCache = new SoundCache(LoadSounds());
@@ -54,39 +54,94 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null) 
         => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
 
-    public IReleasableNote PlayTimedNote(float frequencyHz, double durationSeconds, SynthPatch patch, VolumeKnob? knob = null)
+    public void PlayTimedNote(Note note, VolumeKnob? knob = null)
     {
-        patch.Velocity = knob?.Volume ?? 1f;
-        var source = SynthSignalSource.Create(frequencyHz, patch, MasterVolume, knob);
-        var voice = SynthVoiceProvider.Create(source);
-        mixer.AddMixerInput(voice);
-        var scheduler = Game.Current?.PausableScheduler ?? ConsoleApp.Current.Scheduler;
-        scheduler.Delay(durationSeconds * 1000, voice.ReleaseNote);
-        return voice;
+        RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
+        try
+        {
+            var p = note.Patch ?? SynthPatches.CreateBass();
+            p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, knob, voices.Items);
+
+            for (int i = 0; i < voices.Items.Count; i++)
+            {
+                var voice = SynthVoiceProvider.Create(voices.Items[i]);
+                mixer.AddMixerInput(voice);
+                var scheduler = Game.Current?.PausableScheduler ?? ConsoleApp.Current.Scheduler;
+                scheduler.Delay(note.Duration.TotalSeconds, voice.ReleaseNote);
+            }
+        }
+        finally
+        {
+            voices.Dispose();
+        }
     }
 
-    public IReleasableNote PlaySustainedNote(float frequencyHz, SynthPatch patch, VolumeKnob? knob = null)
+    public RecyclableList<IReleasableNote> PlaySustainedNote(Note note, VolumeKnob? knob)
     {
-        patch.Velocity = knob?.Volume ?? 1f;
-        var source = SynthSignalSource.Create(frequencyHz, patch, MasterVolume, knob);
-        var voice = SynthVoiceProvider.Create(source);
-        mixer.AddMixerInput(voice);
-        return voice;
+        RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
+        try
+        {
+            var p = note.Patch ?? SynthPatches.CreateBass();
+            p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, knob, voices.Items);
+            var releaseable = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
+            for (int i = 0; i < voices.Items.Count; i++)
+            {
+                var voice = SynthVoiceProvider.Create(voices.Items[i]);
+                releaseable.Items.Add(voice);
+                mixer.AddMixerInput(voice);
+            }
+            return releaseable;
+        }
+        finally
+        {
+            voices.Dispose();
+        }
     }
+
+    private static Comparison<Note> MelodyNoteComparer = (a, b) => a.Start.CompareTo(b.Start);
+
+    public void Play(List<Note> notes)
+    {
+        const double bufferDelaySeconds = 0.1; // 100ms buffer for safety
+        long scheduleZero = SamplesRendered + (long)(bufferDelaySeconds * SoundProvider.SampleRate);
+        notes.Sort(MelodyNoteComparer);
+        for (int i = 0; i < notes.Count; i++)
+        {
+            var note = notes[i];
+            long startSample = scheduleZero + (long)Math.Round(note.Start.TotalSeconds * SoundProvider.SampleRate);
+            ScheduleSynthNote(note.MidiNode, startSample, note.Duration.TotalSeconds, note.Velocity, note.Patch ?? SynthPatches.CreateBass());
+        }
+    }
+
 
     public void ScheduleSynthNote(
-    int midiNote,
-    long startSample,
-    double durationSeconds,
-    float velocity = 1.0f,
-    SynthPatch patch = null)
+        int midiNote,
+        long startSample,
+        double durationSeconds,
+        float velocity = 1.0f,
+        ISynthPatch patch = null)
     {
         float freq = MIDIInput.MidiNoteToFrequency(midiNote);
         var knob = VolumeKnob.Create();
         knob.Volume = velocity;
         var p = patch ?? SynthPatches.CreateBass();
-        var source = SynthSignalSource.Create(freq, p, MasterVolume, knob);
-        scheduledSynthProvider.ScheduleNote(ScheduledNoteEvent.Create(startSample, durationSeconds,  source));
+
+        // Let's say max 4 voices
+        RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
+        try
+        {
+            p.SpawnVoices(freq, MasterVolume, knob, voices.Items);
+
+            for (int i = 0; i < voices.Items.Count; i++)
+            {
+                scheduledSynthProvider.ScheduleNote(
+                    ScheduledNoteEvent.Create(startSample, durationSeconds, voices[i]));
+            }
+        }
+        finally
+        {
+            voices.Dispose();
+        }
     }
     private void AddMixerInput(RecyclableSampleProvider? sample)
     {

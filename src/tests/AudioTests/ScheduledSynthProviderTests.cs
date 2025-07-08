@@ -64,17 +64,27 @@ public class ScheduledSynthProviderTests
 
         foreach (var note in melody.Notes)
         {
-            var src = CreateNote(
-                freq: MidiNoteToFrequency(note.MidiNode),
-                durationSeconds: note.Duration.TotalSeconds,
-                patch: note.Patch,
-                volume: note.Velocity / 127f
-            );
-            provider.ScheduleNote(ScheduledNoteEvent.Create(
-                startSample: (long)(note.Start.TotalSeconds * sampleRate),
-                durationSeconds: note.Duration.TotalSeconds,
-                voice: src
-            ));
+            float freq = MidiNoteToFrequency(note.MidiNode);
+            var knob = VolumeKnob.Create();
+            knob.Volume = note.Velocity;
+            var p = note.Patch ?? SynthPatches.CreateBass();
+
+            // Let's say max 4 voices
+            RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
+            try
+            {
+                p.SpawnVoices(freq, knob, knob, voices.Items);
+
+                for (int i = 0; i < voices.Items.Count; i++)
+                {
+                    provider.ScheduleNote(
+                        ScheduledNoteEvent.Create(0, note.Duration.TotalSeconds, voices[i]));
+                }
+            }
+            finally
+            {
+                voices.Dispose();
+            }
         }
 
         // Mix 3 seconds of output

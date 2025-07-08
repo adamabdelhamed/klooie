@@ -27,7 +27,7 @@ public class Melody
         }
     }
 
-    public void AddNote(int midiNode, TimeSpan start, TimeSpan duration, int velocity, SynthPatch? patch)
+    public void AddNote(int midiNode, TimeSpan start, TimeSpan duration, int velocity, ISynthPatch? patch)
     {
         Notes.Add(new Note { MidiNode = midiNode, Start = start, Duration = duration, Velocity = velocity, Patch = patch });
     }
@@ -39,5 +39,5 @@ public class Note
     public TimeSpan Start { get; set; }
     public TimeSpan Duration { get; set; }
     public int Velocity { get; set; }
-    public SynthPatch? Patch { get; set; }
+    public ISynthPatch? Patch { get; set; }
 }

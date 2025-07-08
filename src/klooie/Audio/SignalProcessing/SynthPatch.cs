@@ -5,7 +5,35 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class SynthPatch : Recyclable
+
+public interface ISynthPatch
+{
+    ADSREnvelope Envelope { get; }
+    WaveformType Waveform { get; }
+    float DriftFrequencyHz { get; }
+    float DriftAmountCents { get; }
+    bool EnablePitchDrift { get; }
+    bool EnableSubOsc { get; }
+    int SubOscOctaveOffset { get; }
+    float SubOscLevel { get; }
+    bool EnableLowPassFilter { get; }
+    float FilterAlpha { get; }
+    bool EnableDynamicFilter { get; }
+    float FilterBaseAlpha { get; }
+    float FilterMaxAlpha { get; }
+    bool EnableTransient { get; }
+    float TransientDurationSeconds { get; }
+    float Velocity { get; }
+    List<IEffect>? Effects { get; }
+
+    void SpawnVoices(
+        float frequencyHz,
+        VolumeKnob master,
+        VolumeKnob? sampleKnob,
+        List<SynthSignalSource> outVoices);
+}
+
+public class SynthPatch : Recyclable, ISynthPatch
 {
     private SynthPatch() { }
     private static LazyPool<SynthPatch> _pool = new(() => new SynthPatch());
@@ -24,8 +52,6 @@ public class SynthPatch : Recyclable
         patch.EnableSubOsc = false; // default sub-oscillator disabled
         patch.SubOscLevel = 0.5f; // default sub-oscillator level
         patch.SubOscOctaveOffset = -1; // default sub-oscillator one octave below
-        patch.EnableDistortion = false; // default distortion disabled
-        patch.DistortionAmount = 0.8f; // default distortion amount
         patch.EnablePitchDrift = false; // default pitch drift disabled
         patch.DriftFrequencyHz = 0.5f; // default drift frequency
         patch.DriftAmountCents = 5f; // default drift amount in cents
@@ -33,30 +59,28 @@ public class SynthPatch : Recyclable
         return patch;
     }
 
-    public WaveformType Waveform;
-    public ADSREnvelope Envelope;
-    public bool EnableTransient;
-    public float TransientDurationSeconds;
-    public bool EnableLowPassFilter;
-    public float FilterAlpha;
+    public WaveformType Waveform { get; set; }
+    public ADSREnvelope Envelope { get; set; }
+    public bool EnableTransient { get; set; }
+    public float TransientDurationSeconds { get; set; }
+    public bool EnableLowPassFilter { get; set; }
+    public float FilterAlpha { get; set; }
 
-    public bool EnableDynamicFilter;
-    public float FilterBaseAlpha;
-    public float FilterMaxAlpha;
+    public bool EnableDynamicFilter { get; set; }
+    public float FilterBaseAlpha { get; set; }
+    public float FilterMaxAlpha { get; set; }
 
-    public bool EnableSubOsc;
-    public float SubOscLevel; // 0 = silent, 1 = same as main
-    public int SubOscOctaveOffset; // usually -1 for one octave below
+    public bool EnableSubOsc { get; set; }
+    public float SubOscLevel { get; set; } // 0 = silent, 1 = same as main
+    public int SubOscOctaveOffset { get; set; } // usually -1 for one octave below
 
-    public bool EnableDistortion;
-    public float DistortionAmount; // 0 = clean, 1 = hard clip
 
-    public bool EnablePitchDrift;
-    public float DriftFrequencyHz; // how fast the pitch wobbles
-    public float DriftAmountCents;   // how wide it wobbles (cents = 1/100 semitone)
-    public float Velocity; // default full velocity
+    public bool EnablePitchDrift { get; set; }
+    public float DriftFrequencyHz { get; set; } // how fast the pitch wobbles
+    public float DriftAmountCents { get; set; }   // how wide it wobbles (cents = 1/100 semitone)
+    public float Velocity { get; set; } // default full velocity
 
-    public List<IEffect>? Effects = new List<IEffect>();
+    public List<IEffect>? Effects { get; set; } = new List<IEffect>();
 
     protected override void OnReturn()
     {
@@ -71,6 +95,17 @@ public class SynthPatch : Recyclable
         Effects.Clear();
         Envelope.Dispose();
         Envelope = null!;
+    }
+
+    public virtual void SpawnVoices(
+         float frequencyHz,
+         VolumeKnob master,
+         VolumeKnob? sampleKnob,
+         List<SynthSignalSource> outVoices)
+    {
+        var innerVoice = SynthSignalSource.Create(frequencyHz, this, master, sampleKnob);
+        this.OnDisposed(innerVoice, Recyclable.TryDisposeMe);
+        outVoices.Add(innerVoice);
     }
 }
 
@@ -97,6 +132,9 @@ public static class SynthPatchExtensions
 
     public static SynthPatch WithHighPass(this SynthPatch patch, float cutoffHz = 200f)
         => patch.WithEffect(HighPassFilterEffect.Create(cutoffHz));
+
+    public static SynthPatch WithDistortion(this SynthPatch patch, float drive = 6f, float stageRatio = 0.6f, float bias = 0.15f)
+        => patch.WithEffect(DistortionEffect.Create(drive, stageRatio, bias));
 }
 
 public interface IEffect

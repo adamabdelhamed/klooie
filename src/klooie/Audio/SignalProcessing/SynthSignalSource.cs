@@ -87,9 +87,6 @@ public class SynthSignalSource : Recyclable
             pipeline.Add(TransientStage);
         if (patch.EnableLowPassFilter)
             pipeline.Add(LowPassFilterStage);
-        if (patch.EnableDistortion)
-            pipeline.Add(DistortionStage);
-        pipeline.Add(EnvelopeStage);
 
 
         // After all core DSP, add effect stages
@@ -100,6 +97,8 @@ public class SynthSignalSource : Recyclable
                 pipeline.Add(effect.Process);
             }
         }
+
+        pipeline.Add(EnvelopeStage);
     }
 
     // ---- DSP Pipeline delegate signature ----
@@ -132,13 +131,6 @@ public class SynthSignalSource : Recyclable
         alpha = Math.Clamp(alpha, 0f, 1f);
         filteredSample += alpha * (input - filteredSample);
         return filteredSample;
-    }
-
-    private float DistortionStage(float input, int frameIndex)
-    {
-        float amount = patch.DistortionAmount * patch.Velocity;
-        float drive = 1f + (10f - 1f) * amount;
-        return MathF.Tanh(input * drive);
     }
 
     private float EnvelopeStage(float input, int frameIndex)
