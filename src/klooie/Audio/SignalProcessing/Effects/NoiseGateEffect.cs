@@ -14,6 +14,7 @@ class NoiseGateEffect : Recyclable, IEffect
     float attackMs, releaseMs;
     float env, rise, fall;
     bool open;
+    float gain;
 
     static readonly LazyPool<NoiseGateEffect> _pool =
         new(() => new NoiseGateEffect());
@@ -29,8 +30,9 @@ class NoiseGateEffect : Recyclable, IEffect
         fx.closeThresh = closeThresh;
         fx.rise = 1f - MathF.Exp(-1f / (attackMs * 0.001f * SoundProvider.SampleRate));
         fx.fall = 1f - MathF.Exp(-1f / (releaseMs * 0.001f * SoundProvider.SampleRate));
-        fx.env = 0f;
-        fx.open = false;
+        fx.env = openThresh; // start above closeThresh to avoid initial mute
+        fx.open = true;      // begin open so note attacks aren't choked
+        fx.gain = 1f;
         fx.lookPos = 0;
         Array.Clear(fx.lookBuf, 0, fx.lookBuf.Length);
         return fx;
@@ -52,12 +54,17 @@ class NoiseGateEffect : Recyclable, IEffect
         if (!open && env > openThresh) open = true;
         else if (open && env < closeThresh) open = false;
 
-        return open ? ahead : 0f;
+        float target = open ? 1f : 0f;
+        gain = Smoother.Follow(ref gain, rise, fall, target);
+
+        return ahead * gain;
     }
 
     protected override void OnReturn()
     {
         Array.Clear(lookBuf, 0, lookBuf.Length);
+        lookPos = 0;
+        env = gain = 0f;
+        open = false;
         base.OnReturn();
-    }
-}
+    }}

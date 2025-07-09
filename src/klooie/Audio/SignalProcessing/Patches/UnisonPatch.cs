@@ -73,16 +73,15 @@ public class UnisonPatch : Recyclable, ISynthPatch
 
             // Use a cloned knob for per-voice pan
             var nestedKnob = sampleKnob != null ? VolumeKnob.Create() : null;
-            if(nestedKnob != null)
+            if (nestedKnob != null)
             {
                 OnDisposed(nestedKnob, Recyclable.TryDisposeMe);
                 nestedKnob.Volume = sampleKnob.Volume; // Copy the volume from the master knob
                 nestedKnob.Pan = sampleKnob.Pan; // Copy the pan from the master knob
                 sampleKnob.VolumeChanged.Subscribe(sampleKnob, static (me, v) => me.Volume = v, nestedKnob);
                 sampleKnob.PanChanged.Subscribe(nestedKnob, static (me, v) => me.Pan = v, nestedKnob);
+                nestedKnob.Pan = pan;
             }
-            
-            nestedKnob.Pan = pan;
 
             var nestedPatch = SynthPatch.Create();
             nestedPatch.Waveform = basePatch.Waveform;

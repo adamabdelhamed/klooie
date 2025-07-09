@@ -49,7 +49,7 @@ public class StereoChorusEffect : Recyclable, IEffect
         bufferL[pos] = input;
 
         pos = (pos + 1) % bufferL.Length;
-        phase += 2 * MathF.PI * rateHz / 44100f;
+        phase += 2 * MathF.PI * rateHz / SoundProvider.SampleRate;
         if (phase > 2 * MathF.PI) phase -= 2 * MathF.PI;
 
         return (1 - mix) * input + mix * delayed;

@@ -42,6 +42,7 @@ class AllPassFilter : Recyclable
     {
         buffer = null;
         pos = 0;
+        base.OnReturn();
     }
 }
 
@@ -80,8 +81,9 @@ class CombFilter : Recyclable
 
     protected override void OnReturn()
     {
-        buffer = buffer = null;
+        buffer = null;
         pos = 0;
+        base.OnReturn();
     }
 }
 

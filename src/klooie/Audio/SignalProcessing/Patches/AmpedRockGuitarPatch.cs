@@ -32,13 +32,13 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
 
             /* 1️⃣  Pick + micro-fade come first ------------------------------ */
             .WithPickTransient(.0025f, .35f)
-            .WithFadeIn(0.004f)                 // 4 ms ramp (was 3 ms)
+            .WithFadeIn(0.005f)                 // slightly longer ramp
 
             /* 2️⃣  NOW the pre-gate, with slower attack ---------------------- */
-            .WithNoiseGate(openThresh: 0.025f,
-                           closeThresh: 0.022f,
-                           attackMs: 9f,     // was 1 – 5 ms
-                           releaseMs: 40f)
+            .WithNoiseGate(openThresh: 0.02f,
+                           closeThresh: 0.018f,
+                           attackMs: 4f,
+                           releaseMs: 45f)
 
             /* --- rest of the chain unchanged ------------------------------- */
             .WithVolume(4.2f)
@@ -52,8 +52,8 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
                 ratio: 6f,
                 attack: 0.003f,
                 release: 0.010f))
-            .WithNoiseGate(openThresh: 0.04f, closeThresh: 0.038f,
-                           attackMs: 3f, releaseMs: 25f)
+            .WithNoiseGate(openThresh: 0.04f, closeThresh: 0.036f,
+                           attackMs: 2f, releaseMs: 35f)
             .WithEffect(EnvelopeEffect.Create(
                 attack: 0.01,
                 decay: 0.12,
