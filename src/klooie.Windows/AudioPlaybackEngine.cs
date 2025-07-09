@@ -123,7 +123,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     {
         float freq = MIDIInput.MidiNoteToFrequency(midiNote);
         var knob = VolumeKnob.Create();
-        knob.Volume = velocity;
+        knob.Volume = velocity/127f;
         var p = patch ?? SynthPatches.CreateBass();
 
         // Let's say max 4 voices

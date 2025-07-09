@@ -5,118 +5,118 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+
+public class NoteExpression
+{
+    public int MidiNote { get; init; }
+    public double DurationBeats { get; init; }
+    public int Velocity { get; init; }
+    public Func<ISynthPatch>? PatchFunc { get; init; }
+
+    public static NoteExpression Create(int midi, double beats, int vel = 127, Func<ISynthPatch>? patchFunc = null)
+        => new NoteExpression() { MidiNote = midi, DurationBeats = beats, Velocity = vel, PatchFunc = patchFunc };
+}
+
 public class Motif
 {
-    public readonly (int MidiNote, double DurationBeats, int Velocity, Func<ISynthPatch>? PatchFunc)[] Notes;
+    public readonly NoteExpression[] Notes;
     public readonly string? Name;
-    public readonly Func<ISynthPatch>? DefaultPatchFunc;
+    public readonly double OffsetBeats;
+    public Func<ISynthPatch>? DefaultPatchFunc;
 
-    public Motif(
-        (int midi, double beats, int vel, Func<ISynthPatch>? patchFunc)[] notes,
-        string? name = null,
-        Func<ISynthPatch>? defaultPatchFunc = null)
+    public Motif(IEnumerable<NoteExpression> notes, Func<ISynthPatch>? defaultPatchFunc = null, double offsetBeats = 0f, string? name = null)
     {
-        Notes = notes;
+        Notes = notes.Select(n => NoteExpression.Create(n.MidiNote, n.DurationBeats, n.Velocity, n.PatchFunc ?? defaultPatchFunc)).ToArray();
         Name = name;
+        OffsetBeats = offsetBeats;
         DefaultPatchFunc = defaultPatchFunc;
     }
 
-    // Helper: All notes use the same patch
-    public static Motif Create(string name, Func<ISynthPatch>? patchFunc, params (int midi, double beats, int vel)[] notes)
-        => new Motif(notes.Select(n => (n.midi, n.beats, n.vel, (Func<ISynthPatch>?)null)).ToArray(), name, patchFunc);
-}
-
-public class DrumNote
-{
-    public readonly int MidiNote;
-    public readonly double DurationBeats;
-    public readonly int Velocity;
-    public readonly Func<ISynthPatch> PatchFunc;
-
-    public DrumNote(int midi, double beats, int vel, Func<ISynthPatch> patchFunc)
-        => (MidiNote, DurationBeats, Velocity, PatchFunc) = (midi, beats, vel, patchFunc);
-}
-
-public class DrumMotif
-{
-    public readonly DrumNote[] Notes;
-    public readonly string? Name;
-
-    public DrumMotif(DrumNote[] notes, string? name = null)
-        => (Notes, Name) = (notes, name);
-
-    public static (DrumMotif motif, double offsetBeats)[] TileDrumMotif(DrumMotif motif, double totalBeats)
+    public static IEnumerable<Motif> Repeat(Motif motif, int count)
     {
         var motifBeats = motif.Notes.Sum(n => n.DurationBeats);
-        var result = new List<(DrumMotif, double)>();
         double t = 0;
-        while (t + 0.0001 < totalBeats) // floating point fudge
+        for (int i = 0; i < count; i++)
         {
-            result.Add((motif, t));
+            yield return new Motif(motif.Notes, motif.DefaultPatchFunc, t, motif.Name);
             t += motifBeats;
         }
-        return result.ToArray();
     }
 }
 
 
 public class Phrase
 {
-    public readonly (Motif motif, double offsetBeats)[] MelodicMotifs;
-    public readonly (DrumMotif motif, double offsetBeats)[] DrumMotifs;
+    public readonly Motif[] Motifs;
     public readonly string? Name;
+    public readonly double OffsetBeats;
 
-    public Phrase(
-        (Motif motif, double offsetBeats)[] melodic,
-        (DrumMotif motif, double offsetBeats)[] drums,
-        string? name = null)
+    public double GetLength() => Motifs.Max(m => m.OffsetBeats + m.Notes.Sum(n => n.DurationBeats));
+
+
+    public Phrase(string name, IEnumerable<Motif> motifs, double offsetBeats = 0)
     {
-        MelodicMotifs = melodic;
-        DrumMotifs = drums;
+        Motifs = motifs.ToArray();
         Name = name;
+        OffsetBeats = offsetBeats;
+    }
+
+    public static IEnumerable<Phrase> Repeat(Phrase phrase, int count)
+    {
+        double offset = 0;
+        for (int i = 0; i < count; i++)
+        {
+            yield return new Phrase(phrase.Name, phrase.Motifs, offsetBeats: offset);
+            offset += phrase.GetLength();
+        }
     }
 }
 
+ 
+
 public class Section
 {
-    public readonly (Phrase phrase, double offsetBeats)[] Phrases;
+    public readonly Phrase[] Phrases;
     public readonly string Name;
-    public Section(string name, (Phrase, double)[] phrases)
+    public readonly double OffsetBeats;
+
+    public double GetLength()
+        => Phrases.Sum(p => p.Motifs.Max(m => m.OffsetBeats + m.Notes.Sum(n => n.DurationBeats)));
+
+    public Section(string name, IEnumerable<Phrase> phrases, double offsetBeats = 0)
     {
         Name = name;
-        Phrases = phrases;
+        Phrases = phrases.ToArray();
+        OffsetBeats = offsetBeats;
     }
 }
 
 public class Song
 {
-    public readonly (Section section, double offsetBeats)[] Sections;
-    public Song((Section, double)[] sections) => Sections = sections;
-}
+    public readonly Section[] Sections;
+    public Song(IEnumerable<Section> sections) => Sections = sections.ToArray();
 
-public static class SongExporter
-{
-    public static Melody ExportToMelody(Song song, double bpm = 120.0)
+    public Melody Render(double bpm = 120.0)
     {
         double beatLen = 60.0 / bpm;
         var melody = Melody.Create();
 
-        foreach (var (section, sectionOffsetBeats) in song.Sections)
+        foreach (var section in Sections)
         {
-            foreach (var (phrase, phraseOffsetBeats) in section.Phrases)
+            foreach (var scheduledPhrase in section.Phrases)
             {
-                double phraseAbsStart = sectionOffsetBeats + phraseOffsetBeats;
+                double phraseAbsStart = section.OffsetBeats + scheduledPhrase.OffsetBeats;
 
                 // Export Melodic Motifs
-                foreach (var (motif, motifOffsetBeats) in phrase.MelodicMotifs)
+                foreach (var scheduledMotif in scheduledPhrase.Motifs)
                 {
-                    double motifAbsStart = phraseAbsStart + motifOffsetBeats;
+                    double motifAbsStart = phraseAbsStart + scheduledMotif.OffsetBeats;
                     double runningBeats = motifAbsStart;
 
-                    for (int noteIndex = 0; noteIndex < motif.Notes.Length; noteIndex++)
+                    for (int noteIndex = 0; noteIndex < scheduledMotif.Notes.Length; noteIndex++)
                     {
-                        (int MidiNote, double DurationBeats, int Velocity, Func<ISynthPatch>? PatchFunc) n = motif.Notes[noteIndex];
-                        Func<ISynthPatch>? patchFunc = n.PatchFunc ?? motif.DefaultPatchFunc;
+                        NoteExpression n = scheduledMotif.Notes[noteIndex];
+                        Func<ISynthPatch>? patchFunc = n.PatchFunc ?? scheduledMotif.DefaultPatchFunc;
                         ISynthPatch? patch = patchFunc?.Invoke();
 
                         melody.AddNote(
@@ -130,31 +130,41 @@ public static class SongExporter
                     }
                 }
 
-                // Export Drum Motifs
-                foreach (var (drumMotif, drumMotifOffsetBeats) in phrase.DrumMotifs)
-                {
-                    double drumMotifAbsStart = phraseAbsStart + drumMotifOffsetBeats;
-                    double runningBeats = drumMotifAbsStart;
 
-                    for (int i = 0; i < drumMotif.Notes.Length; i++)
-                    {
-                        DrumNote? n = drumMotif.Notes[i];
-                        // For drums, patchFunc is always required
-                        ISynthPatch patch = n.PatchFunc.Invoke();
-                        melody.AddNote(
-                            n.MidiNote,
-                            TimeSpan.FromSeconds(runningBeats * beatLen),
-                            TimeSpan.FromSeconds(n.DurationBeats * beatLen),
-                            n.Velocity,
-                            patch
-                        );
-                        runningBeats += n.DurationBeats;
-                    }
-                }
             }
         }
         return melody;
     }
 }
 
+public class SongBuilder
+{
+    private readonly List<Section> _sections = new();
+    private double _offset = 0;
+
+    private SongBuilder() { }
+
+    public static SongBuilder Begin() => new SongBuilder();
+
+    public SongBuilder AddSection(string name, Phrase phrase, int repeat = 1)
+    {
+        var repeated = Phrase.Repeat(phrase, repeat);
+        var section = new Section(name, repeated, _offset);
+        _sections.Add(section);
+        _offset += section.GetLength();
+        return this;
+    }
+
+    // Overload to accept multiple phrases (optional)
+    public SongBuilder AddSection(string name, IEnumerable<Phrase> phrases, int repeat = 1)
+    {
+        var allPhrases = phrases.SelectMany(p => Phrase.Repeat(p, repeat));
+        var section = new Section(name, allPhrases, _offset);
+        _sections.Add(section);
+        _offset += section.GetLength();
+        return this;
+    }
+
+    public List<Section> Build() => _sections;
+}
 
