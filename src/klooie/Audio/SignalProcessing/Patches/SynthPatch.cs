@@ -174,6 +174,15 @@ public static class SynthPatchExtensions
     public static SynthPatch WithDCBlocker(this SynthPatch p)
     => p.WithEffect(DCBlockerEffect.Create());
 
+    public static SynthPatch WithPeakEQ(this SynthPatch patch, float freq, float gainDb, float q = 1.0f)
+    => patch.WithEffect(ParametricEQEffect.Create(BiquadType.Peak, freq, gainDb, q));
+
+    public static SynthPatch WithLowShelf(this SynthPatch patch, float freq, float gainDb)
+        => patch.WithEffect(ParametricEQEffect.Create(BiquadType.LowShelf, freq, gainDb));
+
+    public static SynthPatch WithHighShelf(this SynthPatch patch, float freq, float gainDb)
+        => patch.WithEffect(ParametricEQEffect.Create(BiquadType.HighShelf, freq, gainDb));
+
     public static EnvelopeEffect? FindEnvelopeEffect(this ISynthPatch patch)
     {
         // Unwrap until we get a patch whose InnerPatch == itself

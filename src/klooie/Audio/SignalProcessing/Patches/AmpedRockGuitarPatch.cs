@@ -29,25 +29,35 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
             .WithWaveForm(WaveformType.PluckedString)
             .WithDCBlocker()
             .WithPitchDrift(0.25f, 2f)
+
+            // --- PRE-DISTORTION EQ ---
+            .WithLowShelf(120f, -5f)               // Cut sub-bass mud below 120Hz
+            .WithPeakEQ(800f, +3f, 0.6f)           // Add bite/body around 800Hz
             .WithHighPass(110f)
 
-            /* 1️⃣  Pick + micro-fade come first ------------------------------ */
+            // 1️⃣ Pick + micro-fade
             .WithPickTransient(.0025f, .35f)
             .WithFadeIn(0.005f)
 
-            /* 2️⃣  NOW the pre-gate, with slower attack ---------------------- */
+            // 2️⃣ Pre-gate
             .WithNoiseGate(openThresh: 0.02f,
                            closeThresh: 0.018f,
                            attackMs: 4f,
                            releaseMs: 45f)
 
-            /* --- rest of the chain unchanged ------------------------------- */
+            // --- DISTORTION & STACK ---
             .WithVolume(4.2f)
             .WithAggroDistortion(18f, 0.8f, 0.1f)
             .WithToneStack(1.10f, 0.75f, 1.55f)
             .WithCabinet()
             .WithPresenceShelf(-3f)
             .WithLowPass(0.019f)
+
+            // --- POST-CAB EQ ---
+            .WithPeakEQ(400f, -3f, 1.0f)           // Remove boxiness at 400Hz
+            .WithHighShelf(6000f, -4f)             // Tame fizz above 6kHz
+
+            // --- COMPRESS/ENVELOPE ---
             .WithEffect(CompressorEffect.Create(
                 threshold: 0.55f,
                 ratio: 6f,
@@ -61,23 +71,24 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
                 sustain: 0.60,
                 release: 0.22));
 
-        // First layer: Unison for stereo width
+        // Unison for width
         var wide = UnisonPatch.Create(
             numVoices: 2,
             detuneCents: 8f,
             panSpread: 0.9f,
             basePatch: core);
 
-        // Second layer: PowerChordPatch to stack root+5th (+octave, if you like)
+        // PowerChord for root + 5th
         var powerChord = PowerChordPatch.Create(
             basePatch: wide,
-            intervals: new int[] { 0, 7 },    // root + 5th; add 12 for root+5th+octave
-            detuneCents: 6f,                  // subtle extra thickness per interval
-            panSpread: 1.1f                   // wide stereo spread for chord
+            intervals: new int[] { 0, 7 },
+            detuneCents: 6f,
+            panSpread: 1.1f
         );
 
         return powerChord;
     }
+
 
 
 
