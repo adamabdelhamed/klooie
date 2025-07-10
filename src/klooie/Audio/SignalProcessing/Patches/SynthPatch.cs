@@ -18,6 +18,12 @@ public interface ISynthPatch
     bool EnableTransient { get; }
     float TransientDurationSeconds { get; }
     int Velocity { get; }
+
+    public bool EnableVibrato { get;  }
+    public float VibratoRateHz { get;  }
+    public float VibratoDepthCents { get;  }
+    public float VibratoPhaseOffset { get;  }
+
     RecyclableList<IEffect> Effects { get; }
     ISynthPatch InnerPatch { get; }
     void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices);
@@ -51,7 +57,12 @@ public class SynthPatch : Recyclable, ISynthPatch
     public bool EnablePitchDrift { get; set; }
     public float DriftFrequencyHz { get; set; }  
     public float DriftAmountCents { get; set; }    
-    public int Velocity { get; set; }  
+    public int Velocity { get; set; }
+
+    public bool EnableVibrato { get; set; }
+    public float VibratoRateHz { get; set; }
+    public float VibratoDepthCents { get; set; }
+    public float VibratoPhaseOffset { get; set; }
 
     public RecyclableList<IEffect> Effects { get; set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
@@ -124,6 +135,15 @@ public static class SynthPatchExtensions
         patch.EnablePitchDrift = true;
         patch.DriftFrequencyHz = driftFrequencyHz;
         patch.DriftAmountCents = driftAmountCents;
+        return patch;
+    }
+
+    public static SynthPatch WithVibrato(this SynthPatch patch, float rateHz = 5.8f, float depthCents = 35f, float phaseOffset = 0f)
+    {
+        patch.EnableVibrato = true;
+        patch.VibratoRateHz = rateHz;
+        patch.VibratoDepthCents = depthCents;
+        patch.VibratoPhaseOffset = phaseOffset;
         return patch;
     }
 

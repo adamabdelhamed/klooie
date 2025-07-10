@@ -26,6 +26,12 @@ public class PowerChordPatch : Recyclable, ISynthPatch
     public float TransientDurationSeconds => basePatch.TransientDurationSeconds;
     public int Velocity => basePatch.Velocity;
 
+
+    public bool EnableVibrato => basePatch.EnableVibrato;
+    public float VibratoRateHz => basePatch.VibratoRateHz;
+    public float VibratoDepthCents => basePatch.VibratoDepthCents;
+    public float VibratoPhaseOffset => basePatch.VibratoPhaseOffset;
+
     public RecyclableList<IEffect> Effects { get; private set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
     private PowerChordPatch() { }

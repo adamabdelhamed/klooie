@@ -137,22 +137,34 @@ public class SynthSignalSource : Recyclable
             ? input + (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f
             : input;
     }
- 
+
 
     // ---- Feature logic ----
 
     private float Oscillate(float t, WaveformType? overrideWave = null)
     {
-        float driftedFrequency = frequency;
+        float modulatedFrequency = frequency;
+
+        // Pitch drift (already in your code)
         if (patch.EnablePitchDrift)
         {
             float cents = patch.DriftAmountCents * MathF.Sin(driftPhase + driftRandomOffset);
-            float multiplier = MathF.Pow(2f, cents / 1200f); // cents to ratio
-            driftedFrequency *= multiplier;
+            float multiplier = MathF.Pow(2f, cents / 1200f);
+            modulatedFrequency *= multiplier;
         }
+
+        // Vibrato LFO
+        if (patch.EnableVibrato)
+        {
+            float vibratoPhase = 2 * MathF.PI * patch.VibratoRateHz * t + patch.VibratoPhaseOffset;
+            float vibratoCents = MathF.Sin(vibratoPhase) * patch.VibratoDepthCents;
+            float vibratoMultiplier = MathF.Pow(2f, vibratoCents / 1200f);
+            modulatedFrequency *= vibratoMultiplier;
+        }
+
         driftPhase += driftPhaseIncrement;
 
-        double phase = 2 * Math.PI * driftedFrequency * t;
+        double phase = 2 * Math.PI * modulatedFrequency * t;
         var wave = overrideWave ?? patch.Waveform;
         return wave switch
         {
@@ -165,6 +177,7 @@ public class SynthSignalSource : Recyclable
             _ => 0f
         };
     }
+
 
     private float GetPluckedSample()
     {

@@ -29,35 +29,24 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
             .WithWaveForm(WaveformType.PluckedString)
             .WithDCBlocker()
             .WithPitchDrift(0.25f, 2f)
-
-            // --- PRE-DISTORTION EQ ---
-            .WithLowShelf(120f, -5f)               // Cut sub-bass mud below 120Hz
-            .WithPeakEQ(800f, +3f, 0.6f)           // Add bite/body around 800Hz
+            .WithVibrato(rateHz: 6f, depthCents: 28f)    // <--- ADD THIS LINE
+            .WithLowShelf(120f, -5f)
+            .WithPeakEQ(800f, +3f, 0.6f)
             .WithHighPass(110f)
-
-            // 1️⃣ Pick + micro-fade
             .WithPickTransient(.0025f, .35f)
             .WithFadeIn(0.005f)
-
-            // 2️⃣ Pre-gate
             .WithNoiseGate(openThresh: 0.02f,
                            closeThresh: 0.018f,
                            attackMs: 4f,
                            releaseMs: 45f)
-
-            // --- DISTORTION & STACK ---
             .WithVolume(4.2f)
             .WithAggroDistortion(18f, 0.8f, 0.1f)
             .WithToneStack(1.10f, 0.75f, 1.55f)
             .WithCabinet()
             .WithPresenceShelf(-3f)
             .WithLowPass(0.019f)
-
-            // --- POST-CAB EQ ---
-            .WithPeakEQ(400f, -3f, 1.0f)           // Remove boxiness at 400Hz
-            .WithHighShelf(6000f, -4f)             // Tame fizz above 6kHz
-
-            // --- COMPRESS/ENVELOPE ---
+            .WithPeakEQ(400f, -3f, 1.0f)
+            .WithHighShelf(6000f, -4f)
             .WithEffect(CompressorEffect.Create(
                 threshold: 0.55f,
                 ratio: 6f,
@@ -71,14 +60,12 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
                 sustain: 0.60,
                 release: 0.22));
 
-        // Unison for width
         var wide = UnisonPatch.Create(
             numVoices: 2,
             detuneCents: 8f,
             panSpread: 0.9f,
             basePatch: core);
 
-        // PowerChord for root + 5th
         var powerChord = PowerChordPatch.Create(
             basePatch: wide,
             intervals: new int[] { 0, 7 },
@@ -88,6 +75,7 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
 
         return powerChord;
     }
+
 
 
 
@@ -104,6 +92,11 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
     public float TransientDurationSeconds => inner.TransientDurationSeconds;
     public int Velocity => inner.Velocity;
     public RecyclableList<IEffect> Effects => inner.Effects;
+
+    public bool EnableVibrato => inner.EnableVibrato;
+    public float VibratoRateHz => inner.VibratoRateHz;
+    public float VibratoDepthCents => inner.VibratoDepthCents;
+    public float VibratoPhaseOffset => inner.VibratoPhaseOffset;
 
     public void SpawnVoices(float freq,
                             VolumeKnob master,
