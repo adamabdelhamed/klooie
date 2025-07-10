@@ -60,10 +60,12 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         try
         {
             var p = note.Patch ?? SynthPatches.CreateBass();
+            if (p.IsNotePlayable(note.MidiNode) == false) return;
             p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, knob, voices.Items);
             var releaseable = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
             for (int i = 0; i < voices.Items.Count; i++)
             {
+
                 var voice = SynthVoiceProvider.Create(voices.Items[i]);
                 releaseable.Items.Add(voice);
                 mixer.AddMixerInput(voice);
@@ -86,6 +88,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             var p = note.Patch ?? SynthPatches.CreateBass();
             p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, knob, voices.Items);
             var releaseable = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
+            if (p.IsNotePlayable(note.MidiNode) == false) return releaseable;
             for (int i = 0; i < voices.Items.Count; i++)
             {
                 var voice = SynthVoiceProvider.Create(voices.Items[i]);
@@ -128,7 +131,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         var knob = VolumeKnob.Create();
         knob.Volume = velocity/127f;
         var p = patch ?? SynthPatches.CreateBass();
-
+        if (p.IsNotePlayable(midiNote) == false) return;
         // Let's say max 4 voices
         RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
         try

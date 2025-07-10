@@ -8,6 +8,7 @@ namespace klooie;
 
 public interface ISynthPatch
 {
+    bool IsNotePlayable(int midiNote) => true;  // default: always playable
     WaveformType Waveform { get; }
     float DriftFrequencyHz { get; }
     float DriftAmountCents { get; }
@@ -202,6 +203,12 @@ public static class SynthPatchExtensions
 
     public static SynthPatch WithHighShelf(this SynthPatch patch, float freq, float gainDb)
         => patch.WithEffect(ParametricEQEffect.Create(BiquadType.HighShelf, freq, gainDb));
+
+    public static SynthPatch WithPingPongDelay(this SynthPatch patch, float delayMs = 330f, float feedback = 0.45f, float mix = 0.36f)
+    {
+        int delaySamples = (int)(delayMs * SoundProvider.SampleRate / 1000.0);
+        return patch.WithEffect(PingPongDelayEffect.Create(delaySamples, feedback, mix));
+    }
 
     public static EnvelopeEffect? FindEnvelopeEffect(this ISynthPatch patch)
     {

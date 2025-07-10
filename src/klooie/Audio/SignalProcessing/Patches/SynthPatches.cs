@@ -72,6 +72,9 @@ public static class SynthPatches
     public static ISynthPatch CreateRockGuitar()
             => AmpedRockGuitarPatch.Create();
 
+    public static ISynthPatch CreateRockGuitar2()
+        => RockGuitar2.Create();
+
     public static SynthPatch CreateDeepSubBass()
       => SynthPatch.Create()
           .WithWaveForm(WaveformType.Sine)

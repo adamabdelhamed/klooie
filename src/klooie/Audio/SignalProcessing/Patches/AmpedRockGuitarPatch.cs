@@ -29,7 +29,7 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
             .WithWaveForm(WaveformType.PluckedString)
             .WithDCBlocker()
             .WithPitchDrift(0.25f, 2f)
-            .WithVibrato(rateHz: 6f, depthCents: 28f)    // <--- ADD THIS LINE
+            .WithVibrato(rateHz: 6f, depthCents: 28f)
             .WithLowShelf(120f, -5f)
             .WithPeakEQ(800f, +3f, 0.6f)
             .WithHighPass(110f)
@@ -47,6 +47,14 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
             .WithLowPass(0.019f)
             .WithPeakEQ(400f, -3f, 1.0f)
             .WithHighShelf(6000f, -4f)
+
+            // ----- ADD YOUR PING-PONG DELAY HERE -----
+            .WithPingPongDelay(delayMs: 340f, feedback: 0.47f, mix: 0.22f)
+
+            // ----- REVERB IMMEDIATELY AFTER DELAY -----
+            .WithReverb(feedback: 0.65f, diffusion: 0.38f, wet: 0.16f, dry: 0.75f)
+
+            // Final stage: compression/gate/envelope
             .WithEffect(CompressorEffect.Create(
                 threshold: 0.55f,
                 ratio: 6f,
@@ -75,6 +83,7 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
 
         return powerChord;
     }
+
 
 
 
