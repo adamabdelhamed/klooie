@@ -19,12 +19,13 @@ public interface ISynthPatch
     float TransientDurationSeconds { get; }
     int Velocity { get; }
     RecyclableList<IEffect> Effects { get; }
-
+    ISynthPatch InnerPatch { get; }
     void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices);
 }
 
 public class SynthPatch : Recyclable, ISynthPatch
 {
+    public ISynthPatch InnerPatch => this;
     private SynthPatch() { }
     private static LazyPool<SynthPatch> _pool = new(() => new SynthPatch());
     public static SynthPatch Create()
@@ -172,6 +173,38 @@ public static class SynthPatchExtensions
 
     public static SynthPatch WithDCBlocker(this SynthPatch p)
     => p.WithEffect(DCBlockerEffect.Create());
+
+    public static EnvelopeEffect? FindEnvelopeEffect(this ISynthPatch patch)
+    {
+        // Unwrap until we get a patch whose InnerPatch == itself
+        ISynthPatch cur = patch;
+        while (true)
+        {
+            if (cur is SynthPatch s && s.Effects.Items != null)
+            {
+                for(var i = 0; i < s.Effects.Items.Count; i++)
+                {
+                    if (s.Effects.Items[i] is EnvelopeEffect env) return env;
+                }
+
+            }
+
+            var next = cur.InnerPatch;
+            if (next == null || next == cur) break;
+            cur = next;
+        }
+        return null;
+    }
+
+    public static SynthPatch? GetLeafSynthPatch(this ISynthPatch patch)
+    {
+        while (patch is not SynthPatch)
+        {
+            patch = patch.InnerPatch; // You have this property!
+            if (patch == null) return null;
+        }
+        return patch as SynthPatch;
+    }
 }
 
 public interface IEffect

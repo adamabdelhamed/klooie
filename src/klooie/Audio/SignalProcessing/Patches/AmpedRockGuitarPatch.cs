@@ -11,6 +11,7 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
 {
     /* -------------------------------------------------------------------- */
     private ISynthPatch inner;
+    public ISynthPatch InnerPatch => inner;
     private static readonly LazyPool<AmpedRockGuitarPatch> _pool =
         new(() => new AmpedRockGuitarPatch());
     private AmpedRockGuitarPatch() { }
@@ -32,7 +33,7 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
 
             /* 1️⃣  Pick + micro-fade come first ------------------------------ */
             .WithPickTransient(.0025f, .35f)
-            .WithFadeIn(0.005f)                 // slightly longer ramp
+            .WithFadeIn(0.005f)
 
             /* 2️⃣  NOW the pre-gate, with slower attack ---------------------- */
             .WithNoiseGate(openThresh: 0.02f,
@@ -60,12 +61,24 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
                 sustain: 0.60,
                 release: 0.22));
 
-        return UnisonPatch.Create(
+        // First layer: Unison for stereo width
+        var wide = UnisonPatch.Create(
             numVoices: 2,
             detuneCents: 8f,
             panSpread: 0.9f,
             basePatch: core);
+
+        // Second layer: PowerChordPatch to stack root+5th (+octave, if you like)
+        var powerChord = PowerChordPatch.Create(
+            basePatch: wide,
+            intervals: new int[] { 0, 7 },    // root + 5th; add 12 for root+5th+octave
+            detuneCents: 6f,                  // subtle extra thickness per interval
+            panSpread: 1.1f                   // wide stereo spread for chord
+        );
+
+        return powerChord;
     }
+
 
 
     /* ISynthPatch proxy ---------------------------------------------------- */

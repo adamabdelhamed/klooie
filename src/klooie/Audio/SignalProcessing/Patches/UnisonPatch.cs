@@ -9,6 +9,7 @@ namespace klooie;
 public class UnisonPatch : Recyclable, ISynthPatch
 {
     private ISynthPatch basePatch;
+    public ISynthPatch InnerPatch => basePatch;
     private int numVoices;
     private float detuneCents;
     private float panSpread;
@@ -95,12 +96,26 @@ public class UnisonPatch : Recyclable, ISynthPatch
             nestedPatch.EnableTransient = nestedPatch.EnableTransient;
             nestedPatch.TransientDurationSeconds = basePatch.TransientDurationSeconds;
             nestedPatch.Velocity = basePatch.Velocity;
-            
-            for(var j = 0; j < basePatch.Effects?.Count; j++)
-            {
-                nestedPatch.Effects.Items.Add(basePatch.Effects[j].Clone());
-            }
 
+            var leaf = basePatch.GetLeafSynthPatch();
+            if (leaf == null)
+                throw new InvalidOperationException("UnisonPatch basePatch does not contain a leaf SynthPatch.");
+
+            for (var j = 0; j < leaf.Effects?.Count; j++)
+                nestedPatch.Effects.Items.Add(leaf.Effects[j].Clone());
+
+            // Optional: Validate Envelope
+            bool hasEnvelope = false;
+            for (int k = 0; k < nestedPatch.Effects.Items.Count; k++)
+            {
+                if (nestedPatch.Effects.Items[k] is EnvelopeEffect)
+                {
+                    hasEnvelope = true;
+                    break;
+                }
+            }
+            if (!hasEnvelope)
+                throw new InvalidOperationException("UnisonPatch requires the base patch to include an EnvelopeEffect.");
             outVoices.Add(SynthSignalSource.Create(detunedFreq, nestedPatch, master, nestedKnob));
         }
     }

@@ -33,9 +33,7 @@ public class SynthSignalSource : Recyclable
     {
         get
         {
-            var envelopeEffect = patch.Effects[patch.Effects.Count - 1] as EnvelopeEffect;
-            if(envelopeEffect == null) throw new InvalidOperationException("Last effect must be EnvelopeEffect");
-            return envelopeEffect.Envelope;
+            return patch.FindEnvelopeEffect()?.Envelope;
         }
     }
     public bool IsDone => isDone;
