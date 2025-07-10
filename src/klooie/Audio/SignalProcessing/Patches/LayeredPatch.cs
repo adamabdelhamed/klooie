@@ -81,7 +81,6 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     public void SpawnVoices(
         float freq,
         VolumeKnob master,
-        VolumeKnob? sampleKnob,
         List<SynthSignalSource> outVoices)
     {
         for (int i = 0; i < layers.Length; i++)
@@ -92,19 +91,7 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
                 ? freq
                 : freq * MathF.Pow(2f, layerTransposes[layerIdx] / 12f);
 
-            var layerKnob = (sampleKnob != null || layerVolumes[layerIdx] != 1f || layerPans[layerIdx] != 0f) ? VolumeKnob.Create() : null;
-            if (layerKnob != null)
-            {
-                layerKnob.Volume = (sampleKnob?.Volume ?? 1f) * layerVolumes[layerIdx];
-                layerKnob.Pan = (sampleKnob?.Pan ?? 0f) + layerPans[layerIdx];
-                if (sampleKnob != null)
-                {
-                    sampleKnob.VolumeChanged.Subscribe(layerKnob, (me, v) => me.Volume = v * layerVolumes[layerIdx], layerKnob);
-                    sampleKnob.PanChanged.Subscribe(layerKnob, (me, v) => me.Pan = v + layerPans[layerIdx], layerKnob);
-                }
-                OnDisposed(layerKnob, Recyclable.TryDisposeMe);
-            }
-            layers[layerIdx].SpawnVoices(transFreq, master, layerKnob, outVoices);
+            layers[layerIdx].SpawnVoices(transFreq, master, outVoices);
         }
     }
 

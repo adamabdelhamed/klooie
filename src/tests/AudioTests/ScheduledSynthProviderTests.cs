@@ -64,7 +64,7 @@ public class ScheduledSynthProviderTests
     {
         var masterKnob = VolumeKnob.Create();
         masterKnob.Volume = volume;
-        return SynthSignalSource.Create(freq, patch, masterKnob, null);
+        return SynthSignalSource.Create(freq, patch, masterKnob);
     }
 }
 

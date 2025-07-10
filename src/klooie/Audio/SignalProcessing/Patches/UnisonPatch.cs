@@ -109,7 +109,6 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
     public void SpawnVoices(
         float frequencyHz,
         VolumeKnob master,
-        VolumeKnob? sampleKnob,
         List<SynthSignalSource> outVoices)
     {
         for (int i = 0; i < numVoices; i++)
@@ -119,20 +118,7 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
             float pan = rel * panSpread / Math.Max(numVoices - 1, 1);
             float detunedFreq = frequencyHz * MathF.Pow(2f, detune / 1200f);
 
-            // Use a cloned knob for per-voice pan
-            var nestedKnob = sampleKnob != null ? VolumeKnob.Create() : null;
-            if (nestedKnob != null)
-            {
-                OnDisposed(nestedKnob, Recyclable.TryDisposeMe);
-                nestedKnob.Volume = sampleKnob.Volume; // Copy the volume from the master knob
-                nestedKnob.Pan = sampleKnob.Pan; // Copy the pan from the master knob
-                sampleKnob.VolumeChanged.Subscribe(sampleKnob, static (me, v) => me.Volume = v, nestedKnob);
-                sampleKnob.PanChanged.Subscribe(nestedKnob, static (me, v) => me.Pan = v, nestedKnob);
-                nestedKnob.Pan = pan;
-            }
-
-
-            outVoices.Add(SynthSignalSource.Create(detunedFreq, (SynthPatch)_innerPatches[i], master, nestedKnob));
+            outVoices.Add(SynthSignalSource.Create(detunedFreq, (SynthPatch)_innerPatches[i], master));
         }
     }
 

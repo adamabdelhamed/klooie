@@ -25,8 +25,8 @@ public interface ISoundProvider
     void Resume();
     void ClearCache();
     long SamplesRendered { get; }
-    RecyclableList<IReleasableNote> PlaySustainedNote(Note note, VolumeKnob? knob);
-    void PlayTimedNote(Note note, VolumeKnob? knob = null);
+    RecyclableList<IReleasableNote> PlaySustainedNote(Note note);
+    void PlayTimedNote(Note note);
     void Play(List<Note> notes);
     public void ScheduleSynthNote(Note note);
     EventLoop EventLoop { get; }
@@ -55,12 +55,12 @@ public class NoOpSoundProvider : ISoundProvider
 
     }
 
-    public RecyclableList<IReleasableNote> PlaySustainedNote(Note note, VolumeKnob? knob)
+    public RecyclableList<IReleasableNote> PlaySustainedNote(Note note)
     {
         return RecyclableListPool<IReleasableNote>.Instance.Rent();
     }
 
-    public void PlayTimedNote(Note note, VolumeKnob? knob = null)
+    public void PlayTimedNote(Note note)
     {
         throw new NotImplementedException();
     }

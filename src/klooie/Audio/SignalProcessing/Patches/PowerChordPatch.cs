@@ -112,7 +112,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
         }
     }
 
-    public void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices)
+    public void SpawnVoices(float frequencyHz, VolumeKnob master,  List<SynthSignalSource> outVoices)
     {
         int numLayers = intervals.Length;
         for (int i = 0; i < numLayers; i++)
@@ -126,20 +126,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 
             float freq = frequencyHz * MathF.Pow(2f, interval / 12.0f) * MathF.Pow(2f, detune / 1200.0f);
 
-            var nestedKnob = sampleKnob != null ? VolumeKnob.Create() : null;
-            if (nestedKnob != null)
-            {
-                OnDisposed(nestedKnob, Recyclable.TryDisposeMe);
-                nestedKnob.Volume = sampleKnob.Volume;
-                nestedKnob.Pan = sampleKnob.Pan;
-                sampleKnob.VolumeChanged.Subscribe(sampleKnob, static (me, v) => me.Volume = v, nestedKnob);
-                sampleKnob.PanChanged.Subscribe(nestedKnob, static (me, v) => me.Pan = v, nestedKnob);
-                nestedKnob.Pan = pan;
-            }
-
-          
-
-            outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)patches[i], master, nestedKnob));
+            outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)patches[i], master));
         }
     }
 

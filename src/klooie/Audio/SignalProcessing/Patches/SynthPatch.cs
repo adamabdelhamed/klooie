@@ -31,7 +31,7 @@ public interface ISynthPatch
 
     RecyclableList<IEffect> Effects { get; }
     ISynthPatch InnerPatch { get; }
-    void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices);
+    void SpawnVoices(float frequencyHz, VolumeKnob master, List<SynthSignalSource> outVoices);
 }
 
 public class SynthPatch : Recyclable, ISynthPatch
@@ -102,9 +102,9 @@ public class SynthPatch : Recyclable, ISynthPatch
         Effects = null!;
     }
 
-    public virtual void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices)
+    public virtual void SpawnVoices(float frequencyHz, VolumeKnob master, List<SynthSignalSource> outVoices)
     {
-        var innerVoice = SynthSignalSource.Create(frequencyHz, this, master, sampleKnob);
+        var innerVoice = SynthSignalSource.Create(frequencyHz, this, master);
         this.OnDisposed(innerVoice, Recyclable.TryDisposeMe);
         outVoices.Add(innerVoice);
     }

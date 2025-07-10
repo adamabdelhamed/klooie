@@ -54,14 +54,15 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null) 
         => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
 
-    public void PlayTimedNote(Note note, VolumeKnob? knob = null)
+    public void PlayTimedNote(Note note)
     {
         RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
         try
         {
             var p = note.Patch ?? SynthPatches.CreateBass();
+            p.WithVolume(note.Velocity / 127f);
             if (p.IsNotePlayable(note.MidiNode) == false) return;
-            p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, knob, voices.Items);
+            p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, voices.Items);
             var tracker = VoiceCountTracker.Track(voices.Items);
             var releaseable = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
             for (int i = 0; i < voices.Items.Count; i++)
@@ -81,13 +82,14 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         }
     }
 
-    public RecyclableList<IReleasableNote> PlaySustainedNote(Note note, VolumeKnob? knob)
+    public RecyclableList<IReleasableNote> PlaySustainedNote(Note note)
     {
         RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
         try
         {
             var p = note.Patch ?? SynthPatches.CreateBass();
-            p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, knob, voices.Items);
+            p.WithVolume(note.Velocity / 127f);
+            p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, voices.Items);
             var tracker = VoiceCountTracker.Track(voices.Items);
             var releaseable = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
             if (p.IsNotePlayable(note.MidiNode) == false) return releaseable;
@@ -124,15 +126,16 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         long scheduleZero = SamplesRendered + (long)(bufferDelaySeconds * SoundProvider.SampleRate);
         long startSample = scheduleZero + (long)Math.Round(note.Start.TotalSeconds * SoundProvider.SampleRate);
         float freq = MIDIInput.MidiNoteToFrequency(note.MidiNode);
-        var knob = VolumeKnob.Create();
-        knob.Volume = note.Velocity/127f;
+      
+        var volume = note.Velocity/127f;
         var p = note.Patch ?? SynthPatches.CreateBass();
+        p.WithVolume(volume);
         if (p.IsNotePlayable(note.MidiNode) == false) return;
    
         RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
         try
         {
-            p.SpawnVoices(freq, MasterVolume, knob, voices.Items);
+            p.SpawnVoices(freq, MasterVolume, voices.Items);
             var tracker = VoiceCountTracker.Track(voices.Items);
             for (int i = 0; i < voices.Items.Count; i++)
             {

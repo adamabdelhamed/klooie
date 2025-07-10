@@ -45,11 +45,11 @@ public class SynthSignalSource : Recyclable
 
     protected SynthSignalSource() { }
 
-    public static SynthSignalSource Create(float frequencyHz, SynthPatch patch, VolumeKnob master, VolumeKnob? knob)
+    public static SynthSignalSource Create(float frequencyHz, SynthPatch patch, VolumeKnob master)
     {
         var ret = _pool.Value.Rent();
         ret.Id = Interlocked.Increment(ref _globalId);
-        ret.Construct(frequencyHz, patch, master, knob);
+        ret.Construct(frequencyHz, patch, master, null);
         return ret;
     }
 

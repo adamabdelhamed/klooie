@@ -109,9 +109,8 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch, ICompositePa
 
     public void SpawnVoices(float freq,
                             VolumeKnob master,
-                            VolumeKnob? sampleKnob,
                             List<SynthSignalSource> outVoices)
-        => inner.SpawnVoices(freq, master, sampleKnob, outVoices);
+        => inner.SpawnVoices(freq, master, outVoices);
 
     
     public void GetPatches(List<ISynthPatch> patches)
