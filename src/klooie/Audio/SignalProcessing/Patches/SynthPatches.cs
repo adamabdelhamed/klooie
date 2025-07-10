@@ -154,6 +154,59 @@ public static class SynthPatches
             .WithVolume(.85f)
             .WithEnvelope(0.003, 0.09, 0.55, 0.25);
 
+    public static ISynthPatch CreateFatLayeredBass()
+    {
+        // --- Main "body" layer: square, pick transient, drive ---
+        var main = SynthPatch.Create()
+            .WithWaveForm(WaveformType.Square)
+            .WithPickTransient(.003f, .45f)
+            .WithLowPass(.014f)
+            .WithAggroDistortion(5f, 0.7f, 0.08f)
+            .WithNoiseGate(.02f, .018f)
+            .WithVolume(.70f)
+            .WithEnvelope(0.002, 0.045, 0.45, 0.13);
+
+        // --- Sub layer: pure sine, dark, just for weight ---
+        var sub = SynthPatch.Create()
+            .WithWaveForm(WaveformType.Sine)
+            .WithLowPass(.008f)
+            .WithVolume(.38f)
+            .WithEnvelope(0.002, 0.05, 0.8, 0.16);
+
+        // --- Click/attack layer: filtered noise, fast envelope ---
+        var click = SynthPatch.Create()
+            .WithWaveForm(WaveformType.Noise)
+            .WithHighPass(900f)
+            .WithLowPass(.12f)
+            .WithPickTransient(.002f, .75f)
+            .WithVolume(.15f)
+            .WithEnvelope(0.0007, 0.009, 0.05, 0.02);
+
+        // --- Stack root and sub using PowerChordPatch ---
+        var rootPlusSub = PowerChordPatch.Create(
+            basePatch: main,
+            intervals: new[] { 0, -12 },      // root + sub-octave
+            detuneCents: 0f,
+            panSpread: 0f);
+
+        // --- Unison for width and thickness ---
+        var fatWide = UnisonPatch.Create(
+            numVoices: 2,
+            detuneCents: 3.5f,
+            panSpread: 0.18f,
+            basePatch: rootPlusSub);
+
+        // --- Blend main/sub (fatWide) + click using LayeredPatch ---
+        // (If you want to add 'sub' as a separate layer, just add it here too)
+        return LayeredPatch.Create(
+            patches: new ISynthPatch[] { fatWide, click },
+            volumes: new float[] { 1.0f, 0.9f }, // adjust to taste
+            pans: new float[] { 0.0f, 0.0f }  // both centered; tweak for stereo
+        );
+    }
+
+
+
     /// <summary>Click-accented tech bass—fast transient, very short release.</summary>
     public static SynthPatch CreateTechClickBass()
         => SynthPatch.Create()
