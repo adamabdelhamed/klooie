@@ -65,16 +65,37 @@ public class SynthPatch : Recyclable, ISynthPatch
     public float VibratoDepthCents { get; set; }
     public float VibratoPhaseOffset { get; set; }
 
-    public RecyclableList<IEffect> Effects { get; set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
+    public RecyclableList<IEffect> Effects { get; set; }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
+        Effects = RecyclableListPool<IEffect>.Instance.Rent(20);
+        Waveform = WaveformType.Sine;
+        EnableTransient = false;
+        TransientDurationSeconds = 0f;
+        EnableSubOsc = false;
+        SubOscLevel = 0f;
+        SubOscOctaveOffset = 0;
+        EnablePitchDrift = false;
+        DriftFrequencyHz = 0f;
+        DriftAmountCents = 0f;
+        Velocity = 127;
+        EnableVibrato = false;
+        VibratoRateHz = 0f;
+        VibratoDepthCents = 0f;
+        VibratoPhaseOffset = 0f;
+    }
 
     protected override void OnReturn()
     {
         base.OnReturn();
-        for(var i = 0; i < Effects?.Count; i++)
+        for (var i = 0; i < Effects?.Count; i++)
         {
             if (Effects[i] is Recyclable r) r.TryDispose();
         }
         Effects.Dispose();
+        Effects = null!;
     }
 
     public virtual void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices)
