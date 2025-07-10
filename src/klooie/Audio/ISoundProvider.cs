@@ -66,6 +66,45 @@ public class NoOpSoundProvider : ISoundProvider
     }
 }
 
+public class Note : Recyclable
+{
+    private Note() { }
+    private static LazyPool<Note> _pool = new(() => new Note());
+    public static Note Create(int midiNode, TimeSpan start, TimeSpan duration, int velocity, ISynthPatch? patch)
+    {
+        var note = _pool.Value.Rent();
+        note.MidiNode = midiNode;
+        note.Start = start;
+        note.Duration = duration;
+        note.Velocity = velocity;
+        note.Patch = patch;
+        return note;
+    }
 
+    public static Note Create(int midiNode, int velocity, ISynthPatch? patch)
+    {
+        var note = _pool.Value.Rent();
+        note.MidiNode = midiNode;
+        note.Velocity = velocity;
+        note.Patch = patch;
+        return note;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        MidiNode = 0;
+        Start = TimeSpan.Zero;
+        Duration = TimeSpan.Zero;
+        Velocity = 0;
+        Patch = null;
+    }
+
+    public int MidiNode { get; set; }
+    public TimeSpan Start { get; set; }
+    public TimeSpan Duration { get; set; }
+    public int Velocity { get; set; }
+    public ISynthPatch? Patch { get; set; }
+}
 
 

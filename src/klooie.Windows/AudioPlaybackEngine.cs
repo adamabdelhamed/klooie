@@ -34,7 +34,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
             mixer = new MixingSampleProvider(new ISampleProvider[] { sfxMixer, scheduledSynthProvider }) { ReadFully = true };
 
-            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 200);
+            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 40);
             outputDevice.Init(mixer);
             outputDevice.Play();
             soundCache = new SoundCache(LoadSounds());
@@ -61,14 +61,16 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         {
             var p = note.Patch ?? SynthPatches.CreateBass();
             p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, knob, voices.Items);
-
+            var releaseable = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
             for (int i = 0; i < voices.Items.Count; i++)
             {
                 var voice = SynthVoiceProvider.Create(voices.Items[i]);
+                releaseable.Items.Add(voice);
                 mixer.AddMixerInput(voice);
                 var scheduler = Game.Current?.PausableScheduler ?? ConsoleApp.Current.Scheduler;
                 scheduler.Delay(note.Duration.TotalSeconds, voice.ReleaseNote);
             }
+            // TODO: Dispose notes when all voices are done
         }
         finally
         {
@@ -90,6 +92,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
                 releaseable.Items.Add(voice);
                 mixer.AddMixerInput(voice);
             }
+            releaseable.OnDisposed(note, Recyclable.TryDisposeMe);
             return releaseable;
         }
         finally
@@ -137,6 +140,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
                 scheduledSynthProvider.ScheduleNote(
                     ScheduledNoteEvent.Create(startSample, durationSeconds, voices[i]));
             }
+            //TODO: Dispose note when all voices are done
         }
         finally
         {

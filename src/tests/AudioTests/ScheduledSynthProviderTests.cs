@@ -55,90 +55,7 @@ public class ScheduledSynthProviderTests
     {
         return 440f * (float)Math.Pow(2, (noteNumber - 69) / 12.0);
     }
-    [TestMethod]
-    public void EpicTune_Mixes_MultipleInstruments()
-    {
-        int sampleRate = 44100, channels = 2, seconds = 3;
-        var provider = new ScheduledSignalSourceMixer();
-        var melody = CreateEpicTune();
-
-        foreach (var note in melody.Notes)
-        {
-            float freq = MidiNoteToFrequency(note.MidiNode);
-            var knob = VolumeKnob.Create();
-            knob.Volume = note.Velocity;
-            var p = note.Patch ?? SynthPatches.CreateBass();
-
-            // Let's say max 4 voices
-            RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
-            try
-            {
-                p.SpawnVoices(freq, knob, knob, voices.Items);
-
-                for (int i = 0; i < voices.Items.Count; i++)
-                {
-                    provider.ScheduleNote(
-                        ScheduledNoteEvent.Create(0, note.Duration.TotalSeconds, voices[i]));
-                }
-            }
-            finally
-            {
-                voices.Dispose();
-            }
-        }
-
-        // Mix 3 seconds of output
-        float[] buffer = new float[sampleRate * channels * seconds];
-        provider.Read(buffer, 0, buffer.Length);
-
-        // We'll check for energy in the first second (bass and guitar overlap).
-        int oneSecondSamples = sampleRate * channels;
-        float bassEnergy = 0, guitarEnergy = 0;
-
-        // To identify which samples belong to bass or guitar, 
-        // we check the patch assigned to each note.
-        // Let's build index lists for each.
-        var bassNotes = melody.Notes.Where(n => n.Patch.Waveform == WaveformType.Sine).ToList();
-        var guitarNotes = melody.Notes.Where(n => n.Patch.Waveform == WaveformType.PluckedString).ToList();
-
-        // Create time masks for expected activity (just a rough estimate here).
-        bool[] bassActive = new bool[oneSecondSamples / channels];
-        bool[] guitarActive = new bool[oneSecondSamples / channels];
-        foreach (var n in bassNotes)
-        {
-            int start = (int)(n.Start.TotalSeconds * sampleRate);
-            int end = Math.Min(oneSecondSamples / channels, (int)((n.Start + n.Duration).TotalSeconds * sampleRate));
-            for (int i = start; i < end; i++)
-                if (i >= 0 && i < bassActive.Length)
-                    bassActive[i] = true;
-        }
-        foreach (var n in guitarNotes)
-        {
-            int start = (int)(n.Start.TotalSeconds * sampleRate);
-            int end = Math.Min(oneSecondSamples / channels, (int)((n.Start + n.Duration).TotalSeconds * sampleRate));
-            for (int i = start; i < end; i++)
-                if (i >= 0 && i < guitarActive.Length)
-                    guitarActive[i] = true;
-        }
-
-        // Now sum abs values for each instrument's "active" times (for left channel)
-        for (int i = 0; i < bassActive.Length; i++)
-        {
-            float val = buffer[i * channels]; // left channel
-            if (bassActive[i]) bassEnergy += Math.Abs(val);
-            if (guitarActive[i]) guitarEnergy += Math.Abs(val);
-        }
-
-        // Print values if desired:
-        // Console.WriteLine($"BassEnergy={bassEnergy}, GuitarEnergy={guitarEnergy}");
-
-        // Assert that both energies are significant (arbitrary threshold)
-        Assert.IsTrue(bassEnergy > 10, $"Bass is too quiet: {bassEnergy}");
-        Assert.IsTrue(guitarEnergy > 1, $"Guitar is too quiet: {guitarEnergy}");
-
-        // Also assert both are nonzero
-        Assert.IsTrue(bassEnergy > 0 && guitarEnergy > 0, "Either bass or guitar is silent in the mix");
-    }
+ 
 
     [TestMethod]
     public void OverlappingNotesGetUniqueSynthSignalSourceInstances()
@@ -220,39 +137,7 @@ public class ScheduledSynthProviderTests
         }
     }
 
-    static Melody CreateEpicTune()
-    {
-        var loop = Melody.Create();
-
-        // --- timing helpers ---
-        const double sixteenth = 0.125;       // 120 BPM ⇒ 16th-note = 0.125 s
-        TimeSpan Ts(double seconds) => TimeSpan.FromSeconds(seconds);
-
-        loop.AddNote(45, Ts(0), Ts(1.75), 90, SynthPatches.CreateBass());  // A2
-        loop.AddNote(52, Ts(2), Ts(.75), 90, SynthPatches.CreateBass());  // E3
-        loop.AddNote(43, Ts(3), Ts(1), 80, SynthPatches.CreateBass());  // G2
-        loop.AddNote(48, Ts(4), Ts(1.25), 70, SynthPatches.CreateBass());  // C3
-
-        // --- 16-note arpeggio riff (A-min → F-maj-add9 turnaround) ---
-        int[] riff =  // all MIDI note numbers
-        {
-            57, 60, 64, 67,  64, 60, 67, 69,      // A3-C4-E4-G4-E4-C4-G4-A4
-            60, 65, 69, 72,  69, 65, 60, 57       // C4-F4-A4-C5-A4-F4-C4-A3
-        };
-
-        for (int i = 0; i < riff.Length; i++)
-        {
-            loop.AddNote(
-                midiNode: riff[i],
-                start: Ts(i * sixteenth),
-                duration: Ts(sixteenth),
-                velocity: 112 + (i % 4 == 0 ? 8 : 0),   // subtle accent on the beat
-                SynthPatches.CreateGuitar()
-            );
-        }
-        return loop;
-    }
-
+ 
     public static SynthSignalSource CreateNote(float freq, double durationSeconds, SynthPatch patch, float volume = 1f)
     {
         var masterKnob = VolumeKnob.Create();
