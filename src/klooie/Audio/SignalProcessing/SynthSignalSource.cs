@@ -26,7 +26,7 @@ public class SynthSignalSource : Recyclable
     protected VolumeKnob? sampleKnob;
     protected float effectiveVolume;
     protected float effectivePan;
-
+    private List<IPitchModEffect>? pitchMods;
     private List<SignalProcess> pipeline;
 
     public ADSREnvelope Envelope
@@ -104,7 +104,7 @@ public class SynthSignalSource : Recyclable
         if (patch.EnableTransient)
             pipeline.Add(TransientStage);
 
-
+        pitchMods = patch.Effects.Items.OfType<IPitchModEffect>().ToList();
         // After all core DSP, add effect stages
         if (patch.Effects != null)
         {
@@ -143,24 +143,29 @@ public class SynthSignalSource : Recyclable
 
     private float Oscillate(float t, WaveformType? overrideWave = null)
     {
-        float modulatedFrequency = frequency;
+        float totalCents = 0f;
 
-        // Pitch drift (already in your code)
+        // Pitch Drift
         if (patch.EnablePitchDrift)
-        {
-            float cents = patch.DriftAmountCents * MathF.Sin(driftPhase + driftRandomOffset);
-            float multiplier = MathF.Pow(2f, cents / 1200f);
-            modulatedFrequency *= multiplier;
-        }
+            totalCents += patch.DriftAmountCents * MathF.Sin(driftPhase + driftRandomOffset);
 
         // Vibrato LFO
         if (patch.EnableVibrato)
         {
             float vibratoPhase = 2 * MathF.PI * patch.VibratoRateHz * t + patch.VibratoPhaseOffset;
-            float vibratoCents = MathF.Sin(vibratoPhase) * patch.VibratoDepthCents;
-            float vibratoMultiplier = MathF.Pow(2f, vibratoCents / 1200f);
-            modulatedFrequency *= vibratoMultiplier;
+            totalCents += MathF.Sin(vibratoPhase) * patch.VibratoDepthCents;
         }
+
+        // Modular pitch effects (e.g., PitchBendEffect)
+        if (pitchMods != null)
+        {
+            for (int i = 0; i < pitchMods.Count; i++)
+            {
+                totalCents += pitchMods[i].GetPitchOffsetCents(t);
+            }
+        }
+
+        float modulatedFrequency = frequency * MathF.Pow(2f, totalCents / 1200f);
 
         driftPhase += driftPhaseIncrement;
 
@@ -170,14 +175,13 @@ public class SynthSignalSource : Recyclable
         {
             WaveformType.Sine => (float)Math.Sin(phase),
             WaveformType.Square => MathF.Sign(MathF.Sin((float)phase)),
-            WaveformType.Triangle => 2f * MathF.Abs(2f * (float)(t * frequency % 1f) - 1f) - 1f,
-            WaveformType.Saw => 2f * ((float)(t * frequency % 1f)) - 1f,
+            WaveformType.Triangle => 2f * MathF.Abs(2f * (float)(t * modulatedFrequency % 1f) - 1f) - 1f,
+            WaveformType.Saw => 2f * ((float)(t * modulatedFrequency % 1f)) - 1f,
             WaveformType.Noise => (float)(Random.Shared.NextDouble() * 2 - 1),
             WaveformType.PluckedString => GetPluckedSample(),
             _ => 0f
         };
     }
-
 
     private float GetPluckedSample()
     {

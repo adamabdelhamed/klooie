@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-
+public interface ICompositePatch : ISynthPatch { IEnumerable<ISynthPatch> Patches { get; } }
 public interface ISynthPatch
 {
     bool IsNotePlayable(int midiNote) => true;  // default: always playable
@@ -118,8 +118,43 @@ public static class SynthPatchExtensions
         => patch.WithEffect(DistortionEffect.Create(drive, stageRatio, bias));
     public static SynthPatch WithAggroDistortion(this SynthPatch patch, float drive = 12f, float stageRatio = 0.8f, float bias = 0.12f)
     => patch.WithEffect(AggroDistortionEffect.Create(drive, stageRatio, bias));
+
     public static SynthPatch WithVolume(this SynthPatch patch, float volume = 1.0f)
-     => patch.WithEffect(VolumeEffect.Create(volume));
+ => patch.WithEffect(VolumeEffect.Create(volume));
+
+    public static ISynthPatch WithVolume(this ISynthPatch patch, float volume = 1.0f)
+    {
+        foreach (var p in patch.GetAllLeafPatches())
+        {
+            if (p is SynthPatch s)
+                s.Effects.Items.Add(VolumeEffect.Create(volume));
+        }
+        return patch;
+    }
+
+    public static ISynthPatch WithPitchBend(this ISynthPatch patch, Func<float, float> bendFunc, float duration)
+    {
+        foreach (var p in patch.GetAllLeafPatches())
+        {
+            if (p is SynthPatch s)
+                s.Effects.Items.Add(PitchBendEffect.Create(bendFunc, duration));
+        }
+        return patch;
+    }
+
+    public static IEnumerable<ISynthPatch> GetAllLeafPatches(this ISynthPatch patch)
+    {
+        if (patch is ICompositePatch composite)
+        {
+            foreach (var child in composite.Patches)
+                foreach (var leaf in child.GetAllLeafPatches())
+                    yield return leaf;
+        }
+        else
+        {
+            yield return patch;
+        }
+    }
 
     public static SynthPatch WithNoiseGate(this SynthPatch patch, float openThresh = 0.05f, float closeThresh = 0.04f, float attackMs = 2f, float releaseMs = 60f) 
         => patch.WithEffect(NoiseGateEffect.Create(openThresh, closeThresh, attackMs, releaseMs));

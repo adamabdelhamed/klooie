@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class UnisonPatch : Recyclable, ISynthPatch
+public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
 {
     private ISynthPatch basePatch;
     public ISynthPatch InnerPatch => basePatch;
@@ -43,6 +43,9 @@ public class UnisonPatch : Recyclable, ISynthPatch
 
     public RecyclableList<IEffect> Effects { get; private set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
+    private ISynthPatch[] _innerPatches;
+    public IEnumerable<ISynthPatch> Patches => _innerPatches;
+
     private UnisonPatch() { }
 
     public static UnisonPatch Create(int numVoices,
@@ -62,34 +65,11 @@ public class UnisonPatch : Recyclable, ISynthPatch
         this.detuneCents = detuneCents;
         this.panSpread = panSpread;
 
-    }
-
-    public void SpawnVoices(
-        float frequencyHz,
-        VolumeKnob master,
-        VolumeKnob? sampleKnob,
-        List<SynthSignalSource> outVoices)
-    {
+        _innerPatches = new ISynthPatch[numVoices];
         for (int i = 0; i < numVoices; i++)
         {
-            float rel = (i - (numVoices - 1) / 2.0f);
-            float detune = rel * detuneCents / Math.Max(numVoices - 1, 1);
-            float pan = rel * panSpread / Math.Max(numVoices - 1, 1);
-            float detunedFreq = frequencyHz * MathF.Pow(2f, detune / 1200f);
-
-            // Use a cloned knob for per-voice pan
-            var nestedKnob = sampleKnob != null ? VolumeKnob.Create() : null;
-            if (nestedKnob != null)
-            {
-                OnDisposed(nestedKnob, Recyclable.TryDisposeMe);
-                nestedKnob.Volume = sampleKnob.Volume; // Copy the volume from the master knob
-                nestedKnob.Pan = sampleKnob.Pan; // Copy the pan from the master knob
-                sampleKnob.VolumeChanged.Subscribe(sampleKnob, static (me, v) => me.Volume = v, nestedKnob);
-                sampleKnob.PanChanged.Subscribe(nestedKnob, static (me, v) => me.Pan = v, nestedKnob);
-                nestedKnob.Pan = pan;
-            }
-
             var nestedPatch = SynthPatch.Create();
+            _innerPatches[i] = nestedPatch;
             nestedPatch.Waveform = basePatch.Waveform;
             nestedPatch.DriftFrequencyHz = basePatch.DriftFrequencyHz;
             nestedPatch.DriftAmountCents = basePatch.DriftAmountCents;
@@ -121,7 +101,35 @@ public class UnisonPatch : Recyclable, ISynthPatch
             }
             if (!hasEnvelope)
                 throw new InvalidOperationException("UnisonPatch requires the base patch to include an EnvelopeEffect.");
-            outVoices.Add(SynthSignalSource.Create(detunedFreq, nestedPatch, master, nestedKnob));
+        }
+    }
+    public void SpawnVoices(
+        float frequencyHz,
+        VolumeKnob master,
+        VolumeKnob? sampleKnob,
+        List<SynthSignalSource> outVoices)
+    {
+        for (int i = 0; i < numVoices; i++)
+        {
+            float rel = (i - (numVoices - 1) / 2.0f);
+            float detune = rel * detuneCents / Math.Max(numVoices - 1, 1);
+            float pan = rel * panSpread / Math.Max(numVoices - 1, 1);
+            float detunedFreq = frequencyHz * MathF.Pow(2f, detune / 1200f);
+
+            // Use a cloned knob for per-voice pan
+            var nestedKnob = sampleKnob != null ? VolumeKnob.Create() : null;
+            if (nestedKnob != null)
+            {
+                OnDisposed(nestedKnob, Recyclable.TryDisposeMe);
+                nestedKnob.Volume = sampleKnob.Volume; // Copy the volume from the master knob
+                nestedKnob.Pan = sampleKnob.Pan; // Copy the pan from the master knob
+                sampleKnob.VolumeChanged.Subscribe(sampleKnob, static (me, v) => me.Volume = v, nestedKnob);
+                sampleKnob.PanChanged.Subscribe(nestedKnob, static (me, v) => me.Pan = v, nestedKnob);
+                nestedKnob.Pan = pan;
+            }
+
+
+            outVoices.Add(SynthSignalSource.Create(detunedFreq, (SynthPatch)_innerPatches[i], master, nestedKnob));
         }
     }
 
@@ -132,5 +140,6 @@ public class UnisonPatch : Recyclable, ISynthPatch
         numVoices = 0;
         detuneCents = 0f;
         panSpread = 0f;
+        _innerPatches = null!;
     }
 }

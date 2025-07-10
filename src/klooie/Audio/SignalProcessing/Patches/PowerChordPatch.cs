@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace klooie;
 
-public class PowerChordPatch : Recyclable, ISynthPatch
+public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 {
     private ISynthPatch basePatch;
     public ISynthPatch InnerPatch => basePatch;
@@ -34,6 +34,9 @@ public class PowerChordPatch : Recyclable, ISynthPatch
 
     public RecyclableList<IEffect> Effects { get; private set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
+    private ISynthPatch[] patches;
+    public IEnumerable<ISynthPatch> Patches => patches;
+
     private PowerChordPatch() { }
 
     public static PowerChordPatch Create(
@@ -57,11 +60,9 @@ public class PowerChordPatch : Recyclable, ISynthPatch
         this.intervals = intervals ?? new int[] { 0, 7 }; // Default: power chord (root + 5th)
         this.detuneCents = detuneCents;
         this.panSpread = panSpread;
-    }
 
-    public void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices)
-    {
         int numLayers = intervals.Length;
+        patches = new ISynthPatch[numLayers];
         for (int i = 0; i < numLayers; i++)
         {
             int interval = intervals[i];
@@ -71,21 +72,9 @@ public class PowerChordPatch : Recyclable, ISynthPatch
             float detune = rel * detuneCents / Math.Max(numLayers - 1, 1);
             float pan = rel * panSpread / Math.Max(numLayers - 1, 1);
 
-            float freq = frequencyHz * MathF.Pow(2f, interval / 12.0f) * MathF.Pow(2f, detune / 1200.0f);
-
-            var nestedKnob = sampleKnob != null ? VolumeKnob.Create() : null;
-            if (nestedKnob != null)
-            {
-                OnDisposed(nestedKnob, Recyclable.TryDisposeMe);
-                nestedKnob.Volume = sampleKnob.Volume;
-                nestedKnob.Pan = sampleKnob.Pan;
-                sampleKnob.VolumeChanged.Subscribe(sampleKnob, static (me, v) => me.Volume = v, nestedKnob);
-                sampleKnob.PanChanged.Subscribe(nestedKnob, static (me, v) => me.Pan = v, nestedKnob);
-                nestedKnob.Pan = pan;
-            }
-
             // Clone basePatch for each layer (deep copy of effects)
             var layerPatch = SynthPatch.Create();
+            patches[i] = layerPatch;
             layerPatch.Waveform = basePatch.Waveform;
             layerPatch.DriftFrequencyHz = basePatch.DriftFrequencyHz;
             layerPatch.DriftAmountCents = basePatch.DriftAmountCents;
@@ -116,8 +105,37 @@ public class PowerChordPatch : Recyclable, ISynthPatch
             }
             if (!hasEnvelope)
                 throw new InvalidOperationException("PowerChordPatch requires the base patch to include an EnvelopeEffect.");
+        }
+    }
 
-            outVoices.Add(SynthSignalSource.Create(freq, layerPatch, master, nestedKnob));
+    public void SpawnVoices(float frequencyHz, VolumeKnob master, VolumeKnob? sampleKnob, List<SynthSignalSource> outVoices)
+    {
+        int numLayers = intervals.Length;
+        for (int i = 0; i < numLayers; i++)
+        {
+            int interval = intervals[i];
+            float rel = (i - (numLayers - 1) / 2.0f);
+
+            // Calculate detune and pan for each layer
+            float detune = rel * detuneCents / Math.Max(numLayers - 1, 1);
+            float pan = rel * panSpread / Math.Max(numLayers - 1, 1);
+
+            float freq = frequencyHz * MathF.Pow(2f, interval / 12.0f) * MathF.Pow(2f, detune / 1200.0f);
+
+            var nestedKnob = sampleKnob != null ? VolumeKnob.Create() : null;
+            if (nestedKnob != null)
+            {
+                OnDisposed(nestedKnob, Recyclable.TryDisposeMe);
+                nestedKnob.Volume = sampleKnob.Volume;
+                nestedKnob.Pan = sampleKnob.Pan;
+                sampleKnob.VolumeChanged.Subscribe(sampleKnob, static (me, v) => me.Volume = v, nestedKnob);
+                sampleKnob.PanChanged.Subscribe(nestedKnob, static (me, v) => me.Pan = v, nestedKnob);
+                nestedKnob.Pan = pan;
+            }
+
+          
+
+            outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)patches[i], master, nestedKnob));
         }
     }
 
@@ -128,5 +146,6 @@ public class PowerChordPatch : Recyclable, ISynthPatch
         intervals = null;
         detuneCents = 0f;
         panSpread = 0f;
+        patches = null;
     }
 }

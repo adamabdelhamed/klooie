@@ -2,7 +2,7 @@
 
 namespace klooie;
 
-public sealed class LayeredPatch : Recyclable, ISynthPatch
+public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
 {
     private ISynthPatch[] layers;
     private float[] layerVolumes;
@@ -56,6 +56,8 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch
     public float VibratoRateHz => layers[0].VibratoRateHz;
     public float VibratoDepthCents => layers[0].VibratoDepthCents;
     public float VibratoPhaseOffset => layers[0].VibratoPhaseOffset;
+
+    public IEnumerable<ISynthPatch> Patches => layers;
 
     public bool IsNotePlayable(int midiNote)
     {

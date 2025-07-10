@@ -7,7 +7,7 @@ namespace klooie;
 ///   pre-HPF → pre-gain → AggroDistortion → Tone Stack → 4×12 cab →
 ///   LPF fizz-tamer → compressor → width / ambience.
 /// </summary>
-public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
+public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch, ICompositePatch
 {
     /* -------------------------------------------------------------------- */
     private ISynthPatch inner;
@@ -112,6 +112,14 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch
                             VolumeKnob? sampleKnob,
                             List<SynthSignalSource> outVoices)
         => inner.SpawnVoices(freq, master, sampleKnob, outVoices);
+
+    public IEnumerable<ISynthPatch> Patches
+    {
+        get
+        {
+            yield return inner;
+        }
+    }
 
     protected override void OnReturn()
     {

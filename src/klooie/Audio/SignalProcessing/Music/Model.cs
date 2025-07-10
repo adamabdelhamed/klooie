@@ -38,6 +38,7 @@ public sealed class NoteExpression
 
     // Map helpers
     public NoteExpression WithInstrument(Func<ISynthPatch> patchFunc) => new(MidiNote, StartBeat, DurationBeats, Velocity, patchFunc);
+    public NoteExpression WithInstrumentIfNull(Func<ISynthPatch> patchFunc) => new(MidiNote, StartBeat, DurationBeats, Velocity, this.PatchFunc ?? patchFunc);
     public NoteExpression WithOctave(int octaveDelta) => new(MidiNote + octaveDelta * 12, StartBeat, DurationBeats, Velocity, PatchFunc);
     public NoteExpression WithVelocity(int velocity) => new(MidiNote, StartBeat, DurationBeats, velocity, PatchFunc);
     public NoteExpression WithDuration(double beats) => new(MidiNote, StartBeat, beats, Velocity, PatchFunc);
@@ -111,6 +112,8 @@ public sealed class NoteCollection
     // Map helpers
     public NoteCollection WithInstrument(Func<ISynthPatch> patchFunc)
         => new(Notes.Select(n => n.WithInstrument(patchFunc)));
+    public NoteCollection WithInstrumentIfNull(Func<ISynthPatch> patchFunc)
+    => new(Notes.Select(n => n.WithInstrumentIfNull(patchFunc)));
     public NoteCollection WithOctave(int octaveDelta)
         => new(Notes.Select(n => n.WithOctave(octaveDelta)));
     public NoteCollection WithVelocity(int velocity)

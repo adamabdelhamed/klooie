@@ -2,7 +2,7 @@
 
 namespace klooie;
 
-public sealed class RockGuitar2 : Recyclable, ISynthPatch
+public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
 {
     public bool IsNotePlayable(int midiNote) => midiNote >= 40 && midiNote <= 55;
     private ISynthPatch inner;
@@ -93,6 +93,14 @@ public sealed class RockGuitar2 : Recyclable, ISynthPatch
     public float VibratoRateHz => inner.VibratoRateHz;
     public float VibratoDepthCents => inner.VibratoDepthCents;
     public float VibratoPhaseOffset => inner.VibratoPhaseOffset;
+
+    public IEnumerable<ISynthPatch> Patches
+    {
+        get
+        {
+            yield return inner;
+        }
+    }
 
     public void SpawnVoices(float freq,
                             VolumeKnob master,
