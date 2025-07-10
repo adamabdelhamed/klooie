@@ -14,11 +14,12 @@ public class MIDIInput : Recyclable
     private static LazyPool<MIDIInput> pool = new(() => new MIDIInput());
 
     private ConsoleApp app;
-    public static MIDIInput Create(string midiInProductName)
+    public static bool TryCreate(string midiInProductName, out MIDIInput input)
     {
-        var ret = pool.Value.Rent();
-        ret.Construct(midiInProductName);
-        return ret;
+        input = pool.Value.Rent();
+        var success = input.TryConstruct(midiInProductName);
+        if (success == false) input.Dispose();
+        return success;
     }
 
     public static float MidiNoteToFrequency(int noteNumber)
@@ -32,7 +33,7 @@ public class MIDIInput : Recyclable
                (midiEvent is NoteOnEvent noteOn && noteOn.Velocity == 0);
     }
 
-    private void Construct(string midiInProductName)
+    private bool TryConstruct(string midiInProductName)
     {
         app = ConsoleApp.Current;
         if(app == null) throw new InvalidOperationException("MIDIInput requires a ConsoleApp to be running. Please start a ConsoleApp before using MIDIInput.");
@@ -41,13 +42,21 @@ public class MIDIInput : Recyclable
             var deviceInfo = MidiIn.DeviceInfo(i);
             if (deviceInfo.ProductName == midiInProductName)
             {
-                midiIn = new MidiIn(i);
-                midiIn.MessageReceived += OnMidiMessageReceived;
-                midiIn.Start();
+                try
+                {
+                    midiIn = new MidiIn(i);
+                    midiIn.MessageReceived += OnMidiMessageReceived;
+                    midiIn.Start();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    return false;
+                }
             }
         }
 
-        if (midiIn == null) throw new IOException($"Did not find midi input '{midiInProductName}'");
+        return false;
     }
 
     private void OnMidiMessageReceived(object sender, MidiInMessageEventArgs e)
@@ -68,6 +77,6 @@ public class MIDIInput : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        midiIn.Dispose();
+        midiIn?.Dispose();
     }
 }
