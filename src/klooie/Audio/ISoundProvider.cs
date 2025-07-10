@@ -29,10 +29,12 @@ public interface ISoundProvider
     void Play(List<Note> notes);
     public void ScheduleSynthNote(Note note);
     EventLoop EventLoop { get; }
+    Event<Note> NotePlaying { get; }
 }
 
 public class NoOpSoundProvider : ISoundProvider
 {
+    public Event<Note> NotePlaying => Event<Note>.Create();
     public EventLoop EventLoop => ConsoleApp.Current;
     public VolumeKnob MasterVolume { get; set; }
     public void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null) { }
@@ -63,6 +65,27 @@ public class NoOpSoundProvider : ISoundProvider
 
 public class Note : Recyclable
 {
+    public string NoteName
+    {
+        get
+        {
+            // MIDI 0 = C-1, MIDI 60 = C4 (middle C)
+            // There are 12 notes per octave.
+            int noteNumber = MidiNode;
+            int noteInOctave = noteNumber % 12;
+            int octave = (noteNumber / 12) - 1; // MIDI spec: C-1 is 0
+
+            // Sharps by default (you can use flats if you prefer)
+            // Array is static to avoid allocation
+            ReadOnlySpan<string> noteNames = new[]
+            {
+            "C", "C#", "D", "D#", "E", "F",
+            "F#", "G", "G#", "A", "A#", "B"
+        };
+
+            return $"{noteNames[noteInOctave]}{octave}";
+        }
+    }
     private Note() { }
     private static LazyPool<Note> _pool = new(() => new Note());
     public static Note Create(int midiNode, TimeSpan start, TimeSpan duration, int velocity, ISynthPatch? patch)

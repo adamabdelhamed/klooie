@@ -8,6 +8,27 @@ namespace klooie;
 
 public abstract class AudioPlaybackEngine : ISoundProvider
 {
+    private Event<Note> notePlaying;
+    public Event<Note> NotePlaying
+    {
+        get
+        {
+            if(notePlaying == null)
+            {
+                notePlaying = Event<Note>.Create();
+                scheduledSynthProvider.NotePlaying.Subscribe(notePlaying, (ev, note) =>
+                {
+                    var copy = Note.Create(note.Note.MidiNode, note.Note.Start, note.Note.Duration, note.Note.Velocity, null);
+                    EventLoop.Invoke(() =>
+                    {
+                        notePlaying.Fire(copy);
+                    });
+                }, notePlaying);
+            }
+            return notePlaying;
+        }
+    }
+
     public const int SampleRate = 44100;
     private const int ChannelCount = 2;
     private readonly IWavePlayer outputDevice;
@@ -74,7 +95,6 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         }
         finally
         {
-            note.Dispose();
             voices.Dispose();
         }
     }
@@ -101,7 +121,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         long startSample = scheduleZero + (long)Math.Round(note.Start.TotalSeconds * SoundProvider.SampleRate);
         for (int i = 0; i < voices.Items.Count; i++)
         {
-            scheduledSynthProvider.ScheduleNote(ScheduledNoteEvent.Create(startSample, note.Duration.TotalSeconds, voices.Items[i]));
+            scheduledSynthProvider.ScheduleNote(ScheduledNoteEvent.Create(startSample, note.Duration.TotalSeconds, note, voices.Items[i]));
         }
     });
     
