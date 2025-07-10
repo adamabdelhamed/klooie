@@ -65,7 +65,10 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     public float VibratoDepthCents => layers[0].VibratoDepthCents;
     public float VibratoPhaseOffset => layers[0].VibratoPhaseOffset;
 
-    public IEnumerable<ISynthPatch> Patches => layers;
+    public void GetPatches(List<ISynthPatch> patches)
+    {
+        patches.AddRange(layers);
+    }
 
     public bool IsNotePlayable(int midiNote)
     {

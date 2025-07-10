@@ -94,12 +94,9 @@ public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
     public float VibratoDepthCents => inner.VibratoDepthCents;
     public float VibratoPhaseOffset => inner.VibratoPhaseOffset;
 
-    public IEnumerable<ISynthPatch> Patches
+    public void GetPatches(List<ISynthPatch> patches)
     {
-        get
-        {
-            yield return inner;
-        }
+        patches.Add(inner);
     }
 
     public void SpawnVoices(float freq,

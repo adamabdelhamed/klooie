@@ -113,12 +113,10 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch, ICompositePa
                             List<SynthSignalSource> outVoices)
         => inner.SpawnVoices(freq, master, sampleKnob, outVoices);
 
-    public IEnumerable<ISynthPatch> Patches
+    
+    public void GetPatches(List<ISynthPatch> patches)
     {
-        get
-        {
-            yield return inner;
-        }
+        patches.Add(inner);
     }
 
     protected override void OnReturn()

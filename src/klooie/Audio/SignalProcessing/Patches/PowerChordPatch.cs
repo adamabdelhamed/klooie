@@ -35,7 +35,11 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
     public RecyclableList<IEffect> Effects { get; private set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
     private ISynthPatch[] patches;
-    public IEnumerable<ISynthPatch> Patches => patches;
+    public void GetPatches(List<ISynthPatch> patches)
+    {
+        patches.AddRange(this.patches);
+    }
+
 
     private PowerChordPatch() { }
 

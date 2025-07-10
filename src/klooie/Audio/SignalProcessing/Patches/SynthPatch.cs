@@ -5,7 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public interface ICompositePatch : ISynthPatch { IEnumerable<ISynthPatch> Patches { get; } }
+public interface ICompositePatch : ISynthPatch 
+{
+    void GetPatches(List<ISynthPatch> buffer);
+}
+
 public interface ISynthPatch
 {
     bool IsNotePlayable(int midiNote) => true;  // default: always playable
@@ -110,13 +114,7 @@ public static class SynthPatchExtensions
 {
     // ----- Effect: applies to all leaves -----
 
-    public static ISynthPatch WithEffect(this ISynthPatch patch, IEffect effect)
-    {
-        foreach (var p in patch.GetAllLeafPatches())
-            if (p is SynthPatch s)
-                s.Effects.Items.Add(effect.Clone());
-        return patch;
-    }
+
 
     public static ISynthPatch WithCabinet(this ISynthPatch patch)
         => patch.WithEffect(CabinetEffect.Create());
@@ -192,111 +190,221 @@ public static class SynthPatchExtensions
 
     // ----- Property: applies to all leaves -----
 
+    public static ISynthPatch WithEffect(this ISynthPatch patch, IEffect effect)
+    {
+        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
+        try
+        {
+            patch.GetAllLeafPatches(leaves);
+            for (int i = 0; i < leaves.Items.Count; i++)
+                if (leaves.Items[i] is SynthPatch s)
+                    s.Effects.Items.Add(effect.Clone());
+        }
+        finally
+        {
+            leaves.Dispose();
+        }
+        return patch;
+    }
+
     public static ISynthPatch WithTransient(this ISynthPatch patch, float transientDurationSeconds = .01f)
     {
-        foreach (var p in patch.GetAllLeafPatches())
-            if (p is SynthPatch s)
-            {
-                s.EnableTransient = true;
-                s.TransientDurationSeconds = transientDurationSeconds;
-            }
+        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
+        try
+        {
+            patch.GetAllLeafPatches(leaves);
+            for (int i = 0; i < leaves.Items.Count; i++)
+                if (leaves.Items[i] is SynthPatch s)
+                {
+                    s.EnableTransient = true;
+                    s.TransientDurationSeconds = transientDurationSeconds;
+                }
+        }
+        finally
+        {
+            leaves.Dispose();
+        }
         return patch;
     }
 
     public static ISynthPatch WithPitchDrift(this ISynthPatch patch, float driftFrequencyHz = 0.5f, float driftAmountCents = 5f)
     {
-        foreach (var p in patch.GetAllLeafPatches())
-            if (p is SynthPatch s)
-            {
-                s.EnablePitchDrift = true;
-                s.DriftFrequencyHz = driftFrequencyHz;
-                s.DriftAmountCents = driftAmountCents;
-            }
+        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
+        try
+        {
+            patch.GetAllLeafPatches(leaves);
+            for (int i = 0; i < leaves.Items.Count; i++)
+                if (leaves.Items[i] is SynthPatch s)
+                {
+                    s.EnablePitchDrift = true;
+                    s.DriftFrequencyHz = driftFrequencyHz;
+                    s.DriftAmountCents = driftAmountCents;
+                }
+        }
+        finally
+        {
+            leaves.Dispose();
+        }
         return patch;
     }
 
     public static ISynthPatch WithVibrato(this ISynthPatch patch, float rateHz = 5.8f, float depthCents = 35f, float phaseOffset = 0f)
     {
-        foreach (var p in patch.GetAllLeafPatches())
-            if (p is SynthPatch s)
-            {
-                s.EnableVibrato = true;
-                s.VibratoRateHz = rateHz;
-                s.VibratoDepthCents = depthCents;
-                s.VibratoPhaseOffset = phaseOffset;
-            }
+        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
+        try
+        {
+            patch.GetAllLeafPatches(leaves);
+            for (int i = 0; i < leaves.Items.Count; i++)
+                if (leaves.Items[i] is SynthPatch s)
+                {
+                    s.EnableVibrato = true;
+                    s.VibratoRateHz = rateHz;
+                    s.VibratoDepthCents = depthCents;
+                    s.VibratoPhaseOffset = phaseOffset;
+                }
+        }
+        finally
+        {
+            leaves.Dispose();
+        }
         return patch;
     }
 
     public static ISynthPatch WithSubOscillator(this ISynthPatch patch, float subOscLevel = .5f, int subOscOctaveOffset = -1)
     {
-        foreach (var p in patch.GetAllLeafPatches())
-            if (p is SynthPatch s)
-            {
-                s.SubOscLevel = subOscLevel;
-                s.SubOscOctaveOffset = subOscOctaveOffset;
-            }
+        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
+        try
+        {
+            patch.GetAllLeafPatches(leaves);
+            for (int i = 0; i < leaves.Items.Count; i++)
+                if (leaves.Items[i] is SynthPatch s)
+                {
+                    s.SubOscLevel = subOscLevel;
+                    s.SubOscOctaveOffset = subOscOctaveOffset;
+                }
+        }
+        finally
+        {
+            leaves.Dispose();
+        }
         return patch;
     }
 
     public static ISynthPatch WithWaveForm(this ISynthPatch patch, WaveformType waveform)
     {
-        foreach (var p in patch.GetAllLeafPatches())
-            if (p is SynthPatch s)
-                s.Waveform = waveform;
+        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
+        try
+        {
+            patch.GetAllLeafPatches(leaves);
+            for (int i = 0; i < leaves.Items.Count; i++)
+                if (leaves.Items[i] is SynthPatch s)
+                    s.Waveform = waveform;
+        }
+        finally
+        {
+            leaves.Dispose();
+        }
         return patch;
     }
 
+
     // ----- Utility -----
 
-    public static IEnumerable<ISynthPatch> GetAllLeafPatches(this ISynthPatch patch)
+    public static void GetAllLeafPatches(this ISynthPatch patch, RecyclableList<ISynthPatch>? outputBuffer = null)
     {
+        bool isRoot = false;
+        if (outputBuffer == null)
+        {
+            isRoot = true;
+            outputBuffer = RecyclableListPool<ISynthPatch>.Instance.Rent(20);
+        }
+
         if (patch is ICompositePatch composite)
         {
-            foreach (var child in composite.Patches)
-                foreach (var leaf in child.GetAllLeafPatches())
-                    yield return leaf;
+            var children = RecyclableListPool<ISynthPatch>.Instance.Rent(8);
+            try
+            {
+                composite.GetPatches(children.Items);
+                for (int i = 0; i < children.Items.Count; i++)
+                {
+                    children.Items[i].GetAllLeafPatches(outputBuffer);
+                }
+            }
+            finally
+            {
+                children.Dispose();
+            }
         }
         else
         {
-            yield return patch;
+            outputBuffer.Items.Add(patch);
+        }
+
+        if (isRoot)
+        {
+            // outputBuffer now contains only leaves
+            outputBuffer.Dispose();
         }
     }
 
     public static SynthPatch? GetLeafSynthPatch(this ISynthPatch patch)
     {
-        // Returns the *first* leaf SynthPatch, or null if none found
         if (patch is SynthPatch s)
             return s;
+
         if (patch is ICompositePatch composite)
         {
-            foreach (var child in composite.Patches)
+            var children = RecyclableListPool<ISynthPatch>.Instance.Rent(8);
+            try
             {
-                var leaf = child.GetLeafSynthPatch();
-                if (leaf != null)
-                    return leaf;
+                composite.GetPatches(children.Items);
+
+                for (int i = 0; i < children.Items.Count; i++)
+                {
+                    var leaf = children.Items[i].GetLeafSynthPatch();
+                    if (leaf != null)
+                    {
+                        return leaf;
+                    }
+                }
+            }
+            finally
+            {
+                children.Dispose();
             }
         }
+
         return null;
     }
+
 
     // ----- Effect discovery -----
 
     public static EnvelopeEffect? FindEnvelopeEffect(this ISynthPatch patch)
     {
-        foreach (var p in patch.GetAllLeafPatches())
+        // Rent a pooled buffer for the leaves (will be manually disposed)
+        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
+        patch.GetAllLeafPatches(leaves);
+
+        for (int i = 0; i < leaves.Items.Count; i++)
         {
-            if (p is SynthPatch s && s.Effects.Items != null)
+            if (leaves.Items[i] is SynthPatch s && s.Effects.Items != null)
             {
-                for (var i = 0; i < s.Effects.Items.Count; i++)
+                for (int j = 0; j < s.Effects.Items.Count; j++)
                 {
-                    if (s.Effects.Items[i] is EnvelopeEffect env)
+                    if (s.Effects.Items[j] is EnvelopeEffect env)
+                    {
+                        leaves.Dispose(); // Dispose as soon as we return!
                         return env;
+                    }
                 }
             }
         }
+
+        leaves.Dispose();
         return null;
     }
+
 }
 
 

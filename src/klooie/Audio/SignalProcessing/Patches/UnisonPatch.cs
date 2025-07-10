@@ -44,7 +44,10 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
     public RecyclableList<IEffect> Effects { get; private set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
 
     private ISynthPatch[] _innerPatches;
-    public IEnumerable<ISynthPatch> Patches => _innerPatches;
+    public void GetPatches(List<ISynthPatch> patches)
+    {
+        patches.AddRange(_innerPatches);
+    }
 
     private UnisonPatch() { }
 
