@@ -13,18 +13,28 @@ public class ScheduledNoteEvent : Recyclable
     public long StartSample; // Absolute sample offset
     public SynthSignalSource Voice;
     public double DurationSeconds;
-
+    public Note Note { get; private set; }
+    private LeaseState<Note> noteTracker;
     private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
     protected ScheduledNoteEvent() { }
-    public static ScheduledNoteEvent Create(long startSample, double durationSeconds, SynthSignalSource voice)
+    public static ScheduledNoteEvent Create(long startSample, double durationSeconds, Note note, SynthSignalSource voice)
     {
         var ret = pool.Value.Rent();
+        ret.Note = note;
+        ret.noteTracker = LeaseHelper.Track(note);
         ret.StartSample = startSample;
         ret.DurationSeconds = durationSeconds;
         ret.Voice = voice;
         return ret;
     }
 
+    protected override void OnReturn()
+    {
+        noteTracker.UnTrackAndDispose();
+        noteTracker = null;
+        Note = null;
+        base.OnReturn();
+    }
 }
 
 public class ScheduledSignalSourceMixer
@@ -32,6 +42,9 @@ public class ScheduledSignalSourceMixer
     private readonly ConcurrentQueue<ScheduledNoteEvent> scheduledNotes = new();
     private readonly List<(SynthSignalSource Voice, long StartSample, int SamplesPlayed, long ReleaseSample, bool Released)> activeVoices = new();
     private long samplesRendered = 0;
+
+    private Event<ScheduledNoteEvent> notePlaying;
+    public Event<ScheduledNoteEvent> NotePlaying => notePlaying ??= Event<ScheduledNoteEvent>.Create();
 
     public long SamplesRendered => samplesRendered;
     public ScheduledSignalSourceMixer()
@@ -52,6 +65,7 @@ public class ScheduledSignalSourceMixer
         while (scheduledNotes.TryPeek(out var note) && note.StartSample < bufferEnd)
         {
             scheduledNotes.TryDequeue(out note);
+            notePlaying?.Fire(note);
             var voice = note.Voice;
             int durSamples = (int)(note.DurationSeconds * SoundProvider.SampleRate);
             long releaseSample = note.StartSample + durSamples;
