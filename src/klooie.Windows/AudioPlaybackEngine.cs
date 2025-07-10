@@ -62,6 +62,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             var p = note.Patch ?? SynthPatches.CreateBass();
             if (p.IsNotePlayable(note.MidiNode) == false) return;
             p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, knob, voices.Items);
+            var tracker = VoiceCountTracker.Track(voices.Items);
             var releaseable = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
             for (int i = 0; i < voices.Items.Count; i++)
             {
@@ -87,6 +88,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         {
             var p = note.Patch ?? SynthPatches.CreateBass();
             p.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, knob, voices.Items);
+            var tracker = VoiceCountTracker.Track(voices.Items);
             var releaseable = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
             if (p.IsNotePlayable(note.MidiNode) == false) return releaseable;
             for (int i = 0; i < voices.Items.Count; i++)
@@ -108,42 +110,35 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
     public void Play(List<Note> notes)
     {
-        const double bufferDelaySeconds = 0.1; // 100ms buffer for safety
-        long scheduleZero = SamplesRendered + (long)(bufferDelaySeconds * SoundProvider.SampleRate);
         notes.Sort(MelodyNoteComparer);
         for (int i = 0; i < notes.Count; i++)
         {
-            var note = notes[i];
-            long startSample = scheduleZero + (long)Math.Round(note.Start.TotalSeconds * SoundProvider.SampleRate);
-            ScheduleSynthNote(note.MidiNode, startSample, note.Duration.TotalSeconds, note.Velocity, note.Patch ?? SynthPatches.CreateBass());
+            ScheduleSynthNote(notes[i]);
         }
     }
 
 
-    public void ScheduleSynthNote(
-        int midiNote,
-        long startSample,
-        double durationSeconds,
-        float velocity = 1.0f,
-        ISynthPatch patch = null)
+    public void ScheduleSynthNote(Note note)
     {
-        float freq = MIDIInput.MidiNoteToFrequency(midiNote);
+        const double bufferDelaySeconds = 0.1; // 100ms buffer for safety
+        long scheduleZero = SamplesRendered + (long)(bufferDelaySeconds * SoundProvider.SampleRate);
+        long startSample = scheduleZero + (long)Math.Round(note.Start.TotalSeconds * SoundProvider.SampleRate);
+        float freq = MIDIInput.MidiNoteToFrequency(note.MidiNode);
         var knob = VolumeKnob.Create();
-        knob.Volume = velocity/127f;
-        var p = patch ?? SynthPatches.CreateBass();
-        if (p.IsNotePlayable(midiNote) == false) return;
-        // Let's say max 4 voices
+        knob.Volume = note.Velocity/127f;
+        var p = note.Patch ?? SynthPatches.CreateBass();
+        if (p.IsNotePlayable(note.MidiNode) == false) return;
+   
         RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
         try
         {
             p.SpawnVoices(freq, MasterVolume, knob, voices.Items);
-
+            var tracker = VoiceCountTracker.Track(voices.Items);
             for (int i = 0; i < voices.Items.Count; i++)
             {
                 scheduledSynthProvider.ScheduleNote(
-                    ScheduledNoteEvent.Create(startSample, durationSeconds, voices[i]));
+                    ScheduledNoteEvent.Create(startSample, note.Duration.TotalSeconds, voices[i]));
             }
-            //TODO: Dispose note when all voices are done
         }
         finally
         {
@@ -183,6 +178,34 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     protected virtual void LogSoundLoaded(long elapsedMilliseconds) { }
 }
 
+
+internal class VoiceCountTracker : Recyclable
+{
+    private static LazyPool<VoiceCountTracker> _pool = new(() => new VoiceCountTracker());
+    private int remainingVoices;
+    private VoiceCountTracker() { }
+
+    public static VoiceCountTracker Track(List<SynthSignalSource> voices)
+    {
+        var tracker = _pool.Value.Rent();
+        tracker.remainingVoices = voices.Count;
+
+        for(int i = 0; i < voices.Count; i++)
+        {
+            var voice = voices[i];
+            voice.OnDisposed(tracker, static me =>
+            {
+                me.remainingVoices--;
+                if (me.remainingVoices <= 0)
+                {
+                    me.Dispose();
+                }
+            });
+        }
+
+        return tracker;
+    }
+}
 
 
 public class ScheduledSynthProvider : ScheduledSignalSourceMixer, ISampleProvider

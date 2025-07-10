@@ -28,7 +28,7 @@ public interface ISoundProvider
     RecyclableList<IReleasableNote> PlaySustainedNote(Note note, VolumeKnob? knob);
     void PlayTimedNote(Note note, VolumeKnob? knob = null);
     void Play(List<Note> notes);
-    public void ScheduleSynthNote(int midiNote, long startSample, double durationSeconds, float velocity = 1.0f, ISynthPatch patch = null);
+    public void ScheduleSynthNote(Note note);
     EventLoop EventLoop { get; }
 }
 
@@ -45,7 +45,7 @@ public class NoOpSoundProvider : ISoundProvider
    
 
 
-    public void ScheduleSynthNote(int midiNote, long startSample, double durationSeconds, float velocity = 1.0f, ISynthPatch patch = null)
+    public void ScheduleSynthNote(Note note)
     {
         // No-op implementation
     }
