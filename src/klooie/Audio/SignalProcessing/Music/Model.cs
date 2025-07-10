@@ -134,13 +134,24 @@ public sealed class NoteCollection
 // ────────────────────────────────
 public class Song
 {
-    public NoteCollection Notes { get; }
-    public Song(NoteCollection notes) => Notes = notes;
+    public NoteCollection Notes { get; protected set; }
+    public Song(NoteCollection notes, double bpm = 120)
+    {
+        BeatsMerMinute = bpm;
+        Notes = notes;
+    }
+
+    protected Song(double bpm = 120)
+    {
+        BeatsMerMinute = bpm;
+    }
+
+    public double BeatsMerMinute { get; private init; }
 
     // Exports notes, skips velocity == 0 (rest), sorted by StartBeat
-    public List<Note> Render(double bpm = 120.0)
+    public List<Note> Render()
     {
-        double beatLen = 60.0 / bpm;
+        double beatLen = 60.0 / BeatsMerMinute;
         var ret = Notes.Notes
             .OrderBy(expr => expr.StartBeat)
             .Select(expr =>

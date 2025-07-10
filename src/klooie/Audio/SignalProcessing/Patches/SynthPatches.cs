@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 namespace klooie;
 public static class SynthPatches
 {
-    public static SynthPatch CreateGuitar()
+    public static ISynthPatch CreateGuitar()
     => SynthPatch.Create()
         .WithLowPass(0.02f)
         .WithEnvelope(.005f, 0.1f, 0.25f, 0.4f);
 
 
-    public static SynthPatch CreateBass()
+    public static ISynthPatch CreateBass()
     => SynthPatch.Create()
         .WithWaveForm(WaveformType.Sine)
         .WithSubOscillator(.06f, - 1)
@@ -21,7 +21,7 @@ public static class SynthPatches
         .WithDistortion()
         .WithEnvelope(0.005f, 0.12f, 0.5f, 0.4f);
 
-    public static SynthPatch CreateAnalogPad()
+    public static ISynthPatch CreateAnalogPad()
      => SynthPatch.Create()
          .WithWaveForm(WaveformType.Saw)
          .WithPitchDrift(0.3f, 7f)
@@ -31,7 +31,7 @@ public static class SynthPatches
          .WithVolume(.1f)
          .WithEffect(EnvelopeEffect.Create(0.23f, 1.3f, 0.85f, 1.6f));
 
-    public static SynthPatch CreateLead()
+    public static ISynthPatch CreateLead()
     => SynthPatch.Create()
         .WithWaveForm(WaveformType.Saw)
         .WithPitchDrift(0.2f, 3f)
@@ -41,7 +41,7 @@ public static class SynthPatches
         .WithReverb()
         .WithEffect(EnvelopeEffect.Create(0.01f, 0.15f, 0.6f, 0.25f));
 
-    public static SynthPatch CreateKick()
+    public static ISynthPatch CreateKick()
     => SynthPatch.Create()
         .WithWaveForm(WaveformType.Sine)
         .WithTransient(0.005f)
@@ -49,7 +49,7 @@ public static class SynthPatches
         .WithHighPass(20f)
         .WithEffect(EnvelopeEffect.Create(0, 0.1f, 0.0f, 0.1f));
 
-    public static SynthPatch CreateSnare()
+    public static ISynthPatch CreateSnare()
     => SynthPatch.Create()
         .WithWaveForm(WaveformType.Noise)
         .WithTransient(0.005f)
@@ -59,7 +59,7 @@ public static class SynthPatches
         .WithReverb()
         .WithEffect(EnvelopeEffect.Create(0, .1, 0, 0.2f));
 
-    public static SynthPatch CreateRhythmicPad()
+    public static ISynthPatch CreateRhythmicPad()
     => SynthPatch.Create()
         .WithWaveForm(WaveformType.Saw)
         .WithPitchDrift(0.15f, 5f)
@@ -75,7 +75,7 @@ public static class SynthPatches
     public static ISynthPatch CreateRockGuitar2()
         => RockGuitar2.Create();
 
-    public static SynthPatch CreateDeepSubBass()
+    public static ISynthPatch CreateDeepSubBass()
       => SynthPatch.Create()
           .WithWaveForm(WaveformType.Sine)
           .WithSubOscillator(subOscLevel: .18f, subOscOctaveOffset: -1)
@@ -85,7 +85,7 @@ public static class SynthPatches
           .WithEnvelope(0.004, 0.12, 0.6, 0.28);          // fast/tight
 
     /// <summary>Clean, almost FM-like bass with a touch of bite up top.</summary>
-    public static SynthPatch CreateCleanDigitalBass()
+    public static ISynthPatch CreateCleanDigitalBass()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Square)
             .WithHighPass(220f)                             // remove mud
@@ -95,7 +95,7 @@ public static class SynthPatches
             .WithEnvelope(0.002, 0.08, 0.8, 0.12);
 
     /// <summary>Short, percussive pluck for arpeggiated basslines.</summary>
-    public static SynthPatch CreateTightPluckBass()
+    public static ISynthPatch CreateTightPluckBass()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Saw)
             .WithTransient(.006f)
@@ -105,7 +105,7 @@ public static class SynthPatches
             .WithEnvelope(0.0015, 0.045, 0.35, 0.11);
 
     /// <summary>Stereo-chorused pad bass that fills out the mid-low range.</summary>
-    public static SynthPatch CreateChorusPadBass()
+    public static ISynthPatch CreateChorusPadBass()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Sine)
             .WithSubOscillator(.12f, -1)
@@ -115,7 +115,7 @@ public static class SynthPatches
             .WithEnvelope(0.01, 0.22, 0.7, 0.55);
 
     /// <summary>Aggressive, distorted growl suited for modern EDM drops.</summary>
-    public static SynthPatch CreateAggroDistBass()
+    public static ISynthPatch CreateAggroDistBass()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Saw)
             .WithAggroDistortion(drive: 10f, stageRatio: .7f, bias: .12f)
@@ -124,7 +124,7 @@ public static class SynthPatches
             .WithEnvelope(0.003, 0.11, 0.5, 0.27);
 
     /// <summary>Spacious bass with long tail—great for cinematic moments.</summary>
-    public static SynthPatch CreateReverbBass()
+    public static ISynthPatch CreateReverbBass()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Sine)
             .WithSubOscillator(.1f, -1)
@@ -134,7 +134,7 @@ public static class SynthPatches
             .WithEnvelope(0.006, 0.18, 0.6, 1.2);           // long release
 
     /// <summary>Pulsing dub-style wobble—use tremolo rate to lock to tempo.</summary>
-    public static SynthPatch CreateDubPulseBass()
+    public static ISynthPatch CreateDubPulseBass()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Square)
             .WithSubOscillator(.14f, -1)
@@ -144,7 +144,7 @@ public static class SynthPatches
             .WithEnvelope(0.004, 0.1, 0.65, 0.3);
 
     /// <summary>Noisy, gnarly bass with a hint of pitch drift for movement.</summary>
-    public static SynthPatch CreateNoisyGrowlBass()
+    public static ISynthPatch CreateNoisyGrowlBass()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Saw)
             .WithPitchDrift(.6f, 12f)                       // subtle detune
@@ -208,7 +208,7 @@ public static class SynthPatches
 
 
     /// <summary>Click-accented tech bass—fast transient, very short release.</summary>
-    public static SynthPatch CreateTechClickBass()
+    public static ISynthPatch CreateTechClickBass()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Square)
             .WithPickTransient(.004f, .7f)
@@ -218,7 +218,7 @@ public static class SynthPatches
             .WithEnvelope(0.001, 0.03, 0.4, 0.07);
 
     /// <summary>Swept, filtered slide perfect for fills or transitions.</summary>
-    public static SynthPatch CreateFilteredSlideBass()
+    public static ISynthPatch CreateFilteredSlideBass()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Saw)
             .WithSubOscillator(.08f, -1)
@@ -228,7 +228,7 @@ public static class SynthPatches
             .WithVolume(.8f)
             .WithEnvelope(0.005, 0.15, 0.55, 0.5);
 
-    public static SynthPatch CreateBrightSawLead()
+    public static ISynthPatch CreateBrightSawLead()
        => SynthPatch.Create()
            .WithWaveForm(WaveformType.Saw)
            .WithChorus(delayMs: 15, depthMs: 6, rateHz: .28f, mix: .33f)
@@ -238,7 +238,7 @@ public static class SynthPatches
            .WithEnvelope(0.002, 0.06, 0.8, 0.18);
 
     /// <summary>Glass-y, bell-like keys—great for arpeggios.</summary>
-    public static SynthPatch CreateCrystalBell()
+    public static ISynthPatch CreateCrystalBell()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Sine)
             .WithLowPass(.009f)                             // keeps it sparkly
@@ -248,7 +248,7 @@ public static class SynthPatches
             .WithEnvelope(0.003, 0.12, 0.7, 0.95);          // lingering tail
 
     /// <summary>Fast, percussive pluck for staccato melodies.</summary>
-    public static SynthPatch CreateHyperPluckLead()
+    public static ISynthPatch CreateHyperPluckLead()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Square)
             .WithTransient(.004f)
@@ -258,7 +258,7 @@ public static class SynthPatches
             .WithEnvelope(0.001, 0.04, 0.35, 0.07);
 
     /// <summary>Dreamy airy pad that floats above the mix.</summary>
-    public static SynthPatch CreateAirPadLead()
+    public static ISynthPatch CreateAirPadLead()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Saw)
             .WithPitchDrift(.4f, 9f)
@@ -271,7 +271,7 @@ public static class SynthPatches
             .WithEnvelope(0.01, 0.3, 0.8, 0.9);
 
     /// <summary>8-bit style square-wave lead—super clean and direct.</summary>
-    public static SynthPatch CreateChiptuneLead()
+    public static ISynthPatch CreateChiptuneLead()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Square)
             .WithHighPass(450f)
@@ -280,7 +280,7 @@ public static class SynthPatches
             .WithEnvelope(0.0008, 0.03, 0.9, 0.06);
 
     /// <summary>FM-flavoured brassy stab with sharp attack.</summary>
-    public static SynthPatch CreateFMBrassLead()
+    public static ISynthPatch CreateFMBrassLead()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Saw)
             .WithAggroDistortion(drive: 5f, stageRatio: .55f, bias: .1f)
@@ -291,7 +291,7 @@ public static class SynthPatches
             .WithEnvelope(0.0015, 0.07, 0.75, 0.22);
 
     /// <summary>Wide, detuned stack—good for anthem hooks.</summary>
-    public static SynthPatch CreateSuperSawStack()
+    public static ISynthPatch CreateSuperSawStack()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Saw)
             .WithPitchDrift(.35f, 14f)
@@ -303,7 +303,7 @@ public static class SynthPatches
             .WithEnvelope(0.003, 0.09, 0.85, 0.25);
 
     /// <summary>Shimmering keys with long decay and stereo tremolo.</summary>
-    public static SynthPatch CreateShimmerKeys()
+    public static ISynthPatch CreateShimmerKeys()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Sine)
             .WithTremolo(depth: .45f, rateHz: 4f)
@@ -313,7 +313,7 @@ public static class SynthPatches
             .WithEnvelope(0.004, 0.18, 0.8, 1.3);
 
     /// <summary>Pulsing, gated arpeggio synth—sync tremolo to tempo.</summary>
-    public static SynthPatch CreateGatedArpSynth()
+    public static ISynthPatch CreateGatedArpSynth()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Square)
             .WithTremolo(depth: .65f, rateHz: 8f)           // 1/16-note gate @120 BPM
@@ -323,7 +323,7 @@ public static class SynthPatches
             .WithEnvelope(0.002, 0.05, 0.8, 0.1);
 
     /// <summary>High-energy noise-layered lead for risers & screams.</summary>
-    public static SynthPatch CreateNoiseLead()
+    public static ISynthPatch CreateNoiseLead()
         => SynthPatch.Create()
             .WithWaveForm(WaveformType.Saw)
             .WithAggroDistortion(drive: 7f)
