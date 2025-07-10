@@ -34,7 +34,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
             mixer = new MixingSampleProvider(new ISampleProvider[] { sfxMixer, scheduledSynthProvider }) { ReadFully = true };
 
-            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 40);
+            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 200);
             outputDevice.Init(mixer);
             outputDevice.Play();
             soundCache = new SoundCache(LoadSounds());

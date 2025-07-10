@@ -85,11 +85,20 @@ public sealed class NoteCollection
         : Notes.Max(n => n.StartBeat + n.DurationBeats);
 
     // AddSequential: shift all incoming notes by this collection's end
-    public NoteCollection AddSequential(NoteCollection next)
+    public NoteCollection AddSequential(NoteCollection next, int toRemove = 0)
     {
         double offset = GetEndBeat();
+
+        var myNotes = Notes.ToList();
+        while (toRemove > 0)
+        {
+            // If the last note is a rest, remove it
+            offset-= myNotes.Last().DurationBeats;
+            myNotes.RemoveAt(myNotes.Count - 1);
+            toRemove--;
+        }
         var shifted = next.Notes.Select(n => n.WithStartBeat(n.StartBeat + offset));
-        return new NoteCollection(Notes.Concat(shifted));
+        return new NoteCollection(myNotes.Concat(shifted));
     }
 
     // AddParallel: overlays, just combines the two sets
