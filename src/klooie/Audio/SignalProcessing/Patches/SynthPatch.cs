@@ -378,30 +378,28 @@ public static class SynthPatchExtensions
     }
 
 
-    // ----- Effect discovery -----
+
+    private static RecyclableList<ISynthPatch> envelopeBuffer = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
 
     public static EnvelopeEffect? FindEnvelopeEffect(this ISynthPatch patch)
     {
-        // Rent a pooled buffer for the leaves (will be manually disposed)
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-        patch.GetAllLeafPatches(leaves);
+        envelopeBuffer.Items.Clear();
+        patch.GetAllLeafPatches(envelopeBuffer);
 
-        for (int i = 0; i < leaves.Items.Count; i++)
+        for (int i = 0; i < envelopeBuffer.Items.Count; i++)
         {
-            if (leaves.Items[i] is SynthPatch s && s.Effects.Items != null)
+            if (envelopeBuffer.Items[i] is SynthPatch s && s.Effects.Items != null)
             {
                 for (int j = 0; j < s.Effects.Items.Count; j++)
                 {
                     if (s.Effects.Items[j] is EnvelopeEffect env)
                     {
-                        leaves.Dispose(); // Dispose as soon as we return!
                         return env;
                     }
                 }
             }
         }
 
-        leaves.Dispose();
         return null;
     }
 

@@ -28,20 +28,15 @@ public class SynthSignalSource : Recyclable
     protected float effectivePan;
     private List<IPitchModEffect>? pitchMods;
     private List<SignalProcess> pipeline;
+    private ADSREnvelope envelope;
 
-    public ADSREnvelope Envelope
-    {
-        get
-        {
-            return patch.FindEnvelopeEffect()?.Envelope;
-        }
-    }
+ 
     public bool IsDone => isDone;
 
     private static int _globalId = 1;
     public int Id { get; private set; }
 
-    public virtual void ReleaseNote() => Envelope.ReleaseNote(time);
+    public virtual void ReleaseNote() => envelope.ReleaseNote(time);
 
     protected SynthSignalSource() { }
 
@@ -79,8 +74,8 @@ public class SynthSignalSource : Recyclable
 
         InitVolume(master, knob);
         knob?.Dispose();
-
-        Envelope.Trigger(0, sampleRate);
+        this.envelope = patch.FindEnvelopeEffect().Envelope;
+        envelope.Trigger(0, sampleRate);
 
         // Pluck buffer if needed
         pluckBuffer = null;
@@ -228,6 +223,7 @@ public class SynthSignalSource : Recyclable
         masterKnob = null;
         effectiveVolume = 0f;
         effectivePan = 0f;
+        envelope = null;
         pipeline?.Clear();   
         base.OnReturn();
     }
@@ -258,7 +254,7 @@ public class SynthSignalSource : Recyclable
             localTime += 1f / (float)sampleRate;
             samplesWritten += 2;
 
-            if (Envelope.IsDone(time))
+            if (envelope.IsDone(time))
             {
                 isDone = true;
                 break;

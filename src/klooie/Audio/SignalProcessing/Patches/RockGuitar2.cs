@@ -4,7 +4,7 @@ namespace klooie;
 
 public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
 {
-    public bool IsNotePlayable(int midiNote) => midiNote >= 40 && midiNote <= 55;
+    public bool IsNotePlayable(int midiNote) => midiNote >= 37 && midiNote <= 60;
     private ISynthPatch inner;
     public ISynthPatch InnerPatch => inner;
     private static readonly LazyPool<RockGuitar2> _pool =
@@ -37,7 +37,7 @@ public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
                            attackMs: 2.0f,
                            releaseMs: 31f)
             .WithVolume(3.5f)                         // less gain, less fizz
-            .WithAggroDistortion(13f, 0.75f, 0.12f)   // much less drive
+            .WithAggroDistortion(7f, 0.75f, 0.12f)   // much less drive
             .WithToneStack(1.08f, 0.75f, 1.2f)        // modest scoop/bright
             .WithCabinet()
             .WithPresenceShelf(+1.2f)
