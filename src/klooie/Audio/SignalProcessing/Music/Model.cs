@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -23,7 +24,7 @@ public sealed class NoteExpression
 {
     public int MidiNote { get; }
     public double StartBeat { get; }
-    public double DurationBeats { get; }
+    public double DurationBeats { get; set; }
     public int Velocity { get; }
 
     public double EndBeat => StartBeat < 0 ? -1 : StartBeat + DurationBeats;
@@ -62,9 +63,13 @@ public sealed class NoteExpression
     public override string ToString() => $"Note(Midi: {MidiNote}, Start: {StartBeat}, Duration: {DurationBeats}, Velocity: {Velocity})";
 }
 
-public sealed class NoteCollection
+public sealed class NoteCollection : IReadOnlyList<NoteExpression>
 {
-    public IReadOnlyList<NoteExpression> Notes { get; }
+    public int Count => Notes.Count;
+
+    public NoteExpression this[int index] =>  Notes[index];
+
+    private List<NoteExpression> Notes { get; }
 
     public NoteCollection(IEnumerable<NoteExpression> notes)
     {
@@ -88,7 +93,7 @@ public sealed class NoteCollection
             }
             i++;
         }
-        Notes = newNotes.AsReadOnly();
+        Notes = newNotes;
     }
 
     public static NoteCollection Create(params NoteExpression[] notes)
@@ -142,14 +147,29 @@ public sealed class NoteCollection
 
     public NoteCollection AddRest(double beats) => this.AddSequential(Create(NoteExpression.Rest(0, beats)));
     public static NoteCollection Rest(double startBeat, double beats) => new([NoteExpression.Rest(startBeat, beats)]);
+
+    public IEnumerator<NoteExpression> GetEnumerator() => Notes.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => Notes.GetEnumerator();
 }
 
-// ────────────────────────────────
-// 3. Song: Holds a NoteCollection, exports notes
-// ────────────────────────────────
-public class Song
+
+public interface INoteSource : IReadOnlyList<NoteExpression>
 {
-    public NoteCollection Notes { get; protected set; }
+    double BeatsPerMinute { get; }
+}
+
+public class ListNoteSource : List<NoteExpression>, INoteSource
+{
+    public long? StartTimestamp { get; set; } 
+    public double BeatsPerMinute { get; init; } = 60;
+}
+
+public class Song : INoteSource
+{
+    public IReadOnlyList<NoteExpression> Notes { get; protected set; }
+    public int Count => Notes.Count;
+    public NoteExpression this[int index] => Notes[index];
     public Song(NoteCollection notes, double bpm = 120)
     {
         BeatsPerMinute = bpm;
@@ -163,11 +183,13 @@ public class Song
 
     public double BeatsPerMinute { get; private init; }
 
+
+
     // Exports notes, skips velocity == 0 (rest), sorted by StartBeat
     public List<Note> Render()
     {
         double beatLen = 60.0 / BeatsPerMinute;
-        var ret = Notes.Notes
+        var ret = Notes
             .OrderBy(expr => expr.StartBeat)
             .Select(expr =>
             {
@@ -183,5 +205,8 @@ public class Song
             .ToList();
         return ret;
     }
+
+    public IEnumerator<NoteExpression> GetEnumerator() => Notes.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => Notes.GetEnumerator();
 }
 

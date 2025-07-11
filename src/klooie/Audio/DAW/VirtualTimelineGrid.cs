@@ -10,13 +10,27 @@ namespace klooie;
 public class VirtualTimelineGrid : ProtectedConsolePanel
 {
     public TimelineViewport Viewport { get; private init; }
-    private readonly Song song;
+    private INoteSource notes;
     private readonly Dictionary<NoteExpression, NoteCell> live = new();
     private AlternatingBackgroundGrid backgroundGrid;
-    private const int ColWidthChars = 16;
+    private const int ColWidthChars = 1;
     private const int RowHeightChars = 1;
-    private const int TicksPerBeat = 96;
     private Recyclable? focusLifetime;
+
+    private double beatsPerColumn = 1/32.0; 
+    public double BeatsPerColumn
+    {
+        get => beatsPerColumn;
+        set
+        {
+            if (value <= 0) throw new ArgumentOutOfRangeException(nameof(BeatsPerColumn));
+            if (Math.Abs(beatsPerColumn - value) > 0.0001)
+            {
+                beatsPerColumn = value;
+                RefreshVisibleSet();
+            }
+        }
+    }
 
     public double CurrentBeat { get; private set; } = 0; 
     private long? playbackStartTimestamp = null;
@@ -25,27 +39,36 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
     private double maxBeat;
     private Dictionary<string, RGB> instrumentColorMap = new();
-    public VirtualTimelineGrid(Song s)
+    public VirtualTimelineGrid(INoteSource notes)
     {
-        song = s;
-        maxBeat = song.Notes.Notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
         Viewport = new TimelineViewport();
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
         BoundsChanged.Sync(UpdateViewportBounds, this);
-        Viewport.FirstVisibleMidi = s.Notes.Notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(0).Min();
-        this.Focused.Subscribe(EnableKeyboardInput, this);
+        Focused.Subscribe(EnableKeyboardInput, this);
         backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220))).Fill();
         Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
+        LoadNotes(notes);
+    }
 
-        var instruments = song.Notes.Notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
-        var instrumentColors = instruments.Select((s,i) => GetInstrumentColor(i)).ToArray();
+    private void LoadNotes(INoteSource? notes)
+    {
+        this.notes = notes;
+        if (notes == null)
+        {
+            maxBeat = 0;
+            instrumentColorMap = new Dictionary<string, RGB>();
+            return;
+        }
+        Viewport.FirstVisibleMidi = notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min();
+        maxBeat = notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
+        var instruments = notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
+        var instrumentColors = instruments.Select((s, i) => GetInstrumentColor(i)).ToArray();
         for (int i = 0; i < instruments.Length; i++)
         {
             instrumentColorMap[instruments[i]] = instrumentColors[i];
         }
-
     }
 
     private static readonly RGB[] BaseInstrumentColors = new[]
@@ -106,10 +129,9 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
         // Calculate elapsed time
         double elapsedSeconds = Stopwatch.GetElapsedTime(playbackStartTimestamp.Value).TotalSeconds;
-        double secondsPerBeat = 60.0 / song.BeatsPerMinute;
+        double secondsPerBeat = 60.0 / notes?.BeatsPerMinute ?? 60;
         double beat = playheadStartBeat + elapsedSeconds / secondsPerBeat;
 
-        // Clamp to song length
         if (beat > maxBeat)
         {
             CurrentBeat = (int)maxBeat;
@@ -134,7 +156,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     {
         base.OnPaint(context);
         double relBeat = CurrentBeat - Viewport.FirstVisibleBeat;
-        int x = ConsoleMath.Round(relBeat * ColWidthChars);
+        int x = ConsoleMath.Round(relBeat / BeatsPerColumn) * ColWidthChars;
+
         if (x < 0 || x >= Width) return;
         for (int y = 0; y < Height; y++)
         {
@@ -150,7 +173,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
     private void UpdateViewportBounds()
     {
-        Viewport.BeatsOnScreen = Math.Max(1, Width / ColWidthChars);
+        Viewport.BeatsOnScreen = Math.Max(1, Width * BeatsPerColumn / ColWidthChars);
         Viewport.MidisOnScreen = Math.Max(1, Height / RowHeightChars);
     }
 
@@ -169,6 +192,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             else if (k.Key == ConsoleKey.PageDown) Viewport.ScrollRows(-12);
             else if (k.Key == ConsoleKey.Home) Viewport.FirstVisibleMidi = 0;
             else if (k.Key == ConsoleKey.End) Viewport.FirstVisibleMidi = 127;
+            else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add) { BeatsPerColumn /= 2; }  // Zoom in (twice as detailed)
+            else if (k.Key == ConsoleKey.OemMinus || k.Key == ConsoleKey.Subtract) { BeatsPerColumn *= 2; } // Zoom out (twice as broad)
             else return; // Not handled
             RefreshVisibleSet();
         }, focusLifetime);
@@ -185,19 +210,19 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
 
         // 2. Add newly-visible notes
-        for (int i = 0; i < song.Notes.Notes.Count; i++)
+        for (int i = 0; i < notes.Count; i++)
         {
-            var note = song.Notes.Notes[i];
+            var note = notes[i];
             if(note.Velocity == 0) continue; // Skip silent notes
             if (live.TryGetValue(note, out NoteCell cell))
             {
-                PositionCell(cell, note);
+                PositionCell(cell);
             }
             else
             {
                 cell = ProtectedPanel.Add(new NoteCell(note));
-                cell.Background = instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color : RGB.Orange;
-                PositionCell(cell, note);
+                cell.Background = note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color : RGB.Orange;
+                PositionCell(cell);
                 live[note] = cell;
             }
         }
@@ -206,7 +231,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         foreach (var kvp in live.ToArray())
         {
             var note = kvp.Key;
-            if (note.StartBeat + note.DurationBeats < beatStart || note.StartBeat > beatEnd ||
+            double durBeats = kvp.Value.Note.DurationBeats >= 0 ? kvp.Value.Note.DurationBeats : GetSustainedNoteDurationBeats(kvp.Value.Note);
+            if (note.StartBeat + durBeats < beatStart || note.StartBeat > beatEnd ||
                 note.MidiNote < midiTop || note.MidiNote > midiBot)
             {
                 kvp.Value.Dispose();
@@ -215,19 +241,28 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         }
     }
 
-    private void PositionCell(NoteCell cell, NoteExpression n)
+    private void PositionCell(NoteCell cell)
     {
         // convert beat/midi → chars
-        double beatsFromLeft = n.StartBeat - Viewport.FirstVisibleBeat;
-        int x = ConsoleMath.Round(beatsFromLeft * ColWidthChars);
+        double beatsFromLeft = cell.Note.StartBeat - Viewport.FirstVisibleBeat;
 
-        int y = (Viewport.FirstVisibleMidi + Viewport.MidisOnScreen - 1 - n.MidiNote) * RowHeightChars;
+        int x = ConsoleMath.Round((cell.Note.StartBeat - Viewport.FirstVisibleBeat) / BeatsPerColumn) * ColWidthChars;
+        int y = (Viewport.FirstVisibleMidi + Viewport.MidisOnScreen - 1 - cell.Note.MidiNote) * RowHeightChars;
 
-        double durBeats = n.DurationBeats;
-        int w = (int)Math.Max(1, ConsoleMath.Round(durBeats * ColWidthChars));
+        double durBeats = cell.Note.DurationBeats >= 0 ? cell.Note.DurationBeats : GetSustainedNoteDurationBeats(cell.Note);
+        int w = (int)Math.Max(1, ConsoleMath.Round(durBeats / BeatsPerColumn) * ColWidthChars);
         int h = RowHeightChars;
 
         cell.MoveTo(x, y);
         cell.ResizeTo(w, h);
+    }
+
+    private double GetSustainedNoteDurationBeats(NoteExpression n)
+    {
+        var totalPlayTime = Stopwatch.GetElapsedTime(((ListNoteSource)notes).StartTimestamp.Value);
+        var thisNoteStart = n.StartBeat * 60.0 / notes.BeatsPerMinute;
+        var thisNoteSustained = totalPlayTime.TotalSeconds - thisNoteStart;
+        var thisNoteSustainedBeats = thisNoteSustained * notes.BeatsPerMinute / 60.0;
+        return Math.Max(0, thisNoteSustainedBeats);
     }
 }

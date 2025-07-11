@@ -1,13 +1,13 @@
 ﻿using NAudio.Midi;
 
 namespace klooie;
-public class MIDIInput : Recyclable
+public class MIDIInput : Recyclable, IMidiInput
 {
     private MidiIn midiIn;
 
-    private Event<MidiEvent>? midiFired;
-    public Event<MidiEvent> EventFired => midiFired ??= Event<MidiEvent>.Create();
-    private MidiInMessageEventArgs currentEventArgs;
+    private Event<IMidiEvent>? midiFired;
+    public Event<IMidiEvent> EventFired => midiFired ??= Event<IMidiEvent>.Create();
+    private Queue<MidiInMessageEventArgs> eventsToBeProcessed = new();
     protected MIDIInput() { }
     private Lock lck = new();
 
@@ -17,7 +17,7 @@ public class MIDIInput : Recyclable
     public static bool TryCreate(string midiInProductName, out MIDIInput input)
     {
         input = pool.Value.Rent();
-        var success = input.TryConstruct(midiInProductName);
+        var success = input.TryOpen(midiInProductName);
         if (success == false) input.Dispose();
         return success;
     }
@@ -33,7 +33,7 @@ public class MIDIInput : Recyclable
                (midiEvent is NoteOnEvent noteOn && noteOn.Velocity == 0);
     }
 
-    private bool TryConstruct(string midiInProductName)
+    private bool TryOpen(string midiInProductName)
     {
         app = ConsoleApp.Current;
         if(app == null) throw new InvalidOperationException("MIDIInput requires a ConsoleApp to be running. Please start a ConsoleApp before using MIDIInput.");
@@ -63,15 +63,25 @@ public class MIDIInput : Recyclable
     {
         lock (lck)
         {
-            currentEventArgs = e;
+            eventsToBeProcessed.Enqueue(e);
         }
-        app.Invoke(this, static (me) =>
+        app.Invoke(this, static (me) => me.DrainEvents());
+    }
+
+    private void DrainEvents()
+    {
+        List<MidiEventWrapper> toFire = new();
+        lock (lck)
         {
-            lock (me.lck)
+            while (eventsToBeProcessed.Count > 0)
             {
-                me.EventFired.Fire(me.currentEventArgs.MidiEvent);
+                toFire.Add(new MidiEventWrapper(eventsToBeProcessed.Dequeue().MidiEvent));
             }
-        });
+        }
+        foreach (var evt in toFire)
+        {
+            EventFired.Fire(evt);
+        }
     }
 
     protected override void OnReturn()
@@ -79,4 +89,13 @@ public class MIDIInput : Recyclable
         base.OnReturn();
         midiIn?.Dispose();
     }
+}
+
+public class MidiEventWrapper : IMidiEvent
+{
+    private readonly MidiEvent midiEvent;
+    public MidiEventWrapper(MidiEvent midiEvent) => this.midiEvent = midiEvent;
+    public int NoteNumber => (midiEvent as NoteEvent)?.NoteNumber ?? 0;
+    public int Velocity => (midiEvent as NoteEvent)?.Velocity ?? 0;
+    public MidiCommand Command => (MidiCommand)midiEvent.CommandCode;
 }
