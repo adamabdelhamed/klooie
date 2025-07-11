@@ -4,9 +4,21 @@ using System.Linq;
 
 namespace klooie;
 
-// ────────────────────────────────
-// 1. NoteExpression: Immutable
-// ────────────────────────────────
+
+public sealed class InstrumentExpression
+{
+    public string Name { get; }
+    public Func<ISynthPatch> PatchFunc { get; }
+    private InstrumentExpression(string name, Func<ISynthPatch> patchFunc)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Instrument name cannot be null or empty.", nameof(name));
+        if (patchFunc == null) throw new ArgumentNullException(nameof(patchFunc), "Patch function cannot be null.");
+        Name = name;
+        PatchFunc = patchFunc;
+    }
+    public static InstrumentExpression Create(string name, Func<ISynthPatch> patchFunc) => new(name, patchFunc);
+}
+
 public sealed class NoteExpression
 {
     public int MidiNote { get; }
@@ -16,22 +28,22 @@ public sealed class NoteExpression
 
     public double EndBeat => StartBeat < 0 ? -1 : StartBeat + DurationBeats;
 
-    public Func<ISynthPatch>? PatchFunc { get; }
+    public InstrumentExpression? Instrument { get; }
 
-    private NoteExpression(int midiNote, double startBeat, double durationBeats, int velocity, Func<ISynthPatch>? patchFunc)
+    private NoteExpression(int midiNote, double startBeat, double durationBeats, int velocity, InstrumentExpression? instrument)
     {
         MidiNote = midiNote;
         StartBeat = startBeat;
         DurationBeats = durationBeats;
         Velocity = velocity;
-        PatchFunc = patchFunc;
+        Instrument = instrument;
     }
 
-    public static NoteExpression Create(int midi, double startBeat, double durationBeats, int velocity = 127, Func<ISynthPatch>? patchFunc = null)
-        => new(midi, startBeat, durationBeats, velocity, patchFunc);
+    public static NoteExpression Create(int midi, double startBeat, double durationBeats, int velocity = 127, InstrumentExpression? instrument = null)
+        => new(midi, startBeat, durationBeats, velocity, instrument);
 
-    public static NoteExpression Create(int midi, double durationBeats, int velocity = 127, Func<ISynthPatch>? patchFunc = null)
-    => new(midi, -1, durationBeats, velocity, patchFunc);
+    public static NoteExpression Create(int midi, double durationBeats, int velocity = 127, InstrumentExpression? instrument = null)
+    => new(midi, -1, durationBeats, velocity, instrument);
 
     public static NoteExpression Rest(double beats)
     => new(0, -1, beats, 0, null);
@@ -40,12 +52,12 @@ public sealed class NoteExpression
         => new(0, startBeat, beats, 0, null);
 
     // Map helpers
-    public NoteExpression WithInstrument(Func<ISynthPatch> patchFunc) => new(MidiNote, StartBeat, DurationBeats, Velocity, patchFunc);
-    public NoteExpression WithInstrumentIfNull(Func<ISynthPatch> patchFunc) => new(MidiNote, StartBeat, DurationBeats, Velocity, this.PatchFunc ?? patchFunc);
-    public NoteExpression WithOctave(int octaveDelta) => new(MidiNote + octaveDelta * 12, StartBeat, DurationBeats, Velocity, PatchFunc);
-    public NoteExpression WithVelocity(int velocity) => new(MidiNote, StartBeat, DurationBeats, velocity, PatchFunc);
-    public NoteExpression WithDuration(double beats) => new(MidiNote, StartBeat, beats, Velocity, PatchFunc);
-    public NoteExpression WithStartBeat(double startBeat) => new(MidiNote, startBeat, DurationBeats, Velocity, PatchFunc);
+    public NoteExpression WithInstrument(InstrumentExpression instrument) => new(MidiNote, StartBeat, DurationBeats, Velocity, instrument);
+    public NoteExpression WithInstrumentIfNull(InstrumentExpression instrument) => new(MidiNote, StartBeat, DurationBeats, Velocity, this.Instrument ?? instrument);
+    public NoteExpression WithOctave(int octaveDelta) => new(MidiNote + octaveDelta * 12, StartBeat, DurationBeats, Velocity, Instrument);
+    public NoteExpression WithVelocity(int velocity) => new(MidiNote, StartBeat, DurationBeats, velocity, Instrument);
+    public NoteExpression WithDuration(double beats) => new(MidiNote, StartBeat, beats, Velocity, Instrument);
+    public NoteExpression WithStartBeat(double startBeat) => new(MidiNote, startBeat, DurationBeats, Velocity, Instrument);
 
     public override string ToString() => $"Note(Midi: {MidiNote}, Start: {StartBeat}, Duration: {DurationBeats}, Velocity: {Velocity})";
 }
@@ -122,23 +134,14 @@ public sealed class NoteCollection
     }
 
     // Map helpers
-    public NoteCollection WithInstrument(Func<ISynthPatch> patchFunc)
-        => new(Notes.Select(n => n.WithInstrument(patchFunc)));
-    public NoteCollection WithInstrumentIfNull(Func<ISynthPatch> patchFunc)
-    => new(Notes.Select(n => n.WithInstrumentIfNull(patchFunc)));
-    public NoteCollection WithOctave(int octaveDelta)
-        => new(Notes.Select(n => n.WithOctave(octaveDelta)));
-    public NoteCollection WithVelocity(int velocity)
-        => new(Notes.Select(n => n.WithVelocity(velocity)));
-    public NoteCollection WithDuration(double beats)
-        => new(Notes.Select(n => n.WithDuration(beats)));
+    public NoteCollection WithInstrument(InstrumentExpression instrument) => new(Notes.Select(n => n.WithInstrument(instrument)));
+    public NoteCollection WithInstrumentIfNull(InstrumentExpression instrument) => new(Notes.Select(n => n.WithInstrumentIfNull(instrument)));
+    public NoteCollection WithOctave(int octaveDelta) => new(Notes.Select(n => n.WithOctave(octaveDelta)));
+    public NoteCollection WithVelocity(int velocity) => new(Notes.Select(n => n.WithVelocity(velocity)));
+    public NoteCollection WithDuration(double beats) => new(Notes.Select(n => n.WithDuration(beats)));
 
-    // Rest: static helper for convenience (appends a rest after the end)
-    public NoteCollection AddRest(double beats)
-        => this.AddSequential(Create(NoteExpression.Rest(0, beats)));
-
-    public static NoteCollection Rest(double startBeat, double beats)
-        => new([NoteExpression.Rest(startBeat, beats)]);
+    public NoteCollection AddRest(double beats) => this.AddSequential(Create(NoteExpression.Rest(0, beats)));
+    public static NoteCollection Rest(double startBeat, double beats) => new([NoteExpression.Rest(startBeat, beats)]);
 }
 
 // ────────────────────────────────
@@ -168,7 +171,7 @@ public class Song
             .OrderBy(expr => expr.StartBeat)
             .Select(expr =>
             {
-                var patch = expr.PatchFunc?.Invoke();
+                var patch = expr.Instrument?.PatchFunc.Invoke();
                 return Note.Create(
                     expr.MidiNote,
                     TimeSpan.FromSeconds(expr.StartBeat * beatLen),

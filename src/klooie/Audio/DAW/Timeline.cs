@@ -79,6 +79,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     private bool isPlaying = false;
 
     private double maxBeat;
+    private Dictionary<string, RGB> instrumentColorMap = new();
     public VirtualTimelineGrid(Song s)
     {
         song = s;
@@ -92,6 +93,44 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220))).Fill();
         Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
+
+        var instruments = song.Notes.Notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
+        var instrumentColors = instruments.Select((s,i) => GetInstrumentColor(i)).ToArray();
+        for (int i = 0; i < instruments.Length; i++)
+        {
+            instrumentColorMap[instruments[i]] = instrumentColors[i];
+        }
+
+    }
+
+    private static readonly RGB[] BaseInstrumentColors = new[]
+    {
+    new RGB(220, 60, 60),    // Red
+    new RGB(60, 180, 90),    // Green
+    new RGB(65, 105, 225),   // Blue
+    new RGB(240, 200, 60),   // Yellow/Gold
+    new RGB(200, 60, 200),   // Magenta
+    new RGB(50, 220, 210),   // Cyan
+    new RGB(245, 140, 30),   // Orange
+};
+
+    private static readonly float[] PaleFractions = new[]
+    {
+        0.0f, // Full color (original)
+        0.35f,
+        0.7f,
+    };
+
+    private RGB GetInstrumentColor(int index)
+    {
+        int baseCount = BaseInstrumentColors.Length;
+        int shade = index / baseCount;
+        int colorIdx = index % baseCount;
+        float pale = PaleFractions[Math.Min(shade, PaleFractions.Length - 1)];
+
+        // Lerp: (1-pale)*BaseColor + pale*White
+        RGB color = BaseInstrumentColors[colorIdx];
+        return color.ToOther(RGB.White, pale);
     }
 
     public void StartPlayback()
@@ -212,6 +251,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             else
             {
                 cell = ProtectedPanel.Add(new NoteCell(note));
+                cell.Background = instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color : RGB.Orange;
                 PositionCell(cell, note);
                 live[note] = cell;
             }
