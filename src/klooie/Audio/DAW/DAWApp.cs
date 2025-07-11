@@ -12,16 +12,16 @@ public class DAWApp : ConsoleApp
         await base.Startup();
         var pianoWithTimeline = LayoutRoot.Add(new PianoWithTimeline(new DemoSong(120))).Fill();
         pianoWithTimeline.Timeline.Focus();
+        pianoWithTimeline.StartPlayback();
     }
 }
-
 
 public class DemoSong : Song
 {
 
     private ISynthPatch AddCustomPitchBend(ISynthPatch patch, int noteBeats, bool up)
     {
-        float noteSeconds = noteBeats * (60f / (float)this.BeatsMerMinute);
+        float noteSeconds = noteBeats * (60f / (float)this.BeatsPerMinute);
         Func<float, float> bendFunc = t =>
         {
             float frac = t / noteSeconds; // normalize time [0..1]
