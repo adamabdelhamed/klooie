@@ -78,10 +78,11 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
         BoundsChanged.Sync(UpdateViewportBounds, this);
-        Viewport.FirstVisibleMidi = s.Notes.Notes.Select(m => m.MidiNote).DefaultIfEmpty(0).Min();
+        Viewport.FirstVisibleMidi = s.Notes.Notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(0).Min();
         this.Focused.Subscribe(EnableKeyboardInput, this);
         backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220))).Fill();
         Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
+        ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
     }
 
     private void UpdateAlternatingBackgroundOffset()
@@ -102,12 +103,15 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         Unfocused.SubscribeOnce(() => focusLifetime.TryDispose());
         ConsoleApp.Current.GlobalKeyPressed.Subscribe(k =>
         {
-            if (k.Key == ConsoleKey.LeftArrow) Viewport.ScrollBeats(-1);
-            else if (k.Key == ConsoleKey.RightArrow) Viewport.ScrollBeats(+1);
-            else if (k.Key == ConsoleKey.UpArrow) Viewport.ScrollRows(+1);
-            else if (k.Key == ConsoleKey.DownArrow) Viewport.ScrollRows(-1);
+            if (k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A) Viewport.ScrollBeats(-1);
+            else if (k.Key == ConsoleKey.RightArrow || k.Key == ConsoleKey.D) Viewport.ScrollBeats(+1);
+            else if (k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W) Viewport.ScrollRows(+1);
+            else if (k.Key == ConsoleKey.DownArrow || k.Key == ConsoleKey.S) Viewport.ScrollRows(-1);
             else if (k.Key == ConsoleKey.PageUp) Viewport.ScrollRows(+12);
             else if (k.Key == ConsoleKey.PageDown) Viewport.ScrollRows(-12);
+            else if (k.Key == ConsoleKey.Home) Viewport.FirstVisibleMidi = 0;
+            else if (k.Key == ConsoleKey.End) Viewport.FirstVisibleMidi = 127;
+            else return; // Not handled
             RefreshVisibleSet();
         }, focusLifetime);
     }
@@ -126,6 +130,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         for (int i = 0; i < song.Notes.Notes.Count; i++)
         {
             var note = song.Notes.Notes[i];
+            if(note.Velocity == 0) continue; // Skip silent notes
             if (live.TryGetValue(note, out NoteCell cell))
             {
                 PositionCell(cell, note);
@@ -170,16 +175,14 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
 public class PianoPanel : ProtectedConsolePanel
 {
+    public const int KeyWidth = 11;
     private readonly TimelineViewport vp;
-    private readonly int keyWidth;
 
     // Optionally: let user customize width
-    public PianoPanel(TimelineViewport viewport, int keyWidth = 5)
+    public PianoPanel(TimelineViewport viewport)
     {
         vp = viewport;
-        this.keyWidth = keyWidth;
         CanFocus = false;
-        Width = keyWidth;
         Background = new RGB(240, 240, 240); // match grid
         viewport.SubscribeToAnyPropertyChange(this, _=> Refresh(), this);
     }
@@ -200,10 +203,10 @@ public class PianoPanel : ProtectedConsolePanel
             var bg = isWhite ? RGB.White : RGB.Black;
             var fg = isWhite ? RGB.Black : RGB.White;
 
-            ctx.FillRect(bg, 0, i, keyWidth, 1);
+            ctx.FillRect(bg, 0, i, KeyWidth, 1);
 
-            var label = noteName.PadRight(keyWidth);
-            ctx.DrawString(label, fg, bg, 0, i);
+            var leftOffSetToCenter = (KeyWidth - noteName.Length) / 2;
+            ctx.DrawString(noteName, fg, bg, leftOffSetToCenter, i);
         }
     }
 
@@ -215,7 +218,7 @@ public class PianoPanel : ProtectedConsolePanel
         bool isWhite = names[n].Length == 1;
         // Example: "C4"
         int octave = (midi / 12) - 1;
-        return ($"{names[n]}{octave}", isWhite);
+        return ($"{midi}: {names[n]}{octave}", isWhite);
     }
 }
 
@@ -227,8 +230,8 @@ public class PianoWithTimeline : ProtectedConsolePanel
     public VirtualTimelineGrid Timeline { get; private init; }
     public PianoWithTimeline(Song song)
     {
-        layout = ProtectedPanel.Add(new GridLayout("100%", "5p;1r")).Fill();
+        layout = ProtectedPanel.Add(new GridLayout("100%", $"{PianoPanel.KeyWidth}p;1r")).Fill();
         Timeline = layout.Add(new VirtualTimelineGrid(song), 1, 0); // col then row here - I know its strange
-        Piano = layout.Add(new PianoPanel(Timeline.Viewport, 5), 0, 0);
+        Piano = layout.Add(new PianoPanel(Timeline.Viewport), 0, 0);
     }
 }

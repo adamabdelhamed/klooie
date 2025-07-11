@@ -11,7 +11,6 @@ public class DAWApp : ConsoleApp
     {
         await base.Startup();
         var pianoWithTimeline = LayoutRoot.Add(new PianoWithTimeline(new DemoSong(120))).Fill();
-        pianoWithTimeline.Timeline.RefreshVisibleSet();
         pianoWithTimeline.Timeline.Focus();
     }
 }
