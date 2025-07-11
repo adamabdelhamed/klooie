@@ -24,9 +24,9 @@ public sealed class NoteExpression
 {
     public int MidiNote { get; }
     public double StartBeat { get; }
-    public double DurationBeats { get; set; }
+    public double DurationBeats { get; }
     public int Velocity { get; }
-    public double BeatsPerMinute { get; set; }
+    public double BeatsPerMinute { get; }
 
     public TimeSpan StartTime => TimeSpan.FromSeconds(StartBeat * (60.0 / BeatsPerMinute));
     public TimeSpan DurationTime => TimeSpan.FromSeconds(DurationBeats * (60.0 / BeatsPerMinute));
@@ -44,11 +44,24 @@ public sealed class NoteExpression
         Instrument = instrument;
     }
 
+    private NoteExpression(int midiNote, double startBeat, double durationBeats, double bpm, int velocity, InstrumentExpression? instrument)
+    {
+        MidiNote = midiNote;
+        StartBeat = startBeat;
+        DurationBeats = durationBeats;
+        Velocity = velocity;
+        Instrument = instrument;
+        BeatsPerMinute = bpm;
+    }
     public static NoteExpression Create(int midi, double startBeat, double durationBeats, int velocity = 127, InstrumentExpression? instrument = null)
         => new(midi, startBeat, durationBeats, velocity, instrument);
 
+    // TODO: Parameter confusion - Maybe change the name of the method
     public static NoteExpression Create(int midi, double durationBeats, int velocity = 127, InstrumentExpression? instrument = null)
     => new(midi, -1, durationBeats, velocity, instrument);
+
+    public static NoteExpression Create(int midi, double startBeat, double durationBeats, double bpm, int velocity = 127, InstrumentExpression? instrument = null)
+        => new(midi, startBeat, durationBeats, bpm, velocity, instrument);
 
     public static NoteExpression Rest(double beats)
     => new(0, -1, beats, 0, null);
@@ -177,15 +190,14 @@ public class ListNoteSource : List<NoteExpression>, INoteSource
 
 public class Song : INoteSource
 {
-    public IReadOnlyList<NoteExpression> Notes { get; protected set; }
+    public NoteCollection Notes { get; protected set; }
     public int Count => Notes.Count;
     public NoteExpression this[int index] => Notes[index];
     public Song(NoteCollection notes, double bpm = 120)
     {
         BeatsPerMinute = bpm;
-        Notes = notes;
-        for(var i = 0; i < Notes.Count; i++) notes[i].BeatsPerMinute = bpm;
-        notes.Sort();
+        Notes = new NoteCollection(notes.Select(n => NoteExpression.Create(n.MidiNote,n.StartBeat, n.DurationBeats, bpm, n.Velocity,n.Instrument)));
+        Notes.Sort();
     }
 
  

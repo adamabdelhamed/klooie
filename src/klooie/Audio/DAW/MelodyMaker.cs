@@ -64,7 +64,8 @@ public class MelodyMaker : ProtectedConsolePanel
     {
         var elapsed = Stopwatch.GetElapsedTime(noteSource.StartTimestamp.Value);
         var elapsedAsBeats = (elapsed.TotalSeconds * noteSource.BeatsPerMinute / 60.0);
-        tracker.Note.DurationBeats = elapsedAsBeats - tracker.Note.StartBeat;
+        noteSource.Remove(tracker.Note);
+        noteSource.Add(NoteExpression.Create(tracker.Note.MidiNote, tracker.Note.StartBeat, elapsedAsBeats - tracker.Note.StartBeat, noteSource.BeatsPerMinute, tracker.Note.Velocity, tracker.Note.Instrument));
         tracker.ReleaseAll();
         noteTrackers.Remove(ev.NoteNumber);
     }
