@@ -13,6 +13,9 @@ public sealed class NoteExpression
     public double StartBeat { get; }
     public double DurationBeats { get; }
     public int Velocity { get; }
+
+    public double EndBeat => StartBeat < 0 ? -1 : StartBeat + DurationBeats;
+
     public Func<ISynthPatch>? PatchFunc { get; }
 
     private NoteExpression(int midiNote, double startBeat, double durationBeats, int velocity, Func<ISynthPatch>? patchFunc)
@@ -146,21 +149,21 @@ public class Song
     public NoteCollection Notes { get; protected set; }
     public Song(NoteCollection notes, double bpm = 120)
     {
-        BeatsMerMinute = bpm;
+        BeatsPerMinute = bpm;
         Notes = notes;
     }
 
     protected Song(double bpm = 120)
     {
-        BeatsMerMinute = bpm;
+        BeatsPerMinute = bpm;
     }
 
-    public double BeatsMerMinute { get; private init; }
+    public double BeatsPerMinute { get; private init; }
 
     // Exports notes, skips velocity == 0 (rest), sorted by StartBeat
     public List<Note> Render()
     {
-        double beatLen = 60.0 / BeatsMerMinute;
+        double beatLen = 60.0 / BeatsPerMinute;
         var ret = Notes.Notes
             .OrderBy(expr => expr.StartBeat)
             .Select(expr =>
