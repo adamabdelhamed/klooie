@@ -23,44 +23,50 @@ public class MelodyMaker : ProtectedConsolePanel
         app = ConsoleApp.Current;
         Ready.SubscribeOnce(pianoWithTimeline.Timeline.Focus);
         scheduler = new SyncronousScheduler(ConsoleApp.Current);
-        scheduler.Mode = SyncronousScheduler.ExecutionMode.EndOfCycle;
+        scheduler.Mode = SyncronousScheduler.ExecutionMode.EndOfCycle; // vs. AfterPaint so that we get a tighter loop.
     }
 
     private void HandleMidiEvent(IMidiEvent ev)
     {
         if (IsNoteOn(ev))
         {
-            if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
-            if(noteSource.StartTimestamp == null)
-            {
-                noteSource.StartTimestamp = Stopwatch.GetTimestamp();
-                RefreshLoop();
-            }
-
-            var elapsed = Stopwatch.GetElapsedTime(noteSource.StartTimestamp.Value);
-            var elapsedAsBeats = (elapsed.TotalSeconds * noteSource.BeatsPerMinute / 60.0);
-            var noteExpression = NoteExpression.Create(ev.NoteNumber, elapsedAsBeats,  -1,  ev.Velocity,null);
-            var note = Note.Create(ev.NoteNumber, ev.Velocity, SynthPatches.CreateGuitar().WithVolume(5));
-            var voices = app.Sound.PlaySustainedNote(note);
-            noteSource.Add(noteExpression);
-            pianoWithTimeline.Timeline.RefreshVisibleSet();
-            noteTrackers[ev.NoteNumber] = new SustainedNoteTracker(noteExpression, voices);
+            HandleNoteOn(ev);
         }
         else if (IsNoteOff(ev) && noteTrackers.TryGetValue(ev.NoteNumber, out var tracker))
         {
-            app.WriteLine(ConsoleString.Parse($"[Black]Note [Orange]{ev.NoteNumber}[Black] off"));
-
-            var elapsed = Stopwatch.GetElapsedTime(noteSource.StartTimestamp.Value);
-            var elapsedAsBeats = (elapsed.TotalSeconds * noteSource.BeatsPerMinute / 60.0);
-            tracker.Note.DurationBeats = elapsedAsBeats - tracker.Note.StartBeat;
-
-            tracker.ReleaseAll();
-            noteTrackers.Remove(ev.NoteNumber);
+            HandleNoteOff(ev, tracker);
         }
         else if(ev.Command == MidiCommand.NoteOff || ev.Command == MidiCommand.NoteOn)
         {
             app.WriteLine(ConsoleString.Parse($"[Red]Missed note off {ev.NoteNumber}"));
         }
+    }
+
+    private void HandleNoteOn(IMidiEvent ev)
+    {
+        if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
+        if (noteSource.StartTimestamp == null)
+        {
+            noteSource.StartTimestamp = Stopwatch.GetTimestamp();
+            RefreshLoop();
+        }
+
+        var elapsed = Stopwatch.GetElapsedTime(noteSource.StartTimestamp.Value);
+        var elapsedAsBeats = (elapsed.TotalSeconds * noteSource.BeatsPerMinute / 60.0);
+        var noteExpression = NoteExpression.Create(ev.NoteNumber, elapsedAsBeats, -1, ev.Velocity, null);
+        var voices = app.Sound.PlaySustainedNote(noteExpression);
+        noteSource.Add(noteExpression);
+        pianoWithTimeline.Timeline.RefreshVisibleSet();
+        noteTrackers[ev.NoteNumber] = new SustainedNoteTracker(noteExpression, voices);
+    }
+
+    private void HandleNoteOff(IMidiEvent ev, SustainedNoteTracker tracker)
+    {
+        var elapsed = Stopwatch.GetElapsedTime(noteSource.StartTimestamp.Value);
+        var elapsedAsBeats = (elapsed.TotalSeconds * noteSource.BeatsPerMinute / 60.0);
+        tracker.Note.DurationBeats = elapsedAsBeats - tracker.Note.StartBeat;
+        tracker.ReleaseAll();
+        noteTrackers.Remove(ev.NoteNumber);
     }
 
     public static bool IsNoteOff(IMidiEvent midiEvent) => midiEvent.Command == MidiCommand.NoteOff || (midiEvent.Command == MidiCommand.NoteOn && midiEvent.Velocity == 0);

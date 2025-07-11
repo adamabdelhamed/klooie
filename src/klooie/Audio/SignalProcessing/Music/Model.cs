@@ -26,6 +26,10 @@ public sealed class NoteExpression
     public double StartBeat { get; }
     public double DurationBeats { get; set; }
     public int Velocity { get; }
+    public double BeatsPerMinute { get; set; }
+
+    public TimeSpan StartTime => TimeSpan.FromSeconds(StartBeat * (60.0 / BeatsPerMinute));
+    public TimeSpan DurationTime => TimeSpan.FromSeconds(DurationBeats * (60.0 / BeatsPerMinute));
 
     public double EndBeat => StartBeat < 0 ? -1 : StartBeat + DurationBeats;
 
@@ -70,6 +74,7 @@ public sealed class NoteCollection : IReadOnlyList<NoteExpression>
     public NoteExpression this[int index] =>  Notes[index];
 
     private List<NoteExpression> Notes { get; }
+    private static Comparison<NoteExpression> MelodyNoteComparer = (a, b) => a.StartTime.CompareTo(b.StartTime);
 
     public NoteCollection(IEnumerable<NoteExpression> notes)
     {
@@ -94,6 +99,11 @@ public sealed class NoteCollection : IReadOnlyList<NoteExpression>
             i++;
         }
         Notes = newNotes;
+    }
+
+    public void Sort()
+    {
+        Notes.Sort(MelodyNoteComparer);
     }
 
     public static NoteCollection Create(params NoteExpression[] notes)
@@ -174,37 +184,16 @@ public class Song : INoteSource
     {
         BeatsPerMinute = bpm;
         Notes = notes;
+        for(var i = 0; i < Notes.Count; i++) notes[i].BeatsPerMinute = bpm;
+        notes.Sort();
     }
 
-    protected Song(double bpm = 120)
-    {
-        BeatsPerMinute = bpm;
-    }
-
+ 
     public double BeatsPerMinute { get; private init; }
 
 
 
     // Exports notes, skips velocity == 0 (rest), sorted by StartBeat
-    public List<Note> Render()
-    {
-        double beatLen = 60.0 / BeatsPerMinute;
-        var ret = Notes
-            .OrderBy(expr => expr.StartBeat)
-            .Select(expr =>
-            {
-                var patch = expr.Instrument?.PatchFunc.Invoke();
-                return Note.Create(
-                    expr.MidiNote,
-                    TimeSpan.FromSeconds(expr.StartBeat * beatLen),
-                    TimeSpan.FromSeconds(expr.DurationBeats * beatLen),
-                    expr.Velocity,
-                    patch
-                );
-            })
-            .ToList();
-        return ret;
-    }
 
     public IEnumerator<NoteExpression> GetEnumerator() => Notes.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => Notes.GetEnumerator();

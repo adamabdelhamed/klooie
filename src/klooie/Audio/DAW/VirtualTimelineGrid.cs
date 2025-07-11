@@ -17,7 +17,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     private const int RowHeightChars = 1;
     private Recyclable? focusLifetime;
 
-    private double beatsPerColumn = 1/32.0; 
+    private double beatsPerColumn = 1/8.0; 
     public double BeatsPerColumn
     {
         get => beatsPerColumn;
@@ -202,6 +202,11 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
     public void RefreshVisibleSet()
     {
+        if(live.Count == 0 && notes.Count > 0)
+        {
+            Viewport.FirstVisibleMidi = Math.Max(0, notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min() - 12);
+        }
+
         // 1. Mark which notes *should* be on screen
         double beatStart = Viewport.FirstVisibleBeat;
         double beatEnd = beatStart + Viewport.BeatsOnScreen;

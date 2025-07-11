@@ -12,26 +12,22 @@ public class ScheduledNoteEvent : Recyclable
 {
     public long StartSample; // Absolute sample offset
     public SynthSignalSource Voice;
-    public double DurationSeconds;
-    public Note Note { get; private set; }
-    private LeaseState<Note> noteTracker;
+    public double DurationSeconds => Note.DurationTime.TotalSeconds;
+    public NoteExpression Note { get; private set; }
+
     private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
     protected ScheduledNoteEvent() { }
-    public static ScheduledNoteEvent Create(long startSample, double durationSeconds, Note note, SynthSignalSource voice)
+    public static ScheduledNoteEvent Create(long startSample, NoteExpression note, SynthSignalSource voice)
     {
         var ret = pool.Value.Rent();
         ret.Note = note;
-        ret.noteTracker = LeaseHelper.Track(note);
         ret.StartSample = startSample;
-        ret.DurationSeconds = durationSeconds;
         ret.Voice = voice;
         return ret;
     }
 
     protected override void OnReturn()
     {
-        noteTracker.UnTrackAndDispose();
-        noteTracker = null;
         Note = null;
         base.OnReturn();
     }

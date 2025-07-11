@@ -8,20 +8,20 @@ namespace klooie;
 
 public abstract class AudioPlaybackEngine : ISoundProvider
 {
-    private Event<Note> notePlaying;
-    public Event<Note> NotePlaying
+    private Event<NoteExpression> notePlaying;
+    public Event<NoteExpression> NotePlaying
     {
         get
         {
             if(notePlaying == null)
             {
-                notePlaying = Event<Note>.Create();
+                notePlaying = Event<NoteExpression>.Create();
                 scheduledSynthProvider.NotePlaying.Subscribe(notePlaying, (ev, note) =>
                 {
-                    var copy = Note.Create(note.Note.MidiNode, note.Note.Start, note.Note.Duration, note.Note.Velocity, null);
+                    var reference = note.Note;
                     EventLoop.Invoke(() =>
                     {
-                        notePlaying.Fire(copy);
+                        notePlaying.Fire(reference);
                     });
                 }, notePlaying);
             }
@@ -75,21 +75,20 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null) 
         => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
 
-    private void WithSpawnedVoices(Note note, Action<ISynthPatch, RecyclableList<SynthSignalSource>> action)
+    private void WithSpawnedVoices(NoteExpression note, Action<ISynthPatch, RecyclableList<SynthSignalSource>> action)
     {
-        var patch = note.Patch ?? SynthPatches.CreateBass();
+        var patch = note.Instrument?.PatchFunc() ?? SynthPatches.CreateBass();
         patch.WithVolume(note.Velocity / 127f);
-        if (!patch.IsNotePlayable(note.MidiNode))
+        if (!patch.IsNotePlayable(note.MidiNote))
         {
-            ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNode}[D] is not playable by the current instrument"));
-            note.Dispose();
+            ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNote}[D] is not playable by the current instrument"));
             return;
         }
 
         RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
         try
         {
-            patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNode), MasterVolume, voices.Items);
+            patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), MasterVolume, voices.Items);
             VoiceCountTracker.Track(voices.Items); 
             action(patch, voices);
         }
@@ -99,7 +98,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         }
     }
 
-    public RecyclableList<IReleasableNote> PlaySustainedNote(Note note)
+    public RecyclableList<IReleasableNote> PlaySustainedNote(NoteExpression note)
     {
         RecyclableList<IReleasableNote>? result = null;
         WithSpawnedVoices(note, (patch, voices) =>
@@ -115,13 +114,13 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         return result ?? RecyclableListPool<IReleasableNote>.Instance.Rent(0);
     }
 
-    public void ScheduleSynthNote(Note note) => WithSpawnedVoices(note, (patch, voices) =>
+    public void ScheduleSynthNote(NoteExpression note) => WithSpawnedVoices(note, (patch, voices) =>
     {
         long scheduleZero = SamplesRendered + (long)(SoundProvider.SampleRate);
-        long startSample = scheduleZero + (long)Math.Round(note.Start.TotalSeconds * SoundProvider.SampleRate);
+        long startSample = scheduleZero + (long)Math.Round(note.StartTime.TotalSeconds * SoundProvider.SampleRate);
         for (int i = 0; i < voices.Items.Count; i++)
         {
-            scheduledSynthProvider.ScheduleNote(ScheduledNoteEvent.Create(startSample, note.Duration.TotalSeconds, note, voices.Items[i]));
+            scheduledSynthProvider.ScheduleNote(ScheduledNoteEvent.Create(startSample, note, voices.Items[i]));
         }
     });
     
@@ -130,14 +129,13 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
 
 
-    private static Comparison<Note> MelodyNoteComparer = (a, b) => a.Start.CompareTo(b.Start);
 
-    public void Play(List<Note> notes)
+
+    public void Play(Song song)
     {
-        notes.Sort(MelodyNoteComparer);
-        for (int i = 0; i < notes.Count; i++)
+        for (int i = 0; i < song.Count; i++)
         {
-            ScheduleSynthNote(notes[i]);
+            ScheduleSynthNote(song[i]);
         }
     }
 

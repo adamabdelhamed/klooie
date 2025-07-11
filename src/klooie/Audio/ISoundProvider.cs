@@ -25,16 +25,16 @@ public interface ISoundProvider
     void Resume();
     void ClearCache();
     long SamplesRendered { get; }
-    RecyclableList<IReleasableNote> PlaySustainedNote(Note note);
-    void Play(List<Note> notes);
-    public void ScheduleSynthNote(Note note);
+    RecyclableList<IReleasableNote> PlaySustainedNote(NoteExpression note);
+    void Play(Song song);
+    public void ScheduleSynthNote(NoteExpression note);
     EventLoop EventLoop { get; }
-    Event<Note> NotePlaying { get; }
+    Event<NoteExpression> NotePlaying { get; }
 }
 
 public class NoOpSoundProvider : ISoundProvider
 {
-    public Event<Note> NotePlaying => Event<Note>.Create();
+    public Event<NoteExpression> NotePlaying => Event<NoteExpression>.Create();
     public EventLoop EventLoop => ConsoleApp.Current;
     public VolumeKnob MasterVolume { get; set; }
     public void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null) { }
@@ -46,83 +46,21 @@ public class NoOpSoundProvider : ISoundProvider
    
 
 
-    public void ScheduleSynthNote(Note note)
+    public void ScheduleSynthNote(NoteExpression note)
     {
         // No-op implementation
     }
 
-    public void Play(List<Note> notes)
+    public void Play(Song song)
     {
 
     }
 
-    public RecyclableList<IReleasableNote> PlaySustainedNote(Note note)
+    public RecyclableList<IReleasableNote> PlaySustainedNote(NoteExpression note)
     {
         return RecyclableListPool<IReleasableNote>.Instance.Rent();
     }
 
-}
-
-public class Note : Recyclable
-{
-    public string NoteName
-    {
-        get
-        {
-            // MIDI 0 = C-1, MIDI 60 = C4 (middle C)
-            // There are 12 notes per octave.
-            int noteNumber = MidiNode;
-            int noteInOctave = noteNumber % 12;
-            int octave = (noteNumber / 12) - 1; // MIDI spec: C-1 is 0
-
-            // Sharps by default (you can use flats if you prefer)
-            // Array is static to avoid allocation
-            ReadOnlySpan<string> noteNames = new[]
-            {
-            "C", "C#", "D", "D#", "E", "F",
-            "F#", "G", "G#", "A", "A#", "B"
-        };
-
-            return $"{noteNames[noteInOctave]}{octave}";
-        }
-    }
-    private Note() { }
-    private static LazyPool<Note> _pool = new(() => new Note());
-    public static Note Create(int midiNode, TimeSpan start, TimeSpan duration, int velocity, ISynthPatch? patch)
-    {
-        var note = _pool.Value.Rent();
-        note.MidiNode = midiNode;
-        note.Start = start;
-        note.Duration = duration;
-        note.Velocity = velocity;
-        note.Patch = patch;
-        return note;
-    }
-
-    public static Note Create(int midiNode, int velocity, ISynthPatch? patch)
-    {
-        var note = _pool.Value.Rent();
-        note.MidiNode = midiNode;
-        note.Velocity = velocity;
-        note.Patch = patch;
-        return note;
-    }
-
-    protected override void OnReturn()
-    {
-        base.OnReturn();
-        MidiNode = 0;
-        Start = TimeSpan.Zero;
-        Duration = TimeSpan.Zero;
-        Velocity = 0;
-        Patch = null;
-    }
-
-    public int MidiNode { get; set; }
-    public TimeSpan Start { get; set; }
-    public TimeSpan Duration { get; set; }
-    public int Velocity { get; set; }
-    public ISynthPatch? Patch { get; set; }
 }
 
 
