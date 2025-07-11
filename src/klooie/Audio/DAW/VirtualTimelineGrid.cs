@@ -13,13 +13,12 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     private readonly Song song;
     private readonly Dictionary<NoteExpression, NoteCell> live = new();
     private AlternatingBackgroundGrid backgroundGrid;
-    // Tune these: visual char size of one tick / one midi row
-    private const int ColWidthChars = 4;
+    private const int ColWidthChars = 16;
     private const int RowHeightChars = 1;
     private const int TicksPerBeat = 96;
     private Recyclable? focusLifetime;
 
-    public double CurrentBeat { get; private set; } = 0; // Current beat in the timeline, used for playback
+    public double CurrentBeat { get; private set; } = 0; 
     private long? playbackStartTimestamp = null;
     private double playheadStartBeat = 0;
     private bool isPlaying = false;
@@ -232,9 +231,3 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         cell.ResizeTo(w, h);
     }
 }
-
-
-
-
-
-
