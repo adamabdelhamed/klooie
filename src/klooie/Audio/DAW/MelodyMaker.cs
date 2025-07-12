@@ -13,7 +13,7 @@ public class MelodyMaker : ProtectedConsolePanel
     private Dictionary<int, SustainedNoteTracker> noteTrackers = new Dictionary<int, SustainedNoteTracker>();
     private ConsoleApp app;
     private IMidiInput input;
-    private SyncronousScheduler scheduler;
+    private TimelinePlayer player;
 
     public INoteSource Notes => noteSource;
     public Func<ISynthPatch> InstrumentFactory { get; set; } = () => null;
@@ -23,12 +23,15 @@ public class MelodyMaker : ProtectedConsolePanel
     {
         this.input = input ?? throw new ArgumentNullException(nameof(input), "MIDI input cannot be null.");
         noteSource = new ListNoteSource();
-        pianoWithTimeline = ProtectedPanel.Add(new PianoWithTimeline(noteSource)).Fill();
+        player = new TimelinePlayer(() => noteSource.Select(n => n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : 0)).DefaultIfEmpty(0).Max(), noteSource.BeatsPerMinute)
+        {
+            StopAtEnd = false
+        };
+        pianoWithTimeline = ProtectedPanel.Add(new PianoWithTimeline(noteSource, player)).Fill();
+        player.BeatChanged.Subscribe(pianoWithTimeline.Timeline, _ => pianoWithTimeline.Timeline.RefreshVisibleSet(), this);
         input.EventFired.Subscribe(HandleMidiEvent, this);
         app = ConsoleApp.Current;
         Ready.SubscribeOnce(pianoWithTimeline.Timeline.Focus);
-        scheduler = new SyncronousScheduler(ConsoleApp.Current);
-        scheduler.Mode = SyncronousScheduler.ExecutionMode.EndOfCycle; // vs. AfterPaint so that we get a tighter loop.
     }
 
     private void HandleMidiEvent(IMidiEvent ev)
@@ -53,7 +56,7 @@ public class MelodyMaker : ProtectedConsolePanel
         if (noteSource.StartTimestamp == null)
         {
             noteSource.StartTimestamp = Stopwatch.GetTimestamp();
-            RefreshLoop();
+            player.Start();
         }
 
         var elapsed = Stopwatch.GetElapsedTime(noteSource.StartTimestamp.Value);
@@ -79,11 +82,6 @@ public class MelodyMaker : ProtectedConsolePanel
     public static bool IsNoteOn(IMidiEvent midiEvent) => midiEvent.Command == MidiCommand.NoteOn  && midiEvent.Velocity > 0;
 
 
-    private void RefreshLoop()
-    {
-        pianoWithTimeline.Timeline.RefreshVisibleSet();
-        scheduler.Delay(1, RefreshLoop);
-    }
 }
 
 public class SustainedNoteTracker
