@@ -39,11 +39,11 @@ public class TimelinePlayer
         this.BeatsPerMinute = bpm;
     }
 
-    public void Start(double startBeat = 0)
+    public void Start(double? startBeat = null)
     {
         if (IsPlaying) return;
-        playheadStartBeat = startBeat;
-        CurrentBeat = startBeat;
+        playheadStartBeat = startBeat ?? CurrentBeat;
+        CurrentBeat = playheadStartBeat;
         playbackStartTimestamp = Stopwatch.GetTimestamp();
         IsPlaying = true;
         ScheduleTick();

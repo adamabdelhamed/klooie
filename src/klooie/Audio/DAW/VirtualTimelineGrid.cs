@@ -42,7 +42,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     {
         Viewport = new TimelineViewport();
         Player = player ?? new TimelinePlayer(() => maxBeat, notes?.BeatsPerMinute ?? 60);
-        Player.BeatChanged.Subscribe(this, OnBeatChanged, this);
+        Player.BeatChanged.Subscribe(this, static (me,b) => me.OnBeatChanged(b), this);
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
         BoundsChanged.Sync(UpdateViewportBounds, this);
@@ -109,7 +109,6 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             Viewport.FirstVisibleBeat = ConsoleMath.Round(beat - Viewport.BeatsOnScreen * 0.2);
             RefreshVisibleSet();
         }
-        Invalidate();
     }
 
     public void StartPlayback() => Player.Start(CurrentBeat);
@@ -249,10 +248,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
     private double GetSustainedNoteDurationBeats(NoteExpression n)
     {
-        var totalPlayTime = Stopwatch.GetElapsedTime(((ListNoteSource)notes).StartTimestamp.Value);
-        var thisNoteStart = n.StartBeat * 60.0 / notes.BeatsPerMinute;
-        var thisNoteSustained = totalPlayTime.TotalSeconds - thisNoteStart;
-        var thisNoteSustainedBeats = thisNoteSustained * notes.BeatsPerMinute / 60.0;
-        return Math.Max(0, thisNoteSustainedBeats);
+        // Show duration from note's start to current playhead position
+        double sustainedBeats = Player.CurrentBeat - n.StartBeat;
+        return Math.Max(0, sustainedBeats);
     }
 }

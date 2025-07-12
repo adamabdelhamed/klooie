@@ -28,7 +28,7 @@ public class MelodyMaker : ProtectedConsolePanel
             StopAtEnd = false
         };
         pianoWithTimeline = ProtectedPanel.Add(new PianoWithTimeline(noteSource, player)).Fill();
-        player.BeatChanged.Subscribe(pianoWithTimeline.Timeline, _ => pianoWithTimeline.Timeline.RefreshVisibleSet(), this);
+        player.BeatChanged.Subscribe(pianoWithTimeline.Timeline, static (t,b) => t.RefreshVisibleSet(), this);
         input.EventFired.Subscribe(HandleMidiEvent, this);
         app = ConsoleApp.Current;
         Ready.SubscribeOnce(pianoWithTimeline.Timeline.Focus);
@@ -53,15 +53,9 @@ public class MelodyMaker : ProtectedConsolePanel
     private void HandleNoteOn(IMidiEvent ev)
     {
         if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
-        if (noteSource.StartTimestamp == null)
-        {
-            noteSource.StartTimestamp = Stopwatch.GetTimestamp();
-            player.Start();
-        }
 
-        var elapsed = Stopwatch.GetElapsedTime(noteSource.StartTimestamp.Value);
-        var elapsedAsBeats = (elapsed.TotalSeconds * noteSource.BeatsPerMinute / 60.0);
-        var noteExpression = NoteExpression.Create(ev.NoteNumber, elapsedAsBeats, -1, ev.Velocity, InstrumentExpression.Create("Keyboard", InstrumentFactory));
+        player.Start(player.CurrentBeat);
+        var noteExpression = NoteExpression.Create(ev.NoteNumber, player.CurrentBeat, -1, ev.Velocity, InstrumentExpression.Create("Keyboard", InstrumentFactory));
         var voices = app.Sound.PlaySustainedNote(noteExpression);
         noteSource.Add(noteExpression);
         pianoWithTimeline.Timeline.RefreshVisibleSet();
@@ -70,10 +64,13 @@ public class MelodyMaker : ProtectedConsolePanel
 
     private void HandleNoteOff(IMidiEvent ev, SustainedNoteTracker tracker)
     {
-        var elapsed = Stopwatch.GetElapsedTime(noteSource.StartTimestamp.Value);
-        var elapsedAsBeats = (elapsed.TotalSeconds * noteSource.BeatsPerMinute / 60.0);
+        // Get the current timeline beat
+        double playheadBeat = player.CurrentBeat;
+
         noteSource.Remove(tracker.Note);
-        noteSource.Add(NoteExpression.Create(tracker.Note.MidiNote, tracker.Note.StartBeat, elapsedAsBeats - tracker.Note.StartBeat, noteSource.BeatsPerMinute, tracker.Note.Velocity, tracker.Note.Instrument));
+        // Duration is from the note's start beat to the current playhead beat
+        double duration = playheadBeat - tracker.Note.StartBeat;
+        noteSource.Add(NoteExpression.Create(tracker.Note.MidiNote, tracker.Note.StartBeat, duration, tracker.Note.Velocity, tracker.Note.Instrument));
         tracker.ReleaseAll();
         noteTrackers.Remove(ev.NoteNumber);
     }

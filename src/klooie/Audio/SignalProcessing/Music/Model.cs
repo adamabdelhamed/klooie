@@ -184,7 +184,6 @@ public interface INoteSource : IReadOnlyList<NoteExpression>
 
 public class ListNoteSource : List<NoteExpression>, INoteSource
 {
-    public long? StartTimestamp { get; set; } 
     public double BeatsPerMinute { get; init; } = 60;
 }
 
