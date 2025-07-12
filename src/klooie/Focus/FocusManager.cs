@@ -7,11 +7,7 @@ namespace klooie;
 
 public partial class FocusManager : Recyclable,  IObservableObject
 {
-    private static readonly long CycleThrottlerIntervalTicks = Stopwatch.Frequency / 1000 * 25; // 25ms in ticks
-    private long lastCycleThrottlerCheck;
     private Queue<KeyRequest> sendKeys = new Queue<KeyRequest>();
-    private DateTime lastKeyPressTime = DateTime.MinValue;
-    private ConsoleKey lastKey;
 
     private Event<ConsoleKeyInfo> _globalKeyPressed;
     public Event<ConsoleKeyInfo> GlobalKeyPressed    { get => _globalKeyPressed ?? (_globalKeyPressed = Event<ConsoleKeyInfo>.Create()); }
@@ -30,8 +26,6 @@ public partial class FocusManager : Recyclable,  IObservableObject
         onKeyInputThrottled?.TryDispose();
         onKeyInputThrottled = null;
         sendKeys.Clear();
-        lastKeyPressTime = DateTime.MinValue;
-        lastKey = default;
         FocusedControl = null;
     }
 
@@ -215,12 +209,7 @@ public partial class FocusManager : Recyclable,  IObservableObject
 
     public partial ConsoleControl FocusedControl { get; set; }
 
-    /// <summary>
-    /// When key throttling is enabled this lets you set the minimum time that must
-    /// elapse before we forward a key press to the app, provided it is the same key
-    /// that was most recently pressed.
-    /// </summary>
-    public TimeSpan MinTimeBetweenKeyPresses { get; set; } = TimeSpan.FromMilliseconds(35);
+
     /// <summary>
     /// True by default. When true, discards key presses that come in too fast
     /// likely because the user is holding the key down. You can set the
@@ -241,7 +230,7 @@ public partial class FocusManager : Recyclable,  IObservableObject
         StackDepth = 1;
         ConsoleApp.Current.LayoutRoot.DescendentAdded.SubscribeWithPriority(this, static (me,added) => me.Add(added), ConsoleApp.Current);
         ConsoleApp.Current.LayoutRoot.DescendentRemoved.SubscribeWithPriority(this, static (me, removed) => me.Remove(removed), ConsoleApp.Current);
-        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(this, static me => me.CheckForKeyboardInput(), ConsoleApp.Current, (int)Math.Round(1000f / MinTimeBetweenKeyPresses.TotalMilliseconds));
+        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(this, static me => me.CheckForKeyboardInput(), this, 1000);
     }
 
     private void CheckForKeyboardInput()
@@ -249,19 +238,7 @@ public partial class FocusManager : Recyclable,  IObservableObject
         if (ConsoleProvider.Current.KeyAvailable)
         {
             var info = ConsoleProvider.Current.ReadKey(true);
-
-            var effectiveMinTimeBetweenKeyPresses = MinTimeBetweenKeyPresses;
-            if (KeyThrottlingEnabled && info.Key == lastKey && DateTime.UtcNow - lastKeyPressTime < effectiveMinTimeBetweenKeyPresses)
-            {
-                // The user is holding the key down and throttling is enabled
-                OnKeyInputThrottled.Fire();
-            }
-            else
-            {
-                lastKeyPressTime = DateTime.UtcNow;
-                lastKey = info.Key;
-                HandleKeyInput(info);
-            }
+            HandleKeyInput(info);
         }
 
         while (sendKeys.Count > 0)

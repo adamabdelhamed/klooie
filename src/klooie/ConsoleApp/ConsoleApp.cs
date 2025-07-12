@@ -20,12 +20,7 @@ public class ConsoleApp : EventLoop
     public Event AfterPaint => layoutRoot.AfterPaint;
 
     public SyncronousScheduler Scheduler { get; private init; }
-    /// <summary>
-    /// When key throttling is enabled this lets you set the minimum time that must
-    /// elapse before we forward a key press to the app, provided it is the same key
-    /// that was most recently pressed.
-    /// </summary>
-    public TimeSpan MinTimeBetweenKeyPresses { get => focus.MinTimeBetweenKeyPresses; set => focus.MinTimeBetweenKeyPresses = value; } 
+
     /// <summary>
     /// True by default. When true, discards key presses that come in too fast
     /// likely because the user is holding the key down. You can set the
