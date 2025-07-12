@@ -27,6 +27,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             if (Math.Abs(beatsPerColumn - value) > 0.0001)
             {
                 beatsPerColumn = value;
+                UpdateViewportBounds(); 
                 RefreshVisibleSet();
             }
         }
@@ -198,50 +199,54 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             RefreshVisibleSet();
         }, focusLifetime);
     }
-    
 
+    HashSet<NoteExpression> visibleNow = new HashSet<NoteExpression>();
     public void RefreshVisibleSet()
     {
         if(live.Count == 0 && notes.Count > 0)
         {
             Viewport.FirstVisibleMidi = Math.Max(0, notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min() - 12);
         }
-
-        // 1. Mark which notes *should* be on screen
         double beatStart = Viewport.FirstVisibleBeat;
         double beatEnd = beatStart + Viewport.BeatsOnScreen;
         int midiTop = Viewport.FirstVisibleMidi;
         int midiBot = midiTop + Viewport.MidisOnScreen;
 
+        // Track visible notes this frame
+        visibleNow.Clear();
 
-        // 2. Add newly-visible notes
         for (int i = 0; i < notes.Count; i++)
         {
             var note = notes[i];
-            if(note.Velocity == 0) continue; // Skip silent notes
-            if (live.TryGetValue(note, out NoteCell cell))
-            {
-                PositionCell(cell);
-            }
-            else
+            if (note.Velocity == 0) continue;
+
+            double durBeats = note.DurationBeats >= 0 ? note.DurationBeats : GetSustainedNoteDurationBeats(note);
+            bool isVisible =
+                (note.StartBeat + durBeats >= beatStart) &&
+                (note.StartBeat <= beatEnd) &&
+                (note.MidiNote >= midiTop) &&
+                (note.MidiNote <= midiBot);
+
+            if (!isVisible) continue;
+            visibleNow.Add(note);
+
+            if (!live.TryGetValue(note, out NoteCell cell))
             {
                 cell = ProtectedPanel.Add(new NoteCell(note));
                 cell.Background = note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color : RGB.Orange;
-                PositionCell(cell);
                 live[note] = cell;
             }
+            // Always re-position/re-size every visible note
+            PositionCell(cell);
         }
 
-        // 3. Remove now-invisible notes
+        // Remove cells that are no longer visible
         foreach (var kvp in live.ToArray())
         {
-            var note = kvp.Key;
-            double durBeats = kvp.Value.Note.DurationBeats >= 0 ? kvp.Value.Note.DurationBeats : GetSustainedNoteDurationBeats(kvp.Value.Note);
-            if (note.StartBeat + durBeats < beatStart || note.StartBeat > beatEnd ||
-                note.MidiNote < midiTop || note.MidiNote > midiBot)
+            if (!visibleNow.Contains(kvp.Key))
             {
                 kvp.Value.Dispose();
-                live.Remove(note);
+                live.Remove(kvp.Key);
             }
         }
     }

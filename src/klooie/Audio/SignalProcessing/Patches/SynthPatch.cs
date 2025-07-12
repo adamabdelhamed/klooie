@@ -146,8 +146,18 @@ public static class SynthPatchExtensions
     public static ISynthPatch WithVolume(this ISynthPatch patch, float volume = 1.0f)
         => patch.WithEffect(VolumeEffect.Create(volume));
 
-    public static ISynthPatch WithPitchBend(this ISynthPatch patch, Func<float, float> bendFunc, float duration)
-        => patch.WithEffect(PitchBendEffect.Create(bendFunc, duration));
+    public static ISynthPatch WithPitchBend(
+        this ISynthPatch patch,
+        Func<float, float> attackBendFunc, float attackDuration,
+        Func<float, float> releaseBendFunc, float releaseDuration)
+        => patch.WithEffect(PitchBendEffect.Create(attackBendFunc, attackDuration, releaseBendFunc, releaseDuration));
+
+    public static ISynthPatch WithPitchBend(
+    this ISynthPatch patch,
+    Func<float, float> bendFunc, float duration)
+    => patch.WithEffect(PitchBendEffect.Create(
+        attackBend: bendFunc, attackDur: duration,
+        releaseBend: t => 0f, releaseDur: 0.001f)); // Release bend = no bend
 
     public static ISynthPatch WithNoiseGate(this ISynthPatch patch, float openThresh = 0.05f, float closeThresh = 0.04f, float attackMs = 2f, float releaseMs = 60f)
         => patch.WithEffect(NoiseGateEffect.Create(openThresh, closeThresh, attackMs, releaseMs));

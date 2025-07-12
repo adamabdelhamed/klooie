@@ -29,14 +29,18 @@ public class SynthSignalSource : Recyclable
     private List<IPitchModEffect>? pitchMods;
     private List<SignalProcess> pipeline;
     private ADSREnvelope envelope;
+    private float? noteReleaseTime = null; // in seconds
 
- 
     public bool IsDone => isDone;
 
     private static int _globalId = 1;
     public int Id { get; private set; }
 
-    public virtual void ReleaseNote() => envelope.ReleaseNote(time);
+    public virtual void ReleaseNote()
+    {
+        noteReleaseTime = time;
+        envelope.ReleaseNote(time);
+    }
 
     protected SynthSignalSource() { }
 
@@ -151,12 +155,11 @@ public class SynthSignalSource : Recyclable
             totalCents += MathF.Sin(vibratoPhase) * patch.VibratoDepthCents;
         }
 
-        // Modular pitch effects (e.g., PitchBendEffect)
         if (pitchMods != null)
         {
             for (int i = 0; i < pitchMods.Count; i++)
             {
-                totalCents += pitchMods[i].GetPitchOffsetCents(t);
+                totalCents += pitchMods[i].GetPitchOffsetCents(t, noteReleaseTime);
             }
         }
 
@@ -224,6 +227,7 @@ public class SynthSignalSource : Recyclable
         effectiveVolume = 0f;
         effectivePan = 0f;
         envelope = null;
+        noteReleaseTime = null;
         pipeline?.Clear();   
         base.OnReturn();
     }

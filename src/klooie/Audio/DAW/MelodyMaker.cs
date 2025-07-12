@@ -14,6 +14,11 @@ public class MelodyMaker : ProtectedConsolePanel
     private ConsoleApp app;
     private IMidiInput input;
     private SyncronousScheduler scheduler;
+
+    public INoteSource Notes => noteSource;
+    public Func<ISynthPatch> InstrumentFactory { get; set; } = () => null;
+    public double BeatsPerMinute => noteSource.BeatsPerMinute;
+
     public MelodyMaker(IMidiInput input)
     {
         this.input = input ?? throw new ArgumentNullException(nameof(input), "MIDI input cannot be null.");
@@ -53,7 +58,7 @@ public class MelodyMaker : ProtectedConsolePanel
 
         var elapsed = Stopwatch.GetElapsedTime(noteSource.StartTimestamp.Value);
         var elapsedAsBeats = (elapsed.TotalSeconds * noteSource.BeatsPerMinute / 60.0);
-        var noteExpression = NoteExpression.Create(ev.NoteNumber, elapsedAsBeats, -1, ev.Velocity, null);
+        var noteExpression = NoteExpression.Create(ev.NoteNumber, elapsedAsBeats, -1, ev.Velocity, InstrumentExpression.Create("Keyboard", InstrumentFactory));
         var voices = app.Sound.PlaySustainedNote(noteExpression);
         noteSource.Add(noteExpression);
         pianoWithTimeline.Timeline.RefreshVisibleSet();
