@@ -4,6 +4,10 @@ using System.Linq;
 
 namespace klooie;
 
+/// <summary>
+/// TODOS: 
+/// - Selection mode should work when part of the selection is off-screen, so that notes out of theviewport can be selected. We want the user to be able to zoom in and out during selection.
+/// </summary>
 public class SelectionMode : TimelineInputMode
 {
     public RGB SelectionModeColor { get; set; } = RGB.Blue;
@@ -28,17 +32,19 @@ public class SelectionMode : TimelineInputMode
     public override void Paint(ConsoleBitmap context)
     {
         base.Paint(context);
-        int? x = null;
-        if (selectionPhase == SelectionPhase.PickingAnchor && selectionPreviewCursor.HasValue)
-            x = selectionPreviewCursor.Value.X * VirtualTimelineGrid.ColWidthChars;
-        else if (selectionCursor.HasValue)
-            x = selectionCursor.Value.X * VirtualTimelineGrid.ColWidthChars;
+        (int X, int Y)? cursor = selectionPhase == SelectionPhase.PickingAnchor ? selectionPreviewCursor : selectionCursor;
 
-        if (x == null || x < 0 || x >= Timeline.Width) return;
-        for (int y = 0; y < Timeline.Height; y++)
+        int x = cursor.Value.X * VirtualTimelineGrid.ColWidthChars;
+        if (cursor.HasValue && (x >= 0 && x < Timeline.Width))
         {
-            var existingPixel = context.GetPixel(x.Value, y);
-            context.DrawString("|".ToConsoleString(SelectionModeColor, existingPixel.BackgroundColor), x.Value, y);
+            for (int y = 0; y < Timeline.Height; y++)
+            {
+                var existingPixel = context.GetPixel(x, y);
+                context.DrawString(
+                    "|".ToConsoleString(SelectionModeColor, existingPixel.BackgroundColor),
+                    x, y
+                );
+            }
         }
     }
 

@@ -145,14 +145,13 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         base.OnPaint(context);
         double relBeat = CurrentBeat - Viewport.FirstVisibleBeat;
         int x = ConsoleMath.Round(relBeat / BeatsPerColumn) * ColWidthChars;
-
+        CurrentMode?.Paint(context);
         if (x < 0 || x >= Width) return;
         for (int y = 0; y < Height; y++)
         {
             var existingPixel = context.GetPixel(x, y);
             context.DrawString("|".ToRed(existingPixel.BackgroundColor), x, y);
         }
-        CurrentMode?.Paint(context);
     }
 
     private void UpdateAlternatingBackgroundOffset()
