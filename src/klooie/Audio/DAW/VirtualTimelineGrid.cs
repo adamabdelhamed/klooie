@@ -9,15 +9,15 @@ namespace klooie;
 
 public class VirtualTimelineGrid : ProtectedConsolePanel
 {
+    public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
     public TimelineViewport Viewport { get; private init; }
     private INoteSource notes;
     private readonly Dictionary<NoteExpression, NoteCell> live = new();
     private AlternatingBackgroundGrid backgroundGrid;
-    private const int ColWidthChars = 1;
-    private const int RowHeightChars = 1;
+    public const int ColWidthChars = 1;
+    public const int RowHeightChars = 1;
     private Recyclable? focusLifetime;
     public TimelinePlayer Player { get; }
-
     private double beatsPerColumn = 1/8.0; 
     public double BeatsPerColumn
     {
@@ -30,16 +30,21 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                 beatsPerColumn = value;
                 UpdateViewportBounds(); 
                 RefreshVisibleSet();
+                if (CurrentMode is SelectionMode sm)  sm.SyncCursorToCurrentZoom();
             }
         }
     }
 
     public double CurrentBeat => Player.CurrentBeat;
-
+    public double MaxBeat => maxBeat;
     private double maxBeat;
     private Dictionary<string, RGB> instrumentColorMap = new();
-    public VirtualTimelineGrid(INoteSource notes, TimelinePlayer? player = null)
+    private readonly TimelineInputMode[] userCyclableModes;
+    public TimelineInputMode CurrentMode { get; private set; }
+    public Event<TimelineInputMode> ModeChanged { get; } = Event<TimelineInputMode>.Create();
+    public VirtualTimelineGrid(INoteSource notes, TimelinePlayer? player = null, TimelineInputMode[]? availableModes = null)
     {
+        this.userCyclableModes = availableModes ?? [new PanMode() { Timeline = this }, new SeekMode() { Timeline  = this }, new SelectionMode() { Timeline = this }];
         Viewport = new TimelineViewport();
         Player = player ?? new TimelinePlayer(() => maxBeat, notes?.BeatsPerMinute ?? 60);
         Player.BeatChanged.Subscribe(this, static (me,b) => me.OnBeatChanged(b), this);
@@ -51,6 +56,21 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
         LoadNotes(notes);
+        CurrentMode = this.userCyclableModes[0];
+    }
+
+    public void SetMode(TimelineInputMode mode)
+    {
+        if (CurrentMode == mode) return;
+        CurrentMode = mode;
+        CurrentMode.Enter();
+        ModeChanged.Fire(mode);
+    }
+
+    public void NextMode()
+    {
+        int i = Array.IndexOf(userCyclableModes, CurrentMode);
+        SetMode(userCyclableModes[(i + 1) % userCyclableModes.Length]);
     }
 
     private void LoadNotes(INoteSource? notes)
@@ -109,6 +129,11 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             Viewport.FirstVisibleBeat = ConsoleMath.Round(beat - Viewport.BeatsOnScreen * 0.2);
             RefreshVisibleSet();
         }
+        else if (beat < Viewport.FirstVisibleBeat)
+        {
+            Viewport.FirstVisibleBeat = Math.Max(0, ConsoleMath.Round(beat - Viewport.BeatsOnScreen * 0.8));
+            RefreshVisibleSet();
+        }
     }
 
     public void StartPlayback() => Player.Start(CurrentBeat);
@@ -127,6 +152,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             var existingPixel = context.GetPixel(x, y);
             context.DrawString("|".ToRed(existingPixel.BackgroundColor), x, y);
         }
+        CurrentMode?.Paint(context);
     }
 
     private void UpdateAlternatingBackgroundOffset()
@@ -145,36 +171,13 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         focusLifetime?.TryDispose();
         focusLifetime = DefaultRecyclablePool.Instance.Rent();
         Unfocused.SubscribeOnce(() => focusLifetime.TryDispose());
-        ConsoleApp.Current.GlobalKeyPressed.Subscribe(k =>
-        {
-            if (k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A) Viewport.ScrollBeats(-1);
-            else if (k.Key == ConsoleKey.RightArrow || k.Key == ConsoleKey.D) Viewport.ScrollBeats(+1);
-            else if (k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W) Viewport.ScrollRows(+1);
-            else if (k.Key == ConsoleKey.DownArrow || k.Key == ConsoleKey.S) Viewport.ScrollRows(-1);
-            else if (k.Key == ConsoleKey.PageUp) Viewport.ScrollRows(+12);
-            else if (k.Key == ConsoleKey.PageDown) Viewport.ScrollRows(-12);
-            else if (k.Key == ConsoleKey.Home) Viewport.FirstVisibleMidi = 0;
-            else if (k.Key == ConsoleKey.End) Viewport.FirstVisibleMidi = 127;
-            else if (k.Key == ConsoleKey.Spacebar)
-            {
-                if (Player.IsPlaying) Player.Pause(); else Player.Resume();
-            }
-            else if (k.Key == ConsoleKey.B) Player.Seek(0);
-            else if (k.Key == ConsoleKey.E) Player.Seek(maxBeat);
-            else if (k.Key == ConsoleKey.OemComma)
-            {
-                if (k.Modifiers.HasFlag(ConsoleModifiers.Shift)) Player.SeekBy(-4);
-                else Player.SeekBy(-1);
-            }
-            else if (k.Key == ConsoleKey.OemPeriod)
-            {
-                if (k.Modifiers.HasFlag(ConsoleModifiers.Shift)) Player.SeekBy(4);
-                else Player.SeekBy(1);
-            }
-            else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add) { BeatsPerColumn /= 2; }
-            else if (k.Key == ConsoleKey.OemMinus || k.Key == ConsoleKey.Subtract) { BeatsPerColumn *= 2; }
-            else return; // Not handled
-            RefreshVisibleSet();
+        ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
+        {        
+            if (k.Key == ConsoleKey.Spacebar) { if (Player.IsPlaying) Player.Pause(); else Player.Resume(); }
+            else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add) { BeatsPerColumn /= 2; } // zoom available in all modes
+            else if (k.Key == ConsoleKey.OemMinus || k.Key == ConsoleKey.Subtract) { BeatsPerColumn *= 2; } // zoom available in all modes
+            else if (k.Key == ConsoleKey.M) NextMode(); // For mode cycling
+            else CurrentMode.HandleKeyInput(k);
         }, focusLifetime);
     }
 
@@ -211,7 +214,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
             if (!live.TryGetValue(note, out NoteCell cell))
             {
-                cell = ProtectedPanel.Add(new NoteCell(note));
+                cell = ProtectedPanel.Add(new NoteCell(note) { ZIndex = 1 });
                 cell.Background = note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color : RGB.Orange;
                 live[note] = cell;
             }
@@ -252,4 +255,5 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         double sustainedBeats = Player.CurrentBeat - n.StartBeat;
         return Math.Max(0, sustainedBeats);
     }
+    internal ConsoleControl AddPreviewControl() => ProtectedPanel.Add(new ConsoleControl());
 }

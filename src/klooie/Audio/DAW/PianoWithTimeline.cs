@@ -20,17 +20,16 @@ public class PianoWithTimeline : ProtectedConsolePanel
         Timeline = layout.Add(new VirtualTimelineGrid(notes, player), 1, rowOffset); // col then row here - I know its strange
         Piano = layout.Add(new PianoPanel(Timeline.Viewport), 0, rowOffset);
         StatusBar = layout.Add(new StatusBar(), column: 0, row: rowOffset+1, columnSpan: 2);
+        Timeline.StatusChanged.Subscribe(message=> StatusBar.Message = message, this);
     }
 
     public void StartPlayback()
     {
         Timeline.StartPlayback();
-        StatusBar.Message = "Playing...".ToWhite();
     }
 
     public void StopPlayback()
     {
         Timeline.StopPlayback();
-        StatusBar.Message = "Stopped".ToWhite();
     }
 }

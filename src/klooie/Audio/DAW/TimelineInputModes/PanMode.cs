@@ -1,0 +1,28 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace klooie;
+public class PanMode : TimelineInputMode
+{
+
+    public override void HandleKeyInput(ConsoleKeyInfo k)
+    {
+        var Viewport = Timeline.Viewport;
+        // Arrow keys pan the viewport.
+        if (k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A) Viewport.ScrollBeats(-1);
+        else if (k.Key == ConsoleKey.RightArrow || k.Key == ConsoleKey.D) Viewport.ScrollBeats(+1);
+        else if (k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W) Viewport.ScrollRows(+1);
+        else if (k.Key == ConsoleKey.DownArrow || k.Key == ConsoleKey.S) Viewport.ScrollRows(-1);
+
+        else if (k.Key == ConsoleKey.PageUp) Viewport.ScrollBeats(-Viewport.BeatsOnScreen * 0.1); // Page up
+        else if (k.Key == ConsoleKey.PageDown) Viewport.ScrollBeats(+Viewport.BeatsOnScreen * 0.1); // Page down
+        else if (k.Key == ConsoleKey.Home) Viewport.FirstVisibleBeat = 0; // Jump to start
+        else if (k.Key == ConsoleKey.End) Viewport.FirstVisibleBeat = Timeline.MaxBeat - Viewport.BeatsOnScreen; // Jump to end
+
+        else return;
+        Timeline.RefreshVisibleSet();
+    }
+}
