@@ -39,8 +39,8 @@ public class ScheduledSignalSourceMixer
     private readonly List<(SynthSignalSource Voice, long StartSample, int SamplesPlayed, long ReleaseSample, bool Released)> activeVoices = new();
     private long samplesRendered = 0;
 
-    private Event<ScheduledNoteEvent> notePlaying;
-    public Event<ScheduledNoteEvent> NotePlaying => notePlaying ??= Event<ScheduledNoteEvent>.Create();
+    private Event<NoteExpression> notePlaying;
+    public Event<NoteExpression> NotePlaying => notePlaying ??= Event<NoteExpression>.Create();
 
     public long SamplesRendered => samplesRendered;
     public ScheduledSignalSourceMixer()
@@ -61,12 +61,16 @@ public class ScheduledSignalSourceMixer
         while (scheduledNotes.TryPeek(out var note) && note.StartSample < bufferEnd)
         {
             scheduledNotes.TryDequeue(out note);
-            notePlaying?.Fire(note);
+            if (notePlaying != null)
+            {
+                var noteExpression = note.Note;
+                SoundProvider.Current.EventLoop.Invoke(() => notePlaying?.Fire(noteExpression));
+            }
             var voice = note.Voice;
             int durSamples = (int)(note.DurationSeconds * SoundProvider.SampleRate);
             long releaseSample = note.StartSample + durSamples;
             activeVoices.Add((voice, note.StartSample, 0, releaseSample, false));
-            note.Dispose();
+            SoundProvider.Current.EventLoop.Invoke(note, static (note) => note.Dispose());
         }
 
         Array.Clear(buffer, offset, count);
@@ -118,7 +122,7 @@ public class ScheduledSignalSourceMixer
             bool done = voice.IsDone;
             if (done)
             {
-                voice.Dispose();
+                SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.Dispose());
                 activeVoices.RemoveAt(v);
             }
             else

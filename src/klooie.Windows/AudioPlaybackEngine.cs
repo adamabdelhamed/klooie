@@ -16,14 +16,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             if(notePlaying == null)
             {
                 notePlaying = Event<NoteExpression>.Create();
-                scheduledSynthProvider.NotePlaying.Subscribe(notePlaying, (ev, note) =>
-                {
-                    var reference = note.Note;
-                    EventLoop.Invoke(() =>
-                    {
-                        notePlaying.Fire(reference);
-                    });
-                }, notePlaying);
+                scheduledSynthProvider.NotePlaying.Subscribe(notePlaying, (ev, note) => notePlaying.Fire(note), notePlaying);
             }
             return notePlaying;
         }
