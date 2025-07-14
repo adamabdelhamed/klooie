@@ -14,10 +14,5 @@ public class NoteCell : ConsoleControl
         Foreground = RGB.Black;
     }
 
-    // Each cell already knows its bg/fg when created
-    protected override void OnPaint(ConsoleBitmap ctx)
-    {
-        ctx.FillRect(Background, 0, 0, Width, Height);
-
-    }
+    protected override void OnPaint(ConsoleBitmap ctx) => ctx.FillRect(Background, 0, 0, Width, Height);
 }
