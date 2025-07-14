@@ -72,6 +72,12 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         LoadNotes(notes);
         AudioPlayer = new MelodyPlayer(this.notes, Player.BeatsPerMinute);
         CurrentMode = this.userCyclableModes[0];
+        Player.Playing.Subscribe(this, static (me) =>
+        {
+            var autoStopSuffix = me.Player.StopAtEnd ? " (auto-stop)" : "";
+            me.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
+        }, this);
+        Player.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
     }
 
     public void SetMode(TimelineInputMode mode)
@@ -193,7 +199,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             if (k.Key == ConsoleKey.Spacebar)
             {
-                if (Player.IsPlaying) Player.Pause();
+                if (Player.IsPlaying) Player.Stop();
                 else StartPlayback();
             }
             else if(k.Key == ConsoleKey.A && k.Modifiers == ConsoleModifiers.Control)

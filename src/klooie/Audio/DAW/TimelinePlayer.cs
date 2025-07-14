@@ -5,11 +5,13 @@ namespace klooie;
 
 /// <summary>
 /// Centralized controller that manages playback for a timeline.
-/// It exposes play, pause, stop and seeking functionality while
+/// It exposes play, stop and seeking functionality while
 /// raising an event whenever the playhead position changes.
 /// </summary>
 public class TimelinePlayer
 {
+    public Event Playing { get;private set; } = Event.Create();
+    public Event Stopped { get; private set; } = Event.Create();
     private readonly Func<double> maxBeatProvider;
     private double playheadStartBeat;
     private long? playbackStartTimestamp;
@@ -42,6 +44,7 @@ public class TimelinePlayer
     public void Start(double? startBeat = null)
     {
         if (IsPlaying) return;
+        Playing.Fire();
         playheadStartBeat = startBeat ?? CurrentBeat;
         CurrentBeat = playheadStartBeat;
         playbackStartTimestamp = Stopwatch.GetTimestamp();
@@ -49,17 +52,12 @@ public class TimelinePlayer
         ScheduleTick();
     }
 
-    public void Pause()
-    {
-        if (!IsPlaying) return;
-        UpdateCurrentBeat();
-        IsPlaying = false;
-        beatChanged?.Fire(CurrentBeat);
-    }
+   
 
     public void Resume()
     {
         if (IsPlaying) return;
+        Playing.Fire();
         playheadStartBeat = CurrentBeat;
         playbackStartTimestamp = Stopwatch.GetTimestamp();
         IsPlaying = true;
@@ -69,6 +67,8 @@ public class TimelinePlayer
 
     public void Stop()
     {
+        if(IsPlaying == false) return;
+        Stopped.Fire();
         IsPlaying = false;
         playbackStartTimestamp = null;
         beatChanged?.Fire(CurrentBeat);
