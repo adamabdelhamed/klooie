@@ -20,7 +20,14 @@ public class PanMode : TimelineInputMode
 
         else if (k.Key == ConsoleKey.PageUp) Viewport.ScrollBeats(-Viewport.BeatsOnScreen * 0.1); // Page up
         else if (k.Key == ConsoleKey.PageDown) Viewport.ScrollBeats(+Viewport.BeatsOnScreen * 0.1); // Page down
-        else if (k.Key == ConsoleKey.Home) Viewport.FirstVisibleBeat = 0; // Jump to start
+        else if (k.Key == ConsoleKey.Home)
+        {
+            if(Viewport.FirstVisibleBeat == 0)
+            {
+                Timeline.Player.Seek(0); // Jump to start of timeline
+            }
+            Viewport.FirstVisibleBeat = 0; // Jump to start
+        }
         else if (k.Key == ConsoleKey.End) Viewport.FirstVisibleBeat = Timeline.MaxBeat - Viewport.BeatsOnScreen; // Jump to end
 
         else return;
