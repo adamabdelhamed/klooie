@@ -155,13 +155,12 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
     public void StartPlayback()
     {
-        double beat = CurrentBeat;
-        AudioPlayer?.PlayFrom(beat);
-        // TODO: Create an event in the audio thread that fires when the first note starts playing 
-        // so that we don't need a delay here. The audio thread will have to use it's sound provider's
-        // EventLoop to Invoke(), ensuring that the event is fired on the UI thread.
-        ConsoleApp.Current.Scheduler.Delay(950, Player, p => p.Start(beat));
-        PlaybackStarting.Fire(beat);
+        SoundProvider.Current.NotePlaying.SubscribeOnce(this, static (me, note) =>
+        {
+            me.Player.Start(note.StartBeat);
+            me.PlaybackStarting.Fire(me.CurrentBeat);
+        });
+        AudioPlayer?.PlayFrom(CurrentBeat);
     }
 
     public void StopPlayback() => Player.Stop();
@@ -215,6 +214,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                     listSource.Remove(note);
                 }
                 SelectedNotes.Clear();
+                RefreshVisibleSet();
             }
             else if(k.Key == ConsoleKey.P && k.Modifiers == 0 && pendingAddNote != null)
             {
