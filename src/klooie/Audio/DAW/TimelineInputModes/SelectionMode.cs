@@ -11,7 +11,7 @@ namespace klooie;
 public class SelectionMode : TimelineInputMode
 {
     public RGB SelectionModeColor { get; set; } = RGB.Blue;
-
+    public RGB SelectedNoteColor { get; set; } = RGB.Cyan;
     private enum SelectionPhase { PickingAnchor, ExpandingSelection }
     private SelectionPhase selectionPhase = SelectionPhase.PickingAnchor;
 
@@ -28,6 +28,8 @@ public class SelectionMode : TimelineInputMode
     private ConsoleControl? selectionRectangle = null;
     private ConsoleControl? anchorPreviewControl = null;
     private List<NoteExpression> selectedNotes = new();
+
+    public List<NoteExpression> SelectedNotes => selectedNotes;
 
     public override void Paint(ConsoleBitmap context)
     {
@@ -97,7 +99,7 @@ public class SelectionMode : TimelineInputMode
                 .OrderBy(c => Math.Abs(c.Note.StartBeat - playheadBeat))
                 .FirstOrDefault();
 
-            double initBeat = closest?.Note.StartBeat ?? playheadBeat;
+            double initBeat = Math.Floor(closest?.Note.StartBeat ?? playheadBeat);
             int initMidi = closest?.Note.MidiNote ?? midBase;
 
             selectionPreviewCursorBeatMidi = (initBeat, initMidi);
@@ -206,21 +208,42 @@ public class SelectionMode : TimelineInputMode
         else if (k.Key == ConsoleKey.Enter)
         {
             if (selectionAnchor == null || selectionCursor == null) return;
+            selectedNotes.Clear();
             var (ax, ay) = selectionAnchor.Value;
             var (cx, cy) = selectionCursor.Value;
             int colMin = Math.Min(ax, cx), colMax = Math.Max(ax, cx);
             int rowMin = Math.Min(ay, cy), rowMax = Math.Max(ay, cy);
 
-            var selectedCells = Timeline.Descendents
-                .OfType<NoteCell>()
-                .Where(cell => cell.Touches(selectionRectangle))
+            double beat0 = Timeline.Viewport.FirstVisibleBeat + Math.Min(ax, cx) * Timeline.BeatsPerColumn;
+            double beat1 = Timeline.Viewport.FirstVisibleBeat + Math.Max(ax, cx) * Timeline.BeatsPerColumn;
+            int midi0 = Timeline.Viewport.FirstVisibleMidi + Timeline.Viewport.MidisOnScreen - 1 - Math.Max(ay, cy);
+            int midi1 = Timeline.Viewport.FirstVisibleMidi + Timeline.Viewport.MidisOnScreen - 1 - Math.Min(ay, cy);
+
+            // Swap if needed to ensure low <= high
+            if (beat0 > beat1) (beat0, beat1) = (beat1, beat0);
+            if (midi0 > midi1) (midi0, midi1) = (midi1, midi0);
+
+            // Select notes from the underlying note source, not the UI
+            var notesInRange = Timeline.NoteSource
+                .Where(n => n.Velocity > 0
+                    && n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : Timeline.Player.CurrentBeat - n.StartBeat) >= beat0
+                    && n.StartBeat <= beat1
+                    && n.MidiNote >= midi0
+                    && n.MidiNote <= midi1)
                 .ToList();
-            selectedCells.ForEach(s => s.Background = RGB.Cyan);
-            selectedNotes = selectedCells.Select(c => c.Note).ToList();
+
+            // Colorize any NoteCells that are currently visible and selected (optional, for user feedback)
+            var selectedSet = new HashSet<NoteExpression>(notesInRange);
+            foreach (var cell in Timeline.Descendents.OfType<NoteCell>())
+            {
+                if (selectedSet.Contains(cell.Note))
+                    cell.Background = SelectedNoteColor;
+            }
             var noteSingularOrPlural = selectedNotes.Count == 1 ? "note" : "notes";
             Timeline.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{selectedNotes.Count}[White] {noteSingularOrPlural}."));
             Timeline.NextMode();
             selectionRectangle?.Dispose();
+            selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;
             selectionAnchor = null;
             selectionCursor = null;

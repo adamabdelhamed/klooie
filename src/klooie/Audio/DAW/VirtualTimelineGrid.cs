@@ -9,9 +9,13 @@ namespace klooie;
 
 public class VirtualTimelineGrid : ProtectedConsolePanel
 {
+    public const double MaxBeatsPerColumn = 1.0;     // each cell is 1 beat (max zoomed out)
+    public const double MinBeatsPerColumn = 1.0 / 128; // each cell is 1/8 beat (max zoomed in)
+
     public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
     public TimelineViewport Viewport { get; private init; }
     private INoteSource notes;
+    public INoteSource NoteSource => notes;
     private readonly Dictionary<NoteExpression, NoteCell> live = new();
     private AlternatingBackgroundGrid backgroundGrid;
     public const int ColWidthChars = 1;
@@ -165,10 +169,18 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         focusLifetime = DefaultRecyclablePool.Instance.Rent();
         Unfocused.SubscribeOnce(() => focusLifetime.TryDispose());
         ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
-        {        
+        {
             if (k.Key == ConsoleKey.Spacebar) { if (Player.IsPlaying) Player.Pause(); else Player.Resume(); }
-            else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add) { BeatsPerColumn /= 2; } // zoom available in all modes
-            else if (k.Key == ConsoleKey.OemMinus || k.Key == ConsoleKey.Subtract) { BeatsPerColumn *= 2; } // zoom available in all modes
+            else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add)
+            {
+                if (BeatsPerColumn / 2 >= MinBeatsPerColumn)
+                    BeatsPerColumn /= 2; // zoom in
+            }
+            else if (k.Key == ConsoleKey.OemMinus || k.Key == ConsoleKey.Subtract)
+            {
+                if (BeatsPerColumn * 2 <= MaxBeatsPerColumn)
+                    BeatsPerColumn *= 2; // zoom out
+            }
             else if (k.Key == ConsoleKey.M) NextMode(); // For mode cycling
             else CurrentMode.HandleKeyInput(k);
         }, focusLifetime);
@@ -208,9 +220,13 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             if (!live.TryGetValue(note, out NoteCell cell))
             {
                 cell = ProtectedPanel.Add(new NoteCell(note) { ZIndex = 1 });
-                cell.Background = note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color : RGB.Orange;
                 live[note] = cell;
             }
+
+            cell.Background = CurrentMode is SelectionMode sm && sm.SelectedNotes.Contains(note) ? sm.SelectedNoteColor : 
+                note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color 
+                : RGB.Orange;
+
             // Always re-position/re-size every visible note
             PositionCell(cell);
         }

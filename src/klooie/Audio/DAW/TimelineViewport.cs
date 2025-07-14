@@ -11,6 +11,8 @@ public partial class TimelineViewport : IObservableObject
     public partial int FirstVisibleMidi { get; set; }
     public partial int MidisOnScreen { get; set; }
     public partial double FirstVisibleBeat { get; set; }
+    public double LastVisibleBeat => FirstVisibleBeat + BeatsOnScreen;
+
     public partial double BeatsOnScreen { get; set; }
     public void ScrollRows(int delta) => FirstVisibleMidi = Math.Clamp(FirstVisibleMidi + delta, 0, 127);
     public void ScrollBeats(double dx) => FirstVisibleBeat = Math.Max(0, FirstVisibleBeat + dx);
