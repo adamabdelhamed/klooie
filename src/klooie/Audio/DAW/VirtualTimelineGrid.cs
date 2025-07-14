@@ -152,7 +152,10 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     {
         double beat = CurrentBeat;
         AudioPlayer?.PlayFrom(beat);
-        Player.Start(beat);
+        // TODO: Create an event in the audio thread that fires when the first note starts playing 
+        // so that we don't need a delay here. The audio thread will have to use it's sound provider's
+        // EventLoop to Invoke(), ensuring that the event is fired on the UI thread.
+        ConsoleApp.Current.Scheduler.Delay(950, Player, p => p.Start(beat));
         PlaybackStarting.Fire(beat);
     }
 
