@@ -73,6 +73,7 @@ public class SelectionMode : TimelineInputMode
     public override void Enter()
     {
         Timeline.StatusChanged.Fire(ConsoleString.Parse("[White]Selection mode active. Use [B=Cyan][Black] arrows or WASD [D][White] to select an anchor point."));
+        Timeline.ClearAddNotePreview();
         selectionPhase = SelectionPhase.PickingAnchor;
         selectionAnchorBeatMidi = null;
         selectionCursorBeatMidi = null;
@@ -239,6 +240,10 @@ public class SelectionMode : TimelineInputMode
                     && n.MidiNote >= midi0
                     && n.MidiNote <= midi1));
 
+            bool canAddNote = Timeline.SelectedNotes.Count == 0 && midi0 == midi1 && Timeline.NoteSource is ListNoteSource;
+            double addStartBeat = Timeline.Viewport.FirstVisibleBeat + colMin * Timeline.BeatsPerColumn;
+            double addDuration = (colMax - colMin + 1) * Timeline.BeatsPerColumn;
+
             // Colorize any NoteCells that are currently visible and selected (optional, for user feedback)
             var selectedSet = new HashSet<NoteExpression>(Timeline.SelectedNotes);
             foreach (var cell in Timeline.Descendents.OfType<NoteCell>())
@@ -247,6 +252,10 @@ public class SelectionMode : TimelineInputMode
                     cell.Background = SelectedNoteColor;
             }
             var noteSingularOrPlural = Timeline.SelectedNotes.Count == 1 ? "note" : "notes";
+            if (canAddNote)
+            {
+                Timeline.BeginAddNotePreview(addStartBeat, addDuration, midi0);
+            }
             Timeline.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Timeline.SelectedNotes.Count}[White] {noteSingularOrPlural}."));
             Timeline.NextMode();
             selectionRectangle?.Dispose();
