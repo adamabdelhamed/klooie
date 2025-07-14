@@ -14,6 +14,9 @@ public class ScheduledNoteEvent : Recyclable
     public SynthSignalSource Voice;
     public double DurationSeconds => Note.DurationTime.TotalSeconds;
     public NoteExpression Note { get; private set; }
+    public bool IsCancelled;
+
+    public void Cancel() => IsCancelled = true;
 
     private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
     protected ScheduledNoteEvent() { }
@@ -29,6 +32,9 @@ public class ScheduledNoteEvent : Recyclable
     protected override void OnReturn()
     {
         Note = null;
+        Voice = null!;
+        StartSample = 0;
+        IsCancelled = false;
         base.OnReturn();
     }
 }
@@ -36,7 +42,7 @@ public class ScheduledNoteEvent : Recyclable
 public class ScheduledSignalSourceMixer
 {
     private readonly ConcurrentQueue<ScheduledNoteEvent> scheduledNotes = new();
-    private readonly List<(SynthSignalSource Voice, long StartSample, int SamplesPlayed, long ReleaseSample, bool Released)> activeVoices = new();
+    private readonly List<(ScheduledNoteEvent NoteEvent, int SamplesPlayed, long ReleaseSample, bool Released)> activeVoices = new();
     private long samplesRendered = 0;
 
     private Event<NoteExpression> notePlaying;
@@ -61,6 +67,11 @@ public class ScheduledSignalSourceMixer
         while (scheduledNotes.TryPeek(out var note) && note.StartSample < bufferEnd)
         {
             scheduledNotes.TryDequeue(out note);
+            if (note.IsCancelled)
+            {
+                SoundProvider.Current.EventLoop.Invoke(note, static n => n.Dispose());
+                continue;
+            }
             if (notePlaying != null)
             {
                 var noteExpression = note.Note;
@@ -69,8 +80,7 @@ public class ScheduledSignalSourceMixer
             var voice = note.Voice;
             int durSamples = (int)(note.DurationSeconds * SoundProvider.SampleRate);
             long releaseSample = note.StartSample + durSamples;
-            activeVoices.Add((voice, note.StartSample, 0, releaseSample, false));
-            SoundProvider.Current.EventLoop.Invoke(note, static (note) => note.Dispose());
+            activeVoices.Add((note, 0, releaseSample, false));
         }
 
         Array.Clear(buffer, offset, count);
@@ -79,7 +89,17 @@ public class ScheduledSignalSourceMixer
         // 2. Mix active voices
         for (int v = activeVoices.Count - 1; v >= 0; v--)
         {
-            var (voice, startSample, samplesPlayed, releaseSample, released) = activeVoices[v];
+            var (noteEvent, samplesPlayed, releaseSample, released) = activeVoices[v];
+            var voice = noteEvent.Voice;
+            var startSample = noteEvent.StartSample;
+
+            if (noteEvent.IsCancelled)
+            {
+                SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.Dispose());
+                SoundProvider.Current.EventLoop.Invoke(noteEvent, static (n) => n.Dispose());
+                activeVoices.RemoveAt(v);
+                continue;
+            }
 
             // Calculate where the voice's next sample lands in this buffer
             long voiceAbsoluteSample = startSample + samplesPlayed;
@@ -123,11 +143,12 @@ public class ScheduledSignalSourceMixer
             if (done)
             {
                 SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.Dispose());
+                SoundProvider.Current.EventLoop.Invoke(noteEvent, static (n) => n.Dispose());
                 activeVoices.RemoveAt(v);
             }
             else
             {
-                activeVoices[v] = (voice, startSample, samplesPlayed, releaseSample, released);
+                activeVoices[v] = (noteEvent, samplesPlayed, releaseSample, released);
             }
         }
 
