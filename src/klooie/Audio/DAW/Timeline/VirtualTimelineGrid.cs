@@ -159,14 +159,18 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         }
     }
 
+    private Recyclable? playLifetime;
     public void StartPlayback()
     {
+        if(Player.IsPlaying) return;
         SoundProvider.Current.NotePlaying.SubscribeOnce(this, static (me, note) =>
         {
             me.Player.Start(note.StartBeat);
             me.PlaybackStarting.Fire(me.CurrentBeat);
         });
-        AudioPlayer?.PlayFrom(CurrentBeat);
+        playLifetime?.TryDispose();
+        playLifetime = DefaultRecyclablePool.Instance.Rent();
+        AudioPlayer?.PlayFrom(CurrentBeat, playLifetime);
     }
 
     public void StopPlayback() => Player.Stop();
@@ -199,8 +203,16 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             if (k.Key == ConsoleKey.Spacebar)
             {
-                if (Player.IsPlaying) Player.Stop();
-                else StartPlayback();
+                if (Player.IsPlaying)
+                {
+                    playLifetime?.TryDispose();
+                    playLifetime = null;
+                    Player.Pause();
+                }
+                else
+                {
+                    StartPlayback();
+                }
             }
             else if(k.Key == ConsoleKey.A && k.Modifiers == ConsoleModifiers.Control)
             {
@@ -366,5 +378,12 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         list.Add(NoteExpression.Create(midi, start, duration,instrument: InstrumentExpression.Create("Keyboard", InstrumentFactory)));
         ClearAddNotePreview();
         RefreshVisibleSet();
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        playLifetime?.TryDispose();
+        playLifetime = null;
     }
 }

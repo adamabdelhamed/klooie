@@ -13,7 +13,7 @@ public class MelodyPlayer
         this.bpm = bpm;
     }
 
-    public void PlayFrom(double startBeat)
+    public void PlayFrom(double startBeat, ILifetime? playLifetime = null)
     {
         var subset = new List<NoteExpression>();
         foreach(var n in notes)
@@ -35,6 +35,6 @@ public class MelodyPlayer
 
         if(subset.Count == 0) return;
 
-        ConsoleApp.Current.Sound.Play(new Song(new NoteCollection(subset), bpm));
+        ConsoleApp.Current.Sound.Play(new Song(new NoteCollection(subset), bpm), playLifetime);
     }
 }

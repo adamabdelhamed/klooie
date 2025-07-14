@@ -52,7 +52,14 @@ public class TimelinePlayer
         ScheduleTick();
     }
 
-   
+
+    public void Pause()
+    {
+        if (!IsPlaying) return;
+        UpdateCurrentBeat();
+        IsPlaying = false;
+        beatChanged?.Fire(CurrentBeat);
+    }
 
     public void Resume()
     {
@@ -69,8 +76,8 @@ public class TimelinePlayer
     {
         if(IsPlaying == false) return;
         Stopped.Fire();
-        IsPlaying = false;
         playbackStartTimestamp = null;
+        IsPlaying = false;
         beatChanged?.Fire(CurrentBeat);
     }
 

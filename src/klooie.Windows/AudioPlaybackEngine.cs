@@ -107,13 +107,26 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         return result ?? RecyclableListPool<IReleasableNote>.Instance.Rent(0);
     }
 
-    public void ScheduleSynthNote(NoteExpression note) => WithSpawnedVoices(note, (patch, voices) =>
+    public void ScheduleSynthNote(NoteExpression note, ILifetime? lifetime = null) => WithSpawnedVoices(note, (patch, voices) =>
     {
         long scheduleZero = SamplesRendered + (long)(SoundProvider.SampleRate);
         long startSample = scheduleZero + (long)Math.Round(note.StartTime.TotalSeconds * SoundProvider.SampleRate);
         for (int i = 0; i < voices.Items.Count; i++)
         {
-            scheduledSynthProvider.ScheduleNote(ScheduledNoteEvent.Create(startSample, note, voices.Items[i]));
+            var scheduledNote = ScheduledNoteEvent.Create(startSample, note, voices.Items[i]);
+            if(lifetime != null)
+            {
+                var tracker = LeaseHelper.Track(scheduledNote);
+                lifetime.OnDisposed(tracker, static t =>
+                {
+                    if(t.IsRecyclableValid)
+                    {
+                        t.Recyclable!.Cancel();
+                    }
+                    t.Dispose();
+                });
+            }
+            scheduledSynthProvider.ScheduleNote(scheduledNote);
         }
     });
     
@@ -124,11 +137,11 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
 
 
-    public void Play(Song song)
+    public void Play(Song song, ILifetime? lifetime = null)
     {
         for (int i = 0; i < song.Count; i++)
         {
-            ScheduleSynthNote(song[i]);
+            ScheduleSynthNote(song[i], lifetime);
         }
     }
 
