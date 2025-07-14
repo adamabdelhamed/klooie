@@ -14,14 +14,23 @@ public sealed class SynthTweaker : Recyclable, IDisposable
 {
     private static class SyntaxHighlightingPalette
     {
-        public static readonly RGB Keyword = RGB.Blue;
+        public static readonly RGB Keyword = new RGB(80, 160, 255);
         public static readonly RGB Identifier = RGB.White;
         public static readonly RGB StringLiteral = RGB.Yellow;
         public static readonly RGB NumberLiteral = RGB.Magenta;
         public static readonly RGB Comment = RGB.Green;
         public static readonly RGB Punctuation = RGB.White;
         public static readonly RGB TypeName = RGB.Cyan;
+        public static readonly RGB Effect = RGB.Orange;
+        public static RGB MethodDeclaration = RGB.White; // Example color
+        public static RGB MethodCall = RGB.White;         // Example color
     }
+
+    public static readonly HashSet<string> EffectMethodNames = typeof(SynthPatchExtensions)
+        .GetMethods(BindingFlags.Public | BindingFlags.Static)
+        .Where(m => m.ReturnType == typeof(ISynthPatch))
+        .Select(m => m.Name)
+        .ToHashSet();
 
     public Event<ConsoleString> CodeChanged { get; private set; } = Event<ConsoleString>.Create();
     public Event<Func<ISynthPatch>> PatchCompiled { get; private set; } = Event<Func<ISynthPatch>>.Create();
@@ -255,8 +264,21 @@ public sealed class SynthTweaker : Recyclable, IDisposable
                 color = SyntaxHighlightingPalette.NumberLiteral;
             else if (token.IsKind(SyntaxKind.IdentifierToken))
             {
+                // Default: check if it starts with uppercase for type names
                 if (char.IsUpper(token.Text.FirstOrDefault()))
                     color = SyntaxHighlightingPalette.TypeName;
+
+                // Check for method declaration
+                if (token.Parent is Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax methodDecl &&
+                    methodDecl.Identifier == token)
+                {
+                    color = SyntaxHighlightingPalette.MethodDeclaration;
+                }
+                // Check for method call (robust)
+                else if (IsMethodCallIdentifier(token))
+                {
+                    color = EffectMethodNames.Contains(token.ValueText) ? SyntaxHighlightingPalette.Effect : SyntaxHighlightingPalette.MethodCall;
+                }
             }
             else if (token.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
                      token.IsKind(SyntaxKind.MultiLineCommentTrivia))
@@ -287,6 +309,29 @@ public sealed class SynthTweaker : Recyclable, IDisposable
         }
 
         return cs;
+    }
+
+
+    private static bool IsMethodCallIdentifier(SyntaxToken token)
+    {
+        var parent = token.Parent;
+        if (parent is Microsoft.CodeAnalysis.CSharp.Syntax.IdentifierNameSyntax idName)
+        {
+            var grandparent = idName.Parent;
+
+            // Simple call: DoSomething()
+            if (grandparent is Microsoft.CodeAnalysis.CSharp.Syntax.InvocationExpressionSyntax invocation &&
+                invocation.Expression == idName)
+                return true;
+
+            // Member access call: obj.DoSomething()
+            if (grandparent is Microsoft.CodeAnalysis.CSharp.Syntax.MemberAccessExpressionSyntax memberAccess &&
+                memberAccess.Name == idName &&
+                memberAccess.Parent is Microsoft.CodeAnalysis.CSharp.Syntax.InvocationExpressionSyntax memberInvocation &&
+                memberInvocation.Expression == memberAccess)
+                return true;
+        }
+        return false;
     }
 
     private static bool IsPunctuation(SyntaxToken token)
