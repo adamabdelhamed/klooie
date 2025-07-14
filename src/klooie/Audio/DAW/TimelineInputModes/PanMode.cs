@@ -25,8 +25,8 @@ public class PanMode : TimelineInputMode
         else if (k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W) Viewport.ScrollRows(+1);
         else if (k.Key == ConsoleKey.DownArrow || k.Key == ConsoleKey.S) Viewport.ScrollRows(-1);
 
-        else if (k.Key == ConsoleKey.PageUp) Viewport.ScrollBeats(-Viewport.BeatsOnScreen * 0.1); // Page up
-        else if (k.Key == ConsoleKey.PageDown) Viewport.ScrollBeats(+Viewport.BeatsOnScreen * 0.1); // Page down
+        else if (k.Key == ConsoleKey.PageUp) Viewport.ScrollRows(12); 
+        else if (k.Key == ConsoleKey.PageDown) Viewport.ScrollRows(-12); 
         else if (k.Key == ConsoleKey.Home)
         {
             if (Viewport.FirstVisibleBeat == 0)
