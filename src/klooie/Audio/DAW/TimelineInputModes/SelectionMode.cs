@@ -241,8 +241,10 @@ public class SelectionMode : TimelineInputMode
                     && n.MidiNote <= midi1));
 
             bool canAddNote = Timeline.SelectedNotes.Count == 0 && midi0 == midi1 && Timeline.NoteSource is ListNoteSource;
-            double addStartBeat = Timeline.Viewport.FirstVisibleBeat + colMin * Timeline.BeatsPerColumn;
-            double addDuration = (colMax - colMin + 1) * Timeline.BeatsPerColumn;
+            int colStart = Math.Min(ax, cx);
+            int colEnd = Math.Max(ax, cx);
+            double addStartBeat = Timeline.Viewport.FirstVisibleBeat + colStart * Timeline.BeatsPerColumn;
+            double addDuration = (colEnd - colStart + 1) * Timeline.BeatsPerColumn;
 
             // Colorize any NoteCells that are currently visible and selected (optional, for user feedback)
             var selectedSet = new HashSet<NoteExpression>(Timeline.SelectedNotes);
