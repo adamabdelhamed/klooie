@@ -217,8 +217,8 @@ public class SelectionMode : TimelineInputMode
                 .ToList();
             selectedCells.ForEach(s => s.Background = RGB.Cyan);
             selectedNotes = selectedCells.Select(c => c.Note).ToList();
-
-            Timeline.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{selectedNotes.Count}[White] notes"));
+            var noteSingularOrPlural = selectedNotes.Count == 1 ? "note" : "notes";
+            Timeline.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{selectedNotes.Count}[White] {noteSingularOrPlural}."));
             Timeline.NextMode();
             selectionRectangle?.Dispose();
             selectionPhase = SelectionPhase.PickingAnchor;
