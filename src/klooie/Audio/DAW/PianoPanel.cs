@@ -32,15 +32,43 @@ public class PianoPanel : ProtectedConsolePanel
             int midi = midiTop + (vp.MidisOnScreen - 1 - i); // top to bottom
 
             var (noteName, isWhite) = NoteName(midi);
-            var bg = isWhite ? RGB.White : RGB.Black;
-            var fg = isWhite ? RGB.Black : RGB.White;
 
-            ctx.FillRect(bg, 0, i, KeyWidth, 1);
+            if (isWhite)
+            {
+                // Regular white key: fill entire width
+                ctx.FillRect(RGB.White, 0, i, KeyWidth, 1);
+                ctx.DrawString(
+                    noteName,
+                    RGB.Black, RGB.White,
+                    (KeyWidth - noteName.Length) / 2,
+                    i
+                );
+            }
+            else
+            {
+                // Black key with white at right edge (last 2 cells)
+                int blackWidth = KeyWidth - 2;
+                if (blackWidth > 0)
+                    ctx.FillRect(RGB.Black, 0, i, blackWidth, 1);
 
-            var leftOffSetToCenter = (KeyWidth - noteName.Length) / 2;
-            ctx.DrawString(noteName, fg, bg, leftOffSetToCenter, i);
+                // White "bottom" on the right
+                ctx.FillRect(RGB.White, blackWidth, i, 2, 1);
+
+                // Draw note name centered in the black area
+                int leftOffSetToCenter = (blackWidth - noteName.Length) / 2;
+                if (leftOffSetToCenter >= 0)
+                {
+                    ctx.DrawString(
+                        noteName,
+                        RGB.White, RGB.Black,
+                        leftOffSetToCenter,
+                        i
+                    );
+                }
+            }
         }
     }
+
 
     private static (string, bool) NoteName(int midi)
     {
