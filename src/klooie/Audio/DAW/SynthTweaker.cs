@@ -12,6 +12,17 @@ using Microsoft.CodeAnalysis.CSharp;
 
 public sealed class SynthTweaker : Recyclable, IDisposable
 {
+    private static class SyntaxHighlightingPalette
+    {
+        public static readonly RGB Keyword = RGB.Blue;
+        public static readonly RGB Identifier = RGB.White;
+        public static readonly RGB StringLiteral = RGB.Yellow;
+        public static readonly RGB NumberLiteral = RGB.Magenta;
+        public static readonly RGB Comment = RGB.Green;
+        public static readonly RGB Punctuation = RGB.White;
+        public static readonly RGB TypeName = RGB.Cyan;
+    }
+
     public Event<ConsoleString> CodeChanged { get; private set; } = Event<ConsoleString>.Create();
     public Event<Func<ISynthPatch>> PatchCompiled { get; private set; } = Event<Func<ISynthPatch>>.Create();
 
@@ -189,7 +200,7 @@ public sealed class SynthTweaker : Recyclable, IDisposable
             _factories = factories;
             _currentFactory = _factories.First();
             RegisterSuccess(_currentFactory);
-            CodeChanged.Fire(srcText.ToCyan());
+            CodeChanged.Fire(RenderHighlightedSource(srcText));
             PatchCompiled.Fire(_currentFactory.Factory);
         }
         catch (Exception ex)
@@ -226,7 +237,76 @@ public sealed class SynthTweaker : Recyclable, IDisposable
         if (_history.Count > 50) _history.RemoveAt(0);
     }
 
- 
+    private ConsoleString RenderHighlightedSource(string source)
+    {
+        var tree = CSharpSyntaxTree.ParseText(source);
+        var root = tree.GetRoot();
+
+        var cs = new ConsoleString();
+        foreach (var token in root.DescendantTokens())
+        {
+            var color = SyntaxHighlightingPalette.Identifier;
+
+            if (token.IsKeyword())
+                color = SyntaxHighlightingPalette.Keyword;
+            else if (token.IsKind(SyntaxKind.StringLiteralToken))
+                color = SyntaxHighlightingPalette.StringLiteral;
+            else if (token.IsKind(SyntaxKind.NumericLiteralToken))
+                color = SyntaxHighlightingPalette.NumberLiteral;
+            else if (token.IsKind(SyntaxKind.IdentifierToken))
+            {
+                if (char.IsUpper(token.Text.FirstOrDefault()))
+                    color = SyntaxHighlightingPalette.TypeName;
+            }
+            else if (token.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
+                     token.IsKind(SyntaxKind.MultiLineCommentTrivia))
+                color = SyntaxHighlightingPalette.Comment;
+            else if (IsPunctuation(token))
+                color = SyntaxHighlightingPalette.Punctuation;
+
+            // Add leading trivia (e.g., comments/whitespace)
+            foreach (var trivia in token.LeadingTrivia)
+            {
+                var triviaColor = SyntaxHighlightingPalette.Comment;
+                if (trivia.IsKind(SyntaxKind.WhitespaceTrivia))
+                    triviaColor = color;
+                cs += trivia.ToFullString().ToConsoleString(triviaColor);
+            }
+
+            // Add token
+            cs += token.Text.ToConsoleString(color);
+
+            // Add trailing trivia (e.g., newlines)
+            foreach (var trivia in token.TrailingTrivia)
+            {
+                var triviaColor = SyntaxHighlightingPalette.Comment;
+                if (trivia.IsKind(SyntaxKind.WhitespaceTrivia) || trivia.IsKind(SyntaxKind.EndOfLineTrivia))
+                    triviaColor = color;
+                cs += trivia.ToFullString().ToConsoleString(triviaColor);
+            }
+        }
+
+        return cs;
+    }
+
+    private static bool IsPunctuation(SyntaxToken token)
+    {
+        return token.Kind() switch
+        {
+            SyntaxKind.OpenBraceToken or
+            SyntaxKind.CloseBraceToken or
+            SyntaxKind.OpenParenToken or
+            SyntaxKind.CloseParenToken or
+            SyntaxKind.OpenBracketToken or
+            SyntaxKind.CloseBracketToken or
+            SyntaxKind.SemicolonToken or
+            SyntaxKind.CommaToken or
+            SyntaxKind.DotToken => true,
+            _ => false
+        };
+    }
+
+
 
     // ──────── Playback ────────
     private void PlayNotes(Func<ISynthPatch> patchFactory)
