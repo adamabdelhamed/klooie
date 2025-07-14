@@ -10,6 +10,7 @@ public class SeekMode : TimelineInputMode
 {
     public override void HandleKeyInput(ConsoleKeyInfo k)
     {
+        if (k.Modifiers.HasFlag(ConsoleModifiers.Alt) || k.Modifiers.HasFlag(ConsoleModifiers.Control) || k.Modifiers.HasFlag(ConsoleModifiers.Shift)) return;
         var Player = Timeline.Player;
         // Arrow keys move playhead, not the viewport.
         if (k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A) Player.SeekBy(-1);

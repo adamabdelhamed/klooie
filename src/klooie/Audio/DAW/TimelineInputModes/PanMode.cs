@@ -10,6 +10,7 @@ public class PanMode : TimelineInputMode
 
     public override void HandleKeyInput(ConsoleKeyInfo k)
     {
+        if (k.Modifiers.HasFlag(ConsoleModifiers.Alt) || k.Modifiers.HasFlag(ConsoleModifiers.Control) || k.Modifiers.HasFlag(ConsoleModifiers.Shift)) return;
         var Viewport = Timeline.Viewport;
         // Arrow keys pan the viewport.
         if (k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A) Viewport.ScrollBeats(-1);

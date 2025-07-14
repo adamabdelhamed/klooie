@@ -22,7 +22,10 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     public const int RowHeightChars = 1;
     private Recyclable? focusLifetime;
     public TimelinePlayer Player { get; }
-    private double beatsPerColumn = 1/8.0; 
+    private double beatsPerColumn = 1/8.0;
+    
+    public List<NoteExpression> SelectedNotes { get; private set; } = new();
+
     public double BeatsPerColumn
     {
         get => beatsPerColumn;
@@ -45,7 +48,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     private Dictionary<string, RGB> instrumentColorMap = new();
     private readonly TimelineInputMode[] userCyclableModes;
     public TimelineInputMode CurrentMode { get; private set; }
-    public Event<TimelineInputMode> ModeChanged { get; } = Event<TimelineInputMode>.Create();
+    public Event<TimelineInputMode> ModeChanging { get; } = Event<TimelineInputMode>.Create();
     public VirtualTimelineGrid(INoteSource notes, TimelinePlayer? player = null, TimelineInputMode[]? availableModes = null)
     {
         this.userCyclableModes = availableModes ?? [new PanMode() { Timeline = this }, new SeekMode() { Timeline  = this }, new SelectionMode() { Timeline = this }];
@@ -67,8 +70,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     {
         if (CurrentMode == mode) return;
         CurrentMode = mode;
+        ModeChanging.Fire(mode);
         CurrentMode.Enter();
-        ModeChanged.Fire(mode);
     }
 
     public void NextMode()
@@ -171,6 +174,25 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
         {
             if (k.Key == ConsoleKey.Spacebar) { if (Player.IsPlaying) Player.Pause(); else Player.Resume(); }
+            else if(k.Key == ConsoleKey.A && k.Modifiers == ConsoleModifiers.Control)
+            {
+                SelectedNotes.Clear();
+                SelectedNotes.AddRange(NoteSource);
+                RefreshVisibleSet();
+            }
+            else if (k.Key == ConsoleKey.D && k.Modifiers == ConsoleModifiers.Control)
+            {
+                SelectedNotes.Clear();
+                RefreshVisibleSet();
+            }
+            else if(k.Key == ConsoleKey.Delete && NoteSource is ListNoteSource listSource)
+            {
+                foreach(var note in SelectedNotes)
+                {
+                    listSource.Remove(note);
+                }
+                SelectedNotes.Clear();
+            }
             else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add)
             {
                 if (BeatsPerColumn / 2 >= MinBeatsPerColumn)
@@ -223,7 +245,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                 live[note] = cell;
             }
 
-            cell.Background = CurrentMode is SelectionMode sm && sm.SelectedNotes.Contains(note) ? sm.SelectedNoteColor : 
+            cell.Background = SelectedNotes.Contains(note) ? SelectionMode.SelectedNoteColor : 
                 note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color 
                 : RGB.Orange;
 
