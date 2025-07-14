@@ -15,7 +15,7 @@ public class PanMode : TimelineInputMode
         // Arrow keys pan the viewport.
         if (k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A)
         {
-            if(Viewport.FirstVisibleBeat == 0)
+            if (Viewport.FirstVisibleBeat == 0)
             {
                 Timeline.Player.SeekBy(-Timeline.BeatsPerColumn);
             }
@@ -35,7 +35,10 @@ public class PanMode : TimelineInputMode
             }
             Viewport.FirstVisibleBeat = 0; // Jump to start
         }
-        else if (k.Key == ConsoleKey.End) Viewport.FirstVisibleBeat = Timeline.MaxBeat - Viewport.BeatsOnScreen; // Jump to end
+        else if (k.Key == ConsoleKey.End)
+        {
+            Viewport.FirstVisibleBeat = Math.Max(0, Timeline.MaxBeat - Viewport.BeatsOnScreen); // Jump to end
+        }
 
         else return;
         Timeline.RefreshVisibleSet();
