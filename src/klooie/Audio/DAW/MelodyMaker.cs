@@ -55,7 +55,7 @@ public class MelodyMaker : ProtectedConsolePanel
     private void HandleNoteOn(IMidiEvent ev)
     {
         if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
-
+        Timeline.Player.StopAtEnd = false;
         player.Start(player.CurrentBeat);
         var noteExpression = NoteExpression.Create(ev.NoteNumber, player.CurrentBeat, -1, ev.Velocity, InstrumentExpression.Create("Keyboard", Timeline.InstrumentFactory));
         var voices = app.Sound.PlaySustainedNote(noteExpression);

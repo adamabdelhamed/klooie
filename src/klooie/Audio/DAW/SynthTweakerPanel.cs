@@ -67,7 +67,7 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         this.currentPath = path;
         tweaker?.Dispose();
         tweaker = SynthTweaker.Create();
-        tweaker.CodeChanged.SubscribeOnce(code => codeLabel.Text = code);
+        tweaker.CodeChanged.Subscribe(code => codeLabel.Text = code, tweaker);
         tweaker.Initialize(path, melodyMaker.Notes, melodyMaker.BeatsPerMinute);
         tweaker.PatchCompiled.Subscribe(_ =>
         {
@@ -75,6 +75,7 @@ public class SynthTweakerPanel : ProtectedConsolePanel
             {
                 melodyMaker.Player.Seek(0);
             }
+            melodyMaker.Timeline.Player.StopAtEnd = true;
             melodyMaker.StartPlayback();
         }, melodyMaker);
         melodyMaker.Timeline.InstrumentFactory = () => tweaker.CurrentFactory?.Factory();
