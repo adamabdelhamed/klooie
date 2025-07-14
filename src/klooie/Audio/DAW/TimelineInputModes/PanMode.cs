@@ -13,8 +13,15 @@ public class PanMode : TimelineInputMode
         if (k.Modifiers.HasFlag(ConsoleModifiers.Alt) || k.Modifiers.HasFlag(ConsoleModifiers.Control) || k.Modifiers.HasFlag(ConsoleModifiers.Shift)) return;
         var Viewport = Timeline.Viewport;
         // Arrow keys pan the viewport.
-        if (k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A) Viewport.ScrollBeats(-1);
-        else if (k.Key == ConsoleKey.RightArrow || k.Key == ConsoleKey.D) Viewport.ScrollBeats(+1);
+        if (k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A)
+        {
+            if(Viewport.FirstVisibleBeat == 0)
+            {
+                Timeline.Player.SeekBy(-Timeline.BeatsPerColumn);
+            }
+            Viewport.ScrollBeats(-Timeline.BeatsPerColumn);
+        }
+        else if (k.Key == ConsoleKey.RightArrow || k.Key == ConsoleKey.D) Viewport.ScrollBeats(Timeline.BeatsPerColumn);
         else if (k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W) Viewport.ScrollRows(+1);
         else if (k.Key == ConsoleKey.DownArrow || k.Key == ConsoleKey.S) Viewport.ScrollRows(-1);
 
@@ -22,7 +29,7 @@ public class PanMode : TimelineInputMode
         else if (k.Key == ConsoleKey.PageDown) Viewport.ScrollBeats(+Viewport.BeatsOnScreen * 0.1); // Page down
         else if (k.Key == ConsoleKey.Home)
         {
-            if(Viewport.FirstVisibleBeat == 0)
+            if (Viewport.FirstVisibleBeat == 0)
             {
                 Timeline.Player.Seek(0); // Jump to start of timeline
             }
