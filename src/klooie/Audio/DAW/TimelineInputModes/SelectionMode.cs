@@ -99,19 +99,16 @@ public class SelectionMode : TimelineInputMode
     {
         if (selectionPreviewCursorBeatMidi == null)
         {
-            double playheadBeat = Timeline.CurrentBeat;
             int midBase = Timeline.Viewport.FirstVisibleMidi + Timeline.Viewport.MidisOnScreen / 2;
 
             var closest = Timeline.Descendents
                 .OfType<NoteCell>()
                 .Where(c => c.Note.Velocity > 0)
-                .OrderBy(c => Math.Abs(c.Note.StartBeat - playheadBeat))
+                .OrderBy(c => Math.Abs(c.Note.StartBeat - Timeline.CurrentBeat))
                 .FirstOrDefault();
 
-            double initBeat = Math.Floor(closest?.Note.StartBeat ?? playheadBeat);
             int initMidi = closest?.Note.MidiNote ?? midBase;
-
-            selectionPreviewCursorBeatMidi = (initBeat, initMidi);
+            selectionPreviewCursorBeatMidi = (Timeline.CurrentBeat, initMidi);
             SyncCursorToCurrentZoom();
             UpdateAnchorPreview(selectionPreviewCursor.Value);
             return;
