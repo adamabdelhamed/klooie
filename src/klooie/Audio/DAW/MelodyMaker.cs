@@ -14,9 +14,11 @@ public class MelodyMaker : ProtectedConsolePanel
     private ConsoleApp app;
     private IMidiInput input;
     private TimelinePlayer player;
+    public TimelinePlayer Player => player;
+
+    public VirtualTimelineGrid Timeline => pianoWithTimeline.Timeline;
 
     public INoteSource Notes => noteSource;
-    public Func<ISynthPatch> InstrumentFactory { get; set; } = () => null;
     public double BeatsPerMinute => noteSource.BeatsPerMinute;
 
     public MelodyMaker(IMidiInput input)
@@ -55,7 +57,7 @@ public class MelodyMaker : ProtectedConsolePanel
         if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
 
         player.Start(player.CurrentBeat);
-        var noteExpression = NoteExpression.Create(ev.NoteNumber, player.CurrentBeat, -1, ev.Velocity, InstrumentExpression.Create("Keyboard", InstrumentFactory));
+        var noteExpression = NoteExpression.Create(ev.NoteNumber, player.CurrentBeat, -1, ev.Velocity, InstrumentExpression.Create("Keyboard", Timeline.InstrumentFactory));
         var voices = app.Sound.PlaySustainedNote(noteExpression);
         noteSource.Add(noteExpression);
         pianoWithTimeline.Timeline.RefreshVisibleSet();

@@ -31,6 +31,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     private ConsoleControl? addNotePreview;
     private (double Start, double Duration, int Midi)? pendingAddNote;
 
+    public Func<ISynthPatch> InstrumentFactory { get; set; } = () => null;
+
     public double BeatsPerColumn
     {
         get => beatsPerColumn;
@@ -355,7 +357,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     {
         if (pendingAddNote == null || NoteSource is not ListNoteSource list) return;
         var (start, duration, midi) = pendingAddNote.Value;
-        list.Add(NoteExpression.Create(midi, start, duration));
+        list.Add(NoteExpression.Create(midi, start, duration,instrument: InstrumentExpression.Create("Keyboard", InstrumentFactory)));
         ClearAddNotePreview();
         RefreshVisibleSet();
     }
