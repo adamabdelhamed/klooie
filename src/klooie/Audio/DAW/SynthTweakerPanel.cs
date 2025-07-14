@@ -69,6 +69,7 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         tweaker = SynthTweaker.Create();
         tweaker.CodeChanged.SubscribeOnce(code => codeLabel.Text = code);
         tweaker.Initialize(path, melodyMaker.Notes, melodyMaker.BeatsPerMinute);
+        tweaker.PatchCompiled.Subscribe(_ => melodyMaker.StartPlayback(), melodyMaker);
         melodyMaker.InstrumentFactory = () => tweaker.CurrentFactory?.Factory();
         settings.LatestSourcePath = path;
         SaveSettings();

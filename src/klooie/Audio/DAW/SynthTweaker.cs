@@ -13,6 +13,7 @@ using Microsoft.CodeAnalysis.CSharp;
 public sealed class SynthTweaker : Recyclable, IDisposable
 {
     public Event<ConsoleString> CodeChanged { get; private set; } = Event<ConsoleString>.Create();
+    public Event<Func<ISynthPatch>> PatchCompiled { get; private set; } = Event<Func<ISynthPatch>>.Create();
 
     private static readonly LazyPool<SynthTweaker> _pool =
         new(() => new SynthTweaker());
@@ -45,14 +46,14 @@ public sealed class SynthTweaker : Recyclable, IDisposable
         var match = _factories.FirstOrDefault(f => f.Name == name);
         if (match == null) return false;
         _currentFactory = match;
-        PlayNotes(_currentFactory.Factory);
+        PatchCompiled.Fire(_currentFactory.Factory);
         return true;
     }
     public bool SelectFactory(int idx)
     {
         if (idx < 0 || idx >= _factories.Count) return false;
         _currentFactory = _factories[idx];
-        PlayNotes(_currentFactory.Factory);
+        PatchCompiled.Fire(_currentFactory.Factory);
         return true;
     }
 
@@ -189,7 +190,7 @@ public sealed class SynthTweaker : Recyclable, IDisposable
             _currentFactory = _factories.First();
             RegisterSuccess(_currentFactory);
             CodeChanged.Fire(srcText.ToCyan());
-            PlayNotes(_currentFactory.Factory);
+            PatchCompiled.Fire(_currentFactory.Factory);
         }
         catch (Exception ex)
         {

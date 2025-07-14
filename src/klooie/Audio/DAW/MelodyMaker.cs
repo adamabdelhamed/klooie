@@ -75,6 +75,11 @@ public class MelodyMaker : ProtectedConsolePanel
         noteTrackers.Remove(ev.NoteNumber);
     }
 
+    public void StartPlayback()
+    {
+        pianoWithTimeline.Timeline.StartPlayback();
+    }
+
     public static bool IsNoteOff(IMidiEvent midiEvent) => midiEvent.Command == MidiCommand.NoteOff || (midiEvent.Command == MidiCommand.NoteOn && midiEvent.Velocity == 0);
     public static bool IsNoteOn(IMidiEvent midiEvent) => midiEvent.Command == MidiCommand.NoteOn  && midiEvent.Velocity > 0;
 

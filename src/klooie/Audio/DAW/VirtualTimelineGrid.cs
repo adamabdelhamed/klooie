@@ -22,6 +22,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     public const int RowHeightChars = 1;
     private Recyclable? focusLifetime;
     public TimelinePlayer Player { get; }
+    public Event<double> PlaybackStarting { get; } = Event<double>.Create();
+    public MelodyPlayer AudioPlayer { get; private set; }
     private double beatsPerColumn = 1/8.0;
     
     public List<NoteExpression> SelectedNotes { get; private set; } = new();
@@ -63,6 +65,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
         LoadNotes(notes);
+        AudioPlayer = new MelodyPlayer(this.notes, Player.BeatsPerMinute);
         CurrentMode = this.userCyclableModes[0];
     }
 
@@ -87,6 +90,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             maxBeat = 0;
             instrumentColorMap = new Dictionary<string, RGB>();
+            AudioPlayer = new MelodyPlayer(new ListNoteSource(), Player.BeatsPerMinute);
             return;
         }
         Viewport.FirstVisibleMidi = notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min();
@@ -97,6 +101,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             instrumentColorMap[instruments[i]] = instrumentColors[i];
         }
+        AudioPlayer = new MelodyPlayer(this.notes, Player.BeatsPerMinute);
     }
 
     private static readonly RGB[] BaseInstrumentColors = new[]
@@ -143,7 +148,13 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         }
     }
 
-    public void StartPlayback() => Player.Start(CurrentBeat);
+    public void StartPlayback()
+    {
+        double beat = CurrentBeat;
+        AudioPlayer?.PlayFrom(beat);
+        Player.Start(beat);
+        PlaybackStarting.Fire(beat);
+    }
 
     public void StopPlayback() => Player.Stop();
 
@@ -173,7 +184,11 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         Unfocused.SubscribeOnce(() => focusLifetime.TryDispose());
         ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
         {
-            if (k.Key == ConsoleKey.Spacebar) { if (Player.IsPlaying) Player.Pause(); else Player.Resume(); }
+            if (k.Key == ConsoleKey.Spacebar)
+            {
+                if (Player.IsPlaying) Player.Pause();
+                else StartPlayback();
+            }
             else if(k.Key == ConsoleKey.A && k.Modifiers == ConsoleModifiers.Control)
             {
                 SelectedNotes.Clear();
