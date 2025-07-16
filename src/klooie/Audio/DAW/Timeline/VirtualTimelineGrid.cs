@@ -25,6 +25,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     public Event<double> PlaybackStarting { get; } = Event<double>.Create();
     public MelodyPlayer AudioPlayer { get; private set; }
     private double beatsPerColumn = 1/8.0;
+
+    public TimelineEditor Editor { get; }
     
     public List<NoteExpression> SelectedNotes { get; private set; } = new();
 
@@ -72,6 +74,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         LoadNotes(notes);
         AudioPlayer = new MelodyPlayer(this.notes, Player.BeatsPerMinute);
         CurrentMode = this.userCyclableModes[0];
+        Editor = new TimelineEditor { Timeline = this };
         Player.Playing.Subscribe(this, static (me) =>
         {
             var autoStopSuffix = me.Player.StopAtEnd ? " (auto-stop)" : "";
@@ -214,26 +217,6 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                     StartPlayback();
                 }
             }
-            else if(k.Key == ConsoleKey.A && k.Modifiers == ConsoleModifiers.Control)
-            {
-                SelectedNotes.Clear();
-                SelectedNotes.AddRange(NoteSource);
-                RefreshVisibleSet();
-            }
-            else if (k.Key == ConsoleKey.D && k.Modifiers == ConsoleModifiers.Control)
-            {
-                SelectedNotes.Clear();
-                RefreshVisibleSet();
-            }
-            else if(k.Key == ConsoleKey.Delete && NoteSource is ListNoteSource listSource)
-            {
-                foreach(var note in SelectedNotes)
-                {
-                    listSource.Remove(note);
-                }
-                SelectedNotes.Clear();
-                RefreshVisibleSet();
-            }
             else if(k.Key == ConsoleKey.P && k.Modifiers == 0 && pendingAddNote != null)
             {
                 CommitAddNote();
@@ -254,7 +237,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                     BeatsPerColumn *= 2; // zoom out
             }
             else if (k.Key == ConsoleKey.M) NextMode(); // For mode cycling
-            else CurrentMode.HandleKeyInput(k);
+            else if(!Editor.HandleKeyInput(k))
+                CurrentMode.HandleKeyInput(k);
         }, focusLifetime);
     }
 
