@@ -26,12 +26,12 @@ public class TimelineEditor
             DeleteSelected();
             return true;
         }
-        if(k.Key == ConsoleKey.C && k.Modifiers == ConsoleModifiers.Control)
+        if(k.Key == ConsoleKey.C && k.Modifiers == ConsoleModifiers.Shift)
         {
             Copy();
             return true;
         }
-        if(k.Key == ConsoleKey.V && k.Modifiers == ConsoleModifiers.Control)
+        if(k.Key == ConsoleKey.V && k.Modifiers == ConsoleModifiers.Shift)
         {
             Paste();
             return true;
@@ -41,10 +41,12 @@ public class TimelineEditor
             MoveSelection(k);
             return true;
         }
-        if(k.Modifiers == (ConsoleModifiers.Control | ConsoleModifiers.Shift) &&
-            (k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.DownArrow))
+        if(k.Modifiers ==  ConsoleModifiers.Shift && (
+            (k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.DownArrow) ||
+            k.Key == ConsoleKey.W || k.Key == ConsoleKey.S))
         {
-            AdjustVelocity(k.Key == ConsoleKey.UpArrow ? 1 : -1);
+            var isUp = k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W;
+            AdjustVelocity(isUp ? 1 : -1);
             return true;
         }
         return false;
@@ -55,18 +57,21 @@ public class TimelineEditor
         Timeline.SelectedNotes.Clear();
         Timeline.SelectedNotes.AddRange(Timeline.NoteSource);
         Timeline.RefreshVisibleSet();
+        Timeline.StatusChanged.Fire("All notes selected".ToWhite());
     }
 
     private void DeselectAll()
     {
         Timeline.SelectedNotes.Clear();
         Timeline.RefreshVisibleSet();
+        Timeline.StatusChanged.Fire("Deselected all notes".ToWhite());
     }
 
     private void DeleteSelected()
     {
         if(Timeline.NoteSource is not ListNoteSource list) return;
-        foreach(var note in Timeline.SelectedNotes)
+        Timeline.StatusChanged.Fire($"Deleted {Timeline.SelectedNotes.Count} notes".ToWhite());
+        foreach (var note in Timeline.SelectedNotes)
         {
             list.Remove(note);
         }
@@ -77,6 +82,7 @@ public class TimelineEditor
     private void Copy()
     {
         clipboard.Clear();
+        Timeline.StatusChanged.Fire($"Copied {Timeline.SelectedNotes.Count} notes to clipboard".ToWhite());
         clipboard.AddRange(Timeline.SelectedNotes);
     }
 
@@ -100,6 +106,7 @@ public class TimelineEditor
         Timeline.SelectedNotes.Clear();
         Timeline.SelectedNotes.AddRange(pasted);
         Timeline.RefreshVisibleSet();
+        Timeline.StatusChanged.Fire($"Pasted {pasted.Count} notes from clipboard".ToWhite());
     }
 
     private void MoveSelection(ConsoleKeyInfo k)
@@ -125,24 +132,34 @@ public class TimelineEditor
         Timeline.SelectedNotes.Clear();
         Timeline.SelectedNotes.AddRange(updated);
         Timeline.RefreshVisibleSet();
+        Timeline.StatusChanged.Fire($"Moved {updated.Count} notes".ToWhite());
     }
 
     private void AdjustVelocity(int delta)
     {
-        if(Timeline.NoteSource is not ListNoteSource list) return;
+        if (Timeline.NoteSource is not ListNoteSource list) return;
         var updated = new List<NoteExpression>();
-        foreach(var n in Timeline.SelectedNotes.ToArray())
+        var isSingleNote = Timeline.SelectedNotes.Count == 1;
+        foreach (var n in Timeline.SelectedNotes.ToArray())
         {
             int idx = list.IndexOf(n);
-            if(idx < 0) continue;
+            if (idx < 0) continue;
             int newVel = Math.Clamp(n.Velocity + delta, 1, 127);
             var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, newVel, n.Instrument);
             list[idx] = nn;
             updated.Add(nn);
+            if(isSingleNote)
+            {
+                Timeline.StatusChanged.Fire($"Adjusted velocity of note {n.MidiNote} to {newVel}".ToWhite());
+            }
         }
         Timeline.SelectedNotes.Clear();
         Timeline.SelectedNotes.AddRange(updated);
         Timeline.RefreshVisibleSet();
+        if (!isSingleNote)
+        {
+            Timeline.StatusChanged.Fire($"Adjusted velocity of {updated.Count} notes".ToWhite());
+        }
     }
 
     private static bool IsArrowKey(ConsoleKeyInfo k) =>

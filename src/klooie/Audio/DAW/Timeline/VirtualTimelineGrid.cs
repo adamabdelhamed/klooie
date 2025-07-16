@@ -168,8 +168,11 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         if(Player.IsPlaying) return;
         SoundProvider.Current.NotePlaying.SubscribeOnce(this, static (me, note) =>
         {
-            me.Player.Start(note.StartBeat);
-            me.PlaybackStarting.Fire(me.CurrentBeat);
+            ConsoleApp.Current.Scheduler.Delay(400, () =>
+            {
+                me.Player.Start(note.StartBeat);
+                me.PlaybackStarting.Fire(me.CurrentBeat);
+            });
         });
         playLifetime?.TryDispose();
         playLifetime = DefaultRecyclablePool.Instance.Rent();
@@ -217,11 +220,11 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                     StartPlayback();
                 }
             }
-            else if(k.Key == ConsoleKey.P && k.Modifiers == 0 && pendingAddNote != null)
+            else if (k.Key == ConsoleKey.P && k.Modifiers == 0 && pendingAddNote != null)
             {
                 CommitAddNote();
             }
-            else if(k.Key == ConsoleKey.D && k.Modifiers.HasFlag(ConsoleModifiers.Alt) && pendingAddNote != null)
+            else if (k.Key == ConsoleKey.D && k.Modifiers.HasFlag(ConsoleModifiers.Alt) && pendingAddNote != null)
             {
                 ClearAddNotePreview();
                 RefreshVisibleSet();
@@ -237,8 +240,10 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                     BeatsPerColumn *= 2; // zoom out
             }
             else if (k.Key == ConsoleKey.M) NextMode(); // For mode cycling
-            else if(!Editor.HandleKeyInput(k))
+            else if (!Editor.HandleKeyInput(k))
+            {
                 CurrentMode.HandleKeyInput(k);
+            }
         }, focusLifetime);
     }
 

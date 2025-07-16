@@ -1,12 +1,5 @@
-﻿using Microsoft.VisualBasic;
-using System;
+﻿using klooie;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace klooie;
 
 public class ScheduledNoteEvent : Recyclable
 {
@@ -42,17 +35,15 @@ public class ScheduledNoteEvent : Recyclable
 public class ScheduledSignalSourceMixer
 {
     private readonly ConcurrentQueue<ScheduledNoteEvent> scheduledNotes = new();
-    private readonly List<(ScheduledNoteEvent NoteEvent, int SamplesPlayed, long ReleaseSample, bool Released)> activeVoices = new();
+    private readonly List<ActiveVoice> activeVoices = new();
     private long samplesRendered = 0;
 
     private Event<NoteExpression> notePlaying;
     public Event<NoteExpression> NotePlaying => notePlaying ??= Event<NoteExpression>.Create();
 
     public long SamplesRendered => samplesRendered;
-    public ScheduledSignalSourceMixer()
-    {
 
-    }
+    public ScheduledSignalSourceMixer() { }
 
     public void ScheduleNote(ScheduledNoteEvent note) => scheduledNotes.Enqueue(note);
 
@@ -72,15 +63,10 @@ public class ScheduledSignalSourceMixer
                 SoundProvider.Current.EventLoop.Invoke(note, static n => n.Dispose());
                 continue;
             }
-            if (notePlaying != null)
-            {
-                var noteExpression = note.Note;
-                SoundProvider.Current.EventLoop.Invoke(() => notePlaying?.Fire(noteExpression));
-            }
             var voice = note.Voice;
             int durSamples = (int)(note.DurationSeconds * SoundProvider.SampleRate);
             long releaseSample = note.StartSample + durSamples;
-            activeVoices.Add((note, 0, releaseSample, false));
+            activeVoices.Add(new ActiveVoice(note, 0, releaseSample));
         }
 
         Array.Clear(buffer, offset, count);
@@ -89,7 +75,8 @@ public class ScheduledSignalSourceMixer
         // 2. Mix active voices
         for (int v = activeVoices.Count - 1; v >= 0; v--)
         {
-            var (noteEvent, samplesPlayed, releaseSample, released) = activeVoices[v];
+            var av = activeVoices[v];
+            var noteEvent = av.NoteEvent;
             var voice = noteEvent.Voice;
             var startSample = noteEvent.StartSample;
 
@@ -101,46 +88,46 @@ public class ScheduledSignalSourceMixer
                 continue;
             }
 
-            // Calculate where the voice's next sample lands in this buffer
-            long voiceAbsoluteSample = startSample + samplesPlayed;
+            long voiceAbsoluteSample = startSample + av.SamplesPlayed;
 
             // If the voice starts after this buffer, skip it for now
             if (voiceAbsoluteSample >= bufferEnd)
                 continue;
 
-            // Determine where to start mixing in the output buffer
             int bufferWriteOffset = (int)Math.Max(0, voiceAbsoluteSample - bufferStart);
-            // Determine how many samples from the voice to skip (if the buffer starts before the voice)
             int voiceReadOffset = (int)Math.Max(0, bufferStart - startSample);
 
-            // The max samples we can mix from this voice into this buffer
             int samplesAvailable = samplesRequested - bufferWriteOffset;
             if (samplesAvailable <= 0)
                 continue;
 
-            // Release note if needed
-            if (!released && voiceAbsoluteSample >= releaseSample)
+            if (!av.Released && voiceAbsoluteSample >= av.ReleaseSample)
             {
                 voice.ReleaseNote();
-                released = true;
+                av.Released = true;
             }
 
-            // Read from the voice: always start from where the voice itself left off
             int floatsNeeded = samplesAvailable * channels;
             int read = voice.Render(scratch, 0, floatsNeeded);
 
-            // Mix into the output buffer at the correct offset
+            // === NOTEPLAYING LOGIC ===
+            if (!av.Played && read > 0)
+            {
+                if (notePlaying != null)
+                    SoundProvider.Current.EventLoop.Invoke(() => notePlaying?.Fire(noteEvent.Note));
+                av.Played = true;
+            }
+            // =========================
+
             int bufferMixIndex = offset + bufferWriteOffset * channels;
             for (int i = 0; i < read; i++)
             {
                 buffer[bufferMixIndex + i] += scratch[i];
             }
 
-            samplesPlayed += read / channels;
+            av.SamplesPlayed += read / channels;
 
-            // Check if voice is done
-            bool done = voice.IsDone;
-            if (done)
+            if (voice.IsDone)
             {
                 SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.Dispose());
                 SoundProvider.Current.EventLoop.Invoke(noteEvent, static (n) => n.Dispose());
@@ -148,12 +135,30 @@ public class ScheduledSignalSourceMixer
             }
             else
             {
-                activeVoices[v] = (noteEvent, samplesPlayed, releaseSample, released);
+                activeVoices[v] = av;
             }
         }
 
         System.Buffers.ArrayPool<float>.Shared.Return(scratch);
         samplesRendered += samplesRequested;
         return count;
+    }
+}
+
+public struct ActiveVoice
+{
+    public ScheduledNoteEvent NoteEvent;
+    public int SamplesPlayed;
+    public long ReleaseSample;
+    public bool Released;
+    public bool Played; // true once we've actually rendered audio for this note
+
+    public ActiveVoice(ScheduledNoteEvent noteEvent, int samplesPlayed, long releaseSample)
+    {
+        NoteEvent = noteEvent;
+        SamplesPlayed = samplesPlayed;
+        ReleaseSample = releaseSample;
+        Released = false;
+        Played = false;
     }
 }

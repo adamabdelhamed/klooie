@@ -27,7 +27,6 @@ public interface ISoundProvider
     long SamplesRendered { get; }
     RecyclableList<IReleasableNote> PlaySustainedNote(NoteExpression note);
     void Play(Song song, ILifetime? lifetime = null);
-    public void ScheduleSynthNote(NoteExpression note, ILifetime? lifetime = null);
     EventLoop EventLoop { get; }
     Event<NoteExpression> NotePlaying { get; }
 }
@@ -43,13 +42,7 @@ public class NoOpSoundProvider : ISoundProvider
     public void Resume() { }
     public void ClearCache() { }
     public long SamplesRendered => 0;
-   
-
-
-    public void ScheduleSynthNote(NoteExpression note, ILifetime? lifetime = null)
-    {
-        // No-op implementation
-    }
+  
 
     public void Play(Song song, ILifetime? lifetime = null)
     {
