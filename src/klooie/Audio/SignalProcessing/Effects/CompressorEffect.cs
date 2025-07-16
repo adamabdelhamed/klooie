@@ -38,8 +38,9 @@ public sealed class CompressorEffect : Recyclable, IEffect
 
     public IEffect Clone() => Create(threshold, ratio, attack, release);
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
+        float input = ctx.Input;
         float level = MathF.Abs(input);
 
         /* envelope follower ------------------------------------------------*/

@@ -30,8 +30,9 @@ public class HighPassFilterEffect : Recyclable, IEffect
 
     public IEffect Clone() => HighPassFilterEffect.Create(cutoffHz);
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
+        float input = ctx.Input;
         float output = alpha * (prevOutput + input - prevInput);
         prevInput = input;
         prevOutput = output;

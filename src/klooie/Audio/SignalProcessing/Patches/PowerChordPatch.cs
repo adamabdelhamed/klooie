@@ -112,7 +112,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
         }
     }
 
-    public void SpawnVoices(float frequencyHz, VolumeKnob master,  List<SynthSignalSource> outVoices)
+    public void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note,  List<SynthSignalSource> outVoices)
     {
         int numLayers = intervals.Length;
         for (int i = 0; i < numLayers; i++)
@@ -126,7 +126,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 
             float freq = frequencyHz * MathF.Pow(2f, interval / 12.0f) * MathF.Pow(2f, detune / 1200.0f);
 
-            outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)patches[i], master));
+            outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)patches[i], master, note));
         }
     }
 

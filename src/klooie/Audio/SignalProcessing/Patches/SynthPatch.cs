@@ -31,7 +31,7 @@ public interface ISynthPatch
 
     RecyclableList<IEffect> Effects { get; }
     ISynthPatch InnerPatch { get; }
-    void SpawnVoices(float frequencyHz, VolumeKnob master, List<SynthSignalSource> outVoices);
+    void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note, List<SynthSignalSource> outVoices);
 }
 
 public class SynthPatch : Recyclable, ISynthPatch
@@ -102,9 +102,9 @@ public class SynthPatch : Recyclable, ISynthPatch
         Effects = null!;
     }
 
-    public virtual void SpawnVoices(float frequencyHz, VolumeKnob master, List<SynthSignalSource> outVoices)
+    public virtual void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note, List<SynthSignalSource> outVoices)
     {
-        var innerVoice = SynthSignalSource.Create(frequencyHz, this, master);
+        var innerVoice = SynthSignalSource.Create(frequencyHz, this, master, note);
         this.OnDisposed(innerVoice, Recyclable.TryDisposeMe);
         outVoices.Add(innerVoice);
     }
@@ -419,7 +419,7 @@ public static class SynthPatchExtensions
 public interface IEffect
 {
     // Process a mono sample (or stereo, if you want!)
-    float Process(float input, int frameIndex, float time);
+    float Process(in EffectContext ctx);
     IEffect Clone();
 }
 

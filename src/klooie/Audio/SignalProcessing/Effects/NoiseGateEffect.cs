@@ -40,8 +40,9 @@ class NoiseGateEffect : Recyclable, IEffect
 
     public IEffect Clone() => NoiseGateEffect.Create(openThresh, closeThresh, attackMs, releaseMs);
 
-    public float Process(float input, int frame, float time)
+    public float Process(in EffectContext ctx)
     {
+        float input = ctx.Input;
         // write current sample into look-ahead ring
         lookBuf[lookPos] = input;
         int readPos = (lookPos + 1) & (lookBuf.Length - 1);

@@ -43,8 +43,8 @@ public class ParametricEQEffect : Recyclable, IEffect
         return fx;
     }
 
-    public float Process(float input, int frameIndex, float time)
-        => Biquad.Process(ref state, b0, b1, b2, a1, a2, input);
+    public float Process(in EffectContext ctx)
+        => Biquad.Process(ref state, b0, b1, b2, a1, a2, ctx.Input);
 
     public IEffect Clone()
         => Create(type, freq, gainDb, q);

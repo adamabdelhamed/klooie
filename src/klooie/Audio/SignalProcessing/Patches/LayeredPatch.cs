@@ -81,6 +81,7 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     public void SpawnVoices(
         float freq,
         VolumeKnob master,
+        NoteExpression note,
         List<SynthSignalSource> outVoices)
     {
         for (int i = 0; i < layers.Length; i++)
@@ -91,7 +92,7 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
                 ? freq
                 : freq * MathF.Pow(2f, layerTransposes[layerIdx] / 12f);
 
-            layers[layerIdx].SpawnVoices(transFreq, master, outVoices);
+            layers[layerIdx].SpawnVoices(transFreq, master, note, outVoices);
         }
     }
 

@@ -81,7 +81,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
         try
         {
-            patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), MasterVolume, voices.Items);
+            patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), MasterVolume, note, voices.Items);
             VoiceCountTracker.Track(voices.Items); 
             action(patch, voices);
         }

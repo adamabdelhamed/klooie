@@ -24,9 +24,9 @@ public class VolumeEffect : Recyclable, IEffect
         return Create(gain);
     }
 
-    public float Process(float input, int frameIdx, float time)
+    public float Process(in EffectContext ctx)
     {
-        return input * gain;
+        return ctx.Input * gain;
     }
 
     protected override void OnReturn()

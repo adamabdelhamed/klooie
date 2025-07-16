@@ -33,8 +33,9 @@ public class DelayEffect : Recyclable, IEffect
         return ret;
     }
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
+        float input = ctx.Input;
         float delayed = buffer[pos];
         float output = (1 - mix) * input + mix * delayed;
         buffer[pos] = input + delayed * feedback;

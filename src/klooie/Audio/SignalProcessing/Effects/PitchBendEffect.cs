@@ -3,7 +3,7 @@ using System.Drawing;
 
 public interface IPitchModEffect : IEffect
 {
-    float GetPitchOffsetCents(float time, float? releaseTime); // <- note new arg
+    float GetPitchOffsetCents(in PitchModContext ctx);
 }
 
 
@@ -29,24 +29,24 @@ public class PitchBendEffect : Recyclable, IPitchModEffect
     }
 
     // The noteReleaseTime is nullable; if null, note is still held
-    public float GetPitchOffsetCents(float time, float? noteReleaseTime)
+    public float GetPitchOffsetCents(in PitchModContext ctx)
     {
-        if (noteReleaseTime == null || time < noteReleaseTime)
+        if (ctx.ReleaseTime == null || ctx.Time < ctx.ReleaseTime)
         {
             // attack/sustain phase
-            float t = Math.Min(time, attackDuration);
+            float t = Math.Min(ctx.Time, attackDuration);
             return attackBendFunc(t);
         }
         else
         {
             // release/decay phase
-            float tRelease = time - noteReleaseTime.Value;
+            float tRelease = ctx.Time - ctx.ReleaseTime.Value;
             float t = Math.Min(tRelease, releaseDuration);
             return releaseBendFunc(t);
         }
     }
 
-    public float Process(float input, int frameIndex, float time) => input;
+    public float Process(in EffectContext ctx) => ctx.Input;
 
     public IEffect Clone() => Create(attackBendFunc, attackDuration, releaseBendFunc, releaseDuration);
 

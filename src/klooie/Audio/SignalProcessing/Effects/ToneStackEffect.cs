@@ -39,8 +39,9 @@ public sealed class ToneStackEffect : Recyclable, IEffect
 
     public IEffect Clone() => Create(bassG, midG, trebG);
 
-    public float Process(float x, int frame, float time)
+    public float Process(in EffectContext ctx)
     {
+        float x = ctx.Input;
         /* low band --------------------------------------------------------- */
         lowLpf += alphaLow * (x - lowLpf);          // LPF @250 Hz
         float low = lowLpf;

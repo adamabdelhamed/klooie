@@ -32,10 +32,11 @@ public class PingPongDelayEffect : Recyclable, IEffect
     }
 
     // Only processes mono (L+R alternation; true stereo can be more advanced)
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
+        float input = ctx.Input;
         // Simulate "frameIndex % 2" as L/R for stereo buffer writing
-        bool isLeft = (frameIndex & 1) == 0;
+        bool isLeft = (ctx.FrameIndex & 1) == 0;
 
         // Calculate read index (circular buffer)
         int readIndex = (writeIndex + 1) % bufferSize;

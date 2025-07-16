@@ -101,8 +101,9 @@ public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
 
     public void SpawnVoices(float freq,
                             VolumeKnob master,
+                            NoteExpression note,
                             List<SynthSignalSource> outVoices)
-        => inner.SpawnVoices(freq, master, outVoices);
+        => inner.SpawnVoices(freq, master, note, outVoices);
 
     protected override void OnReturn()
     {

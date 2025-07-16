@@ -31,8 +31,10 @@ public class FadeInEffect : Recyclable, IEffect
 
     public IEffect Clone() => Create(fadeDuration);
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
+        float input = ctx.Input;
+        float time = ctx.Time;
         if (finished || fadeDuration <= 0)
             return input;
 
@@ -80,8 +82,10 @@ public class FadeOutEffect : Recyclable, IEffect
 
     public IEffect Clone() => Create(fadeDuration, fadeStartTime);
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
+        float input = ctx.Input;
+        float time = ctx.Time;
         if (finished || fadeDuration <= 0)
             return input;
 

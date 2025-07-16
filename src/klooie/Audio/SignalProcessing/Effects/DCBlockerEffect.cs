@@ -28,8 +28,9 @@ public sealed class DCBlockerEffect : Recyclable, IEffect
 
     public IEffect Clone() => Create();
 
-    public float Process(float x, int frame, float time)
+    public float Process(in EffectContext ctx)
     {
+        float x = ctx.Input;
         // y[n] = x[n] - x[n-1] + a * y[n-1]
         float y = x - xPrev + a * yPrev;
         xPrev = x;
