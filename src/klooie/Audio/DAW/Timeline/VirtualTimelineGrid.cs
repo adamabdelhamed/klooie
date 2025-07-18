@@ -166,17 +166,10 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     public void StartPlayback()
     {
         if(Player.IsPlaying) return;
-        SoundProvider.Current.NotePlaying.SubscribeOnce(this, static (me, note) =>
+        ConsoleApp.Current.Scheduler.Delay(60, () =>
         {
-            ConsoleApp.Current.Scheduler.Delay(60, () =>
-            {
-                // The incoming note's StartBeat is relative to the play request
-                // which may be zero if playback starts mid-timeline. Using it
-                // would reset the playhead to the beginning, so instead start
-                // at the current beat that playback was initiated from.
-                me.Player.Start(me.CurrentBeat);
-                me.PlaybackStarting.Fire(me.CurrentBeat);
-            });
+            Player.Start(CurrentBeat);
+            PlaybackStarting.Fire(CurrentBeat);
         });
         playLifetime?.TryDispose();
         playLifetime = DefaultRecyclablePool.Instance.Rent();
