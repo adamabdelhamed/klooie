@@ -7,6 +7,10 @@ public interface IPitchModEffect : IEffect
 }
 
 
+[SynthDescription("""
+Applies attack and release pitch bends in cents over time.
+""")]
+[SynthCategory("Modulation")]
 public class PitchBendEffect : Recyclable, IPitchModEffect
 {
     private Func<float, float> attackBendFunc;
@@ -18,11 +22,21 @@ public class PitchBendEffect : Recyclable, IPitchModEffect
 
     private PitchBendEffect() { }
 
+    [SynthDescription("""
+    Parameters for PitchBendEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Function returning pitch offset during attack.""")]
         public Func<float, float> AttackBend;
+
+        [SynthDescription("""Duration of the attack bend in seconds.""")]
         public float AttackDuration;
+
+        [SynthDescription("""Function returning pitch offset during release.""")]
         public Func<float, float> ReleaseBend;
+
+        [SynthDescription("""Duration of the release bend in seconds.""")]
         public float ReleaseDuration;
     }
 

@@ -1,6 +1,10 @@
 using System;
 
 namespace klooie;
+[SynthDescription("""
+Simple one-pole high-pass filter.
+""")]
+[SynthCategory("Filter")]
 public class HighPassFilterEffect : Recyclable, IEffect
 {
     private float prevInput;
@@ -14,11 +18,21 @@ public class HighPassFilterEffect : Recyclable, IEffect
     private static readonly LazyPool<HighPassFilterEffect> _pool = new(() => new HighPassFilterEffect());
     protected HighPassFilterEffect() { }
 
+    [SynthDescription("""
+    Parameters for HighPassFilterEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Cutoff frequency in Hz.""")]
         public float CutoffHz;
+
+        [SynthDescription("""Blend between dry and filtered signal.""")]
         public float Mix;
+
+        [SynthDescription("""When true, velocity scales the mix amount.""")]
         public bool VelocityAffectsMix;
+
+        [SynthDescription("""Curve for velocity-based mix scaling.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

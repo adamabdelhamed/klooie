@@ -87,6 +87,10 @@ class CombFilter : Recyclable
     }
 }
 
+[SynthDescription("""
+Simple stereo reverb composed of comb and all-pass filters.
+""")]
+[SynthCategory("Reverb")]
 public class ReverbEffect : Recyclable, IEffect
 {
     private CombFilter[] combs;
@@ -101,13 +105,27 @@ public class ReverbEffect : Recyclable, IEffect
 
     private static LazyPool<ReverbEffect> _pool = new(() => new ReverbEffect());
     protected ReverbEffect() { }
+    [SynthDescription("""
+    Parameters for ReverbEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Feedback amount controlling decay.""")]
         public float Feedback;
+
+        [SynthDescription("""Diffusion amount for all-pass filters.""")]
         public float Diffusion;
+
+        [SynthDescription("""Wet mix level.""")]
         public float Wet;
+
+        [SynthDescription("""Dry signal level.""")]
         public float Dry;
+
+        [SynthDescription("""Whether velocity scales the wet mix.""")]
         public bool VelocityAffectsMix;
+
+        [SynthDescription("""Curve for velocity-based wet scaling.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

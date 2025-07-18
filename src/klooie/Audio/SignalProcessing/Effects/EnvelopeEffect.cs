@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+[SynthDescription("""
+ADSR envelope generator that modulates the input signal level.
+""")]
+[SynthCategory("Dynamics")]
 public class EnvelopeEffect : Recyclable, IEffect
 {
     public ADSREnvelope Envelope { get; private set; }
@@ -13,11 +17,21 @@ public class EnvelopeEffect : Recyclable, IEffect
 
     private EnvelopeEffect() { }
 
+    [SynthDescription("""
+    Parameters for EnvelopeEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Attack time in seconds.""")]
         public double Attack;
+
+        [SynthDescription("""Decay time in seconds.""")]
         public double Decay;
+
+        [SynthDescription("""Sustain level from 0-1.""")]
         public double Sustain;
+
+        [SynthDescription("""Release time in seconds.""")]
         public double Release;
     }
 

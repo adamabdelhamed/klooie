@@ -9,6 +9,10 @@ namespace klooie;
 /// Scales the input by a constant gain and optionally modulates that gain with
 /// note velocity.
 /// </summary>
+[SynthDescription("""
+Simple gain stage with optional velocity modulation.
+""")]
+[SynthCategory("Utility")]
 public class VolumeEffect : Recyclable, IEffect
 {
     private float gain;
@@ -18,10 +22,18 @@ public class VolumeEffect : Recyclable, IEffect
     private VolumeEffect() { }
     static readonly LazyPool<VolumeEffect> _pool = new(() => new VolumeEffect());
 
+[SynthDescription("""
+Parameters for VolumeEffect.
+""")]
 public struct Settings
 {
+    [SynthDescription("""Gain multiplier.""")]
     public float Gain;
+
+    [SynthDescription("""Curve mapping velocity to a scale factor.""")]
     public Func<float, float>? VelocityCurve;
+
+    [SynthDescription("""Multiplier applied to the velocity curve.""")]
     public float VelocityScale;
 }
 

@@ -6,6 +6,10 @@ namespace klooie;
 /// Simple peak/RMS hybrid compressor – great for taming post-amp transients
 /// without crushing pick attack.
 /// </summary>
+[SynthDescription("""
+Peak/RMS hybrid compressor for controlling dynamic range.
+""")]
+[SynthCategory("Dynamics")]
 public sealed class CompressorEffect : Recyclable, IEffect
 {
     /* --- tunables ------------------------------------------------------- */
@@ -24,13 +28,27 @@ public sealed class CompressorEffect : Recyclable, IEffect
     private static readonly LazyPool<CompressorEffect> _pool = new(() => new CompressorEffect());
     private CompressorEffect() { }
 
+    [SynthDescription("""
+    Parameters for CompressorEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Threshold level before compression occurs.""")]
         public float Threshold;
+
+        [SynthDescription("""Compression ratio.""")]
         public float Ratio;
+
+        [SynthDescription("""Attack time coefficient.""")]
         public float Attack;
+
+        [SynthDescription("""Release time coefficient.""")]
         public float Release;
+
+        [SynthDescription("""Velocity-to-gain curve.""")]
         public Func<float, float>? VelocityCurve;
+
+        [SynthDescription("""Scale factor for velocity curve.""")]
         public float VelocityScale;
     }
 

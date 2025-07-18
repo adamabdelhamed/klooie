@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+[SynthDescription("""
+Stereo chorus effect with delay modulation.
+""")]
+[SynthCategory("Modulation")]
 public class StereoChorusEffect : Recyclable, IEffect
 {
     private float[] bufferL, bufferR;
@@ -18,13 +22,27 @@ public class StereoChorusEffect : Recyclable, IEffect
 
     private static LazyPool<StereoChorusEffect> _pool = new(() => new StereoChorusEffect());
     protected StereoChorusEffect() { }
+    [SynthDescription("""
+    Parameters for StereoChorusEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Base delay in milliseconds.""")]
         public int DelayMs;
+
+        [SynthDescription("""Modulation depth in milliseconds.""")]
         public int DepthMs;
+
+        [SynthDescription("""LFO rate in Hz.""")]
         public float RateHz;
+
+        [SynthDescription("""Blend between dry and modulated signal.""")]
         public float Mix;
+
+        [SynthDescription("""Whether velocity scales the mix amount.""")]
         public bool VelocityAffectsMix;
+
+        [SynthDescription("""Curve for velocity-based mix scaling.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

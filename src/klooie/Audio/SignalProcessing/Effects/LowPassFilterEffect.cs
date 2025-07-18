@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+[SynthDescription("""
+First-order low-pass filter.
+""")]
+[SynthCategory("Filter")]
 class LowPassFilterEffect : Recyclable, IEffect
 {
     private float alpha;
@@ -18,11 +22,21 @@ class LowPassFilterEffect : Recyclable, IEffect
 
     private LowPassFilterEffect() { }
 
+    [SynthDescription("""
+    Parameters for LowPassFilterEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Cutoff frequency in Hz.""")]
         public float CutoffHz;
+
+        [SynthDescription("""Blend between dry and filtered signal.""")]
         public float Mix;
+
+        [SynthDescription("""When true, velocity scales the mix amount.""")]
         public bool VelocityAffectsMix;
+
+        [SynthDescription("""Curve for velocity-based mix scaling.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

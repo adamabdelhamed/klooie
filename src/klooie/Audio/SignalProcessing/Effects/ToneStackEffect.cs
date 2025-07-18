@@ -10,6 +10,10 @@ namespace klooie;
 /// •  <c>high &gt;  2 500 Hz</c>
 /// Gains are linear (1 = unity, 2 = +6 dB, 0.5 = -6 dB).
 /// </summary>
+[SynthDescription("""
+Classic bass, mid and treble tone stack filter.
+""")]
+[SynthCategory("Filter")]
 public sealed class ToneStackEffect : Recyclable, IEffect
 {
     /* -------------------------------------------------------------------- */
@@ -28,12 +32,24 @@ public sealed class ToneStackEffect : Recyclable, IEffect
         new(() => new ToneStackEffect());
     private ToneStackEffect() { }
 
+    [SynthDescription("""
+    Parameters for ToneStackEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Bass gain factor.""")]
         public float Bass;
+
+        [SynthDescription("""Mid gain factor.""")]
         public float Mid;
+
+        [SynthDescription("""Treble gain factor.""")]
         public float Treble;
+
+        [SynthDescription("""Whether velocity scales all gains.""")]
         public bool VelocityAffectsGain;
+
+        [SynthDescription("""Curve for velocity-based gain scaling.""")]
         public Func<float, float>? GainVelocityCurve;
     }
 

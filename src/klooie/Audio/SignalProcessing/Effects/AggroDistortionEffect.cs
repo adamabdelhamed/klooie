@@ -2,6 +2,10 @@
 
 namespace klooie;
 
+[SynthDescription("""
+Aggressive multi-stage distortion with oversampling for heavy tones.
+""")]
+[SynthCategory("Distortion")]
 public sealed class AggroDistortionEffect : Recyclable, IEffect
 {
     /* -------- parameters (public API) ------------------------------------ */
@@ -23,12 +27,24 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
 
     private AggroDistortionEffect() { }
 
+    [SynthDescription("""
+    Parameters for AggroDistortionEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Input drive level.""")]
         public float Drive;
+
+        [SynthDescription("""Gain ratio between each distortion stage.""")]
         public float StageRatio;
+
+        [SynthDescription("""Bias for asymmetric clipping.""")]
         public float Bias;
+
+        [SynthDescription("""Optional velocity-to-gain curve.""")]
         public Func<float, float>? VelocityCurve;
+
+        [SynthDescription("""Scale factor applied to the velocity curve.""")]
         public float VelocityScale;
     }
 

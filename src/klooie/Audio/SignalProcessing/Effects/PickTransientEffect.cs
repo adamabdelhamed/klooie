@@ -7,6 +7,10 @@ namespace klooie;
 /// Duration & level track the patch’s <c>TransientDurationSeconds</c>.
 /// Place very early in the chain (before distortion) for realism.
 /// </summary>
+[SynthDescription("""
+Adds a short noise transient at note onset for realism.
+""")]
+[SynthCategory("Dynamics")]
 public sealed class PickTransientEffect : Recyclable, IEffect
 {
     private float duration;
@@ -19,9 +23,15 @@ public sealed class PickTransientEffect : Recyclable, IEffect
         new(() => new PickTransientEffect());
     private PickTransientEffect() { rng = new Random(); }
 
+    [SynthDescription("""
+    Parameters for PickTransientEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Noise duration in seconds.""")]
         public float Duration;
+
+        [SynthDescription("""Amplitude of the transient.""")]
         public float Gain;
     }
 

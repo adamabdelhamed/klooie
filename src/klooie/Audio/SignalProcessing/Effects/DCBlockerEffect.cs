@@ -6,6 +6,10 @@ namespace klooie;
 /// First-order DC-block / 15 Hz high-pass.
 /// Removes sub-audible offsets that become “pops” after heavy drive.
 /// </summary>
+[SynthDescription("""
+High-pass filter at 15 Hz to remove DC offsets.
+""")]
+[SynthCategory("Filter")]
 public sealed class DCBlockerEffect : Recyclable, IEffect
 {
     private const float fCut = 15f;          // cutoff Hz
@@ -19,9 +23,15 @@ public sealed class DCBlockerEffect : Recyclable, IEffect
         new(() => new DCBlockerEffect());
     private DCBlockerEffect() { }
 
+    [SynthDescription("""
+    Parameters for DCBlockerEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""When true, velocity scales the output level.""")]
         public bool VelocityAffectsOutput;
+
+        [SynthDescription("""Curve used when velocity affects output.""")]
         public Func<float, float>? VelocityCurve;
     }
 

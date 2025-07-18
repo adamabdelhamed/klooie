@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+[SynthDescription("""
+Cabinet simulator using shelf filters and a mid scoop to mimic guitar cabinets.
+""")]
+[SynthCategory("Filter")]
 class CabinetEffect : Recyclable, IEffect
 {
     // shelves + mid scoop
@@ -18,9 +22,15 @@ class CabinetEffect : Recyclable, IEffect
     static readonly LazyPool<CabinetEffect> _pool =
         new(() => new CabinetEffect());
 
+    [SynthDescription("""
+    Parameters for CabinetEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Curve scaling output based on note velocity.""")]
         public Func<float, float>? VelocityCurve;
+
+        [SynthDescription("""Multiplier applied to the velocity curve.""")]
         public float VelocityScale;
     }
 
