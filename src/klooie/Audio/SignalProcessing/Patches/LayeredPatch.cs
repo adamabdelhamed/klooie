@@ -2,7 +2,7 @@
 
 [SynthCategory("Utility")]
 [SynthDescription("""
-Combines multiple patches into layers with per-layer volume, pan and
+Combines multiple patches into layers with per-layer volume, pan, and
 transpose control for complex instruments.
 """)]
 public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
@@ -10,46 +10,58 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     private ISynthPatch[] layers;
     private float[] layerVolumes;
     private float[] layerPans;
-    private int[] layerTransposes; // <-- NEW
+    private int[] layerTransposes;
     public ISynthPatch[] Layers => layers;
     public float[] LayerVolumes => layerVolumes;
     public float[] LayerPans => layerPans;
     public int[] LayerTransposes => layerTransposes;
 
-    // ISynthPatch contract:
     public ISynthPatch InnerPatch => layers.Length > 0 ? layers[0] : null;
 
     private static readonly LazyPool<LayeredPatch> _pool = new(() => new LayeredPatch());
 
     private LayeredPatch() { }
 
-    // === New overloaded Create ===
+    public static LayeredPatch Create(Settings settings)
+    {
+        var p = _pool.Value.Rent();
+        int count = settings.Patches.Length;
+
+        p.layers = settings.Patches;
+        p.layerVolumes = ValidateOrCreate(settings.Volumes, count, 1f);
+        p.layerPans = ValidateOrCreate(settings.Pans, count, 0f);
+        p.layerTransposes = ValidateOrCreate(settings.Transposes, count, 0);
+
+        return p;
+    }
+
+    // Optional: maintain legacy overload for convenience
     public static LayeredPatch Create(
         ISynthPatch[] patches,
         float[]? volumes = null,
         float[]? pans = null,
         int[]? transposes = null)
-    {
-        var p = _pool.Value.Rent();
-        p.layers = patches;
-        int count = patches.Length;
-        p.layerVolumes = (volumes != null && volumes.Length == count) ? volumes : CreateArray(count, 1f);
-        p.layerPans = (pans != null && pans.Length == count) ? pans : CreateArray(count, 0f);
-        p.layerTransposes = (transposes != null && transposes.Length == count) ? transposes : CreateArray(count, 0);
-        return p;
-    }
+        => Create(new Settings
+        {
+            Patches = patches,
+            Volumes = volumes,
+            Pans = pans,
+            Transposes = transposes
+        });
 
-    private static float[] CreateArray(int count, float value)
+    private static float[] ValidateOrCreate(float[]? arr, int count, float def)
     {
-        var arr = new float[count];
-        for (int j = 0; j < count; j++) arr[j] = value;
-        return arr;
+        if (arr != null && arr.Length == count) return arr;
+        var a = new float[count];
+        for (int i = 0; i < count; i++) a[i] = def;
+        return a;
     }
-    private static int[] CreateArray(int count, int value)
+    private static int[] ValidateOrCreate(int[]? arr, int count, int def)
     {
-        var arr = new int[count];
-        for (int j = 0; j < count; j++) arr[j] = value;
-        return arr;
+        if (arr != null && arr.Length == count) return arr;
+        var a = new int[count];
+        for (int i = 0; i < count; i++) a[i] = def;
+        return a;
     }
 
     // Proxy properties from the first layer
@@ -71,9 +83,7 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     public float VibratoPhaseOffset => layers[0].VibratoPhaseOffset;
 
     public void GetPatches(List<ISynthPatch> patches)
-    {
-        patches.AddRange(layers);
-    }
+        => patches.AddRange(layers);
 
     public bool IsNotePlayable(int midiNote)
     {
@@ -91,23 +101,20 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     {
         for (int i = 0; i < layers.Length; i++)
         {
-            int layerIdx = i;
-            // Transpose frequency for this layer
-            float transFreq = (layerTransposes[layerIdx] == 0)
+            float transFreq = (layerTransposes[i] == 0)
                 ? freq
-                : freq * MathF.Pow(2f, layerTransposes[layerIdx] / 12f);
+                : freq * MathF.Pow(2f, layerTransposes[i] / 12f);
 
-            layers[layerIdx].SpawnVoices(transFreq, master, note, outVoices);
+            layers[i].SpawnVoices(transFreq, master, note, outVoices);
         }
     }
 
     protected override void OnReturn()
     {
         if (layers != null)
-        {
             foreach (var l in layers)
                 if (l is Recyclable r) r.TryDispose();
-        }
+
         layers = null!;
         layerVolumes = null!;
         layerPans = null!;

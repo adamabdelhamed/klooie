@@ -31,7 +31,6 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
     public float TransientDurationSeconds => basePatch.TransientDurationSeconds;
     public int Velocity => basePatch.Velocity;
 
-
     public bool EnableVibrato => basePatch.EnableVibrato;
     public float VibratoRateHz => basePatch.VibratoRateHz;
     public float VibratoDepthCents => basePatch.VibratoDepthCents;
@@ -45,30 +44,21 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
         patches.AddRange(this.patches);
     }
 
-
     private PowerChordPatch() { }
 
-    public static PowerChordPatch Create(
-        ISynthPatch basePatch,
-        int[] intervals = null,              // e.g. [0, 7] = root + 5th; [0, 7, 12] = root+5th+octave
-        float detuneCents = 6f,
-        float panSpread = 0.8f)
+    public static PowerChordPatch Create(Settings settings)
     {
         var patch = _pool.Value.Rent();
-        patch.Construct(basePatch, intervals, detuneCents, panSpread);
+        patch.Construct(settings);
         return patch;
     }
 
-    protected void Construct(
-        ISynthPatch basePatch,
-        int[]? intervals,
-        float detuneCents,
-        float panSpread)
+    protected void Construct(Settings settings)
     {
-        this.basePatch = basePatch ?? throw new ArgumentNullException(nameof(basePatch));
-        this.intervals = intervals ?? new int[] { 0, 7 }; // Default: power chord (root + 5th)
-        this.detuneCents = detuneCents;
-        this.panSpread = panSpread;
+        this.basePatch = settings.BasePatch ?? throw new ArgumentNullException(nameof(settings.BasePatch));
+        this.intervals = settings.Intervals ?? new int[] { 0, 7 }; // Default: power chord (root + 5th)
+        this.detuneCents = settings.DetuneCents;
+        this.panSpread = settings.PanSpread;
 
         int numLayers = intervals.Length;
         patches = new ISynthPatch[numLayers];
@@ -117,7 +107,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
         }
     }
 
-    public void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note,  List<SynthSignalSource> outVoices)
+    public void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note, List<SynthSignalSource> outVoices)
     {
         int numLayers = intervals.Length;
         for (int i = 0; i < numLayers; i++)

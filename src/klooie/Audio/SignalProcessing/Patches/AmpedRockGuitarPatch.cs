@@ -67,18 +67,25 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch, ICompositePa
                 decay: 0.12,
                 sustain: 0.60,
                 release: 0.22));
-
         var wide = UnisonPatch.Create(
-            numVoices: 2,
-            detuneCents: 8f,
-            panSpread: 0.9f,
-            basePatch: core);
+            new UnisonPatch.Settings
+            {
+                BasePatch = core,
+                NumVoices = 2,
+                DetuneCents = 8f,
+                PanSpread = 0.9f
+            }
+        );
+
 
         var powerChord = PowerChordPatch.Create(
-            basePatch: wide,
-            intervals: new int[] { 0, 7 },
-            detuneCents: 6f,
-            panSpread: 1.1f
+            new PowerChordPatch.Settings
+            {
+                BasePatch = wide,
+                Intervals = new int[] { 0, 7 },
+                DetuneCents = 6f,
+                PanSpread = 1.1f
+            }
         );
 
         return powerChord;

@@ -182,19 +182,25 @@ public static class SynthPatches
             .WithVolume(.15f)
             .WithEnvelope(0.0007, 0.009, 0.05, 0.02);
 
-        // --- Stack root and sub using PowerChordPatch ---
         var rootPlusSub = PowerChordPatch.Create(
-            basePatch: main,
-            intervals: new[] { 0, -12 },      // root + sub-octave
-            detuneCents: 0f,
-            panSpread: 0f);
+            new PowerChordPatch.Settings
+            {
+                BasePatch = main,
+                Intervals = new[] { 0, -12 },      // root + sub-octave
+                DetuneCents = 0f,
+                PanSpread = 0f
+            }
+        );
 
-        // --- Unison for width and thickness ---
         var fatWide = UnisonPatch.Create(
-            numVoices: 2,
-            detuneCents: 3.5f,
-            panSpread: 0.18f,
-            basePatch: rootPlusSub);
+            new UnisonPatch.Settings
+            {
+                BasePatch = rootPlusSub,
+                NumVoices = 2,
+                DetuneCents = 3.5f,
+                PanSpread = 0.18f
+            }
+        );
 
         // --- Blend main/sub (fatWide) + click using LayeredPatch ---
         // (If you want to add 'sub' as a separate layer, just add it here too)

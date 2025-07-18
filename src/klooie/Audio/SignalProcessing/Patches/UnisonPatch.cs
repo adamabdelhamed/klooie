@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing.Imaging.Effects;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+
 [SynthCategory("Utility")]
 [SynthDescription("""
 Creates multiple detuned copies of a patch for wide, thick sounds
@@ -22,25 +22,15 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
     private static LazyPool<UnisonPatch> _pool = new(() => new UnisonPatch());
 
     public WaveformType Waveform => basePatch.Waveform;
-
     public float DriftFrequencyHz => basePatch.DriftFrequencyHz;
-
     public float DriftAmountCents => basePatch.DriftAmountCents;
-
-    public bool EnablePitchDrift =>  basePatch.EnablePitchDrift;
-
+    public bool EnablePitchDrift => basePatch.EnablePitchDrift;
     public bool EnableSubOsc => basePatch.EnableSubOsc;
-
     public int SubOscOctaveOffset => basePatch.SubOscOctaveOffset;
-
     public float SubOscLevel => basePatch.SubOscLevel;
-
     public bool EnableTransient => basePatch.EnableTransient;
-
     public float TransientDurationSeconds => basePatch.TransientDurationSeconds;
-
     public int Velocity => basePatch.Velocity;
-
     public bool EnableVibrato => basePatch.EnableVibrato;
     public float VibratoRateHz => basePatch.VibratoRateHz;
     public float VibratoDepthCents => basePatch.VibratoDepthCents;
@@ -56,22 +46,19 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
 
     private UnisonPatch() { }
 
-    public static UnisonPatch Create(int numVoices,
-        float detuneCents,
-        float panSpread,
-        ISynthPatch basePatch)
+    public static UnisonPatch Create(Settings settings)
     {
         var patch = _pool.Value.Rent();
-        patch.Construct(basePatch, numVoices, detuneCents, panSpread);
+        patch.Construct(settings);
         return patch;
     }
 
-    protected void Construct(ISynthPatch basePatch, int numVoices = 2, float detuneCents = 6f, float panSpread = 0.8f)
+    protected void Construct(Settings settings)
     {
-        this.basePatch = basePatch;
-        this.numVoices = numVoices;
-        this.detuneCents = detuneCents;
-        this.panSpread = panSpread;
+        this.basePatch = settings.BasePatch ?? throw new ArgumentNullException(nameof(settings.BasePatch));
+        this.numVoices = settings.NumVoices;
+        this.detuneCents = settings.DetuneCents;
+        this.panSpread = settings.PanSpread;
 
         _innerPatches = new ISynthPatch[numVoices];
         for (int i = 0; i < numVoices; i++)
@@ -86,7 +73,6 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
             nestedPatch.SubOscOctaveOffset = basePatch.SubOscOctaveOffset;
             nestedPatch.SubOscLevel = basePatch.SubOscLevel;
             nestedPatch.EnableTransient = basePatch.EnableTransient;
-            nestedPatch.EnableTransient = nestedPatch.EnableTransient;
             nestedPatch.TransientDurationSeconds = basePatch.TransientDurationSeconds;
             nestedPatch.Velocity = basePatch.Velocity;
 
@@ -111,6 +97,7 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
                 throw new InvalidOperationException("UnisonPatch requires the base patch to include an EnvelopeEffect.");
         }
     }
+
     public void SpawnVoices(
         float frequencyHz,
         VolumeKnob master,

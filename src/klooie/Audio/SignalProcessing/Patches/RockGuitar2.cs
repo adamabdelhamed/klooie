@@ -61,19 +61,25 @@ public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
 
         // 2-voice unison is safer; for >64 MIDI, reduce to 1 voice
         var wide = UnisonPatch.Create(
-            numVoices: 2,
-            detuneCents: 7.5f,
-            panSpread: 0.85f,
-            basePatch: core);
+            new UnisonPatch.Settings
+            {
+                BasePatch = core,
+                NumVoices = 2,
+                DetuneCents = 7.5f,
+                PanSpread = 0.85f
+            }
+        );
 
         // Single note only, for “realism”
         var powerChord = PowerChordPatch.Create(
-            basePatch: wide,
-            intervals: new int[] { 0 },
-            detuneCents: 4.5f,
-            panSpread: 0.7f
+            new PowerChordPatch.Settings
+            {
+                BasePatch = wide,
+                Intervals = new int[] { 0 },
+                DetuneCents = 4.5f,
+                PanSpread = 0.7f
+            }
         );
-
         return powerChord;
     }
 
