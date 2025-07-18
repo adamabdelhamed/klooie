@@ -168,7 +168,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         if(Player.IsPlaying) return;
         SoundProvider.Current.NotePlaying.SubscribeOnce(this, static (me, note) =>
         {
-            ConsoleApp.Current.Scheduler.Delay(400, () =>
+            ConsoleApp.Current.Scheduler.Delay(60, () =>
             {
                 me.Player.Start(note.StartBeat);
                 me.PlaybackStarting.Fire(me.CurrentBeat);
