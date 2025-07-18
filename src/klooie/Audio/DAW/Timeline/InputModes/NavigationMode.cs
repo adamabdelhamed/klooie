@@ -18,57 +18,61 @@ public class NavigationMode : TimelineInputMode
         var view = Timeline.Viewport;
         bool handled = true;
 
-        switch (key.Key)
+        var k = key.Key;
+
+        if (k == ConsoleKey.LeftArrow || k == ConsoleKey.A)
         {
-            case ConsoleKey.LeftArrow:
-            case ConsoleKey.A:
-                if (player.IsPlaying)
-                {
-                    view.ScrollBeats(-Timeline.BeatsPerColumn);
-                }
-                else
-                {
-                    player.SeekBy(-Timeline.BeatsPerColumn);
-                    EnsurePlayheadVisible();
-                }
-                break;
-            case ConsoleKey.RightArrow:
-            case ConsoleKey.D:
-                if (player.IsPlaying)
-                {
-                    view.ScrollBeats(Timeline.BeatsPerColumn);
-                }
-                else
-                {
-                    player.SeekBy(Timeline.BeatsPerColumn);
-                    EnsurePlayheadVisible();
-                }
-                break;
-            case ConsoleKey.UpArrow:
-            case ConsoleKey.W:
-                view.ScrollRows(1);
-                break;
-            case ConsoleKey.DownArrow:
-            case ConsoleKey.S:
-                view.ScrollRows(-1);
-                break;
-            case ConsoleKey.PageUp:
-                view.ScrollRows(view.MidisOnScreen >= 24 ? 12 : 1);
-                break;
-            case ConsoleKey.PageDown:
-                view.ScrollRows(view.MidisOnScreen >= 24 ? -12 : -1);
-                break;
-            case ConsoleKey.Home:
-                player.Seek(0);
+            if (player.IsPlaying)
+            {
+                view.ScrollBeats(-Timeline.BeatsPerColumn);
+            }
+            else
+            {
+                player.SeekBy(-Timeline.BeatsPerColumn);
                 EnsurePlayheadVisible();
-                break;
-            case ConsoleKey.End:
-                player.Seek(Timeline.MaxBeat);
+            }
+        }
+        else if (k == ConsoleKey.RightArrow || k == ConsoleKey.D)
+        {
+            if (player.IsPlaying)
+            {
+                view.ScrollBeats(Timeline.BeatsPerColumn);
+            }
+            else
+            {
+                player.SeekBy(Timeline.BeatsPerColumn);
                 EnsurePlayheadVisible();
-                break;
-            default:
-                handled = false;
-                break;
+            }
+        }
+        else if (k == ConsoleKey.UpArrow || k == ConsoleKey.W)
+        {
+            view.ScrollRows(1);
+        }
+        else if (k == ConsoleKey.DownArrow || k == ConsoleKey.S)
+        {
+            view.ScrollRows(-1);
+        }
+        else if (k == ConsoleKey.PageUp)
+        {
+            view.ScrollRows(view.MidisOnScreen >= 24 ? 12 : 1);
+        }
+        else if (k == ConsoleKey.PageDown)
+        {
+            view.ScrollRows(view.MidisOnScreen >= 24 ? -12 : -1);
+        }
+        else if (k == ConsoleKey.Home)
+        {
+            player.Seek(0);
+            EnsurePlayheadVisible();
+        }
+        else if (k == ConsoleKey.End)
+        {
+            player.Seek(Timeline.MaxBeat);
+            EnsurePlayheadVisible();
+        }
+        else
+        {
+            handled = false;
         }
 
         if (handled)
