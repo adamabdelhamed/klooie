@@ -1,6 +1,10 @@
 using System;
 
 namespace klooie;
+[SynthDescription("""
+Amplitude tremolo modulation.
+""")]
+[SynthCategory("Modulation")]
 public class TremoloEffect : Recyclable, IEffect
 {
     private float depth;
@@ -12,11 +16,21 @@ public class TremoloEffect : Recyclable, IEffect
     private static readonly LazyPool<TremoloEffect> _pool = new(() => new TremoloEffect());
     protected TremoloEffect() { }
 
+    [SynthDescription("""
+    Parameters for TremoloEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Depth of modulation (0-1).""")]
         public float Depth;
+
+        [SynthDescription("""LFO rate in Hz.""")]
         public float RateHz;
+
+        [SynthDescription("""When true, velocity scales the modulation depth.""")]
         public bool VelocityAffectsDepth;
+
+        [SynthDescription("""Curve for velocity-based depth scaling.""")]
         public Func<float, float>? DepthVelocityCurve;
     }
 

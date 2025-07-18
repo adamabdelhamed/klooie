@@ -1,5 +1,9 @@
 ﻿using klooie;
 
+[SynthDescription("""
+Stereo ping-pong delay alternating between left and right channels.
+""")]
+[SynthCategory("Delay")]
 public class PingPongDelayEffect : Recyclable, IEffect
 {
     private float[] leftBuffer, rightBuffer;
@@ -15,12 +19,24 @@ public class PingPongDelayEffect : Recyclable, IEffect
 
     private PingPongDelayEffect() { }
 
+    [SynthDescription("""
+    Parameters for PingPongDelayEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Delay length in samples.""")]
         public int DelaySamples;
+
+        [SynthDescription("""Feedback amount (0-1).""")]
         public float Feedback;
+
+        [SynthDescription("""Blend between dry and delayed signal (0-1).""")]
         public float Mix;
+
+        [SynthDescription("""Whether velocity scales the mix amount.""")]
         public bool VelocityAffectsMix;
+
+        [SynthDescription("""Curve for velocity-based mix scaling.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

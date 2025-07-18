@@ -2,6 +2,10 @@
 
 public enum BiquadType { Peak, LowShelf, HighShelf }
 
+[SynthDescription("""
+Parametric equalizer supporting peak and shelf modes.
+""")]
+[SynthCategory("Filter")]
 public class ParametricEQEffect : Recyclable, IEffect
 {
     // Filter params
@@ -21,14 +25,30 @@ public class ParametricEQEffect : Recyclable, IEffect
 
     private ParametricEQEffect() { }
 
+    [SynthDescription("""
+    Parameters for ParametricEQEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Type of biquad filter.""")]
         public BiquadType Type;
+
+        [SynthDescription("""Center frequency in Hz.""")]
         public float Freq;
+
+        [SynthDescription("""Gain in decibels.""")]
         public float GainDb;
+
+        [SynthDescription("""Quality factor.""")]
         public float Q;
+
+        [SynthDescription("""Whether velocity affects gain.""")]
         public bool VelocityAffectsGain;
+
+        [SynthDescription("""Curve for velocity-based gain scaling.""")]
         public Func<float, float>? GainVelocityCurve;
+
+        [SynthDescription("""Scale factor for velocity curve.""")]
         public float GainVelocityScale;
     }
 

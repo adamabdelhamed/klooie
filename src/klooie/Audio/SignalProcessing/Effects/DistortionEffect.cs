@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+[SynthDescription("""
+Multi-stage soft-clipping distortion effect with simple oversampling to reduce aliasing.
+""")]
+[SynthCategory("Distortion")]
 class DistortionEffect : Recyclable, IEffect
 {
     // 2× oversample using linear interp, 3 gain stages, tanh softclip
@@ -19,12 +23,24 @@ class DistortionEffect : Recyclable, IEffect
     private DistortionEffect() { }
     static readonly LazyPool<DistortionEffect> _pool = new(() => new DistortionEffect());
 
+    [SynthDescription("""
+    Parameters for DistortionEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Input gain before distortion stages.""")]
         public float Drive;
+
+        [SynthDescription("""Relative gain drop for each successive stage.""")]
         public float StageRatio;
+
+        [SynthDescription("""Asymmetry bias added to the clipper.""")]
         public float Bias;
+
+        [SynthDescription("""Optional curve mapping velocity to gain scale.""")]
         public Func<float, float>? VelocityCurve;
+
+        [SynthDescription("""Multiplier applied to the velocity curve.""")]
         public float VelocityScale;
     }
 

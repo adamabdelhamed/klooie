@@ -7,6 +7,10 @@ namespace klooie;
 /// Emulates the electrical resonance of passive guitar pickups
 /// and the presence control on high-gain amps.
 /// </summary>
+[SynthDescription("""
+Resonant low-pass feeding a high-shelf booster for presence control.
+""")]
+[SynthCategory("Filter")]
 public sealed class PresenceShelfEffect : Recyclable, IEffect
 {
     /* ---- parameters ---------------------------------------------------- */
@@ -30,10 +34,18 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
 
     private PresenceShelfEffect() { }
 
+    [SynthDescription("""
+    Parameters for PresenceShelfEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Amount of high-frequency boost in dB.""")]
         public float PresenceDb;
+
+        [SynthDescription("""Optional curve for velocity-based scaling.""")]
         public Func<float, float>? VelocityCurve;
+
+        [SynthDescription("""Multiplier applied to velocity curve.""")]
         public float VelocityScale;
     }
 

@@ -6,6 +6,10 @@ namespace klooie;
 /// First-order tilt-EQ centred around a gentle low-pass.
 /// Positive <c>tilt</c> brightens; negative warms.
 /// </summary>
+[SynthDescription("""
+First-order tilt EQ balancing lows and highs around a fixed cutoff.
+""")]
+[SynthCategory("Filter")]
 public sealed class TiltEQEffect : Recyclable, IEffect
 {
     private float tilt;     // -1 (bass boost) … +1 (treble boost)
@@ -16,9 +20,15 @@ public sealed class TiltEQEffect : Recyclable, IEffect
     private static readonly LazyPool<TiltEQEffect> _pool = new(() => new TiltEQEffect());
     private TiltEQEffect() { }
 
+    [SynthDescription("""
+    Parameters for TiltEQEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Tilt amount from -1 to +1.""")]
         public float Tilt;
+
+        [SynthDescription("""Cutoff frequency for the underlying low-pass.""")]
         public float CutoffHz;
     }
 

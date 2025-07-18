@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 namespace klooie;
 
 // FadeInEffect: Multiplies input by [0,1] fade-in envelope over the given duration
+[SynthDescription("""
+Applies a fade-in envelope to the signal over the specified duration.
+""")]
+[SynthCategory("Utility")]
 public class FadeInEffect : Recyclable, IEffect
 {
     private float fadeDuration;
@@ -18,10 +22,18 @@ public class FadeInEffect : Recyclable, IEffect
 
     private FadeInEffect() { }
 
+    [SynthDescription("""
+    Parameters for FadeInEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Fade duration in seconds.""")]
         public float DurationSeconds;
+
+        [SynthDescription("""Optional velocity-to-gain curve.""")]
         public Func<float, float>? VelocityCurve;
+
+        [SynthDescription("""Scale factor applied to velocity curve.""")]
         public float VelocityScale;
     }
 
@@ -75,6 +87,10 @@ public class FadeInEffect : Recyclable, IEffect
         base.OnReturn();
     }
 }
+[SynthDescription("""
+Applies a fade-out envelope starting at the specified time.
+""")]
+[SynthCategory("Utility")]
 public class FadeOutEffect : Recyclable, IEffect
 {
     private float fadeDuration;
@@ -91,11 +107,21 @@ public class FadeOutEffect : Recyclable, IEffect
     /// durationSeconds: how long the fade should last
     /// fadeStartTime: time (in seconds) when fade should *start* (default = 0 to fade from the beginning)
     /// </summary>
+[SynthDescription("""
+Parameters for FadeOutEffect.
+""")]
 public struct Settings
 {
+    [SynthDescription("""Fade duration in seconds.""")]
     public float DurationSeconds;
+
+    [SynthDescription("""Time in seconds when fade should start.""")]
     public float FadeStartTime;
+
+    [SynthDescription("""Optional velocity-to-gain curve.""")]
     public Func<float, float>? VelocityCurve;
+
+    [SynthDescription("""Scale factor applied to velocity curve.""")]
     public float VelocityScale;
 }
 

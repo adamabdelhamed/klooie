@@ -5,6 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+[SynthDescription("""
+Creates a basic delay line that echoes the input after a
+specified number of samples. Feedback controls how much of
+the delayed signal is fed back for repeating echoes.
+""")]
+[SynthCategory("Delay")]
 public class DelayEffect : Recyclable, IEffect
 {
     private float[] buffer;
@@ -15,12 +21,26 @@ public class DelayEffect : Recyclable, IEffect
 
     private static LazyPool<DelayEffect> _pool = new(() => new DelayEffect()); // Default 1 second delay at 44100Hz
     protected DelayEffect() { }
+
+    [SynthDescription("""
+    Parameters used when creating a DelayEffect instance.
+    All values are in sample or normalized units.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Number of samples to delay the signal.""")]
         public int DelaySamples;
+
+        [SynthDescription("""Amount of feedback returned to the delay line (0-1).""")]
         public float Feedback;
+
+        [SynthDescription("""Blend between dry and delayed signal (0-1).""")]
         public float Mix;
+
+        [SynthDescription("""When true, note velocity scales the mix amount.""")]
         public bool VelocityAffectsMix;
+
+        [SynthDescription("""Curve that maps normalized velocity to a mix multiplier.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

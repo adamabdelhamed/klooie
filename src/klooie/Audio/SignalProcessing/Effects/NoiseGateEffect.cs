@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+[SynthDescription("""
+Suppresses noise by muting the signal below a threshold.
+""")]
+[SynthCategory("Dynamics")]
 class NoiseGateEffect : Recyclable, IEffect
 {
     readonly float[] lookBuf = new float[256];   // ≈ 5.8 ms @44.1 kHz
@@ -21,13 +25,27 @@ class NoiseGateEffect : Recyclable, IEffect
     static readonly LazyPool<NoiseGateEffect> _pool =
         new(() => new NoiseGateEffect());
 
+    [SynthDescription("""
+    Parameters for NoiseGateEffect.
+    """)]
     public struct Settings
     {
+        [SynthDescription("""Threshold for opening the gate.""")]
         public float OpenThresh;
+
+        [SynthDescription("""Threshold for closing the gate.""")]
         public float CloseThresh;
+
+        [SynthDescription("""Attack time in milliseconds.""")]
         public float AttackMs;
+
+        [SynthDescription("""Release time in milliseconds.""")]
         public float ReleaseMs;
+
+        [SynthDescription("""Whether velocity scales the thresholds.""")]
         public bool VelocityAffectsThreshold;
+
+        [SynthDescription("""Curve for velocity-based threshold scaling.""")]
         public Func<float, float>? VelocityCurve;
     }
 
