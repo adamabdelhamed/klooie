@@ -26,11 +26,12 @@ public sealed class TiltEQEffect : Recyclable, IEffect
 
     public IEffect Clone() => Create(tilt, alpha);
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
-        /* split ----------------------------------------------------------------*/
-        low += alpha * (input - low);          // 1-pole LP → “bass”
-        float high = input - low;              // residual  → “treble”
+        float input = ctx.Input;
+        /* split ---------------------------------------------------------------*/
+        low += alpha * (input - low);          // 1-pole LP -> "bass"
+        float high = input - low;              // residual  -> "treble"
 
         /* tilt mix --------------------------------------------------------------*/
         return low * (1f - tilt) +

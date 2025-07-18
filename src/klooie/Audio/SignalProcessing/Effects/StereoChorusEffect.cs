@@ -39,20 +39,20 @@ public class StereoChorusEffect : Recyclable, IEffect
         phase = 0f;
     }
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
         // Mono version: pan modulation and width not shown; can be extended
         float mod = (float)Math.Sin(phase) * depthSamples;
         int readIndex = (int)((pos - delaySamples + mod + bufferL.Length) % bufferL.Length);
 
         float delayed = bufferL[readIndex];
-        bufferL[pos] = input;
+        bufferL[pos] = ctx.Input;
 
         pos = (pos + 1) % bufferL.Length;
         phase += 2 * MathF.PI * rateHz / SoundProvider.SampleRate;
         if (phase > 2 * MathF.PI) phase -= 2 * MathF.PI;
 
-        return (1 - mix) * input + mix * delayed;
+        return (1 - mix) * ctx.Input + mix * delayed;
     }
 
 

@@ -43,9 +43,10 @@ class DistortionEffect : Recyclable, IEffect
 
     static float SoftClip(float x) => MathF.Tanh(x);
 
-    public float Process(float input, int frameIdx, float time)
+    public float Process(in EffectContext ctx)
     {
         // ---- 2× oversampling (linear) -------------------------------------
+        float input = ctx.Input;
         float mid = 0.5f * (input + prevIn);
         float a = Distort(prevIn);
         float b = Distort(mid);

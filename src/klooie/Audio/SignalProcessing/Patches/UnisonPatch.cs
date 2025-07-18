@@ -109,6 +109,7 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
     public void SpawnVoices(
         float frequencyHz,
         VolumeKnob master,
+        NoteExpression note,
         List<SynthSignalSource> outVoices)
     {
         for (int i = 0; i < numVoices; i++)
@@ -118,7 +119,7 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
             float pan = rel * panSpread / Math.Max(numVoices - 1, 1);
             float detunedFreq = frequencyHz * MathF.Pow(2f, detune / 1200f);
 
-            outVoices.Add(SynthSignalSource.Create(detunedFreq, (SynthPatch)_innerPatches[i], master));
+            outVoices.Add(SynthSignalSource.Create(detunedFreq, (SynthPatch)_innerPatches[i], master, note));
         }
     }
 

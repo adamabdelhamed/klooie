@@ -31,9 +31,9 @@ public class EnvelopeEffect : Recyclable, IEffect
         Envelope.Sustain,
         Envelope.Release);
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
-        return input * Envelope.GetLevel(time);
+        return ctx.Input * Envelope.GetLevel(ctx.Time);
     }
 
     public void Release(float time) => Envelope.ReleaseNote(time);

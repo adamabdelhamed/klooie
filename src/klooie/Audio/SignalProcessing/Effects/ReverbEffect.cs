@@ -126,8 +126,9 @@ public class ReverbEffect : Recyclable, IEffect
 
     public IEffect Clone() => Create(feedback, diffusion, wet, dry);
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
+        float input = ctx.Input;
         // Mix combs in parallel
         float combOut = 0f;
         for (int i = 0; i < combs.Length; i++)

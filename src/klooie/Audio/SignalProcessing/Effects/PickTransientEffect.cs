@@ -31,8 +31,9 @@ public sealed class PickTransientEffect : Recyclable, IEffect
 
     public IEffect Clone() => Create(duration, gain);
 
-    public float Process(float x, int frame, float time)
+    public float Process(in EffectContext ctx)
     {
+        float x = ctx.Input;
         if (!active) return x;
 
         timeSinceOn += 1f / SoundProvider.SampleRate;

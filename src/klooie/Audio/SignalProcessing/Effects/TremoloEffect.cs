@@ -26,10 +26,10 @@ public class TremoloEffect : Recyclable, IEffect
         this.phase = 0f;
     }
 
-    public float Process(float input, int frameIndex, float time)
+    public float Process(in EffectContext ctx)
     {
         float mod = 1f - depth + depth * (0.5f * (MathF.Sin(phase) + 1f));
-        float output = input * mod;
+        float output = ctx.Input * mod;
         phase += 2f * MathF.PI * rateHz / SoundProvider.SampleRate;
         if (phase > 2f * MathF.PI) phase -= 2f * MathF.PI;
         return output;

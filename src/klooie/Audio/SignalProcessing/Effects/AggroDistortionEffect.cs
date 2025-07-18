@@ -40,10 +40,10 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
     private const int oversample = 4;
     private readonly float lpAlpha = 1f - MathF.Exp(-2f * MathF.PI * 7000f / SoundProvider.SampleRate);
 
-    public float Process(float input, int frame, float time)
+    public float Process(in EffectContext ctx)
     {
         /* poly-phase 4× oversample ---------------------------------------- */
-        float s = input, outSum = 0f;
+        float s = ctx.Input, outSum = 0f;
         for (int p = 0; p < oversample; p++)
         {
             /* cheap linear upsample */

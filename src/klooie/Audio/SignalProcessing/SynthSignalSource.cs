@@ -44,11 +44,11 @@ public class SynthSignalSource : Recyclable
 
     protected SynthSignalSource() { }
 
-    public static SynthSignalSource Create(float frequencyHz, SynthPatch patch, VolumeKnob master)
+    public static SynthSignalSource Create(float frequencyHz, SynthPatch patch, VolumeKnob master, NoteExpression note)
     {
         var ret = _pool.Value.Rent();
         ret.Id = Interlocked.Increment(ref _globalId);
-        ret.Construct(frequencyHz, patch, master, null);
+        ret.Construct(frequencyHz, patch, master, note, null);
         return ret;
     }
 
@@ -63,13 +63,18 @@ public class SynthSignalSource : Recyclable
         return 0;
     };
 
-    protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, VolumeKnob? knob)
+    private NoteExpression note;
+    private EffectContext ctx;
+
+    protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, NoteExpression note, VolumeKnob? knob)
     {
         frequency = frequencyHz;
         sampleRate = 44100;
         time = 0;
         filteredSample = 0;
         this.patch = patch;
+        this.note = note;
+        ctx = new EffectContext { Note = note };
         this.patch.Effects.Items.Sort(EnvelopesAtTheEndSortComparison);
         isDone = false;
         driftPhase = 0f;
@@ -115,26 +120,26 @@ public class SynthSignalSource : Recyclable
     }
 
     // ---- DSP Pipeline delegate signature ----
-    public delegate float SignalProcess(float input, int frameIndex, float time);
+    public delegate float SignalProcess(in EffectContext ctx);
 
     // ---- Pipeline stages: all instance methods, no capturing lambdas ----
 
-    private float OscillatorStage(float input, int frameIndex, float time)
+    private float OscillatorStage(in EffectContext ctx)
     {
-        return Oscillate(time);
+        return Oscillate(ctx.Time);
     }
 
-    private float SubOscillatorStage(float input, int frameIndex, float time)
+    private float SubOscillatorStage(in EffectContext ctx)
     {
-        float subTime = time * (float)Math.Pow(2, patch.SubOscOctaveOffset);
-        return input + Oscillate(subTime, WaveformType.Sine) * patch.SubOscLevel;
+        float subTime = ctx.Time * (float)Math.Pow(2, patch.SubOscOctaveOffset);
+        return ctx.Input + Oscillate(subTime, WaveformType.Sine) * patch.SubOscLevel;
     }
 
-    private float TransientStage(float input, int frameIndex, float time)
+    private float TransientStage(in EffectContext ctx)
     {
-        return time < patch.TransientDurationSeconds
-            ? input + (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f
-            : input;
+        return ctx.Time < patch.TransientDurationSeconds
+            ? ctx.Input + (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f
+            : ctx.Input;
     }
 
 
@@ -157,9 +162,10 @@ public class SynthSignalSource : Recyclable
 
         if (pitchMods != null)
         {
+            var pmCtx = new PitchModContext { Time = t, ReleaseTime = noteReleaseTime, Note = note };
             for (int i = 0; i < pitchMods.Count; i++)
             {
-                totalCents += pitchMods[i].GetPitchOffsetCents(t, noteReleaseTime);
+                totalCents += pitchMods[i].GetPitchOffsetCents(pmCtx);
             }
         }
 
@@ -228,7 +234,9 @@ public class SynthSignalSource : Recyclable
         effectivePan = 0f;
         envelope = null;
         noteReleaseTime = null;
-        pipeline?.Clear();   
+        pipeline?.Clear();
+        note = null!;
+        ctx = default;
         base.OnReturn();
     }
 
@@ -246,9 +254,15 @@ public class SynthSignalSource : Recyclable
         {
             time = localTime;
 
+            ctx.FrameIndex = n / 2;
+            ctx.Time = time;
+            ctx.Input = 0f;
             float sample = 0f;
             for (int s = 0; s < pipeline.Count; s++)
-                sample = pipeline[s](sample, n / 2, time);
+            {
+                ctx.Input = sample;
+                sample = pipeline[s](ctx);
+            }
 
             float finalSample = Math.Clamp(sample * effectiveVolume, -1f, 1f);
 

@@ -24,8 +24,9 @@ class LowPassFilterEffect : Recyclable, IEffect
 
     public IEffect Clone() => LowPassFilterEffect.Create(alpha);
 
-    public float Process(float input, int frameIdx, float time)
+    public float Process(in EffectContext ctx)
     {
+        float input = ctx.Input;
         state += alpha * (input - state);
         return state;
     }

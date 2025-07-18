@@ -40,9 +40,10 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
     public IEffect Clone() => Create(20f * MathF.Log10(shelfGain));
 
     /* ----- core ---------------------------------------------------------- */
-    public float Process(float x, int frame, float time)
+    public float Process(in EffectContext ctx)
     {
         /* resonant LP ----------------------------------------------------- */
+        float x = ctx.Input;
         float y = b0 * x + b1 * resY1 + b2 * resY2 - a1 * resY1 - a2 * resY2;
         resY2 = resY1;
         resY1 = y;
