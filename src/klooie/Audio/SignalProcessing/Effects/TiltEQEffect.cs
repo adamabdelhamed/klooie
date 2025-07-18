@@ -16,10 +16,16 @@ public sealed class TiltEQEffect : Recyclable, IEffect
     private static readonly LazyPool<TiltEQEffect> _pool = new(() => new TiltEQEffect());
     private TiltEQEffect() { }
 
-    public static TiltEQEffect Create(float tilt = 0.0f, float cutoffHz = 200f)
+    public struct Settings
+    {
+        public float Tilt;
+        public float CutoffHz;
+    }
+
+    public static TiltEQEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.Construct(tilt, cutoffHz);
+        fx.Construct(settings.Tilt, settings.CutoffHz);
         return fx;
     }
 
@@ -33,7 +39,15 @@ public sealed class TiltEQEffect : Recyclable, IEffect
         low = 0f;
     }
 
-    public IEffect Clone() => Create(tilt, cutoffHz);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            Tilt = tilt,
+            CutoffHz = cutoffHz
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

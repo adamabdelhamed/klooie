@@ -24,26 +24,42 @@ public sealed class CompressorEffect : Recyclable, IEffect
     private static readonly LazyPool<CompressorEffect> _pool = new(() => new CompressorEffect());
     private CompressorEffect() { }
 
-    public static CompressorEffect Create(
-        float threshold = 0.6f,
-        float ratio = 4f,
-        float attack = 0.01f,
-        float release = 0.005f,
-        Func<float, float>? velocityCurve = null,
-        float velocityScale = 1f)
+    public struct Settings
+    {
+        public float Threshold;
+        public float Ratio;
+        public float Attack;
+        public float Release;
+        public Func<float, float>? VelocityCurve;
+        public float VelocityScale;
+    }
+
+    public static CompressorEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.threshold = threshold;
-        fx.ratio = ratio;
-        fx.attack = attack;
-        fx.release = release;
+        fx.threshold = settings.Threshold;
+        fx.ratio = settings.Ratio;
+        fx.attack = settings.Attack;
+        fx.release = settings.Release;
         fx.envelope = 0f;
-        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
-        fx.velocityScale = velocityScale;
+        fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = settings.VelocityScale;
         return fx;
     }
 
-    public IEffect Clone() => Create(threshold, ratio, attack, release, velocityCurve, velocityScale);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            Threshold = threshold,
+            Ratio = ratio,
+            Attack = attack,
+            Release = release,
+            VelocityCurve = velocityCurve,
+            VelocityScale = velocityScale
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

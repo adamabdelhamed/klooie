@@ -18,18 +18,38 @@ public class StereoChorusEffect : Recyclable, IEffect
 
     private static LazyPool<StereoChorusEffect> _pool = new(() => new StereoChorusEffect());
     protected StereoChorusEffect() { }
-    public static StereoChorusEffect Create(int delayMs = 20, int depthMs = 6, float rateHz = 0.4f, float mix = 0.3f,
-        bool velocityAffectsMix = true,
-        Func<float, float>? mixVelocityCurve = null)
+    public struct Settings
+    {
+        public int DelayMs;
+        public int DepthMs;
+        public float RateHz;
+        public float Mix;
+        public bool VelocityAffectsMix;
+        public Func<float, float>? MixVelocityCurve;
+    }
+
+    public static StereoChorusEffect Create(in Settings settings)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(delayMs, depthMs, rateHz, mix);
-        ret.velocityAffectsMix = velocityAffectsMix;
-        ret.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
+        ret.Construct(settings.DelayMs, settings.DepthMs, settings.RateHz, settings.Mix);
+        ret.velocityAffectsMix = settings.VelocityAffectsMix;
+        ret.mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
 
-    public IEffect Clone() => Create(delayMs, depthMs, rateHz, mix, velocityAffectsMix, mixVelocityCurve);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            DelayMs = delayMs,
+            DepthMs = depthMs,
+            RateHz = rateHz,
+            Mix = mix,
+            VelocityAffectsMix = velocityAffectsMix,
+            MixVelocityCurve = mixVelocityCurve
+        };
+        return Create(in settings);
+    }
 
     protected void Construct(int delayMs = 20, int depthMs = 6, float rateHz = 0.4f, float mix = 0.3f)
     {

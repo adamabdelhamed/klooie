@@ -12,18 +12,34 @@ public class TremoloEffect : Recyclable, IEffect
     private static readonly LazyPool<TremoloEffect> _pool = new(() => new TremoloEffect());
     protected TremoloEffect() { }
 
-    public static TremoloEffect Create(float depth = 0.5f, float rateHz = 5f,
-        bool velocityAffectsDepth = true,
-        Func<float, float>? depthVelocityCurve = null)
+    public struct Settings
+    {
+        public float Depth;
+        public float RateHz;
+        public bool VelocityAffectsDepth;
+        public Func<float, float>? DepthVelocityCurve;
+    }
+
+    public static TremoloEffect Create(in Settings settings)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(depth, rateHz);
-        ret.velocityAffectsDepth = velocityAffectsDepth;
-        ret.depthVelocityCurve = depthVelocityCurve ?? EffectContext.EaseLinear;
+        ret.Construct(settings.Depth, settings.RateHz);
+        ret.velocityAffectsDepth = settings.VelocityAffectsDepth;
+        ret.depthVelocityCurve = settings.DepthVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
 
-    public IEffect Clone() => Create(depth, rateHz, velocityAffectsDepth, depthVelocityCurve);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            Depth = depth,
+            RateHz = rateHz,
+            VelocityAffectsDepth = velocityAffectsDepth,
+            DepthVelocityCurve = depthVelocityCurve
+        };
+        return Create(in settings);
+    }
 
     protected void Construct(float depth, float rateHz)
     {

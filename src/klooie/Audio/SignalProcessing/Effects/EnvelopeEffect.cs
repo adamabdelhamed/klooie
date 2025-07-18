@@ -13,23 +13,37 @@ public class EnvelopeEffect : Recyclable, IEffect
 
     private EnvelopeEffect() { }
 
-    public static EnvelopeEffect Create(double attack, double decay, double sustain, double release)
+    public struct Settings
+    {
+        public double Attack;
+        public double Decay;
+        public double Sustain;
+        public double Release;
+    }
+
+    public static EnvelopeEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
         fx.Envelope = ADSREnvelope.Create();
-        fx.Envelope.Attack = attack;
-        fx.Envelope.Decay = decay;
-        fx.Envelope.Sustain = sustain;
-        fx.Envelope.Release = release;
+        fx.Envelope.Attack = settings.Attack;
+        fx.Envelope.Decay = settings.Decay;
+        fx.Envelope.Sustain = settings.Sustain;
+        fx.Envelope.Release = settings.Release;
         fx.Envelope.Trigger(0, SoundProvider.SampleRate);
         return fx;
     }
 
-    public IEffect Clone() => Create(
-        Envelope.Attack,
-        Envelope.Decay,
-        Envelope.Sustain,
-        Envelope.Release);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            Attack = Envelope.Attack,
+            Decay = Envelope.Decay,
+            Sustain = Envelope.Sustain,
+            Release = Envelope.Release
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

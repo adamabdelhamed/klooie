@@ -18,16 +18,21 @@ class LowPassFilterEffect : Recyclable, IEffect
 
     private LowPassFilterEffect() { }
 
-    public static LowPassFilterEffect Create(float cutoffHz = 200f,
-        float mix = 1f,
-        bool velocityAffectsMix = true,
-        Func<float, float>? mixVelocityCurve = null)
+    public struct Settings
+    {
+        public float CutoffHz;
+        public float Mix;
+        public bool VelocityAffectsMix;
+        public Func<float, float>? MixVelocityCurve;
+    }
+
+    public static LowPassFilterEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.Construct(cutoffHz);
-        fx.mix = mix;
-        fx.velocityAffectsMix = velocityAffectsMix;
-        fx.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
+        fx.Construct(settings.CutoffHz);
+        fx.mix = settings.Mix;
+        fx.velocityAffectsMix = settings.VelocityAffectsMix;
+        fx.mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
         return fx;
     }
 
@@ -40,7 +45,17 @@ class LowPassFilterEffect : Recyclable, IEffect
         state = 0f;
     }
 
-    public IEffect Clone() => LowPassFilterEffect.Create(cutoffHz, mix, velocityAffectsMix, mixVelocityCurve);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            CutoffHz = cutoffHz,
+            Mix = mix,
+            VelocityAffectsMix = velocityAffectsMix,
+            MixVelocityCurve = mixVelocityCurve
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

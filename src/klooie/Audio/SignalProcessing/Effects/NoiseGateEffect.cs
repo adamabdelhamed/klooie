@@ -21,30 +21,48 @@ class NoiseGateEffect : Recyclable, IEffect
     static readonly LazyPool<NoiseGateEffect> _pool =
         new(() => new NoiseGateEffect());
 
-    public static NoiseGateEffect Create(
-        float openThresh = 0.05f, float closeThresh = 0.04f,
-        float attackMs = 2f, float releaseMs = 60f,
-        bool velocityAffectsThreshold = true,
-        Func<float, float>? velocityCurve = null)
+    public struct Settings
+    {
+        public float OpenThresh;
+        public float CloseThresh;
+        public float AttackMs;
+        public float ReleaseMs;
+        public bool VelocityAffectsThreshold;
+        public Func<float, float>? VelocityCurve;
+    }
+
+    public static NoiseGateEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.attackMs = attackMs;
-        fx.releaseMs = releaseMs;
-        fx.openThresh = openThresh;
-        fx.closeThresh = closeThresh;
-        fx.rise = 1f - MathF.Exp(-1f / (attackMs * 0.001f * SoundProvider.SampleRate));
-        fx.fall = 1f - MathF.Exp(-1f / (releaseMs * 0.001f * SoundProvider.SampleRate));
-        fx.env = openThresh; // start above closeThresh to avoid initial mute
+        fx.attackMs = settings.AttackMs;
+        fx.releaseMs = settings.ReleaseMs;
+        fx.openThresh = settings.OpenThresh;
+        fx.closeThresh = settings.CloseThresh;
+        fx.rise = 1f - MathF.Exp(-1f / (settings.AttackMs * 0.001f * SoundProvider.SampleRate));
+        fx.fall = 1f - MathF.Exp(-1f / (settings.ReleaseMs * 0.001f * SoundProvider.SampleRate));
+        fx.env = settings.OpenThresh; // start above closeThresh to avoid initial mute
         fx.open = true;      // begin open so note attacks aren't choked
         fx.gain = 1f;
-        fx.velocityAffectsThreshold = velocityAffectsThreshold;
-        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityAffectsThreshold = settings.VelocityAffectsThreshold;
+        fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
         fx.lookPos = 0;
         Array.Clear(fx.lookBuf, 0, fx.lookBuf.Length);
         return fx;
     }
 
-    public IEffect Clone() => NoiseGateEffect.Create(openThresh, closeThresh, attackMs, releaseMs, velocityAffectsThreshold, velocityCurve);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            OpenThresh = openThresh,
+            CloseThresh = closeThresh,
+            AttackMs = attackMs,
+            ReleaseMs = releaseMs,
+            VelocityAffectsThreshold = velocityAffectsThreshold,
+            VelocityCurve = velocityCurve
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

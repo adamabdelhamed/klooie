@@ -18,13 +18,21 @@ public class PitchBendEffect : Recyclable, IPitchModEffect
 
     private PitchBendEffect() { }
 
-    public static PitchBendEffect Create(Func<float, float> attackBend, float attackDur, Func<float, float> releaseBend, float releaseDur)
+    public struct Settings
+    {
+        public Func<float, float> AttackBend;
+        public float AttackDuration;
+        public Func<float, float> ReleaseBend;
+        public float ReleaseDuration;
+    }
+
+    public static PitchBendEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.attackBendFunc = attackBend;
-        fx.attackDuration = attackDur;
-        fx.releaseBendFunc = releaseBend;
-        fx.releaseDuration = releaseDur;
+        fx.attackBendFunc = settings.AttackBend;
+        fx.attackDuration = settings.AttackDuration;
+        fx.releaseBendFunc = settings.ReleaseBend;
+        fx.releaseDuration = settings.ReleaseDuration;
         return fx;
     }
 
@@ -48,7 +56,17 @@ public class PitchBendEffect : Recyclable, IPitchModEffect
 
     public float Process(in EffectContext ctx) => ctx.Input;
 
-    public IEffect Clone() => Create(attackBendFunc, attackDuration, releaseBendFunc, releaseDuration);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            AttackBend = attackBendFunc,
+            AttackDuration = attackDuration,
+            ReleaseBend = releaseBendFunc,
+            ReleaseDuration = releaseDuration
+        };
+        return Create(in settings);
+    }
 
     protected override void OnReturn()
     {

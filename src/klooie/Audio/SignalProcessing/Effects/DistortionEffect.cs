@@ -19,29 +19,41 @@ class DistortionEffect : Recyclable, IEffect
     private DistortionEffect() { }
     static readonly LazyPool<DistortionEffect> _pool = new(() => new DistortionEffect());
 
-    public static DistortionEffect Create(
-        float drive = 6f, // overall gain
-        float stageRatio = 0.6f, // how each stage’s gain scales
-        float bias = 0.15f,      // DC bias to add asymmetry
-        Func<float, float>? velocityCurve = null,
-        float velocityScale = 1f)
+    public struct Settings
+    {
+        public float Drive;
+        public float StageRatio;
+        public float Bias;
+        public Func<float, float>? VelocityCurve;
+        public float VelocityScale;
+    }
+
+    public static DistortionEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.gain1 = drive;
-        fx.gain2 = drive * stageRatio;
-        fx.gain3 = drive * stageRatio * stageRatio;
-        fx.bias = bias;
+        fx.gain1 = settings.Drive;
+        fx.gain2 = settings.Drive * settings.StageRatio;
+        fx.gain3 = settings.Drive * settings.StageRatio * settings.StageRatio;
+        fx.bias = settings.Bias;
         fx.prevIn = 0f;
         fx.lpOut = 0f;
-        fx.stageRatio = stageRatio;
-        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
-        fx.velocityScale = velocityScale;
+        fx.stageRatio = settings.StageRatio;
+        fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = settings.VelocityScale;
         return fx;
     }
 
     public IEffect Clone()
     {
-        return Create(gain1, stageRatio, bias, velocityCurve, velocityScale);
+        var settings = new Settings
+        {
+            Drive = gain1,
+            StageRatio = stageRatio,
+            Bias = bias,
+            VelocityCurve = velocityCurve,
+            VelocityScale = velocityScale
+        };
+        return Create(in settings);
     }
 
     // one-pole LP at ~9 kHz (post-distortion, base SR)

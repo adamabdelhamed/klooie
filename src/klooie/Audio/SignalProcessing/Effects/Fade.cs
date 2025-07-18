@@ -18,14 +18,19 @@ public class FadeInEffect : Recyclable, IEffect
 
     private FadeInEffect() { }
 
-    public static FadeInEffect Create(float durationSeconds,
-        Func<float, float>? velocityCurve = null,
-        float velocityScale = 1f)
+    public struct Settings
+    {
+        public float DurationSeconds;
+        public Func<float, float>? VelocityCurve;
+        public float VelocityScale;
+    }
+
+    public static FadeInEffect Create(in Settings settings)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(durationSeconds);
-        ret.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
-        ret.velocityScale = velocityScale;
+        ret.Construct(settings.DurationSeconds);
+        ret.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
+        ret.velocityScale = settings.VelocityScale;
         return ret;
     }
 
@@ -35,7 +40,16 @@ public class FadeInEffect : Recyclable, IEffect
         finished = false;
     }
 
-    public IEffect Clone() => Create(fadeDuration, velocityCurve, velocityScale);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            DurationSeconds = fadeDuration,
+            VelocityCurve = velocityCurve,
+            VelocityScale = velocityScale
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {
@@ -77,14 +91,20 @@ public class FadeOutEffect : Recyclable, IEffect
     /// durationSeconds: how long the fade should last
     /// fadeStartTime: time (in seconds) when fade should *start* (default = 0 to fade from the beginning)
     /// </summary>
-    public static FadeOutEffect Create(float durationSeconds, float fadeStartTime = 0,
-        Func<float, float>? velocityCurve = null,
-        float velocityScale = 1f)
+public struct Settings
+{
+    public float DurationSeconds;
+    public float FadeStartTime;
+    public Func<float, float>? VelocityCurve;
+    public float VelocityScale;
+}
+
+    public static FadeOutEffect Create(in Settings settings)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(durationSeconds, fadeStartTime);
-        ret.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
-        ret.velocityScale = velocityScale;
+        ret.Construct(settings.DurationSeconds, settings.FadeStartTime);
+        ret.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
+        ret.velocityScale = settings.VelocityScale;
         return ret;
     }
 
@@ -95,7 +115,17 @@ public class FadeOutEffect : Recyclable, IEffect
         finished = false;
     }
 
-    public IEffect Clone() => Create(fadeDuration, fadeStartTime, velocityCurve, velocityScale);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            DurationSeconds = fadeDuration,
+            FadeStartTime = fadeStartTime,
+            VelocityCurve = velocityCurve,
+            VelocityScale = velocityScale
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

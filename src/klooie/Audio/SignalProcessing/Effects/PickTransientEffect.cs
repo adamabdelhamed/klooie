@@ -19,17 +19,31 @@ public sealed class PickTransientEffect : Recyclable, IEffect
         new(() => new PickTransientEffect());
     private PickTransientEffect() { rng = new Random(); }
 
-    public static PickTransientEffect Create(float duration = .005f, float gain = .6f)
+    public struct Settings
+    {
+        public float Duration;
+        public float Gain;
+    }
+
+    public static PickTransientEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.duration = duration;
-        fx.gain = gain;
+        fx.duration = settings.Duration;
+        fx.gain = settings.Gain;
         fx.timeSinceOn = 0f;
         fx.active = true;
         return fx;
     }
 
-    public IEffect Clone() => Create(duration, gain);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            Duration = duration,
+            Gain = gain
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {
