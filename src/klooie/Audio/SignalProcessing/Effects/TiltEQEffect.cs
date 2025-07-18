@@ -22,17 +22,21 @@ public sealed class TiltEQEffect : Recyclable, IEffect
     private TiltEQEffect() { }
 
     [SynthDescription("""
-    Settings defining the tilt amount and the cutoff frequency used by the
-    internal low‑pass filter.
-    """)]
+Settings defining the tilt amount and the cutoff frequency used by the
+internal low‑pass filter.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Tilt amount from -1 (bass boost) to +1 (treble
-        boost).""")]
+        [SynthDescription("""
+Tilt amount from -1 (bass boost) to +1 (treble
+boost).
+""")]
         public float Tilt;
 
-        [SynthDescription("""Cutoff frequency for the internal low-pass filter in
-        hertz.""")]
+        [SynthDescription("""
+Cutoff frequency for the internal low-pass filter in
+hertz.
+""")]
         public float CutoffHz;
     }
 

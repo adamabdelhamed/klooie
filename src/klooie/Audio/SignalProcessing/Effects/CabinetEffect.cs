@@ -24,17 +24,21 @@ class CabinetEffect : Recyclable, IEffect
         new(() => new CabinetEffect());
 
     [SynthDescription("""
-    Settings controlling the cabinet simulation.  These include an optional
-    curve for scaling output based on note velocity.
-    """)]
+Settings controlling the cabinet simulation.  These include an optional
+curve for scaling output based on note velocity.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Function that adjusts output level based on the
-        note's velocity.""")]
+        [SynthDescription("""
+Function that adjusts output level based on the
+note's velocity.
+""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Additional multiplier applied after evaluating the
-        velocity curve.""")]
+        [SynthDescription("""
+Additional multiplier applied after evaluating the
+velocity curve.
+""")]
         public float VelocityScale;
     }
 

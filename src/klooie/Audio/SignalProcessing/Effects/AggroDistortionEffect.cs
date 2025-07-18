@@ -30,29 +30,39 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
     private AggroDistortionEffect() { }
 
     [SynthDescription("""
-    Settings used when constructing an AggroDistortionEffect.  These values
-    control how hard the signal is driven and how each stage behaves.
-    """)]
+Settings used when constructing an AggroDistortionEffect.  These values
+control how hard the signal is driven and how each stage behaves.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Pre-gain applied before the distortion stages.  Higher
-        values push the effect harder.""")]
+        [SynthDescription("""
+Pre-gain applied before the distortion stages.  Higher
+values push the effect harder.
+""")]
         public float Drive;
 
-        [SynthDescription("""Relative gain drop applied to each successive
-        distortion stage.""")]
+        [SynthDescription("""
+Relative gain drop applied to each successive
+distortion stage.
+""")]
         public float StageRatio;
 
-        [SynthDescription("""Offset that introduces asymmetry into the clipping
-        curve.""")]
+        [SynthDescription("""
+Offset that introduces asymmetry into the clipping
+curve.
+""")]
         public float Bias;
 
-        [SynthDescription("""Function mapping note velocity to a gain
-        multiplier.""")]
+        [SynthDescription("""
+Function mapping note velocity to a gain
+multiplier.
+""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Overall multiplier applied after evaluating the
-        velocity curve.""")]
+        [SynthDescription("""
+Overall multiplier applied after evaluating the
+velocity curve.
+""")]
         public float VelocityScale;
     }
 

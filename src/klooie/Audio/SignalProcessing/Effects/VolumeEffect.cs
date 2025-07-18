@@ -28,15 +28,21 @@ Settings defining the fixed gain and optional velocity response.
 """)]
 public struct Settings
 {
-    [SynthDescription("""Gain multiplier applied to the input signal.""")]
+    [SynthDescription("""
+Gain multiplier applied to the input signal.
+""")]
     public float Gain;
 
-    [SynthDescription("""Function that converts note velocity into a gain
-    multiplier.""")]
+    [SynthDescription("""
+Function that converts note velocity into a gain
+multiplier.
+""")]
     public Func<float, float>? VelocityCurve;
 
-    [SynthDescription("""Additional multiplier applied after the velocity
-    curve.""")]
+    [SynthDescription("""
+Additional multiplier applied after the velocity
+curve.
+""")]
     public float VelocityScale;
 }
 

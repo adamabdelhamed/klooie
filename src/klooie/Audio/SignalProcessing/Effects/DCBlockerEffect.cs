@@ -26,17 +26,21 @@ public sealed class DCBlockerEffect : Recyclable, IEffect
     private DCBlockerEffect() { }
 
     [SynthDescription("""
-    Configuration options for the DC blocker including optional velocity
-    sensitivity.
-    """)]
+Configuration options for the DC blocker including optional velocity
+sensitivity.
+""")]
     public struct Settings
     {
-        [SynthDescription("""When true, the output level is scaled by the
-        incoming note velocity.""")]
+        [SynthDescription("""
+When true, the output level is scaled by the
+incoming note velocity.
+""")]
         public bool VelocityAffectsOutput;
 
-        [SynthDescription("""Function applied to velocity when computing the
-        output scale.""")]
+        [SynthDescription("""
+Function applied to velocity when computing the
+output scale.
+""")]
         public Func<float, float>? VelocityCurve;
     }
 

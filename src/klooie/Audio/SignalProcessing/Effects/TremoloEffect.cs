@@ -17,22 +17,30 @@ public class TremoloEffect : Recyclable, IEffect
     protected TremoloEffect() { }
 
     [SynthDescription("""
-    Settings for tremolo depth, rate and optional velocity-based scaling.
-    """)]
+Settings for tremolo depth, rate and optional velocity-based scaling.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Amount of volume modulation from 0 (none) to 1
-        (full).""")]
+        [SynthDescription("""
+Amount of volume modulation from 0 (none) to 1
+(full).
+""")]
         public float Depth;
 
-        [SynthDescription("""Frequency of the modulation LFO in hertz.""")]
+        [SynthDescription("""
+Frequency of the modulation LFO in hertz.
+""")]
         public float RateHz;
 
-        [SynthDescription("""If true, note velocity changes the modulation
-        depth.""")]
+        [SynthDescription("""
+If true, note velocity changes the modulation
+depth.
+""")]
         public bool VelocityAffectsDepth;
 
-        [SynthDescription("""Function mapping velocity to a depth multiplier.""")]
+        [SynthDescription("""
+Function mapping velocity to a depth multiplier.
+""")]
         public Func<float, float>? DepthVelocityCurve;
     }
 

@@ -34,26 +34,36 @@ public sealed class ToneStackEffect : Recyclable, IEffect
     private ToneStackEffect() { }
 
     [SynthDescription("""
-    Settings controlling the bass, mid and treble gains and optional
-    velocity-based scaling.
-    """)]
+Settings controlling the bass, mid and treble gains and optional
+velocity-based scaling.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Linear gain applied to the low frequencies.""")]
+        [SynthDescription("""
+Linear gain applied to the low frequencies.
+""")]
         public float Bass;
 
-        [SynthDescription("""Linear gain applied to the midrange.""")]
+        [SynthDescription("""
+Linear gain applied to the midrange.
+""")]
         public float Mid;
 
-        [SynthDescription("""Linear gain applied to the high frequencies.""")]
+        [SynthDescription("""
+Linear gain applied to the high frequencies.
+""")]
         public float Treble;
 
-        [SynthDescription("""If true, note velocity scales the bass, mid and
-        treble gains.""")]
+        [SynthDescription("""
+If true, note velocity scales the bass, mid and
+treble gains.
+""")]
         public bool VelocityAffectsGain;
 
-        [SynthDescription("""Function mapping velocity to a gain multiplier
-        applied to all bands.""")]
+        [SynthDescription("""
+Function mapping velocity to a gain multiplier
+applied to all bands.
+""")]
         public Func<float, float>? GainVelocityCurve;
     }
 

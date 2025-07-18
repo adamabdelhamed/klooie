@@ -26,33 +26,47 @@ public class ParametricEQEffect : Recyclable, IEffect
     private ParametricEQEffect() { }
 
     [SynthDescription("""
-    Settings that configure the filter type, frequency and how gain responds to
-    note velocity.
-    """)]
+Settings that configure the filter type, frequency and how gain responds to
+note velocity.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Which biquad filter to use (peak, low shelf or high
-        shelf).""")]
+        [SynthDescription("""
+Which biquad filter to use (peak, low shelf or high
+shelf).
+""")]
         public BiquadType Type;
 
-        [SynthDescription("""Center frequency in hertz.""")]
+        [SynthDescription("""
+Center frequency in hertz.
+""")]
         public float Freq;
 
-        [SynthDescription("""Boost or cut amount in decibels.""")]
+        [SynthDescription("""
+Boost or cut amount in decibels.
+""")]
         public float GainDb;
 
-        [SynthDescription("""Resonance or bandwidth of the filter.""")]
+        [SynthDescription("""
+Resonance or bandwidth of the filter.
+""")]
         public float Q;
 
-        [SynthDescription("""If true, note velocity modulates the filter's
-        gain.""")]
+        [SynthDescription("""
+If true, note velocity modulates the filter's
+gain.
+""")]
         public bool VelocityAffectsGain;
 
-        [SynthDescription("""Function mapping velocity to a gain multiplier.""")]
+        [SynthDescription("""
+Function mapping velocity to a gain multiplier.
+""")]
         public Func<float, float>? GainVelocityCurve;
 
-        [SynthDescription("""Multiplier applied after evaluating the velocity
-        curve.""")]
+        [SynthDescription("""
+Multiplier applied after evaluating the velocity
+curve.
+""")]
         public float GainVelocityScale;
     }
 

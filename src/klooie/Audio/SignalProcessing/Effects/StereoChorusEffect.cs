@@ -24,28 +24,40 @@ public class StereoChorusEffect : Recyclable, IEffect
     private static LazyPool<StereoChorusEffect> _pool = new(() => new StereoChorusEffect());
     protected StereoChorusEffect() { }
     [SynthDescription("""
-    Settings defining the base delay time, modulation depth and how the mix
-    responds to note velocity.
-    """)]
+Settings defining the base delay time, modulation depth and how the mix
+responds to note velocity.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Initial delay in milliseconds before modulation.""")]
+        [SynthDescription("""
+Initial delay in milliseconds before modulation.
+""")]
         public int DelayMs;
 
-        [SynthDescription("""Amount the delay is modulated in milliseconds.""")]
+        [SynthDescription("""
+Amount the delay is modulated in milliseconds.
+""")]
         public int DepthMs;
 
-        [SynthDescription("""Speed of the modulation LFO in hertz.""")]
+        [SynthDescription("""
+Speed of the modulation LFO in hertz.
+""")]
         public float RateHz;
 
-        [SynthDescription("""Mix between the original and modulated signals
-        (0 = dry, 1 = fully wet).""")]
+        [SynthDescription("""
+Mix between the original and modulated signals
+(0 = dry, 1 = fully wet).
+""")]
         public float Mix;
 
-        [SynthDescription("""If true, note velocity affects the wet/dry mix.""")]
+        [SynthDescription("""
+If true, note velocity affects the wet/dry mix.
+""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Function converting velocity to a mix multiplier.""")]
+        [SynthDescription("""
+Function converting velocity to a mix multiplier.
+""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

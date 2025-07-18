@@ -126,23 +126,31 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
     }
 
     [SynthDescription("""
-    Settings describing the base patch and how many detuned voices to create
-    along with their pan spread.
-    """)]
+Settings describing the base patch and how many detuned voices to create
+along with their pan spread.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Patch that will be duplicated for every voice.""")]
+        [SynthDescription("""
+Patch that will be duplicated for every voice.
+""")]
         public ISynthPatch BasePatch;
 
-        [SynthDescription("""How many detuned voices to spawn.""")]
+        [SynthDescription("""
+How many detuned voices to spawn.
+""")]
         public int NumVoices;
 
-        [SynthDescription("""Total amount of detuning across all voices in
-        cents.""")]
+        [SynthDescription("""
+Total amount of detuning across all voices in
+cents.
+""")]
         public float DetuneCents;
 
-        [SynthDescription("""Stereo spread of the voices where -1 is hard left
-        and +1 is hard right.""")]
+        [SynthDescription("""
+Stereo spread of the voices where -1 is hard left
+and +1 is hard right.
+""")]
         public float PanSpread;
     }
 }

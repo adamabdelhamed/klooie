@@ -30,31 +30,43 @@ public sealed class CompressorEffect : Recyclable, IEffect
     private CompressorEffect() { }
 
     [SynthDescription("""
-    Settings that define how the compressor reacts to incoming audio.
-    """)]
+Settings that define how the compressor reacts to incoming audio.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Input level (0–1) above which compression begins.""")]
+        [SynthDescription("""
+Input level (0–1) above which compression begins.
+""")]
         public float Threshold;
 
-        [SynthDescription("""Amount of gain reduction applied once above the
-        threshold.""")]
+        [SynthDescription("""
+Amount of gain reduction applied once above the
+threshold.
+""")]
         public float Ratio;
 
-        [SynthDescription("""How quickly the compressor engages when the
-        threshold is exceeded.""")]
+        [SynthDescription("""
+How quickly the compressor engages when the
+threshold is exceeded.
+""")]
         public float Attack;
 
-        [SynthDescription("""How quickly the compression relaxes after the
-        signal falls below the threshold.""")]
+        [SynthDescription("""
+How quickly the compression relaxes after the
+signal falls below the threshold.
+""")]
         public float Release;
 
-        [SynthDescription("""Function mapping note velocity to a gain
-        multiplier.""")]
+        [SynthDescription("""
+Function mapping note velocity to a gain
+multiplier.
+""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Multiplier applied after evaluating the velocity
-        curve.""")]
+        [SynthDescription("""
+Multiplier applied after evaluating the velocity
+curve.
+""")]
         public float VelocityScale;
     }
 

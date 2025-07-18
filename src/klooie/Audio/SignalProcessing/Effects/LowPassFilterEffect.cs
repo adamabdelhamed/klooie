@@ -23,25 +23,33 @@ class LowPassFilterEffect : Recyclable, IEffect
     private LowPassFilterEffect() { }
 
     [SynthDescription("""
-    Settings describing the cutoff frequency and how strongly the filtered
-    signal is mixed in.
-    """)]
+Settings describing the cutoff frequency and how strongly the filtered
+signal is mixed in.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Cutoff frequency in hertz above which the signal is
-        attenuated.""")]
+        [SynthDescription("""
+Cutoff frequency in hertz above which the signal is
+attenuated.
+""")]
         public float CutoffHz;
 
-        [SynthDescription("""Mix level between the original and filtered signal
-        (0 = dry, 1 = filtered).""")]
+        [SynthDescription("""
+Mix level between the original and filtered signal
+(0 = dry, 1 = filtered).
+""")]
         public float Mix;
 
-        [SynthDescription("""If true, note velocity changes how much of the
-        filtered signal is heard.""")]
+        [SynthDescription("""
+If true, note velocity changes how much of the
+filtered signal is heard.
+""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Function converting velocity into a mix
-        multiplier.""")]
+        [SynthDescription("""
+Function converting velocity into a mix
+multiplier.
+""")]
         public Func<float, float>? MixVelocityCurve;
     }
 
