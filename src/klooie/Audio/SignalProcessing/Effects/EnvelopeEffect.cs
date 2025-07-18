@@ -21,6 +21,9 @@ public class EnvelopeEffect : Recyclable, IEffect
         public double Release;
     }
 
+    public static EnvelopeEffect Create(double attack, double decay, double sustain, double release) =>
+        Create(new Settings() { Attack = attack, Decay = decay, Sustain = sustain, Release = release });
+
     public static EnvelopeEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();

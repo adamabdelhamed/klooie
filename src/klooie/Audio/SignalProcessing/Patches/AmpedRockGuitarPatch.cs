@@ -55,11 +55,11 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch, ICompositePa
             .WithReverb(feedback: 0.65f, diffusion: 0.38f, wet: 0.16f, dry: 0.75f)
 
             // Final stage: compression/gate/envelope
-            .WithEffect(CompressorEffect.Create(
-                threshold: 0.55f,
-                ratio: 6f,
-                attack: 0.003f,
-                release: 0.010f))
+            .WithEffect(CompressorEffect.Create(new CompressorEffect.Settings() {
+                Threshold= 0.55f,
+                Ratio= 6f,
+                Attack = 0.003f,
+                Release= 0.010f}))
             .WithNoiseGate(openThresh: 0.04f, closeThresh: 0.036f,
                            attackMs: 2f, releaseMs: 35f)
             .WithEffect(EnvelopeEffect.Create(

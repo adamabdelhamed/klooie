@@ -44,11 +44,8 @@ public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
             .WithLowPass(158f)                      // higher cutoff, more highs get through
             .WithPingPongDelay(delayMs: 170f, feedback: 0.24f, mix: 0.11f)
             .WithReverb(feedback: 0.38f, diffusion: 0.21f, wet: 0.08f, dry: 0.87f)
-            .WithEffect(CompressorEffect.Create(
-                threshold: 0.56f,
-                ratio: 6.5f,
-                attack: 0.0018f,
-                release: 0.011f))
+            .WithEffect(CompressorEffect.Create(new CompressorEffect.Settings() { Threshold = .56f
+            , Ratio = 6.5f, Attack = .0018f, Release = .011f}))
             .WithNoiseGate(openThresh: 0.018f, closeThresh: 0.014f,
                            attackMs: 1.2f, releaseMs: 18f)
             .WithEffect(EnvelopeEffect.Create(
