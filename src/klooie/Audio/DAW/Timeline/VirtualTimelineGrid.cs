@@ -170,7 +170,11 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             ConsoleApp.Current.Scheduler.Delay(60, () =>
             {
-                me.Player.Start(note.StartBeat);
+                // The incoming note's StartBeat is relative to the play request
+                // which may be zero if playback starts mid-timeline. Using it
+                // would reset the playhead to the beginning, so instead start
+                // at the current beat that playback was initiated from.
+                me.Player.Start(me.CurrentBeat);
                 me.PlaybackStarting.Fire(me.CurrentBeat);
             });
         });
