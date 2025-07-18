@@ -18,9 +18,13 @@ class CabinetEffect : Recyclable, IEffect
     static readonly LazyPool<CabinetEffect> _pool =
         new(() => new CabinetEffect());
 
-    public static CabinetEffect Create(
-        Func<float, float>? velocityCurve = null,
-        float velocityScale = 1f)
+    public struct Settings
+    {
+        public Func<float, float>? VelocityCurve;
+        public float VelocityScale;
+    }
+
+    public static CabinetEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
         // design filters (values = typical 4×12 cab)
@@ -31,12 +35,20 @@ class CabinetEffect : Recyclable, IEffect
         Biquad.DesignHighShelf(fc: 4500f, gainDb: -6f, out fx.bh0, out fx.bh1, out fx.bh2,
                                                               out fx.ah1, out fx.ah2);
         fx.low = fx.mid = fx.high = default;
-        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
-        fx.velocityScale = velocityScale;
+        fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = settings.VelocityScale;
         return fx;
     }
 
-    public IEffect Clone() => Create(velocityCurve, velocityScale);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            VelocityCurve = velocityCurve,
+            VelocityScale = velocityScale
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

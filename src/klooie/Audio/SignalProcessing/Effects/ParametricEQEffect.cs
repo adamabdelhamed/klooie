@@ -21,32 +21,40 @@ public class ParametricEQEffect : Recyclable, IEffect
 
     private ParametricEQEffect() { }
 
-    public static ParametricEQEffect Create(BiquadType type, float freq, float gainDb, float q = 1.0f,
-        bool velocityAffectsGain = true,
-        Func<float, float>? gainVelocityCurve = null,
-        float gainVelocityScale = 1f)
+    public struct Settings
+    {
+        public BiquadType Type;
+        public float Freq;
+        public float GainDb;
+        public float Q;
+        public bool VelocityAffectsGain;
+        public Func<float, float>? GainVelocityCurve;
+        public float GainVelocityScale;
+    }
+
+    public static ParametricEQEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.type = type;
-        fx.freq = freq;
-        fx.gainDb = gainDb;
-        fx.q = q;
-        fx.velocityAffectsGain = velocityAffectsGain;
-        fx.gainVelocityCurve = gainVelocityCurve ?? EffectContext.EaseLinear;
-        fx.gainVelocityScale = gainVelocityScale;
+        fx.type = settings.Type;
+        fx.freq = settings.Freq;
+        fx.gainDb = settings.GainDb;
+        fx.q = settings.Q;
+        fx.velocityAffectsGain = settings.VelocityAffectsGain;
+        fx.gainVelocityCurve = settings.GainVelocityCurve ?? EffectContext.EaseLinear;
+        fx.gainVelocityScale = settings.GainVelocityScale;
         fx.state = new Biquad.State();
 
         // Design coeffs
-        switch (type)
+        switch (settings.Type)
         {
             case BiquadType.Peak:
-                Biquad.DesignPeak(freq, q, gainDb, out fx.b0, out fx.b1, out fx.b2, out fx.a1, out fx.a2);
+                Biquad.DesignPeak(settings.Freq, settings.Q, settings.GainDb, out fx.b0, out fx.b1, out fx.b2, out fx.a1, out fx.a2);
                 break;
             case BiquadType.LowShelf:
-                Biquad.DesignLowShelf(freq, gainDb, out fx.b0, out fx.b1, out fx.b2, out fx.a1, out fx.a2);
+                Biquad.DesignLowShelf(settings.Freq, settings.GainDb, out fx.b0, out fx.b1, out fx.b2, out fx.a1, out fx.a2);
                 break;
             case BiquadType.HighShelf:
-                Biquad.DesignHighShelf(freq, gainDb, out fx.b0, out fx.b1, out fx.b2, out fx.a1, out fx.a2);
+                Biquad.DesignHighShelf(settings.Freq, settings.GainDb, out fx.b0, out fx.b1, out fx.b2, out fx.a1, out fx.a2);
                 break;
         }
         return fx;
@@ -77,7 +85,19 @@ public class ParametricEQEffect : Recyclable, IEffect
     }
 
     public IEffect Clone()
-        => Create(type, freq, gainDb, q, velocityAffectsGain, gainVelocityCurve, gainVelocityScale);
+    {
+        var settings = new Settings
+        {
+            Type = type,
+            Freq = freq,
+            GainDb = gainDb,
+            Q = q,
+            VelocityAffectsGain = velocityAffectsGain,
+            GainVelocityCurve = gainVelocityCurve,
+            GainVelocityScale = gainVelocityScale
+        };
+        return Create(in settings);
+    }
 
     protected override void OnReturn()
     {

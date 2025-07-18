@@ -19,19 +19,32 @@ public sealed class DCBlockerEffect : Recyclable, IEffect
         new(() => new DCBlockerEffect());
     private DCBlockerEffect() { }
 
-    public static DCBlockerEffect Create(bool velocityAffectsOutput = false,
-        Func<float, float>? velocityCurve = null)
+    public struct Settings
+    {
+        public bool VelocityAffectsOutput;
+        public Func<float, float>? VelocityCurve;
+    }
+
+    public static DCBlockerEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
         float sr = SoundProvider.SampleRate;
         fx.a = (float)Math.Exp(-2.0 * Math.PI * fCut / sr);
         fx.xPrev = fx.yPrev = 0f;
-        fx.velocityAffectsOutput = velocityAffectsOutput;
-        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityAffectsOutput = settings.VelocityAffectsOutput;
+        fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
         return fx;
     }
 
-    public IEffect Clone() => Create(velocityAffectsOutput, velocityCurve);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            VelocityAffectsOutput = velocityAffectsOutput,
+            VelocityCurve = velocityCurve
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

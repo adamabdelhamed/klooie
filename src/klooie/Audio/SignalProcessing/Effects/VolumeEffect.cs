@@ -18,21 +18,31 @@ public class VolumeEffect : Recyclable, IEffect
     private VolumeEffect() { }
     static readonly LazyPool<VolumeEffect> _pool = new(() => new VolumeEffect());
 
-    public static VolumeEffect Create(
-        float gain = 1.0f,
-        Func<float, float>? velocityCurve = null,
-        float velocityScale = 1f)
-    {
-        var fx = _pool.Value.Rent();
-        fx.gain = gain;
-        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
-        fx.velocityScale = velocityScale;
-        return fx;
-    }
+public struct Settings
+{
+    public float Gain;
+    public Func<float, float>? VelocityCurve;
+    public float VelocityScale;
+}
+
+public static VolumeEffect Create(in Settings settings)
+{
+    var fx = _pool.Value.Rent();
+    fx.gain = settings.Gain;
+    fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
+    fx.velocityScale = settings.VelocityScale;
+    return fx;
+}
 
     public IEffect Clone()
     {
-        return Create(gain, velocityCurve, velocityScale);
+        var settings = new Settings
+        {
+            Gain = gain,
+            VelocityCurve = velocityCurve,
+            VelocityScale = velocityScale
+        };
+        return Create(in settings);
     }
 
     public float Process(in EffectContext ctx)

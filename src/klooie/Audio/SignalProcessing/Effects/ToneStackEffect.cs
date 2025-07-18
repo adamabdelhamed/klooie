@@ -28,22 +28,40 @@ public sealed class ToneStackEffect : Recyclable, IEffect
         new(() => new ToneStackEffect());
     private ToneStackEffect() { }
 
-    public static ToneStackEffect Create(float bass = 1f, float mid = 1f, float treble = 1f,
-        bool velocityAffectsGain = true,
-        Func<float, float>? gainVelocityCurve = null)
+    public struct Settings
+    {
+        public float Bass;
+        public float Mid;
+        public float Treble;
+        public bool VelocityAffectsGain;
+        public Func<float, float>? GainVelocityCurve;
+    }
+
+    public static ToneStackEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.bassG = bass;
-        fx.midG = mid;
-        fx.trebG = treble;
+        fx.bassG = settings.Bass;
+        fx.midG = settings.Mid;
+        fx.trebG = settings.Treble;
         fx.lowLpf = 0f;
         fx.highLpf = 0f;
-        fx.velocityAffectsGain = velocityAffectsGain;
-        fx.gainVelocityCurve = gainVelocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityAffectsGain = settings.VelocityAffectsGain;
+        fx.gainVelocityCurve = settings.GainVelocityCurve ?? EffectContext.EaseLinear;
         return fx;
     }
 
-    public IEffect Clone() => Create(bassG, midG, trebG, velocityAffectsGain, gainVelocityCurve);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            Bass = bassG,
+            Mid = midG,
+            Treble = trebG,
+            VelocityAffectsGain = velocityAffectsGain,
+            GainVelocityCurve = gainVelocityCurve
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

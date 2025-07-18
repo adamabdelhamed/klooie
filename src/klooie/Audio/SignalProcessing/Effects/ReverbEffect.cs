@@ -101,14 +101,22 @@ public class ReverbEffect : Recyclable, IEffect
 
     private static LazyPool<ReverbEffect> _pool = new(() => new ReverbEffect());
     protected ReverbEffect() { }
-    public static ReverbEffect Create(float feedback = 0.78f, float diffusion = 0.5f, float wet = 0.3f, float dry = 0.7f,
-        bool velocityAffectsMix = true,
-        Func<float, float>? mixVelocityCurve = null)
+    public struct Settings
+    {
+        public float Feedback;
+        public float Diffusion;
+        public float Wet;
+        public float Dry;
+        public bool VelocityAffectsMix;
+        public Func<float, float>? MixVelocityCurve;
+    }
+
+    public static ReverbEffect Create(in Settings settings)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(feedback, diffusion, wet, dry);
-        ret.velocityAffectsMix = velocityAffectsMix;
-        ret.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
+        ret.Construct(settings.Feedback, settings.Diffusion, settings.Wet, settings.Dry);
+        ret.velocityAffectsMix = settings.VelocityAffectsMix;
+        ret.mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
 
@@ -130,7 +138,19 @@ public class ReverbEffect : Recyclable, IEffect
         this.dry = dry;
     }
 
-    public IEffect Clone() => Create(feedback, diffusion, wet, dry, velocityAffectsMix, mixVelocityCurve);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            Feedback = feedback,
+            Diffusion = diffusion,
+            Wet = wet,
+            Dry = dry,
+            VelocityAffectsMix = velocityAffectsMix,
+            MixVelocityCurve = mixVelocityCurve
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

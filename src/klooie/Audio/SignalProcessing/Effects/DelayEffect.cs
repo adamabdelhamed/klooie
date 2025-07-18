@@ -15,14 +15,21 @@ public class DelayEffect : Recyclable, IEffect
 
     private static LazyPool<DelayEffect> _pool = new(() => new DelayEffect()); // Default 1 second delay at 44100Hz
     protected DelayEffect() { }
-    public static DelayEffect Create(int delaySamples, float feedback = 0.3f, float mix = 0.4f,
-        bool velocityAffectsMix = true,
-        Func<float, float>? mixVelocityCurve = null)
+    public struct Settings
+    {
+        public int DelaySamples;
+        public float Feedback;
+        public float Mix;
+        public bool VelocityAffectsMix;
+        public Func<float, float>? MixVelocityCurve;
+    }
+
+    public static DelayEffect Create(in Settings settings)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(delaySamples, feedback, mix);
-        ret.velocityAffectsMix = velocityAffectsMix;
-        ret.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
+        ret.Construct(settings.DelaySamples, settings.Feedback, settings.Mix);
+        ret.velocityAffectsMix = settings.VelocityAffectsMix;
+        ret.mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
     protected void Construct(int delaySamples, float feedback = 0.3f, float mix = 0.4f)
@@ -35,8 +42,15 @@ public class DelayEffect : Recyclable, IEffect
 
     public IEffect Clone()
     {
-        var ret= Create(buffer.Length, feedback, mix, velocityAffectsMix, mixVelocityCurve);
-        return ret;
+        var settings = new Settings
+        {
+            DelaySamples = buffer.Length,
+            Feedback = feedback,
+            Mix = mix,
+            VelocityAffectsMix = velocityAffectsMix,
+            MixVelocityCurve = mixVelocityCurve
+        };
+        return Create(in settings);
     }
 
     public float Process(in EffectContext ctx)

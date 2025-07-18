@@ -23,25 +23,40 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
 
     private AggroDistortionEffect() { }
 
-    public static AggroDistortionEffect Create(
-        float drive = 12f,       // hotter than before
-        float stageRatio = 0.8f, // keep stages fairly hot
-        float bias = 0.12f,      // subtle even-harmonics
-        Func<float, float>? velocityCurve = null,
-        float velocityScale = 1f)
+    public struct Settings
+    {
+        public float Drive;
+        public float StageRatio;
+        public float Bias;
+        public Func<float, float>? VelocityCurve;
+        public float VelocityScale;
+    }
+
+    public static AggroDistortionEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.preGain = drive;
-        fx.stageRatio = stageRatio;
-        fx.bias = bias;
-        fx.makeup = 1f / MathF.Tanh(drive * 0.7f); // auto-level
+        fx.preGain = settings.Drive;
+        fx.stageRatio = settings.StageRatio;
+        fx.bias = settings.Bias;
+        fx.makeup = 1f / MathF.Tanh(settings.Drive * 0.7f); // auto-level
         fx.Reset();
-        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
-        fx.velocityScale = velocityScale;
+        fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = settings.VelocityScale;
         return fx;
     }
 
-    public IEffect Clone() => Create(preGain, stageRatio, bias, velocityCurve, velocityScale);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            Drive = preGain,
+            StageRatio = stageRatio,
+            Bias = bias,
+            VelocityCurve = velocityCurve,
+            VelocityScale = velocityScale
+        };
+        return Create(in settings);
+    }
 
     /* pre-compiled constants ---------------------------------------------- */
     private const int oversample = 4;

@@ -14,16 +14,21 @@ public class HighPassFilterEffect : Recyclable, IEffect
     private static readonly LazyPool<HighPassFilterEffect> _pool = new(() => new HighPassFilterEffect());
     protected HighPassFilterEffect() { }
 
-    public static HighPassFilterEffect Create(float cutoffHz = 200f,
-        float mix = 1f,
-        bool velocityAffectsMix = true,
-        Func<float, float>? mixVelocityCurve = null)
+    public struct Settings
+    {
+        public float CutoffHz;
+        public float Mix;
+        public bool VelocityAffectsMix;
+        public Func<float, float>? MixVelocityCurve;
+    }
+
+    public static HighPassFilterEffect Create(in Settings settings)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(cutoffHz);
-        ret.mix = mix;
-        ret.velocityAffectsMix = velocityAffectsMix;
-        ret.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
+        ret.Construct(settings.CutoffHz);
+        ret.mix = settings.Mix;
+        ret.velocityAffectsMix = settings.VelocityAffectsMix;
+        ret.mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
 
@@ -37,7 +42,17 @@ public class HighPassFilterEffect : Recyclable, IEffect
         this.cutoffHz = cutoffHz;
     }
 
-    public IEffect Clone() => HighPassFilterEffect.Create(cutoffHz, mix, velocityAffectsMix, mixVelocityCurve);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            CutoffHz = cutoffHz,
+            Mix = mix,
+            VelocityAffectsMix = velocityAffectsMix,
+            MixVelocityCurve = mixVelocityCurve
+        };
+        return Create(in settings);
+    }
 
     public float Process(in EffectContext ctx)
     {

@@ -30,20 +30,34 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
 
     private PresenceShelfEffect() { }
 
-    public static PresenceShelfEffect Create(float presenceDb = +3f,
-        Func<float, float>? velocityCurve = null,
-        float velocityScale = 1f)
+    public struct Settings
+    {
+        public float PresenceDb;
+        public Func<float, float>? VelocityCurve;
+        public float VelocityScale;
+    }
+
+    public static PresenceShelfEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.shelfGain = MathF.Pow(10f, presenceDb / 20f);
+        fx.shelfGain = MathF.Pow(10f, settings.PresenceDb / 20f);
         fx.Configure();
         fx.resY1 = fx.resY2 = fx.lp = 0f;
-        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
-        fx.velocityScale = velocityScale;
+        fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = settings.VelocityScale;
         return fx;
     }
 
-    public IEffect Clone() => Create(20f * MathF.Log10(shelfGain), velocityCurve, velocityScale);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            PresenceDb = 20f * MathF.Log10(shelfGain),
+            VelocityCurve = velocityCurve,
+            VelocityScale = velocityScale
+        };
+        return Create(in settings);
+    }
 
     /* ----- core ---------------------------------------------------------- */
     public float Process(in EffectContext ctx)

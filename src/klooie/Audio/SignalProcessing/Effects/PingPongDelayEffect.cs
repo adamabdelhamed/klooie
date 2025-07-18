@@ -15,18 +15,25 @@ public class PingPongDelayEffect : Recyclable, IEffect
 
     private PingPongDelayEffect() { }
 
-    public static PingPongDelayEffect Create(int delaySamples, float feedback = 0.5f, float mix = 0.4f,
-        bool velocityAffectsMix = true,
-        Func<float, float>? mixVelocityCurve = null)
+    public struct Settings
+    {
+        public int DelaySamples;
+        public float Feedback;
+        public float Mix;
+        public bool VelocityAffectsMix;
+        public Func<float, float>? MixVelocityCurve;
+    }
+
+    public static PingPongDelayEffect Create(in Settings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.delaySamples = delaySamples;
-        fx.feedback = Math.Clamp(feedback, 0f, 0.98f);
-        fx.mix = Math.Clamp(mix, 0f, 1f);
-        fx.velocityAffectsMix = velocityAffectsMix;
-        fx.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
+        fx.delaySamples = settings.DelaySamples;
+        fx.feedback = Math.Clamp(settings.Feedback, 0f, 0.98f);
+        fx.mix = Math.Clamp(settings.Mix, 0f, 1f);
+        fx.velocityAffectsMix = settings.VelocityAffectsMix;
+        fx.mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
 
-        fx.bufferSize = Math.Max(2, delaySamples + 1);
+        fx.bufferSize = Math.Max(2, settings.DelaySamples + 1);
         fx.leftBuffer = fx.leftBuffer != null && fx.leftBuffer.Length == fx.bufferSize ? fx.leftBuffer : new float[fx.bufferSize];
         fx.rightBuffer = fx.rightBuffer != null && fx.rightBuffer.Length == fx.bufferSize ? fx.rightBuffer : new float[fx.bufferSize];
         fx.writeIndex = 0;
@@ -73,7 +80,18 @@ public class PingPongDelayEffect : Recyclable, IEffect
         return dry * (1f - mixAmt) + wet * mixAmt;
     }
 
-    public IEffect Clone() => Create(delaySamples, feedback, mix, velocityAffectsMix, mixVelocityCurve);
+    public IEffect Clone()
+    {
+        var settings = new Settings
+        {
+            DelaySamples = delaySamples,
+            Feedback = feedback,
+            Mix = mix,
+            VelocityAffectsMix = velocityAffectsMix,
+            MixVelocityCurve = mixVelocityCurve
+        };
+        return Create(in settings);
+    }
 
     protected override void OnReturn()
     {
