@@ -41,7 +41,7 @@ public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
             .WithToneStack(1.08f, 0.75f, 1.2f)        // modest scoop/bright
             .WithCabinet()
             .WithPresenceShelf(+1.2f)
-            .WithLowPass(0.022f)                      // higher cutoff, more highs get through
+            .WithLowPass(158f)                      // higher cutoff, more highs get through
             .WithPingPongDelay(delayMs: 170f, feedback: 0.24f, mix: 0.11f)
             .WithReverb(feedback: 0.38f, diffusion: 0.21f, wet: 0.08f, dry: 0.87f)
             .WithEffect(CompressorEffect.Create(
