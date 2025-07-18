@@ -7,7 +7,8 @@ namespace klooie;
 /// Positive <c>tilt</c> brightens; negative warms.
 /// </summary>
 [SynthDescription("""
-First-order tilt EQ balancing lows and highs around a fixed cutoff.
+Tilt EQ that boosts highs while cutting lows (or the reverse) around a chosen
+cutoff frequency.
 """)]
 [SynthCategory("Filter")]
 public sealed class TiltEQEffect : Recyclable, IEffect
@@ -21,14 +22,17 @@ public sealed class TiltEQEffect : Recyclable, IEffect
     private TiltEQEffect() { }
 
     [SynthDescription("""
-    Parameters for TiltEQEffect.
+    Settings defining the tilt amount and the cutoff frequency used by the
+    internal low‑pass filter.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Tilt amount from -1 to +1.""")]
+        [SynthDescription("""Tilt amount from -1 (bass boost) to +1 (treble
+        boost).""")]
         public float Tilt;
 
-        [SynthDescription("""Cutoff frequency for the underlying low-pass.""")]
+        [SynthDescription("""Cutoff frequency for the internal low-pass filter in
+        hertz.""")]
         public float CutoffHz;
     }
 

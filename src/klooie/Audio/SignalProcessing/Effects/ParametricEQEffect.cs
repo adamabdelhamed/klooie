@@ -3,7 +3,7 @@
 public enum BiquadType { Peak, LowShelf, HighShelf }
 
 [SynthDescription("""
-Parametric equalizer supporting peak and shelf modes.
+Flexible parametric EQ supporting peak, low‑shelf and high‑shelf modes.
 """)]
 [SynthCategory("Filter")]
 public class ParametricEQEffect : Recyclable, IEffect
@@ -26,29 +26,33 @@ public class ParametricEQEffect : Recyclable, IEffect
     private ParametricEQEffect() { }
 
     [SynthDescription("""
-    Parameters for ParametricEQEffect.
+    Settings that configure the filter type, frequency and how gain responds to
+    note velocity.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Type of biquad filter.""")]
+        [SynthDescription("""Which biquad filter to use (peak, low shelf or high
+        shelf).""")]
         public BiquadType Type;
 
-        [SynthDescription("""Center frequency in Hz.""")]
+        [SynthDescription("""Center frequency in hertz.""")]
         public float Freq;
 
-        [SynthDescription("""Gain in decibels.""")]
+        [SynthDescription("""Boost or cut amount in decibels.""")]
         public float GainDb;
 
-        [SynthDescription("""Quality factor.""")]
+        [SynthDescription("""Resonance or bandwidth of the filter.""")]
         public float Q;
 
-        [SynthDescription("""Whether velocity affects gain.""")]
+        [SynthDescription("""If true, note velocity modulates the filter's
+        gain.""")]
         public bool VelocityAffectsGain;
 
-        [SynthDescription("""Curve for velocity-based gain scaling.""")]
+        [SynthDescription("""Function mapping velocity to a gain multiplier.""")]
         public Func<float, float>? GainVelocityCurve;
 
-        [SynthDescription("""Scale factor for velocity curve.""")]
+        [SynthDescription("""Multiplier applied after evaluating the velocity
+        curve.""")]
         public float GainVelocityScale;
     }
 

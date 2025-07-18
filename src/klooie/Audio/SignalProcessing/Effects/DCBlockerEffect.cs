@@ -7,7 +7,9 @@ namespace klooie;
 /// Removes sub-audible offsets that become “pops” after heavy drive.
 /// </summary>
 [SynthDescription("""
-High-pass filter at 15 Hz to remove DC offsets.
+Very low high-pass filter (around 15 Hz) that removes DC offsets.
+Use this to eliminate sub-audible shifts that can cause pops after heavy
+processing.
 """)]
 [SynthCategory("Filter")]
 public sealed class DCBlockerEffect : Recyclable, IEffect
@@ -24,14 +26,17 @@ public sealed class DCBlockerEffect : Recyclable, IEffect
     private DCBlockerEffect() { }
 
     [SynthDescription("""
-    Parameters for DCBlockerEffect.
+    Configuration options for the DC blocker including optional velocity
+    sensitivity.
     """)]
     public struct Settings
     {
-        [SynthDescription("""When true, velocity scales the output level.""")]
+        [SynthDescription("""When true, the output level is scaled by the
+        incoming note velocity.""")]
         public bool VelocityAffectsOutput;
 
-        [SynthDescription("""Curve used when velocity affects output.""")]
+        [SynthDescription("""Function applied to velocity when computing the
+        output scale.""")]
         public Func<float, float>? VelocityCurve;
     }
 

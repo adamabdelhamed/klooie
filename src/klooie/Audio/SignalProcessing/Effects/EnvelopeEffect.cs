@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace klooie;
 [SynthDescription("""
-ADSR envelope generator that modulates the input signal level.
+Applies an Attack‑Decay‑Sustain‑Release envelope to shape the level of the
+incoming signal.
 """)]
 [SynthCategory("Dynamics")]
 public class EnvelopeEffect : Recyclable, IEffect
@@ -18,20 +19,22 @@ public class EnvelopeEffect : Recyclable, IEffect
     private EnvelopeEffect() { }
 
     [SynthDescription("""
-    Parameters for EnvelopeEffect.
+    Timing values used to construct the ADSR envelope.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Attack time in seconds.""")]
+        [SynthDescription("""Duration of the attack phase in seconds.""")]
         public double Attack;
 
-        [SynthDescription("""Decay time in seconds.""")]
+        [SynthDescription("""Time for the level to drop from the peak to the
+        sustain level.""")]
         public double Decay;
 
-        [SynthDescription("""Sustain level from 0-1.""")]
+        [SynthDescription("""Normalized sustain level (0–1) held until release.""")]
         public double Sustain;
 
-        [SynthDescription("""Release time in seconds.""")]
+        [SynthDescription("""Time for the level to fade out after a note is
+        released.""")]
         public double Release;
     }
 

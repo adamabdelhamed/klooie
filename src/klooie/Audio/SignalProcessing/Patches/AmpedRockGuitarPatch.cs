@@ -4,8 +4,9 @@ namespace klooie;
 
 [SynthCategory("Guitar")]
 [SynthDescription("""
-High-gain guitar patch built from stacked distortion, tone shaping,
-cabinet simulation and ambience effects for aggressive rock lines.
+High‑gain guitar patch composed of multiple distortion stages, tone shaping
+filters, cabinet simulation and ambience effects.  Ideal for aggressive rock
+parts.
 """)]
 public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch, ICompositePatch
 {

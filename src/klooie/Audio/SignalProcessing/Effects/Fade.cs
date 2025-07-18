@@ -8,7 +8,8 @@ namespace klooie;
 
 // FadeInEffect: Multiplies input by [0,1] fade-in envelope over the given duration
 [SynthDescription("""
-Applies a fade-in envelope to the signal over the specified duration.
+Gradually raises the signal from silence over the given duration.  Useful for
+smoothing in the start of a note or phrase.
 """)]
 [SynthCategory("Utility")]
 public class FadeInEffect : Recyclable, IEffect
@@ -23,17 +24,20 @@ public class FadeInEffect : Recyclable, IEffect
     private FadeInEffect() { }
 
     [SynthDescription("""
-    Parameters for FadeInEffect.
+    Settings controlling the duration of the fade‑in and optional velocity
+    modulation.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Fade duration in seconds.""")]
+        [SynthDescription("""How long the fade‑in lasts, measured in seconds.""")]
         public float DurationSeconds;
 
-        [SynthDescription("""Optional velocity-to-gain curve.""")]
+        [SynthDescription("""Function that maps note velocity to an additional
+        gain multiplier.""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Scale factor applied to velocity curve.""")]
+        [SynthDescription("""Multiplier applied after evaluating the velocity
+        curve.""")]
         public float VelocityScale;
     }
 
@@ -88,7 +92,8 @@ public class FadeInEffect : Recyclable, IEffect
     }
 }
 [SynthDescription("""
-Applies a fade-out envelope starting at the specified time.
+Gradually lowers the signal to silence starting at the specified time.
+Use this to smooth out the end of sustained notes.
 """)]
 [SynthCategory("Utility")]
 public class FadeOutEffect : Recyclable, IEffect
@@ -108,20 +113,23 @@ public class FadeOutEffect : Recyclable, IEffect
     /// fadeStartTime: time (in seconds) when fade should *start* (default = 0 to fade from the beginning)
     /// </summary>
 [SynthDescription("""
-Parameters for FadeOutEffect.
+Settings controlling when the fade begins, how long it lasts and optional
+velocity scaling.
 """)]
 public struct Settings
 {
-    [SynthDescription("""Fade duration in seconds.""")]
+    [SynthDescription("""Length of the fade‑out in seconds.""")]
     public float DurationSeconds;
 
-    [SynthDescription("""Time in seconds when fade should start.""")]
+    [SynthDescription("""Time in seconds when the fade‑out begins.""")]
     public float FadeStartTime;
 
-    [SynthDescription("""Optional velocity-to-gain curve.""")]
+    [SynthDescription("""Function mapping note velocity to a gain factor
+    applied during the fade.""")]
     public Func<float, float>? VelocityCurve;
 
-    [SynthDescription("""Scale factor applied to velocity curve.""")]
+    [SynthDescription("""Multiplier applied to the result of the velocity
+    curve.""")]
     public float VelocityScale;
 }
 

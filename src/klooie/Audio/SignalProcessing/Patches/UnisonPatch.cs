@@ -8,8 +8,8 @@ namespace klooie;
 
 [SynthCategory("Utility")]
 [SynthDescription("""
-Creates multiple detuned copies of a patch for wide, thick sounds
-with controllable pan spread.
+Generates several slightly detuned copies of a patch.  Each voice can be panned
+across the stereo field to create a wide, lush sound.
 """)]
 public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
 {
@@ -126,20 +126,23 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
     }
 
     [SynthDescription("""
-    Parameters for creating a unison patch.
+    Settings describing the base patch and how many detuned voices to create
+    along with their pan spread.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Patch to clone for each voice.""")]
+        [SynthDescription("""Patch that will be duplicated for every voice.""")]
         public ISynthPatch BasePatch;
 
-        [SynthDescription("""Number of detuned voices.""")]
+        [SynthDescription("""How many detuned voices to spawn.""")]
         public int NumVoices;
 
-        [SynthDescription("""Total detune range in cents.""")]
+        [SynthDescription("""Total amount of detuning across all voices in
+        cents.""")]
         public float DetuneCents;
 
-        [SynthDescription("""Stereo spread of the voices (-1 to 1).""")]
+        [SynthDescription("""Stereo spread of the voices where -1 is hard left
+        and +1 is hard right.""")]
         public float PanSpread;
     }
 }

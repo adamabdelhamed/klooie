@@ -88,7 +88,8 @@ class CombFilter : Recyclable
 }
 
 [SynthDescription("""
-Simple stereo reverb composed of comb and all-pass filters.
+Stereo reverb constructed from multiple comb and all-pass filters.  Feedback and
+diffusion settings shape the size and character of the virtual space.
 """)]
 [SynthCategory("Reverb")]
 public class ReverbEffect : Recyclable, IEffect
@@ -106,26 +107,31 @@ public class ReverbEffect : Recyclable, IEffect
     private static LazyPool<ReverbEffect> _pool = new(() => new ReverbEffect());
     protected ReverbEffect() { }
     [SynthDescription("""
-    Parameters for ReverbEffect.
+    Settings controlling reverb decay, diffusion and how the wet/dry mix reacts
+    to note velocity.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Feedback amount controlling decay.""")]
+        [SynthDescription("""Amount of feedback which determines how long the
+        reverb tail lasts.""")]
         public float Feedback;
 
-        [SynthDescription("""Diffusion amount for all-pass filters.""")]
+        [SynthDescription("""How dense the reflections become. Higher values
+        create a smoother tail.""")]
         public float Diffusion;
 
-        [SynthDescription("""Wet mix level.""")]
+        [SynthDescription("""Volume of the reverberated (wet) signal.""")]
         public float Wet;
 
-        [SynthDescription("""Dry signal level.""")]
+        [SynthDescription("""Volume of the unaffected (dry) signal.""")]
         public float Dry;
 
-        [SynthDescription("""Whether velocity scales the wet mix.""")]
+        [SynthDescription("""If true, note velocity influences the wet mix
+        level.""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Curve for velocity-based wet scaling.""")]
+        [SynthDescription("""Function mapping velocity to a multiplier applied
+        to the wet level.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

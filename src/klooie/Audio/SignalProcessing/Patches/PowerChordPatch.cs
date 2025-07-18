@@ -7,8 +7,8 @@ namespace klooie;
 
 [SynthCategory("Utility")]
 [SynthDescription("""
-Layers transposed copies of a base patch to form power chords with
-adjustable detune and stereo spread.
+Creates power chords by layering transposed copies of a base patch.  Each layer
+can be slightly detuned and panned for a wide stereo effect.
 """)]
 public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 {
@@ -136,20 +136,25 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
     }
 
     [SynthDescription("""
-    Settings used to build a power-chord patch.
+    Settings describing which patch to copy for each chord tone along with
+    detune and stereo spread options.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Patch to duplicate for each chord note.""")]
+        [SynthDescription("""The base patch that will be duplicated for each
+        chord note.""")]
         public ISynthPatch BasePatch;
 
-        [SynthDescription("""Semitone offsets for each additional note.""")]
+        [SynthDescription("""Array of semitone offsets defining the chord
+        intervals.""")]
         public int[]? Intervals;
 
-        [SynthDescription("""Maximum detune spread in cents.""")]
+        [SynthDescription("""Total detune range applied across the layers in
+        cents.""")]
         public float DetuneCents;
 
-        [SynthDescription("""Stereo spread of layers (-1 to 1).""")]
+        [SynthDescription("""Stereo spread of the layers where -1 is far left
+        and +1 is far right.""")]
         public float PanSpread;
     }
 }

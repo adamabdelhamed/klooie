@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace klooie;
 [SynthDescription("""
-Suppresses noise by muting the signal below a threshold.
+Silences the signal whenever its level drops below a defined threshold,
+helping remove background noise between notes.
 """)]
 [SynthCategory("Dynamics")]
 class NoiseGateEffect : Recyclable, IEffect
@@ -26,26 +27,28 @@ class NoiseGateEffect : Recyclable, IEffect
         new(() => new NoiseGateEffect());
 
     [SynthDescription("""
-    Parameters for NoiseGateEffect.
+    Settings that determine how the gate opens and closes.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Threshold for opening the gate.""")]
+        [SynthDescription("""Signal level above which the gate opens.""")]
         public float OpenThresh;
 
-        [SynthDescription("""Threshold for closing the gate.""")]
+        [SynthDescription("""Level below which the gate starts to close.""")]
         public float CloseThresh;
 
-        [SynthDescription("""Attack time in milliseconds.""")]
+        [SynthDescription("""Time in milliseconds for the gate to fully open""")]
         public float AttackMs;
 
-        [SynthDescription("""Release time in milliseconds.""")]
+        [SynthDescription("""Time in milliseconds for the gate to fully close""")]
         public float ReleaseMs;
 
-        [SynthDescription("""Whether velocity scales the thresholds.""")]
+        [SynthDescription("""If true, note velocity scales the open and close
+        thresholds.""")]
         public bool VelocityAffectsThreshold;
 
-        [SynthDescription("""Curve for velocity-based threshold scaling.""")]
+        [SynthDescription("""Function that maps velocity to a multiplier used
+        when scaling the thresholds.""")]
         public Func<float, float>? VelocityCurve;
     }
 

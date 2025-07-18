@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace klooie;
 [SynthDescription("""
-Cabinet simulator using shelf filters and a mid scoop to mimic guitar cabinets.
+Simulates the tone of a guitar speaker cabinet using shelving filters plus a
+midrange scoop.  Helpful for creating amp-like patches without external IRs.
 """)]
 [SynthCategory("Filter")]
 class CabinetEffect : Recyclable, IEffect
@@ -23,14 +24,17 @@ class CabinetEffect : Recyclable, IEffect
         new(() => new CabinetEffect());
 
     [SynthDescription("""
-    Parameters for CabinetEffect.
+    Settings controlling the cabinet simulation.  These include an optional
+    curve for scaling output based on note velocity.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Curve scaling output based on note velocity.""")]
+        [SynthDescription("""Function that adjusts output level based on the
+        note's velocity.""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Multiplier applied to the velocity curve.""")]
+        [SynthDescription("""Additional multiplier applied after evaluating the
+        velocity curve.""")]
         public float VelocityScale;
     }
 

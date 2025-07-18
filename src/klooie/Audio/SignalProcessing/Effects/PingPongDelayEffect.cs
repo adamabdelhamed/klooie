@@ -1,7 +1,8 @@
 ﻿using klooie;
 
 [SynthDescription("""
-Stereo ping-pong delay alternating between left and right channels.
+Delay effect that bounces echoes between the left and right speakers,
+creating a ping‑pong stereo field.
 """)]
 [SynthCategory("Delay")]
 public class PingPongDelayEffect : Recyclable, IEffect
@@ -20,23 +21,27 @@ public class PingPongDelayEffect : Recyclable, IEffect
     private PingPongDelayEffect() { }
 
     [SynthDescription("""
-    Parameters for PingPongDelayEffect.
+    Settings that define the delay time, feedback and how the echoes mix with
+    the original signal.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Delay length in samples.""")]
+        [SynthDescription("""Length of the delay line in samples.""")]
         public int DelaySamples;
 
-        [SynthDescription("""Feedback amount (0-1).""")]
+        [SynthDescription("""Portion of the delayed signal fed back for more
+        repeats (0 = none, 1 = infinite).""")]
         public float Feedback;
 
-        [SynthDescription("""Blend between dry and delayed signal (0-1).""")]
+        [SynthDescription("""Mix between original and delayed signals (0 = dry,
+        1 = fully wet).""")]
         public float Mix;
 
-        [SynthDescription("""Whether velocity scales the mix amount.""")]
+        [SynthDescription("""If true, harder notes produce a stronger delay
+        mix.""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Curve for velocity-based mix scaling.""")]
+        [SynthDescription("""Function mapping velocity to a mix multiplier.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

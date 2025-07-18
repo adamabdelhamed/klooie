@@ -2,8 +2,9 @@
 
 [SynthCategory("Utility")]
 [SynthDescription("""
-Combines multiple patches into layers with per-layer volume, pan, and
-transpose control for complex instruments.
+Allows several patches to be played together as layers.  Each layer
+has its own volume, stereo pan and pitch offset so you can build rich,
+multi-voice instruments.
 """)]
 public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
 {
@@ -123,20 +124,26 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     }
 
     [SynthDescription("""
-    Parameters controlling how patches are layered.
+    Configuration describing which patches are layered together and
+    how each layer is mixed in terms of volume, pan position and
+    transpose amount.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Patches to layer together.""")]
+        [SynthDescription("""Array of patches that will play at the same time.  The
+        index of each patch matches the entries in Volumes, Pans and Transposes.""")]
         public ISynthPatch[] Patches;
 
-        [SynthDescription("""Relative volume for each layer (0–1).""")]
+        [SynthDescription("""Relative volume of each layer from 0 to 1.  Values
+        above 1 will boost that layer while values below 1 reduce it.""")]
         public float[]? Volumes;
 
-        [SynthDescription("""Pan position per layer (-1 = left, +1 = right).""")]
+        [SynthDescription("""Stereo pan for each layer where -1 is full left and
+        +1 is full right.""")]
         public float[]? Pans;
 
-        [SynthDescription("""Semitone offset applied to each layer.""")]
+        [SynthDescription("""Number of semitones each layer is transposed
+        relative to the original pitch.""")]
         public int[]? Transposes;
     }
 }
