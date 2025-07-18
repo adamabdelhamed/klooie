@@ -1,5 +1,10 @@
 ﻿using klooie;
 
+[SynthCategory("Utility")]
+[SynthDescription("""
+Combines multiple patches into layers with per-layer volume, pan and
+transpose control for complex instruments.
+""")]
 public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
 {
     private ISynthPatch[] layers;
@@ -108,5 +113,23 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
         layerPans = null!;
         layerTransposes = null!;
         base.OnReturn();
+    }
+
+    [SynthDescription("""
+    Parameters controlling how patches are layered.
+    """)]
+    public struct Settings
+    {
+        [SynthDescription("""Patches to layer together.""")]
+        public ISynthPatch[] Patches;
+
+        [SynthDescription("""Relative volume for each layer (0–1).""")]
+        public float[]? Volumes;
+
+        [SynthDescription("""Pan position per layer (-1 = left, +1 = right).""")]
+        public float[]? Pans;
+
+        [SynthDescription("""Semitone offset applied to each layer.""")]
+        public int[]? Transposes;
     }
 }
