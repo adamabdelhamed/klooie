@@ -19,22 +19,30 @@ public class EnvelopeEffect : Recyclable, IEffect
     private EnvelopeEffect() { }
 
     [SynthDescription("""
-    Timing values used to construct the ADSR envelope.
-    """)]
+Timing values used to construct the ADSR envelope.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Duration of the attack phase in seconds.""")]
+        [SynthDescription("""
+Duration of the attack phase in seconds.
+""")]
         public double Attack;
 
-        [SynthDescription("""Time for the level to drop from the peak to the
-        sustain level.""")]
+        [SynthDescription("""
+Time for the level to drop from the peak to the
+sustain level.
+""")]
         public double Decay;
 
-        [SynthDescription("""Normalized sustain level (0–1) held until release.""")]
+        [SynthDescription("""
+Normalized sustain level (0–1) held until release.
+""")]
         public double Sustain;
 
-        [SynthDescription("""Time for the level to fade out after a note is
-        released.""")]
+        [SynthDescription("""
+Time for the level to fade out after a note is
+released.
+""")]
         public double Release;
     }
 

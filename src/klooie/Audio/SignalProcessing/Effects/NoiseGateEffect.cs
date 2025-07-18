@@ -27,28 +27,40 @@ class NoiseGateEffect : Recyclable, IEffect
         new(() => new NoiseGateEffect());
 
     [SynthDescription("""
-    Settings that determine how the gate opens and closes.
-    """)]
+Settings that determine how the gate opens and closes.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Signal level above which the gate opens.""")]
+        [SynthDescription("""
+Signal level above which the gate opens.
+""")]
         public float OpenThresh;
 
-        [SynthDescription("""Level below which the gate starts to close.""")]
+        [SynthDescription("""
+Level below which the gate starts to close.
+""")]
         public float CloseThresh;
 
-        [SynthDescription("""Time in milliseconds for the gate to fully open""")]
+        [SynthDescription("""
+Time in milliseconds for the gate to fully open
+""")]
         public float AttackMs;
 
-        [SynthDescription("""Time in milliseconds for the gate to fully close""")]
+        [SynthDescription("""
+Time in milliseconds for the gate to fully close
+""")]
         public float ReleaseMs;
 
-        [SynthDescription("""If true, note velocity scales the open and close
-        thresholds.""")]
+        [SynthDescription("""
+If true, note velocity scales the open and close
+thresholds.
+""")]
         public bool VelocityAffectsThreshold;
 
-        [SynthDescription("""Function that maps velocity to a multiplier used
-        when scaling the thresholds.""")]
+        [SynthDescription("""
+Function that maps velocity to a multiplier used
+when scaling the thresholds.
+""")]
         public Func<float, float>? VelocityCurve;
     }
 

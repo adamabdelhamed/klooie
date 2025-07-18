@@ -23,28 +23,38 @@ public class DelayEffect : Recyclable, IEffect
     protected DelayEffect() { }
 
     [SynthDescription("""
-    Settings for constructing a DelayEffect.  DelaySamples is specified in
-    audio samples while the other values range between 0 and 1.
-    """)]
+Settings for constructing a DelayEffect.  DelaySamples is specified in
+audio samples while the other values range between 0 and 1.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Length of the delay buffer measured in samples.""")]
+        [SynthDescription("""
+Length of the delay buffer measured in samples.
+""")]
         public int DelaySamples;
 
-        [SynthDescription("""Fraction of the delayed output that is fed back for
-        repeated echoes (0 = none, 1 = infinite).""")]
+        [SynthDescription("""
+Fraction of the delayed output that is fed back for
+repeated echoes (0 = none, 1 = infinite).
+""")]
         public float Feedback;
 
-        [SynthDescription("""Mix between the original signal and the delayed
-        signal. 0 gives only the dry signal, 1 gives only delay.""")]
+        [SynthDescription("""
+Mix between the original signal and the delayed
+signal. 0 gives only the dry signal, 1 gives only delay.
+""")]
         public float Mix;
 
-        [SynthDescription("""When true, harder played notes increase the mix
-        amount.""")]
+        [SynthDescription("""
+When true, harder played notes increase the mix
+amount.
+""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Function that converts normalized velocity into a
-        multiplier applied to the mix.""")]
+        [SynthDescription("""
+Function that converts normalized velocity into a
+multiplier applied to the mix.
+""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

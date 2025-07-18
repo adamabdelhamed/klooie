@@ -24,22 +24,30 @@ public class PitchBendEffect : Recyclable, IPitchModEffect
     private PitchBendEffect() { }
 
     [SynthDescription("""
-    Functions and timing values defining the attack and release pitch bends.
-    """)]
+Functions and timing values defining the attack and release pitch bends.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Function that returns a pitch offset (in cents)
-        over the course of the attack.""")]
+        [SynthDescription("""
+Function that returns a pitch offset (in cents)
+over the course of the attack.
+""")]
         public Func<float, float> AttackBend;
 
-        [SynthDescription("""Length of the attack bend in seconds.""")]
+        [SynthDescription("""
+Length of the attack bend in seconds.
+""")]
         public float AttackDuration;
 
-        [SynthDescription("""Function providing the pitch offset curve during
-        the release phase.""")]
+        [SynthDescription("""
+Function providing the pitch offset curve during
+the release phase.
+""")]
         public Func<float, float> ReleaseBend;
 
-        [SynthDescription("""Length of the release bend in seconds.""")]
+        [SynthDescription("""
+Length of the release bend in seconds.
+""")]
         public float ReleaseDuration;
     }
 

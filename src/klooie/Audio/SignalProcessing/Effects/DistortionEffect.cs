@@ -25,29 +25,39 @@ class DistortionEffect : Recyclable, IEffect
     static readonly LazyPool<DistortionEffect> _pool = new(() => new DistortionEffect());
 
     [SynthDescription("""
-    Settings used to build a DistortionEffect.  They define the drive level and
-    how each clipping stage behaves.
-    """)]
+Settings used to build a DistortionEffect.  They define the drive level and
+how each clipping stage behaves.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Gain applied before the first clipping stage.  Higher
-        values yield more distortion.""")]
+        [SynthDescription("""
+Gain applied before the first clipping stage.  Higher
+values yield more distortion.
+""")]
         public float Drive;
 
-        [SynthDescription("""Multiplier controlling how much the gain decreases
-        at each successive stage.""")]
+        [SynthDescription("""
+Multiplier controlling how much the gain decreases
+at each successive stage.
+""")]
         public float StageRatio;
 
-        [SynthDescription("""Offset added before clipping to produce asymmetric
-        distortion.""")]
+        [SynthDescription("""
+Offset added before clipping to produce asymmetric
+distortion.
+""")]
         public float Bias;
 
-        [SynthDescription("""Optional function mapping note velocity to a gain
-        multiplier.""")]
+        [SynthDescription("""
+Optional function mapping note velocity to a gain
+multiplier.
+""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Additional multiplier applied after evaluating the
-        velocity curve.""")]
+        [SynthDescription("""
+Additional multiplier applied after evaluating the
+velocity curve.
+""")]
         public float VelocityScale;
     }
 

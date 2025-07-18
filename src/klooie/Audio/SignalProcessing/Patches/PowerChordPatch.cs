@@ -136,25 +136,33 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
     }
 
     [SynthDescription("""
-    Settings describing which patch to copy for each chord tone along with
-    detune and stereo spread options.
-    """)]
+Settings describing which patch to copy for each chord tone along with
+detune and stereo spread options.
+""")]
     public struct Settings
     {
-        [SynthDescription("""The base patch that will be duplicated for each
-        chord note.""")]
+        [SynthDescription("""
+The base patch that will be duplicated for each
+chord note.
+""")]
         public ISynthPatch BasePatch;
 
-        [SynthDescription("""Array of semitone offsets defining the chord
-        intervals.""")]
+        [SynthDescription("""
+Array of semitone offsets defining the chord
+intervals.
+""")]
         public int[]? Intervals;
 
-        [SynthDescription("""Total detune range applied across the layers in
-        cents.""")]
+        [SynthDescription("""
+Total detune range applied across the layers in
+cents.
+""")]
         public float DetuneCents;
 
-        [SynthDescription("""Stereo spread of the layers where -1 is far left
-        and +1 is far right.""")]
+        [SynthDescription("""
+Stereo spread of the layers where -1 is far left
+and +1 is far right.
+""")]
         public float PanSpread;
     }
 }

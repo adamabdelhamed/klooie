@@ -124,26 +124,34 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     }
 
     [SynthDescription("""
-    Configuration describing which patches are layered together and
-    how each layer is mixed in terms of volume, pan position and
-    transpose amount.
-    """)]
+Configuration describing which patches are layered together and
+how each layer is mixed in terms of volume, pan position and
+transpose amount.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Array of patches that will play at the same time.  The
-        index of each patch matches the entries in Volumes, Pans and Transposes.""")]
+        [SynthDescription("""
+Array of patches that will play at the same time.  The
+index of each patch matches the entries in Volumes, Pans and Transposes.
+""")]
         public ISynthPatch[] Patches;
 
-        [SynthDescription("""Relative volume of each layer from 0 to 1.  Values
-        above 1 will boost that layer while values below 1 reduce it.""")]
+        [SynthDescription("""
+Relative volume of each layer from 0 to 1.  Values
+above 1 will boost that layer while values below 1 reduce it.
+""")]
         public float[]? Volumes;
 
-        [SynthDescription("""Stereo pan for each layer where -1 is full left and
-        +1 is full right.""")]
+        [SynthDescription("""
+Stereo pan for each layer where -1 is full left and
++1 is full right.
+""")]
         public float[]? Pans;
 
-        [SynthDescription("""Number of semitones each layer is transposed
-        relative to the original pitch.""")]
+        [SynthDescription("""
+Number of semitones each layer is transposed
+relative to the original pitch.
+""")]
         public int[]? Transposes;
     }
 }

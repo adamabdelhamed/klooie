@@ -24,20 +24,26 @@ public class FadeInEffect : Recyclable, IEffect
     private FadeInEffect() { }
 
     [SynthDescription("""
-    Settings controlling the duration of the fade‑in and optional velocity
-    modulation.
-    """)]
+Settings controlling the duration of the fade‑in and optional velocity
+modulation.
+""")]
     public struct Settings
     {
-        [SynthDescription("""How long the fade‑in lasts, measured in seconds.""")]
+        [SynthDescription("""
+How long the fade‑in lasts, measured in seconds.
+""")]
         public float DurationSeconds;
 
-        [SynthDescription("""Function that maps note velocity to an additional
-        gain multiplier.""")]
+        [SynthDescription("""
+Function that maps note velocity to an additional
+gain multiplier.
+""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Multiplier applied after evaluating the velocity
-        curve.""")]
+        [SynthDescription("""
+Multiplier applied after evaluating the velocity
+curve.
+""")]
         public float VelocityScale;
     }
 
@@ -118,18 +124,26 @@ velocity scaling.
 """)]
 public struct Settings
 {
-    [SynthDescription("""Length of the fade‑out in seconds.""")]
+    [SynthDescription("""
+Length of the fade‑out in seconds.
+""")]
     public float DurationSeconds;
 
-    [SynthDescription("""Time in seconds when the fade‑out begins.""")]
+    [SynthDescription("""
+Time in seconds when the fade‑out begins.
+""")]
     public float FadeStartTime;
 
-    [SynthDescription("""Function mapping note velocity to a gain factor
-    applied during the fade.""")]
+    [SynthDescription("""
+Function mapping note velocity to a gain factor
+applied during the fade.
+""")]
     public Func<float, float>? VelocityCurve;
 
-    [SynthDescription("""Multiplier applied to the result of the velocity
-    curve.""")]
+    [SynthDescription("""
+Multiplier applied to the result of the velocity
+curve.
+""")]
     public float VelocityScale;
 }
 

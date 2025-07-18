@@ -36,20 +36,26 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
     private PresenceShelfEffect() { }
 
     [SynthDescription("""
-    Settings controlling the amount of high-frequency boost and optional
-    velocity-based scaling.
-    """)]
+Settings controlling the amount of high-frequency boost and optional
+velocity-based scaling.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Boost applied to the high frequencies in decibels.""")]
+        [SynthDescription("""
+Boost applied to the high frequencies in decibels.
+""")]
         public float PresenceDb;
 
-        [SynthDescription("""Function used to scale the boost based on note
-        velocity.""")]
+        [SynthDescription("""
+Function used to scale the boost based on note
+velocity.
+""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Additional multiplier applied to the velocity
-        curve's output.""")]
+        [SynthDescription("""
+Additional multiplier applied to the velocity
+curve's output.
+""")]
         public float VelocityScale;
     }
 

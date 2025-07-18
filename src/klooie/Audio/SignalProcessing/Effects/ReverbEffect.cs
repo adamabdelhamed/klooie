@@ -107,31 +107,43 @@ public class ReverbEffect : Recyclable, IEffect
     private static LazyPool<ReverbEffect> _pool = new(() => new ReverbEffect());
     protected ReverbEffect() { }
     [SynthDescription("""
-    Settings controlling reverb decay, diffusion and how the wet/dry mix reacts
-    to note velocity.
-    """)]
+Settings controlling reverb decay, diffusion and how the wet/dry mix reacts
+to note velocity.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Amount of feedback which determines how long the
-        reverb tail lasts.""")]
+        [SynthDescription("""
+Amount of feedback which determines how long the
+reverb tail lasts.
+""")]
         public float Feedback;
 
-        [SynthDescription("""How dense the reflections become. Higher values
-        create a smoother tail.""")]
+        [SynthDescription("""
+How dense the reflections become. Higher values
+create a smoother tail.
+""")]
         public float Diffusion;
 
-        [SynthDescription("""Volume of the reverberated (wet) signal.""")]
+        [SynthDescription("""
+Volume of the reverberated (wet) signal.
+""")]
         public float Wet;
 
-        [SynthDescription("""Volume of the unaffected (dry) signal.""")]
+        [SynthDescription("""
+Volume of the unaffected (dry) signal.
+""")]
         public float Dry;
 
-        [SynthDescription("""If true, note velocity influences the wet mix
-        level.""")]
+        [SynthDescription("""
+If true, note velocity influences the wet mix
+level.
+""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Function mapping velocity to a multiplier applied
-        to the wet level.""")]
+        [SynthDescription("""
+Function mapping velocity to a multiplier applied
+to the wet level.
+""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

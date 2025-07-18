@@ -19,25 +19,33 @@ public class HighPassFilterEffect : Recyclable, IEffect
     protected HighPassFilterEffect() { }
 
     [SynthDescription("""
-    Settings describing the cutoff frequency and how the mix reacts to
-    note velocity.
-    """)]
+Settings describing the cutoff frequency and how the mix reacts to
+note velocity.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Frequency above which audio passes through,
-        measured in hertz.""")]
+        [SynthDescription("""
+Frequency above which audio passes through,
+measured in hertz.
+""")]
         public float CutoffHz;
 
-        [SynthDescription("""Amount of filtered signal mixed with the original
-        (0 = dry, 1 = fully filtered).""")]
+        [SynthDescription("""
+Amount of filtered signal mixed with the original
+(0 = dry, 1 = fully filtered).
+""")]
         public float Mix;
 
-        [SynthDescription("""When true, harder played notes increase the mix of
-        the filtered signal.""")]
+        [SynthDescription("""
+When true, harder played notes increase the mix of
+the filtered signal.
+""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Function mapping normalized velocity to a
-        mix multiplier.""")]
+        [SynthDescription("""
+Function mapping normalized velocity to a
+mix multiplier.
+""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

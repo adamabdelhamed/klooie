@@ -25,14 +25,18 @@ public sealed class PickTransientEffect : Recyclable, IEffect
     private PickTransientEffect() { rng = new Random(); }
 
     [SynthDescription("""
-    Settings controlling how long the noise burst lasts and how loud it is.
-    """)]
+Settings controlling how long the noise burst lasts and how loud it is.
+""")]
     public struct Settings
     {
-        [SynthDescription("""Length of the noise burst in seconds.""")]
+        [SynthDescription("""
+Length of the noise burst in seconds.
+""")]
         public float Duration;
 
-        [SynthDescription("""Volume of the transient noise.""")]
+        [SynthDescription("""
+Volume of the transient noise.
+""")]
         public float Gain;
     }
 
