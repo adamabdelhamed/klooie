@@ -60,7 +60,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     public Event<TimelineInputMode> ModeChanging { get; } = Event<TimelineInputMode>.Create();
     public VirtualTimelineGrid(INoteSource notes, TimelinePlayer? player = null, TimelineInputMode[]? availableModes = null)
     {
-        this.userCyclableModes = availableModes ?? [new PanMode() { Timeline = this }, new SeekMode() { Timeline  = this }, new SelectionMode() { Timeline = this }];
+        this.userCyclableModes = availableModes ?? [new NavigationMode() { Timeline = this }, new SelectionMode() { Timeline = this }];
         Viewport = new TimelineViewport();
         Player = player ?? new TimelinePlayer(() => maxBeat, notes?.BeatsPerMinute ?? 60);
         Player.BeatChanged.Subscribe(this, static (me,b) => me.OnBeatChanged(b), this);

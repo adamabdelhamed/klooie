@@ -22,7 +22,7 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
     private void DrawPlayHead(ConsoleBitmap context)
     {
         var playHeadColor = Timeline.Player.IsPlaying ? RGB.Green :
-            Timeline.CurrentMode is SelectionMode ? RGB.Gray : Timeline.CurrentMode is PanMode ? RGB.DarkRed : RGB.Red;
+            Timeline.CurrentMode is SelectionMode ? RGB.Gray : Timeline.CurrentMode is NavigationMode ? RGB.DarkRed : RGB.Red;
         double relBeat = Timeline.CurrentBeat - Timeline.Viewport.FirstVisibleBeat;
         int x = ConsoleMath.Round(relBeat / Timeline.BeatsPerColumn) * VirtualTimelineGrid.ColWidthChars;
         if (x < 0 || x >= Timeline.Width) return;
