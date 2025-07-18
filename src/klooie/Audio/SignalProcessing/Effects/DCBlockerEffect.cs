@@ -12,21 +12,26 @@ public sealed class DCBlockerEffect : Recyclable, IEffect
     private float a;                         // filter coefficient
     private float xPrev;                     // x[n-1]
     private float yPrev;                     // y[n-1]
+    private bool velocityAffectsOutput;
+    private Func<float, float> velocityCurve = EffectContext.EaseLinear;
 
     private static readonly LazyPool<DCBlockerEffect> _pool =
         new(() => new DCBlockerEffect());
     private DCBlockerEffect() { }
 
-    public static DCBlockerEffect Create()
+    public static DCBlockerEffect Create(bool velocityAffectsOutput = false,
+        Func<float, float>? velocityCurve = null)
     {
         var fx = _pool.Value.Rent();
         float sr = SoundProvider.SampleRate;
         fx.a = (float)Math.Exp(-2.0 * Math.PI * fCut / sr);
         fx.xPrev = fx.yPrev = 0f;
+        fx.velocityAffectsOutput = velocityAffectsOutput;
+        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
         return fx;
     }
 
-    public IEffect Clone() => Create();
+    public IEffect Clone() => Create(velocityAffectsOutput, velocityCurve);
 
     public float Process(in EffectContext ctx)
     {
@@ -35,12 +40,17 @@ public sealed class DCBlockerEffect : Recyclable, IEffect
         float y = x - xPrev + a * yPrev;
         xPrev = x;
         yPrev = y;
-        return y;
+        float outVal = y;
+        if (velocityAffectsOutput)
+            outVal *= velocityCurve(ctx.VelocityNorm);
+        return outVal;
     }
 
     protected override void OnReturn()
     {
         a = xPrev = yPrev = 0f;
+        velocityAffectsOutput = false;
+        velocityCurve = EffectContext.EaseLinear;
         base.OnReturn();
     }
 }

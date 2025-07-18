@@ -92,6 +92,8 @@ public class ReverbEffect : Recyclable, IEffect
     private CombFilter[] combs;
     private AllPassFilter[] allpasses;
     private float feedback, diffusion, wet, dry;
+    private bool velocityAffectsMix;
+    private Func<float, float> mixVelocityCurve = EffectContext.EaseLinear;
 
     // Some classic reverb delay times (in samples, for 44.1kHz sample rate)
     private static readonly int[] combDelays = { 1557, 1617, 1491, 1422 };
@@ -99,10 +101,14 @@ public class ReverbEffect : Recyclable, IEffect
 
     private static LazyPool<ReverbEffect> _pool = new(() => new ReverbEffect());
     protected ReverbEffect() { }
-    public static ReverbEffect Create(float feedback = 0.78f, float diffusion = 0.5f, float wet = 0.3f, float dry = 0.7f)
+    public static ReverbEffect Create(float feedback = 0.78f, float diffusion = 0.5f, float wet = 0.3f, float dry = 0.7f,
+        bool velocityAffectsMix = true,
+        Func<float, float>? mixVelocityCurve = null)
     {
         var ret = _pool.Value.Rent();
         ret.Construct(feedback, diffusion, wet, dry);
+        ret.velocityAffectsMix = velocityAffectsMix;
+        ret.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
 
@@ -124,7 +130,7 @@ public class ReverbEffect : Recyclable, IEffect
         this.dry = dry;
     }
 
-    public IEffect Clone() => Create(feedback, diffusion, wet, dry);
+    public IEffect Clone() => Create(feedback, diffusion, wet, dry, velocityAffectsMix, mixVelocityCurve);
 
     public float Process(in EffectContext ctx)
     {
@@ -140,8 +146,10 @@ public class ReverbEffect : Recyclable, IEffect
         for (int i = 0; i < allpasses.Length; i++)
             apOut = allpasses[i].Process(apOut);
 
-        // Mix wet/dry
-        return dry * input + wet * apOut;
+        float mixAmt = wet;
+        if (velocityAffectsMix)
+            mixAmt *= mixVelocityCurve(ctx.VelocityNorm);
+        return dry * input + mixAmt * apOut;
     }
 
 
@@ -159,6 +167,8 @@ public class ReverbEffect : Recyclable, IEffect
             a.Dispose();
         }
         allpasses = null;
+        velocityAffectsMix = false;
+        mixVelocityCurve = EffectContext.EaseLinear;
         base.OnReturn();
     }
 }

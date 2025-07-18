@@ -11,15 +11,21 @@ public class FadeInEffect : Recyclable, IEffect
 {
     private float fadeDuration;
     private bool finished;
+    private Func<float, float> velocityCurve = EffectContext.EaseLinear;
+    private float velocityScale = 1f;
 
     private static readonly LazyPool<FadeInEffect> _pool = new(() => new FadeInEffect());
 
     private FadeInEffect() { }
 
-    public static FadeInEffect Create(float durationSeconds)
+    public static FadeInEffect Create(float durationSeconds,
+        Func<float, float>? velocityCurve = null,
+        float velocityScale = 1f)
     {
         var ret = _pool.Value.Rent();
         ret.Construct(durationSeconds);
+        ret.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
+        ret.velocityScale = velocityScale;
         return ret;
     }
 
@@ -29,7 +35,7 @@ public class FadeInEffect : Recyclable, IEffect
         finished = false;
     }
 
-    public IEffect Clone() => Create(fadeDuration);
+    public IEffect Clone() => Create(fadeDuration, velocityCurve, velocityScale);
 
     public float Process(in EffectContext ctx)
     {
@@ -39,6 +45,7 @@ public class FadeInEffect : Recyclable, IEffect
             return input;
 
         float gain = MathF.Min(1.0f, time / fadeDuration);
+        gain *= velocityCurve(ctx.VelocityNorm) * velocityScale;
         if (gain >= 1.0f)
             finished = true;
 
@@ -49,6 +56,8 @@ public class FadeInEffect : Recyclable, IEffect
     {
         fadeDuration = 0;
         finished = false;
+        velocityCurve = EffectContext.EaseLinear;
+        velocityScale = 1f;
         base.OnReturn();
     }
 }
@@ -57,6 +66,8 @@ public class FadeOutEffect : Recyclable, IEffect
     private float fadeDuration;
     private bool finished;
     private float fadeStartTime;
+    private Func<float, float> velocityCurve = EffectContext.EaseLinear;
+    private float velocityScale = 1f;
 
     private static readonly LazyPool<FadeOutEffect> _pool = new(() => new FadeOutEffect());
 
@@ -66,10 +77,14 @@ public class FadeOutEffect : Recyclable, IEffect
     /// durationSeconds: how long the fade should last
     /// fadeStartTime: time (in seconds) when fade should *start* (default = 0 to fade from the beginning)
     /// </summary>
-    public static FadeOutEffect Create(float durationSeconds, float fadeStartTime = 0)
+    public static FadeOutEffect Create(float durationSeconds, float fadeStartTime = 0,
+        Func<float, float>? velocityCurve = null,
+        float velocityScale = 1f)
     {
         var ret = _pool.Value.Rent();
         ret.Construct(durationSeconds, fadeStartTime);
+        ret.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
+        ret.velocityScale = velocityScale;
         return ret;
     }
 
@@ -80,7 +95,7 @@ public class FadeOutEffect : Recyclable, IEffect
         finished = false;
     }
 
-    public IEffect Clone() => Create(fadeDuration, fadeStartTime);
+    public IEffect Clone() => Create(fadeDuration, fadeStartTime, velocityCurve, velocityScale);
 
     public float Process(in EffectContext ctx)
     {
@@ -93,6 +108,7 @@ public class FadeOutEffect : Recyclable, IEffect
             return input;
 
         float gain = 1.0f - MathF.Min(1.0f, (time - fadeStartTime) / fadeDuration);
+        gain *= velocityCurve(ctx.VelocityNorm) * velocityScale;
         if (gain <= 0f)
         {
             finished = true;
@@ -107,6 +123,8 @@ public class FadeOutEffect : Recyclable, IEffect
         fadeDuration = 0;
         fadeStartTime = 0;
         finished = false;
+        velocityCurve = EffectContext.EaseLinear;
+        velocityScale = 1f;
         base.OnReturn();
     }
 }

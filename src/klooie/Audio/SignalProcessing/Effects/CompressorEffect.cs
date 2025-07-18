@@ -17,6 +17,9 @@ public sealed class CompressorEffect : Recyclable, IEffect
     /* --- state ---------------------------------------------------------- */
     private float envelope;
 
+    private Func<float, float> velocityCurve = EffectContext.EaseLinear;
+    private float velocityScale = 1f;
+
     /* --- pooling -------------------------------------------------------- */
     private static readonly LazyPool<CompressorEffect> _pool = new(() => new CompressorEffect());
     private CompressorEffect() { }
@@ -25,7 +28,9 @@ public sealed class CompressorEffect : Recyclable, IEffect
         float threshold = 0.6f,
         float ratio = 4f,
         float attack = 0.01f,
-        float release = 0.005f)
+        float release = 0.005f,
+        Func<float, float>? velocityCurve = null,
+        float velocityScale = 1f)
     {
         var fx = _pool.Value.Rent();
         fx.threshold = threshold;
@@ -33,14 +38,18 @@ public sealed class CompressorEffect : Recyclable, IEffect
         fx.attack = attack;
         fx.release = release;
         fx.envelope = 0f;
+        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = velocityScale;
         return fx;
     }
 
-    public IEffect Clone() => Create(threshold, ratio, attack, release);
+    public IEffect Clone() => Create(threshold, ratio, attack, release, velocityCurve, velocityScale);
 
     public float Process(in EffectContext ctx)
     {
         float input = ctx.Input;
+        float velFactor = velocityCurve(ctx.VelocityNorm) * velocityScale;
+        float thresholdMod = threshold * velFactor;
         float level = MathF.Abs(input);
 
         /* envelope follower ------------------------------------------------*/
@@ -50,10 +59,10 @@ public sealed class CompressorEffect : Recyclable, IEffect
 
         /* gain computer ----------------------------------------------------*/
         float gain = 1f;
-        if (envelope > threshold && envelope > 1e-9f)
+        if (envelope > thresholdMod && envelope > 1e-9f)
         {
-            float over = envelope - threshold;
-            float compressed = threshold + over / ratio;   // soft-knee-ish
+            float over = envelope - thresholdMod;
+            float compressed = thresholdMod + over / ratio;   // soft-knee-ish
             gain = compressed / envelope;
         }
 
@@ -63,6 +72,8 @@ public sealed class CompressorEffect : Recyclable, IEffect
     protected override void OnReturn()
     {
         threshold = ratio = attack = release = envelope = 0f;
+        velocityCurve = EffectContext.EaseLinear;
+        velocityScale = 1f;
         base.OnReturn();
     }
 }

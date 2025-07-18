@@ -10,13 +10,19 @@ public class DelayEffect : Recyclable, IEffect
     private float[] buffer;
     private int pos;
     private float feedback, mix;
+    private bool velocityAffectsMix;
+    private Func<float, float> mixVelocityCurve = EffectContext.EaseLinear;
 
     private static LazyPool<DelayEffect> _pool = new(() => new DelayEffect()); // Default 1 second delay at 44100Hz
     protected DelayEffect() { }
-    public static DelayEffect Create(int delaySamples, float feedback = 0.3f, float mix = 0.4f)
+    public static DelayEffect Create(int delaySamples, float feedback = 0.3f, float mix = 0.4f,
+        bool velocityAffectsMix = true,
+        Func<float, float>? mixVelocityCurve = null)
     {
         var ret = _pool.Value.Rent();
         ret.Construct(delaySamples, feedback, mix);
+        ret.velocityAffectsMix = velocityAffectsMix;
+        ret.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
     protected void Construct(int delaySamples, float feedback = 0.3f, float mix = 0.4f)
@@ -29,7 +35,7 @@ public class DelayEffect : Recyclable, IEffect
 
     public IEffect Clone()
     {
-        var ret= Create(buffer.Length, feedback, mix);
+        var ret= Create(buffer.Length, feedback, mix, velocityAffectsMix, mixVelocityCurve);
         return ret;
     }
 
@@ -37,7 +43,10 @@ public class DelayEffect : Recyclable, IEffect
     {
         float input = ctx.Input;
         float delayed = buffer[pos];
-        float output = (1 - mix) * input + mix * delayed;
+        float mixAmount = mix;
+        if (velocityAffectsMix)
+            mixAmount *= mixVelocityCurve(ctx.VelocityNorm);
+        float output = (1 - mixAmount) * input + mixAmount * delayed;
         buffer[pos] = input + delayed * feedback;
         pos = (pos + 1) % buffer.Length;
         return output;
@@ -47,6 +56,8 @@ public class DelayEffect : Recyclable, IEffect
     {
         Array.Clear(buffer, 0, buffer.Length);
         pos = 0;
+        velocityAffectsMix = false;
+        mixVelocityCurve = EffectContext.EaseLinear;
         base.OnReturn();
     }
 }

@@ -7,14 +7,23 @@ public class HighPassFilterEffect : Recyclable, IEffect
     private float prevOutput;
     private float alpha;
     private float cutoffHz;
+    private float mix = 1f;
+    private bool velocityAffectsMix;
+    private Func<float, float> mixVelocityCurve = EffectContext.EaseLinear;
 
     private static readonly LazyPool<HighPassFilterEffect> _pool = new(() => new HighPassFilterEffect());
     protected HighPassFilterEffect() { }
 
-    public static HighPassFilterEffect Create(float cutoffHz = 200f)
+    public static HighPassFilterEffect Create(float cutoffHz = 200f,
+        float mix = 1f,
+        bool velocityAffectsMix = true,
+        Func<float, float>? mixVelocityCurve = null)
     {
         var ret = _pool.Value.Rent();
         ret.Construct(cutoffHz);
+        ret.mix = mix;
+        ret.velocityAffectsMix = velocityAffectsMix;
+        ret.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
 
@@ -28,7 +37,7 @@ public class HighPassFilterEffect : Recyclable, IEffect
         this.cutoffHz = cutoffHz;
     }
 
-    public IEffect Clone() => HighPassFilterEffect.Create(cutoffHz);
+    public IEffect Clone() => HighPassFilterEffect.Create(cutoffHz, mix, velocityAffectsMix, mixVelocityCurve);
 
     public float Process(in EffectContext ctx)
     {
@@ -36,7 +45,10 @@ public class HighPassFilterEffect : Recyclable, IEffect
         float output = alpha * (prevOutput + input - prevInput);
         prevInput = input;
         prevOutput = output;
-        return output;
+        float mixAmt = mix;
+        if (velocityAffectsMix)
+            mixAmt *= mixVelocityCurve(ctx.VelocityNorm);
+        return input * (1 - mixAmt) + output * mixAmt;
     }
 
     protected override void OnReturn()
@@ -44,6 +56,9 @@ public class HighPassFilterEffect : Recyclable, IEffect
         prevInput = 0f;
         prevOutput = 0f;
         alpha = 0f;
+        mix = 1f;
+        velocityAffectsMix = false;
+        mixVelocityCurve = EffectContext.EaseLinear;
         base.OnReturn();
     }
 }
