@@ -6,6 +6,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+[SynthCategory("Utility")]
+[SynthDescription("""
+Creates multiple detuned copies of a patch for wide, thick sounds
+with controllable pan spread.
+""")]
 public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
 {
     private ISynthPatch basePatch;
@@ -131,5 +136,23 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
         detuneCents = 0f;
         panSpread = 0f;
         _innerPatches = null!;
+    }
+
+    [SynthDescription("""
+    Parameters for creating a unison patch.
+    """)]
+    public struct Settings
+    {
+        [SynthDescription("""Patch to clone for each voice.""")]
+        public ISynthPatch BasePatch;
+
+        [SynthDescription("""Number of detuned voices.""")]
+        public int NumVoices;
+
+        [SynthDescription("""Total detune range in cents.""")]
+        public float DetuneCents;
+
+        [SynthDescription("""Stereo spread of the voices (-1 to 1).""")]
+        public float PanSpread;
     }
 }

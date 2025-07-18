@@ -2,6 +2,11 @@
 
 namespace klooie;
 
+[SynthCategory("Guitar")]
+[SynthDescription("""
+Moderate-gain rock guitar patch featuring layered unison voices and
+power-chord assembly for realistic riffs.
+""")]
 public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
 {
     public bool IsNotePlayable(int midiNote) => midiNote >= 37 && midiNote <= 60;

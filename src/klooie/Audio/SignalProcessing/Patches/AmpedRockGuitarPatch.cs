@@ -2,11 +2,11 @@
 
 namespace klooie;
 
-/// <summary>
-/// Modern high-gain guitar “amp-stack”:
-///   pre-HPF → pre-gain → AggroDistortion → Tone Stack → 4×12 cab →
-///   LPF fizz-tamer → compressor → width / ambience.
-/// </summary>
+[SynthCategory("Guitar")]
+[SynthDescription("""
+High-gain guitar patch built from stacked distortion, tone shaping,
+cabinet simulation and ambience effects for aggressive rock lines.
+""")]
 public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch, ICompositePatch
 {
     /* -------------------------------------------------------------------- */

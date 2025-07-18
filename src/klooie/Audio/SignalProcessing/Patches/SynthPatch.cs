@@ -34,6 +34,11 @@ public interface ISynthPatch
     void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note, List<SynthSignalSource> outVoices);
 }
 
+[SynthCategory("Core")]
+[SynthDescription("""
+Basic synthesizer patch providing a single oscillator with optional
+sub oscillator, vibrato, pitch drift and effect chain support.
+""")]
 public class SynthPatch : Recyclable, ISynthPatch
 {
     public ISynthPatch InnerPatch => this;
