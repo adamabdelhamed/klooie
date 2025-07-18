@@ -44,7 +44,7 @@ public sealed class AmpedRockGuitarPatch : Recyclable, ISynthPatch, ICompositePa
             .WithToneStack(1.10f, 0.75f, 1.55f)
             .WithCabinet()
             .WithPresenceShelf(-3f)
-            .WithLowPass(0.019f)
+            .WithLowPass(136f)
             .WithPeakEQ(400f, -3f, 1.0f)
             .WithHighShelf(6000f, -4f)
 

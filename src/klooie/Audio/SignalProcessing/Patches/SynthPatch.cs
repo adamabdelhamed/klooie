@@ -134,8 +134,8 @@ public static class SynthPatchExtensions
     public static ISynthPatch WithHighPass(this ISynthPatch patch, float cutoffHz = 200f)
         => patch.WithEffect(HighPassFilterEffect.Create(cutoffHz));
 
-    public static ISynthPatch WithLowPass(this ISynthPatch patch, float alpha)
-        => patch.WithEffect(LowPassFilterEffect.Create(alpha));
+    public static ISynthPatch WithLowPass(this ISynthPatch patch, float cutoffHz = 200f)
+        => patch.WithEffect(LowPassFilterEffect.Create(cutoffHz));
 
     public static ISynthPatch WithDistortion(this ISynthPatch patch, float drive = 6f, float stageRatio = 0.6f, float bias = 0.15f)
         => patch.WithEffect(DistortionEffect.Create(drive, stageRatio, bias));
