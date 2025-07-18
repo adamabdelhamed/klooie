@@ -14,6 +14,9 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
     private float z1, z2, z3;       // poly-phase accumulators
     private float lp;               // anti-alias LPF
 
+    private Func<float, float> velocityCurve = EffectContext.EaseLinear;
+    private float velocityScale = 1f;
+
     /* -------- pooling ----------------------------------------------------- */
     private static readonly LazyPool<AggroDistortionEffect> _pool =
         new(() => new AggroDistortionEffect());
@@ -23,7 +26,9 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
     public static AggroDistortionEffect Create(
         float drive = 12f,       // hotter than before
         float stageRatio = 0.8f, // keep stages fairly hot
-        float bias = 0.12f)      // subtle even-harmonics
+        float bias = 0.12f,      // subtle even-harmonics
+        Func<float, float>? velocityCurve = null,
+        float velocityScale = 1f)
     {
         var fx = _pool.Value.Rent();
         fx.preGain = drive;
@@ -31,10 +36,12 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
         fx.bias = bias;
         fx.makeup = 1f / MathF.Tanh(drive * 0.7f); // auto-level
         fx.Reset();
+        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = velocityScale;
         return fx;
     }
 
-    public IEffect Clone() => Create(preGain, stageRatio, bias);
+    public IEffect Clone() => Create(preGain, stageRatio, bias, velocityCurve, velocityScale);
 
     /* pre-compiled constants ---------------------------------------------- */
     private const int oversample = 4;
@@ -44,6 +51,7 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
     {
         /* poly-phase 4× oversample ---------------------------------------- */
         float s = ctx.Input, outSum = 0f;
+        float velFactor = 1f + velocityScale * (velocityCurve(ctx.VelocityNorm) - 1f);
         for (int p = 0; p < oversample; p++)
         {
             /* cheap linear upsample */
@@ -57,7 +65,7 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
 
             z1 = s;
 
-            outSum += Distort(interp);
+            outSum += Distort(interp, velFactor);
         }
 
         /* down-sample & low-pass ------------------------------------------ */
@@ -67,9 +75,9 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
     }
 
     /* 3-stage soft-clip with bias ----------------------------------------- */
-    private float Distort(float x)
+    private float Distort(float x, float velFactor)
     {
-        float g1 = preGain;
+        float g1 = preGain * velFactor;
         float g2 = g1 * stageRatio;
         float g3 = g2 * stageRatio;
 
@@ -88,6 +96,8 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
     {
         Reset();
         preGain = stageRatio = bias = makeup = 0f;
+        velocityCurve = EffectContext.EaseLinear;
+        velocityScale = 1f;
         base.OnReturn();
     }
 }

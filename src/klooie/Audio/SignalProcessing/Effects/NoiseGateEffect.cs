@@ -15,13 +15,17 @@ class NoiseGateEffect : Recyclable, IEffect
     float env, rise, fall;
     bool open;
     float gain;
+    private bool velocityAffectsThreshold;
+    private Func<float, float> velocityCurve = EffectContext.EaseLinear;
 
     static readonly LazyPool<NoiseGateEffect> _pool =
         new(() => new NoiseGateEffect());
 
     public static NoiseGateEffect Create(
         float openThresh = 0.05f, float closeThresh = 0.04f,
-        float attackMs = 2f, float releaseMs = 60f)
+        float attackMs = 2f, float releaseMs = 60f,
+        bool velocityAffectsThreshold = true,
+        Func<float, float>? velocityCurve = null)
     {
         var fx = _pool.Value.Rent();
         fx.attackMs = attackMs;
@@ -33,12 +37,14 @@ class NoiseGateEffect : Recyclable, IEffect
         fx.env = openThresh; // start above closeThresh to avoid initial mute
         fx.open = true;      // begin open so note attacks aren't choked
         fx.gain = 1f;
+        fx.velocityAffectsThreshold = velocityAffectsThreshold;
+        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
         fx.lookPos = 0;
         Array.Clear(fx.lookBuf, 0, fx.lookBuf.Length);
         return fx;
     }
 
-    public IEffect Clone() => NoiseGateEffect.Create(openThresh, closeThresh, attackMs, releaseMs);
+    public IEffect Clone() => NoiseGateEffect.Create(openThresh, closeThresh, attackMs, releaseMs, velocityAffectsThreshold, velocityCurve);
 
     public float Process(in EffectContext ctx)
     {
@@ -51,9 +57,16 @@ class NoiseGateEffect : Recyclable, IEffect
         float ahead = lookBuf[readPos];
         float abs = MathF.Abs(ahead);
 
+        float openT = openThresh;
+        float closeT = closeThresh;
+        if (velocityAffectsThreshold)
+        {
+            float v = velocityCurve(ctx.VelocityNorm);
+            openT *= v; closeT *= v;
+        }
         env = Smoother.Follow(ref env, rise, fall, abs);
-        if (!open && env > openThresh) open = true;
-        else if (open && env < closeThresh) open = false;
+        if (!open && env > openT) open = true;
+        else if (open && env < closeT) open = false;
 
         float target = open ? 1f : 0f;
         gain = Smoother.Follow(ref gain, rise, fall, target);
@@ -67,5 +80,7 @@ class NoiseGateEffect : Recyclable, IEffect
         lookPos = 0;
         env = gain = 0f;
         open = false;
+        velocityAffectsThreshold = false;
+        velocityCurve = EffectContext.EaseLinear;
         base.OnReturn();
     }}

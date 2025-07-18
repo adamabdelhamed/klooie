@@ -12,11 +12,15 @@ class CabinetEffect : Recyclable, IEffect
     float bl0, bl1, bl2, al1, al2;
     float bm0, bm1, bm2, am1, am2;
     float bh0, bh1, bh2, ah1, ah2;
+    private Func<float, float> velocityCurve = EffectContext.EaseLinear;
+    private float velocityScale = 1f;
 
     static readonly LazyPool<CabinetEffect> _pool =
         new(() => new CabinetEffect());
 
-    public static CabinetEffect Create()
+    public static CabinetEffect Create(
+        Func<float, float>? velocityCurve = null,
+        float velocityScale = 1f)
     {
         var fx = _pool.Value.Rent();
         // design filters (values = typical 4×12 cab)
@@ -27,10 +31,12 @@ class CabinetEffect : Recyclable, IEffect
         Biquad.DesignHighShelf(fc: 4500f, gainDb: -6f, out fx.bh0, out fx.bh1, out fx.bh2,
                                                               out fx.ah1, out fx.ah2);
         fx.low = fx.mid = fx.high = default;
+        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = velocityScale;
         return fx;
     }
 
-    public IEffect Clone() => Create();
+    public IEffect Clone() => Create(velocityCurve, velocityScale);
 
     public float Process(in EffectContext ctx)
     {
@@ -38,12 +44,15 @@ class CabinetEffect : Recyclable, IEffect
         x = Biquad.Process(ref low, bl0, bl1, bl2, al1, al2, x);
         x = Biquad.Process(ref mid, bm0, bm1, bm2, am1, am2, x);
         x = Biquad.Process(ref high, bh0, bh1, bh2, ah1, ah2, x);
-        return x;
+        float gain = velocityCurve(ctx.VelocityNorm) * velocityScale;
+        return x * gain;
     }
 
     protected override void OnReturn()
     {
         low = mid = high = default;
+        velocityCurve = EffectContext.EaseLinear;
+        velocityScale = 1f;
         base.OnReturn();
     }
 }

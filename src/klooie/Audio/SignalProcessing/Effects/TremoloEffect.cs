@@ -6,18 +6,24 @@ public class TremoloEffect : Recyclable, IEffect
     private float depth;
     private float rateHz;
     private float phase;
+    private bool velocityAffectsDepth;
+    private Func<float, float> depthVelocityCurve = EffectContext.EaseLinear;
 
     private static readonly LazyPool<TremoloEffect> _pool = new(() => new TremoloEffect());
     protected TremoloEffect() { }
 
-    public static TremoloEffect Create(float depth = 0.5f, float rateHz = 5f)
+    public static TremoloEffect Create(float depth = 0.5f, float rateHz = 5f,
+        bool velocityAffectsDepth = true,
+        Func<float, float>? depthVelocityCurve = null)
     {
         var ret = _pool.Value.Rent();
         ret.Construct(depth, rateHz);
+        ret.velocityAffectsDepth = velocityAffectsDepth;
+        ret.depthVelocityCurve = depthVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
 
-    public IEffect Clone() => Create(depth, rateHz);
+    public IEffect Clone() => Create(depth, rateHz, velocityAffectsDepth, depthVelocityCurve);
 
     protected void Construct(float depth, float rateHz)
     {
@@ -28,7 +34,10 @@ public class TremoloEffect : Recyclable, IEffect
 
     public float Process(in EffectContext ctx)
     {
-        float mod = 1f - depth + depth * (0.5f * (MathF.Sin(phase) + 1f));
+        float d = depth;
+        if (velocityAffectsDepth)
+            d *= depthVelocityCurve(ctx.VelocityNorm);
+        float mod = 1f - d + d * (0.5f * (MathF.Sin(phase) + 1f));
         float output = ctx.Input * mod;
         phase += 2f * MathF.PI * rateHz / SoundProvider.SampleRate;
         if (phase > 2f * MathF.PI) phase -= 2f * MathF.PI;
@@ -40,6 +49,8 @@ public class TremoloEffect : Recyclable, IEffect
         depth = 0f;
         rateHz = 0f;
         phase = 0f;
+        velocityAffectsDepth = false;
+        depthVelocityCurve = EffectContext.EaseLinear;
         base.OnReturn();
     }
 }

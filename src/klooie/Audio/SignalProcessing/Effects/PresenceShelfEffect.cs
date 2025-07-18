@@ -18,6 +18,8 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
     /* ---- state ---------------------------------------------------------- */
     private float resY1, resY2;     // biquad delay
     private float lp;               // 1-pole LP for shelf split
+    private Func<float, float> velocityCurve = EffectContext.EaseLinear;
+    private float velocityScale = 1f;
 
     /* ---- coefficients --------------------------------------------------- */
     private float b0, b1, b2, a1, a2; // biquad (resonant LP)
@@ -28,16 +30,20 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
 
     private PresenceShelfEffect() { }
 
-    public static PresenceShelfEffect Create(float presenceDb = +3f)
+    public static PresenceShelfEffect Create(float presenceDb = +3f,
+        Func<float, float>? velocityCurve = null,
+        float velocityScale = 1f)
     {
         var fx = _pool.Value.Rent();
         fx.shelfGain = MathF.Pow(10f, presenceDb / 20f);
         fx.Configure();
         fx.resY1 = fx.resY2 = fx.lp = 0f;
+        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = velocityScale;
         return fx;
     }
 
-    public IEffect Clone() => Create(20f * MathF.Log10(shelfGain));
+    public IEffect Clone() => Create(20f * MathF.Log10(shelfGain), velocityCurve, velocityScale);
 
     /* ----- core ---------------------------------------------------------- */
     public float Process(in EffectContext ctx)
@@ -51,7 +57,8 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
         /* presence shelf --------------------------------------------------- */
         lp += alphaShelf * (y - lp);
         float high = y - lp;             // >4.8 kHz
-        return lp + high * shelfGain;
+        float gain = shelfGain * (1f + velocityScale * (velocityCurve(ctx.VelocityNorm) - 1f));
+        return lp + high * gain;
     }
 
     /* ----- helpers ------------------------------------------------------- */
@@ -85,6 +92,8 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
     {
         shelfGain = resY1 = resY2 = lp = 0f;
         b0 = b1 = b2 = a1 = a2 = alphaShelf = 0f;
+        velocityCurve = EffectContext.EaseLinear;
+        velocityScale = 1f;
         base.OnReturn();
     }
 }

@@ -9,6 +9,8 @@ class DistortionEffect : Recyclable, IEffect
 {
     // 2× oversample using linear interp, 3 gain stages, tanh softclip
     float gain1, gain2, gain3, bias;
+    private Func<float, float> velocityCurve = EffectContext.EaseLinear;
+    private float velocityScale = 1f;
     float lpOut;   // simple 1-pole LP to anti-alias
     float prevIn;
 
@@ -20,7 +22,9 @@ class DistortionEffect : Recyclable, IEffect
     public static DistortionEffect Create(
         float drive = 6f, // overall gain
         float stageRatio = 0.6f, // how each stage’s gain scales
-        float bias = 0.15f)      // DC bias to add asymmetry
+        float bias = 0.15f,      // DC bias to add asymmetry
+        Func<float, float>? velocityCurve = null,
+        float velocityScale = 1f)
     {
         var fx = _pool.Value.Rent();
         fx.gain1 = drive;
@@ -30,12 +34,14 @@ class DistortionEffect : Recyclable, IEffect
         fx.prevIn = 0f;
         fx.lpOut = 0f;
         fx.stageRatio = stageRatio;
+        fx.velocityCurve = velocityCurve ?? EffectContext.EaseLinear;
+        fx.velocityScale = velocityScale;
         return fx;
     }
 
     public IEffect Clone()
     {
-        return Create(gain1, stageRatio, bias);
+        return Create(gain1, stageRatio, bias, velocityCurve, velocityScale);
     }
 
     // one-pole LP at ~9 kHz (post-distortion, base SR)
@@ -47,10 +53,11 @@ class DistortionEffect : Recyclable, IEffect
     {
         // ---- 2× oversampling (linear) -------------------------------------
         float input = ctx.Input;
+        float velFactor = 1f + velocityScale * (velocityCurve(ctx.VelocityNorm) - 1f);
         float mid = 0.5f * (input + prevIn);
-        float a = Distort(prevIn);
-        float b = Distort(mid);
-        float c = Distort(input);
+        float a = Distort(prevIn, velFactor);
+        float b = Distort(mid, velFactor);
+        float c = Distort(input, velFactor);
         prevIn = input;
 
         // anti-alias LP & decimate: weighted average ≈ low-pass
@@ -59,11 +66,11 @@ class DistortionEffect : Recyclable, IEffect
         return lpOut;
     }
 
-    float Distort(float x)
+    float Distort(float x, float velFactor)
     {
-        float y1 = SoftClip(x * gain1 + bias);
-        float y2 = SoftClip(y1 * gain2 - bias);
-        float y3 = SoftClip(y2 * gain3);
+        float y1 = SoftClip(x * (gain1 * velFactor) + bias);
+        float y2 = SoftClip(y1 * (gain2 * velFactor) - bias);
+        float y3 = SoftClip(y2 * (gain3 * velFactor));
         return y3 * 0.6f;  // tame output level
     }
 
@@ -71,6 +78,8 @@ class DistortionEffect : Recyclable, IEffect
     {
         prevIn = lpOut = 0f;
         gain1 = gain2 = gain3 = bias = 0f;
+        velocityCurve = EffectContext.EaseLinear;
+        velocityScale = 1f;
         base.OnReturn();
     }
 }

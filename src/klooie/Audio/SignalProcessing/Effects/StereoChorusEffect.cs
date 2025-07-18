@@ -11,19 +11,25 @@ public class StereoChorusEffect : Recyclable, IEffect
     private int pos;
     private int delaySamples, depthSamples;
     private float rateHz, mix;
+    private bool velocityAffectsMix;
+    private Func<float, float> mixVelocityCurve = EffectContext.EaseLinear;
     private float phase;
     private int delayMs, depthMs;
 
     private static LazyPool<StereoChorusEffect> _pool = new(() => new StereoChorusEffect());
     protected StereoChorusEffect() { }
-    public static StereoChorusEffect Create(int delayMs = 20, int depthMs = 6, float rateHz = 0.4f, float mix = 0.3f)
+    public static StereoChorusEffect Create(int delayMs = 20, int depthMs = 6, float rateHz = 0.4f, float mix = 0.3f,
+        bool velocityAffectsMix = true,
+        Func<float, float>? mixVelocityCurve = null)
     {
         var ret = _pool.Value.Rent();
         ret.Construct(delayMs, depthMs, rateHz, mix);
+        ret.velocityAffectsMix = velocityAffectsMix;
+        ret.mixVelocityCurve = mixVelocityCurve ?? EffectContext.EaseLinear;
         return ret;
     }
 
-    public IEffect Clone() => Create(delayMs, depthMs, rateHz, mix);
+    public IEffect Clone() => Create(delayMs, depthMs, rateHz, mix, velocityAffectsMix, mixVelocityCurve);
 
     protected void Construct(int delayMs = 20, int depthMs = 6, float rateHz = 0.4f, float mix = 0.3f)
     {
@@ -52,7 +58,10 @@ public class StereoChorusEffect : Recyclable, IEffect
         phase += 2 * MathF.PI * rateHz / SoundProvider.SampleRate;
         if (phase > 2 * MathF.PI) phase -= 2 * MathF.PI;
 
-        return (1 - mix) * ctx.Input + mix * delayed;
+        float mixAmt = mix;
+        if (velocityAffectsMix)
+            mixAmt *= mixVelocityCurve(ctx.VelocityNorm);
+        return (1 - mixAmt) * ctx.Input + mixAmt * delayed;
     }
 
 
@@ -61,7 +70,9 @@ public class StereoChorusEffect : Recyclable, IEffect
         bufferL = null;
         bufferR = null;
         pos = 0;
-        phase = 0f; 
+        phase = 0f;
+        velocityAffectsMix = false;
+        mixVelocityCurve = EffectContext.EaseLinear;
         base.OnReturn();
     }
 }
