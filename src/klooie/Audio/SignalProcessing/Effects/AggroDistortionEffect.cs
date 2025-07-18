@@ -3,7 +3,9 @@
 namespace klooie;
 
 [SynthDescription("""
-Aggressive multi-stage distortion with oversampling for heavy tones.
+Multi-stage distortion designed for saturated guitar tones.  Oversampling is
+used to reduce aliasing so the result stays aggressive without unwanted
+high‑frequency artifacts.
 """)]
 [SynthCategory("Distortion")]
 public sealed class AggroDistortionEffect : Recyclable, IEffect
@@ -28,23 +30,29 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
     private AggroDistortionEffect() { }
 
     [SynthDescription("""
-    Parameters for AggroDistortionEffect.
+    Settings used when constructing an AggroDistortionEffect.  These values
+    control how hard the signal is driven and how each stage behaves.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Input drive level.""")]
+        [SynthDescription("""Pre-gain applied before the distortion stages.  Higher
+        values push the effect harder.""")]
         public float Drive;
 
-        [SynthDescription("""Gain ratio between each distortion stage.""")]
+        [SynthDescription("""Relative gain drop applied to each successive
+        distortion stage.""")]
         public float StageRatio;
 
-        [SynthDescription("""Bias for asymmetric clipping.""")]
+        [SynthDescription("""Offset that introduces asymmetry into the clipping
+        curve.""")]
         public float Bias;
 
-        [SynthDescription("""Optional velocity-to-gain curve.""")]
+        [SynthDescription("""Function mapping note velocity to a gain
+        multiplier.""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Scale factor applied to the velocity curve.""")]
+        [SynthDescription("""Overall multiplier applied after evaluating the
+        velocity curve.""")]
         public float VelocityScale;
     }
 

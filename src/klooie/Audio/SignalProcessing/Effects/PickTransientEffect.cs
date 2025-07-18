@@ -8,7 +8,8 @@ namespace klooie;
 /// Place very early in the chain (before distortion) for realism.
 /// </summary>
 [SynthDescription("""
-Adds a short noise transient at note onset for realism.
+Inserts a brief burst of noise when a note begins.  This mimics the pick or
+pluck sound heard on real instruments.
 """)]
 [SynthCategory("Dynamics")]
 public sealed class PickTransientEffect : Recyclable, IEffect
@@ -24,14 +25,14 @@ public sealed class PickTransientEffect : Recyclable, IEffect
     private PickTransientEffect() { rng = new Random(); }
 
     [SynthDescription("""
-    Parameters for PickTransientEffect.
+    Settings controlling how long the noise burst lasts and how loud it is.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Noise duration in seconds.""")]
+        [SynthDescription("""Length of the noise burst in seconds.""")]
         public float Duration;
 
-        [SynthDescription("""Amplitude of the transient.""")]
+        [SynthDescription("""Volume of the transient noise.""")]
         public float Gain;
     }
 

@@ -4,8 +4,8 @@ namespace klooie;
 
 [SynthCategory("Guitar")]
 [SynthDescription("""
-Moderate-gain rock guitar patch featuring layered unison voices and
-power-chord assembly for realistic riffs.
+Moderate‑gain rock guitar patch built from layered unison voices and automatic
+power‑chord generation for convincing riffs.
 """)]
 public sealed class RockGuitar2 : Recyclable, ISynthPatch, ICompositePatch
 {

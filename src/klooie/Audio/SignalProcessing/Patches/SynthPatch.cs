@@ -36,8 +36,9 @@ public interface ISynthPatch
 
 [SynthCategory("Core")]
 [SynthDescription("""
-Basic synthesizer patch providing a single oscillator with optional
-sub oscillator, vibrato, pitch drift and effect chain support.
+Single-oscillator patch that forms the basis of most instruments.  Optional
+components include a sub oscillator, vibrato, gentle pitch drift and a
+pluggable effects chain.  Use this as a starting point for custom patches.
 """)]
 public class SynthPatch : Recyclable, ISynthPatch
 {

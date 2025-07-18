@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace klooie;
 [SynthDescription("""
-First-order low-pass filter.
+Simple low-pass filter that rolls off frequencies above the cutoff.
 """)]
 [SynthCategory("Filter")]
 class LowPassFilterEffect : Recyclable, IEffect
@@ -23,20 +23,25 @@ class LowPassFilterEffect : Recyclable, IEffect
     private LowPassFilterEffect() { }
 
     [SynthDescription("""
-    Parameters for LowPassFilterEffect.
+    Settings describing the cutoff frequency and how strongly the filtered
+    signal is mixed in.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Cutoff frequency in Hz.""")]
+        [SynthDescription("""Cutoff frequency in hertz above which the signal is
+        attenuated.""")]
         public float CutoffHz;
 
-        [SynthDescription("""Blend between dry and filtered signal.""")]
+        [SynthDescription("""Mix level between the original and filtered signal
+        (0 = dry, 1 = filtered).""")]
         public float Mix;
 
-        [SynthDescription("""When true, velocity scales the mix amount.""")]
+        [SynthDescription("""If true, note velocity changes how much of the
+        filtered signal is heard.""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Curve for velocity-based mix scaling.""")]
+        [SynthDescription("""Function converting velocity into a mix
+        multiplier.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace klooie;
 [SynthDescription("""
-Stereo chorus effect with delay modulation.
+Classic stereo chorus that modulates a short delay time to produce a wide,
+swirling sound.
 """)]
 [SynthCategory("Modulation")]
 public class StereoChorusEffect : Recyclable, IEffect
@@ -23,26 +24,28 @@ public class StereoChorusEffect : Recyclable, IEffect
     private static LazyPool<StereoChorusEffect> _pool = new(() => new StereoChorusEffect());
     protected StereoChorusEffect() { }
     [SynthDescription("""
-    Parameters for StereoChorusEffect.
+    Settings defining the base delay time, modulation depth and how the mix
+    responds to note velocity.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Base delay in milliseconds.""")]
+        [SynthDescription("""Initial delay in milliseconds before modulation.""")]
         public int DelayMs;
 
-        [SynthDescription("""Modulation depth in milliseconds.""")]
+        [SynthDescription("""Amount the delay is modulated in milliseconds.""")]
         public int DepthMs;
 
-        [SynthDescription("""LFO rate in Hz.""")]
+        [SynthDescription("""Speed of the modulation LFO in hertz.""")]
         public float RateHz;
 
-        [SynthDescription("""Blend between dry and modulated signal.""")]
+        [SynthDescription("""Mix between the original and modulated signals
+        (0 = dry, 1 = fully wet).""")]
         public float Mix;
 
-        [SynthDescription("""Whether velocity scales the mix amount.""")]
+        [SynthDescription("""If true, note velocity affects the wet/dry mix.""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Curve for velocity-based mix scaling.""")]
+        [SynthDescription("""Function converting velocity to a mix multiplier.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

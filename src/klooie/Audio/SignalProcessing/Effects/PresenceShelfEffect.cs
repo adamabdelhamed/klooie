@@ -8,7 +8,8 @@ namespace klooie;
 /// and the presence control on high-gain amps.
 /// </summary>
 [SynthDescription("""
-Resonant low-pass feeding a high-shelf booster for presence control.
+Combines a resonant low‑pass with a high‑shelf boost to mimic the presence
+control found on many guitar amplifiers.
 """)]
 [SynthCategory("Filter")]
 public sealed class PresenceShelfEffect : Recyclable, IEffect
@@ -35,17 +36,20 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
     private PresenceShelfEffect() { }
 
     [SynthDescription("""
-    Parameters for PresenceShelfEffect.
+    Settings controlling the amount of high-frequency boost and optional
+    velocity-based scaling.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Amount of high-frequency boost in dB.""")]
+        [SynthDescription("""Boost applied to the high frequencies in decibels.""")]
         public float PresenceDb;
 
-        [SynthDescription("""Optional curve for velocity-based scaling.""")]
+        [SynthDescription("""Function used to scale the boost based on note
+        velocity.""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Multiplier applied to velocity curve.""")]
+        [SynthDescription("""Additional multiplier applied to the velocity
+        curve's output.""")]
         public float VelocityScale;
     }
 

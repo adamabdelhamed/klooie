@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace klooie;
 [SynthDescription("""
-Multi-stage soft-clipping distortion effect with simple oversampling to reduce aliasing.
+Distortion built from several soft‑clipping stages.  Basic oversampling is used
+to lessen aliasing so the tone stays smoother even at high drive levels.
 """)]
 [SynthCategory("Distortion")]
 class DistortionEffect : Recyclable, IEffect
@@ -24,23 +25,29 @@ class DistortionEffect : Recyclable, IEffect
     static readonly LazyPool<DistortionEffect> _pool = new(() => new DistortionEffect());
 
     [SynthDescription("""
-    Parameters for DistortionEffect.
+    Settings used to build a DistortionEffect.  They define the drive level and
+    how each clipping stage behaves.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Input gain before distortion stages.""")]
+        [SynthDescription("""Gain applied before the first clipping stage.  Higher
+        values yield more distortion.""")]
         public float Drive;
 
-        [SynthDescription("""Relative gain drop for each successive stage.""")]
+        [SynthDescription("""Multiplier controlling how much the gain decreases
+        at each successive stage.""")]
         public float StageRatio;
 
-        [SynthDescription("""Asymmetry bias added to the clipper.""")]
+        [SynthDescription("""Offset added before clipping to produce asymmetric
+        distortion.""")]
         public float Bias;
 
-        [SynthDescription("""Optional curve mapping velocity to gain scale.""")]
+        [SynthDescription("""Optional function mapping note velocity to a gain
+        multiplier.""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Multiplier applied to the velocity curve.""")]
+        [SynthDescription("""Additional multiplier applied after evaluating the
+        velocity curve.""")]
         public float VelocityScale;
     }
 

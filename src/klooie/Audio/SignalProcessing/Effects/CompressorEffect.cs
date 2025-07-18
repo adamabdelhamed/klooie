@@ -7,7 +7,8 @@ namespace klooie;
 /// without crushing pick attack.
 /// </summary>
 [SynthDescription("""
-Peak/RMS hybrid compressor for controlling dynamic range.
+Combines peak and RMS detection to smooth out volume spikes while
+preserving natural attack transients.
 """)]
 [SynthCategory("Dynamics")]
 public sealed class CompressorEffect : Recyclable, IEffect
@@ -29,26 +30,31 @@ public sealed class CompressorEffect : Recyclable, IEffect
     private CompressorEffect() { }
 
     [SynthDescription("""
-    Parameters for CompressorEffect.
+    Settings that define how the compressor reacts to incoming audio.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Threshold level before compression occurs.""")]
+        [SynthDescription("""Input level (0–1) above which compression begins.""")]
         public float Threshold;
 
-        [SynthDescription("""Compression ratio.""")]
+        [SynthDescription("""Amount of gain reduction applied once above the
+        threshold.""")]
         public float Ratio;
 
-        [SynthDescription("""Attack time coefficient.""")]
+        [SynthDescription("""How quickly the compressor engages when the
+        threshold is exceeded.""")]
         public float Attack;
 
-        [SynthDescription("""Release time coefficient.""")]
+        [SynthDescription("""How quickly the compression relaxes after the
+        signal falls below the threshold.""")]
         public float Release;
 
-        [SynthDescription("""Velocity-to-gain curve.""")]
+        [SynthDescription("""Function mapping note velocity to a gain
+        multiplier.""")]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""Scale factor for velocity curve.""")]
+        [SynthDescription("""Multiplier applied after evaluating the velocity
+        curve.""")]
         public float VelocityScale;
     }
 

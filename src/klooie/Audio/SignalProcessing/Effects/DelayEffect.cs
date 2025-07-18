@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace klooie;
 [SynthDescription("""
-Creates a basic delay line that echoes the input after a
-specified number of samples. Feedback controls how much of
-the delayed signal is fed back for repeating echoes.
+Implements a simple delay line that plays back the input after a fixed number
+of samples.  The feedback setting routes some of the delayed signal back in so
+you can create repeating echoes.
 """)]
 [SynthCategory("Delay")]
 public class DelayEffect : Recyclable, IEffect
@@ -23,24 +23,28 @@ public class DelayEffect : Recyclable, IEffect
     protected DelayEffect() { }
 
     [SynthDescription("""
-    Parameters used when creating a DelayEffect instance.
-    All values are in sample or normalized units.
+    Settings for constructing a DelayEffect.  DelaySamples is specified in
+    audio samples while the other values range between 0 and 1.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Number of samples to delay the signal.""")]
+        [SynthDescription("""Length of the delay buffer measured in samples.""")]
         public int DelaySamples;
 
-        [SynthDescription("""Amount of feedback returned to the delay line (0-1).""")]
+        [SynthDescription("""Fraction of the delayed output that is fed back for
+        repeated echoes (0 = none, 1 = infinite).""")]
         public float Feedback;
 
-        [SynthDescription("""Blend between dry and delayed signal (0-1).""")]
+        [SynthDescription("""Mix between the original signal and the delayed
+        signal. 0 gives only the dry signal, 1 gives only delay.""")]
         public float Mix;
 
-        [SynthDescription("""When true, note velocity scales the mix amount.""")]
+        [SynthDescription("""When true, harder played notes increase the mix
+        amount.""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Curve that maps normalized velocity to a mix multiplier.""")]
+        [SynthDescription("""Function that converts normalized velocity into a
+        multiplier applied to the mix.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 

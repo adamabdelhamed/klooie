@@ -11,7 +11,8 @@ namespace klooie;
 /// Gains are linear (1 = unity, 2 = +6 dB, 0.5 = -6 dB).
 /// </summary>
 [SynthDescription("""
-Classic bass, mid and treble tone stack filter.
+Three‑band tone stack emulating the bass, mid and treble controls of many
+guitar amplifiers.
 """)]
 [SynthCategory("Filter")]
 public sealed class ToneStackEffect : Recyclable, IEffect
@@ -33,23 +34,26 @@ public sealed class ToneStackEffect : Recyclable, IEffect
     private ToneStackEffect() { }
 
     [SynthDescription("""
-    Parameters for ToneStackEffect.
+    Settings controlling the bass, mid and treble gains and optional
+    velocity-based scaling.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Bass gain factor.""")]
+        [SynthDescription("""Linear gain applied to the low frequencies.""")]
         public float Bass;
 
-        [SynthDescription("""Mid gain factor.""")]
+        [SynthDescription("""Linear gain applied to the midrange.""")]
         public float Mid;
 
-        [SynthDescription("""Treble gain factor.""")]
+        [SynthDescription("""Linear gain applied to the high frequencies.""")]
         public float Treble;
 
-        [SynthDescription("""Whether velocity scales all gains.""")]
+        [SynthDescription("""If true, note velocity scales the bass, mid and
+        treble gains.""")]
         public bool VelocityAffectsGain;
 
-        [SynthDescription("""Curve for velocity-based gain scaling.""")]
+        [SynthDescription("""Function mapping velocity to a gain multiplier
+        applied to all bands.""")]
         public Func<float, float>? GainVelocityCurve;
     }
 

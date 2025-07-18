@@ -2,7 +2,7 @@ using System;
 
 namespace klooie;
 [SynthDescription("""
-Simple one-pole high-pass filter.
+Basic high-pass filter for removing low frequencies below the chosen cutoff.
 """)]
 [SynthCategory("Filter")]
 public class HighPassFilterEffect : Recyclable, IEffect
@@ -19,20 +19,25 @@ public class HighPassFilterEffect : Recyclable, IEffect
     protected HighPassFilterEffect() { }
 
     [SynthDescription("""
-    Parameters for HighPassFilterEffect.
+    Settings describing the cutoff frequency and how the mix reacts to
+    note velocity.
     """)]
     public struct Settings
     {
-        [SynthDescription("""Cutoff frequency in Hz.""")]
+        [SynthDescription("""Frequency above which audio passes through,
+        measured in hertz.""")]
         public float CutoffHz;
 
-        [SynthDescription("""Blend between dry and filtered signal.""")]
+        [SynthDescription("""Amount of filtered signal mixed with the original
+        (0 = dry, 1 = fully filtered).""")]
         public float Mix;
 
-        [SynthDescription("""When true, velocity scales the mix amount.""")]
+        [SynthDescription("""When true, harder played notes increase the mix of
+        the filtered signal.""")]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""Curve for velocity-based mix scaling.""")]
+        [SynthDescription("""Function mapping normalized velocity to a
+        mix multiplier.""")]
         public Func<float, float>? MixVelocityCurve;
     }
 
