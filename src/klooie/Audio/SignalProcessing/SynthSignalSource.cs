@@ -220,6 +220,8 @@ public class SynthSignalSource : Recyclable
             : ctx.Input;
     }
 
+    private float pluckDamping = 0.98f; // Expose this as needed!
+
     private float GetPluckedSample()
     {
         if (pluckBuffer == null || pluckLength == 0)
@@ -227,10 +229,21 @@ public class SynthSignalSource : Recyclable
         int nextIndex = (pluckWriteIndex + 1) % pluckLength;
         float current = pluckBuffer[pluckWriteIndex];
         float next = pluckBuffer[nextIndex];
-        float damping = 0.98f;
+
+        // Clamp for safety
+        float damping = Math.Clamp(pluckDamping + (Random.Shared.NextSingle() - 0.5f) * 0.0002f, 0.8f, 0.999f);
+
         float newSample = damping * 0.5f * (current + next);
+
+        // Avoid denormals
+        if (Math.Abs(newSample) < 1e-10f) newSample = 0f;
+
         pluckBuffer[pluckWriteIndex] = newSample;
         pluckWriteIndex = nextIndex;
+
+        // Optional: Also denormal protect current
+        if (Math.Abs(current) < 1e-10f) current = 0f;
+
         return current;
     }
 

@@ -575,6 +575,43 @@ public static class SynthPatchExtensions
         return patch;
     }
 
+    public static ISynthPatch WithCompressor(this ISynthPatch patch, float threshold = 0.5f, float ratio = 4f, float attackMs = 0.01f, float releaseMs = 0.05f)
+    {
+        var settings = new CompressorEffect.Settings
+        {
+            Threshold = threshold,
+            Ratio = ratio,
+            Attack = attackMs,
+            Release = releaseMs,
+            VelocityScale = 1f
+        };
+        return patch.WithEffect(CompressorEffect.Create(in settings));
+    }
+
+    public static ISynthPatch WrapWithUnison(this ISynthPatch patch, int numVoices = 2, float detuneCents = 0, float panSpread = 1)
+    {
+        var ret = UnisonPatch.Create(new UnisonPatch.Settings
+        {
+            BasePatch = patch,
+            NumVoices = numVoices,
+            DetuneCents = detuneCents,
+            PanSpread = panSpread
+        });
+        return ret;
+    }
+
+    public static ISynthPatch WrapWithPowerChord(this ISynthPatch patch, int[] intervals, float detuneCents = 0, float panSpread = 1)
+    {
+        var ret = PowerChordPatch.Create(new PowerChordPatch.Settings
+        {
+            BasePatch = patch,
+            Intervals = intervals,
+            DetuneCents = detuneCents,
+            PanSpread = panSpread
+        });
+        return ret;
+    }
+
 
     // ----- Utility -----
 

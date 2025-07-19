@@ -12,6 +12,8 @@ public class SynthTweakerPanel : ProtectedConsolePanel
     private SynthTweaker? tweaker;
     private string? currentPath;
 
+    public MelodyMaker MelodyMaker => melodyMaker;
+
     private static readonly SynthTweakerSettings settings = LoadSettings();
 
     private static SynthTweakerSettings LoadSettings()
@@ -34,12 +36,12 @@ public class SynthTweakerPanel : ProtectedConsolePanel
 
     private static string SettingsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SynthTweakerSettings.json");
 
-    public SynthTweakerPanel(IMidiInput midiInput)
+    public SynthTweakerPanel(IMidiInput midiInput, double bpm = 60)
     {
         // Layout: 1 row, 2 columns: code on left, melody on right
         layout = ProtectedPanel.Add(new GridLayout("1r", "90p;1r")).Fill();
         codeLabel = layout.Add(new Label("Press ALT + O to open a file.".ToWhite()) , 0, 0);
-        melodyMaker = layout.Add(new MelodyMaker(midiInput), 1, 0);
+        melodyMaker = layout.Add(new MelodyMaker(midiInput, bpm), 1, 0);
         this.Ready.SubscribeOnce(ListenForFileOpenShortcut);
 
         if(settings.LatestSourcePath != null && File.Exists(settings.LatestSourcePath))
@@ -78,6 +80,9 @@ public class SynthTweakerPanel : ProtectedConsolePanel
             melodyMaker.Timeline.Player.StopAtEnd = true;
             melodyMaker.StartPlayback();
         }, melodyMaker);
+        var newNotes = melodyMaker.Notes.Select(n => n.WithInstrument(InstrumentExpression.Create("Synth", tweaker.CurrentFactory.Factory)));
+        (melodyMaker.Notes as ListNoteSource).Clear();
+        (melodyMaker.Notes as ListNoteSource).AddRange(newNotes);
         melodyMaker.Timeline.InstrumentFactory = () => tweaker.CurrentFactory?.Factory();
         settings.LatestSourcePath = path;
         SaveSettings();

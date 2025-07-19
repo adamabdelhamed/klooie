@@ -21,10 +21,10 @@ public class MelodyMaker : ProtectedConsolePanel
     public INoteSource Notes => noteSource;
     public double BeatsPerMinute => noteSource.BeatsPerMinute;
 
-    public MelodyMaker(IMidiInput input)
+    public MelodyMaker(IMidiInput input, double bpm = 60)
     {
         this.input = input ?? throw new ArgumentNullException(nameof(input), "MIDI input cannot be null.");
-        noteSource = new ListNoteSource();
+        noteSource = new ListNoteSource() { BeatsPerMinute = bpm };
         player = new TimelinePlayer(() => noteSource.Select(n => n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : 0)).DefaultIfEmpty(0).Max(), noteSource.BeatsPerMinute)
         {
             StopAtEnd = false
