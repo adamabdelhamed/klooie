@@ -31,6 +31,10 @@ public class SynthSignalSource : Recyclable
     private ADSREnvelope envelope;
     private float? noteReleaseTime = null; // in seconds
 
+    // --- Phase accumulator for main oscillator ---
+    private double oscPhase = 0.0;
+    private double oscPhaseSub = 0.0; // For sub-oscillator
+
     public bool IsDone => isDone;
 
     private static int _globalId = 1;
@@ -81,6 +85,9 @@ public class SynthSignalSource : Recyclable
         driftPhaseIncrement = (float)(2 * Math.PI * patch.DriftFrequencyHz / sampleRate);
         driftRandomOffset = Random.Shared.NextSingle() * (2 * MathF.PI);
 
+        oscPhase = 0.0;
+        oscPhaseSub = 0.0;
+
         InitVolume(master, knob);
         knob?.Dispose();
         this.envelope = patch.FindEnvelopeEffect().Envelope;
@@ -102,6 +109,7 @@ public class SynthSignalSource : Recyclable
 
         // Build DSP pipeline
         pipeline = pipeline ?? new List<SignalProcess>(20);
+        pipeline.Clear();
         pipeline.Add(OscillatorStage);
         if (patch.EnableSubOsc)
             pipeline.Add(SubOscillatorStage);
@@ -124,15 +132,85 @@ public class SynthSignalSource : Recyclable
 
     // ---- Pipeline stages: all instance methods, no capturing lambdas ----
 
-    private float OscillatorStage(in EffectContext ctx)
+    // Main oscillator: uses the main phase accumulator
+    private float Oscillate()
     {
-        return Oscillate(ctx.Time);
+        return Oscillate(ref oscPhase, frequency, patch.Waveform);
     }
 
+    // Sub oscillator: pass in the sub-phase accumulator, frequency, and always sine wave
+    private float OscillateSub()
+    {
+        float subFreq = frequency * (float)Math.Pow(2, patch.SubOscOctaveOffset);
+        return Oscillate(ref oscPhaseSub, subFreq, WaveformType.Sine);
+    }
+
+    // Unified oscillator with phase accumulator (for both main and sub)
+    private float Oscillate(ref double phase, float freq, WaveformType wave)
+    {
+        float totalCents = 0f;
+
+        // Pitch Drift (only for main oscillator)
+        if (wave == patch.Waveform && patch.EnablePitchDrift)
+            totalCents += patch.DriftAmountCents * MathF.Sin(driftPhase + driftRandomOffset);
+
+        // Vibrato LFO (only for main oscillator)
+        if (wave == patch.Waveform && patch.EnableVibrato)
+        {
+            float vibratoPhase = 2 * MathF.PI * patch.VibratoRateHz * time + patch.VibratoPhaseOffset;
+            totalCents += MathF.Sin(vibratoPhase) * patch.VibratoDepthCents;
+        }
+
+        if (pitchMods != null && wave == patch.Waveform)
+        {
+            var pmCtx = new PitchModContext { Time = time, ReleaseTime = noteReleaseTime, Note = note };
+            for (int i = 0; i < pitchMods.Count; i++)
+            {
+                totalCents += pitchMods[i].GetPitchOffsetCents(pmCtx);
+            }
+        }
+
+        float modulatedFrequency = freq * MathF.Pow(2f, totalCents / 1200f);
+
+        driftPhase += driftPhaseIncrement;
+
+        // Phase accumulator step
+        double phaseIncr = 2.0 * Math.PI * modulatedFrequency / sampleRate;
+        phase += phaseIncr;
+        if (phase > 2.0 * Math.PI) phase -= 2.0 * Math.PI;
+        if (phase < 0) phase += 2.0 * Math.PI;
+
+        switch (wave)
+        {
+            case WaveformType.Sine:
+                return (float)Math.Sin(phase);
+            case WaveformType.Square:
+                return MathF.Sign(MathF.Sin((float)phase));
+            case WaveformType.Triangle:
+                float frac = (float)(phase / (2.0 * Math.PI));
+                return 2f * MathF.Abs(2f * (frac % 1f) - 1f) - 1f;
+            case WaveformType.Saw:
+                float sawFrac = (float)(phase / (2.0 * Math.PI));
+                return 2f * (sawFrac - MathF.Floor(sawFrac + 0.5f));
+            case WaveformType.Noise:
+                return (float)(Random.Shared.NextDouble() * 2 - 1);
+            case WaveformType.PluckedString:
+                return GetPluckedSample();
+            default:
+                return 0f;
+        }
+    }
+
+    // Pipeline stage for main oscillator
+    private float OscillatorStage(in EffectContext ctx)
+    {
+        return Oscillate();
+    }
+
+    // Pipeline stage for sub oscillator (if enabled)
     private float SubOscillatorStage(in EffectContext ctx)
     {
-        float subTime = ctx.Time * (float)Math.Pow(2, patch.SubOscOctaveOffset);
-        return ctx.Input + Oscillate(subTime, WaveformType.Sine) * patch.SubOscLevel;
+        return ctx.Input + OscillateSub() * patch.SubOscLevel;
     }
 
     private float TransientStage(in EffectContext ctx)
@@ -140,51 +218,6 @@ public class SynthSignalSource : Recyclable
         return ctx.Time < patch.TransientDurationSeconds
             ? ctx.Input + (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f
             : ctx.Input;
-    }
-
-
-    // ---- Feature logic ----
-
-    private float Oscillate(float t, WaveformType? overrideWave = null)
-    {
-        float totalCents = 0f;
-
-        // Pitch Drift
-        if (patch.EnablePitchDrift)
-            totalCents += patch.DriftAmountCents * MathF.Sin(driftPhase + driftRandomOffset);
-
-        // Vibrato LFO
-        if (patch.EnableVibrato)
-        {
-            float vibratoPhase = 2 * MathF.PI * patch.VibratoRateHz * t + patch.VibratoPhaseOffset;
-            totalCents += MathF.Sin(vibratoPhase) * patch.VibratoDepthCents;
-        }
-
-        if (pitchMods != null)
-        {
-            var pmCtx = new PitchModContext { Time = t, ReleaseTime = noteReleaseTime, Note = note };
-            for (int i = 0; i < pitchMods.Count; i++)
-            {
-                totalCents += pitchMods[i].GetPitchOffsetCents(pmCtx);
-            }
-        }
-
-        float modulatedFrequency = frequency * MathF.Pow(2f, totalCents / 1200f);
-
-        driftPhase += driftPhaseIncrement;
-
-        double phase = 2 * Math.PI * modulatedFrequency * t;
-        var wave = overrideWave ?? patch.Waveform;
-        return wave switch
-        {
-            WaveformType.Sine => (float)Math.Sin(phase),
-            WaveformType.Square => MathF.Sign(MathF.Sin((float)phase)),
-            WaveformType.Triangle => 2f * MathF.Abs(2f * (float)(t * modulatedFrequency % 1f) - 1f) - 1f,
-            WaveformType.Saw => 2f * ((float)(t * modulatedFrequency % 1f)) - 1f,
-            WaveformType.Noise => (float)(Random.Shared.NextDouble() * 2 - 1),
-            WaveformType.PluckedString => GetPluckedSample(),
-            _ => 0f
-        };
     }
 
     private float GetPluckedSample()
@@ -237,6 +270,8 @@ public class SynthSignalSource : Recyclable
         pipeline?.Clear();
         note = null!;
         ctx = default;
+        oscPhase = 0.0;
+        oscPhaseSub = 0.0;
         base.OnReturn();
     }
 
