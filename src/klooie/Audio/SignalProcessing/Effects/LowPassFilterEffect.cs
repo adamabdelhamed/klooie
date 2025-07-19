@@ -13,7 +13,7 @@ Use a fixed cutoff for consistent tone or a multiplier
 to keep the filter in tune with each note.
 """)]
 [SynthCategory("Filter")]
-class LowPassFilterEffect : Recyclable, IEffect
+public class LowPassFilterEffect : Recyclable, IEffect
 {
     private float alpha;
     private float state;

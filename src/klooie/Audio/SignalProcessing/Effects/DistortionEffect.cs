@@ -10,7 +10,7 @@ Distortion built from several soft‑clipping stages.  Basic oversampling is use
 to lessen aliasing so the tone stays smoother even at high drive levels.
 """)]
 [SynthCategory("Distortion")]
-class DistortionEffect : Recyclable, IEffect
+public class DistortionEffect : Recyclable, IEffect
 {
     // 2× oversample using linear interp, 3 gain stages, tanh softclip
     float gain1, gain2, gain3, bias;

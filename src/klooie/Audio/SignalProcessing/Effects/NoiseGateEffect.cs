@@ -10,7 +10,7 @@ Silences the signal whenever its level drops below a defined threshold,
 helping remove background noise between notes.
 """)]
 [SynthCategory("Dynamics")]
-class NoiseGateEffect : Recyclable, IEffect
+public class NoiseGateEffect : Recyclable, IEffect
 {
     readonly float[] lookBuf = new float[256];   // ≈ 5.8 ms @44.1 kHz
     int lookPos;

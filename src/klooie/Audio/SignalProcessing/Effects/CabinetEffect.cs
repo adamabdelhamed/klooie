@@ -10,7 +10,7 @@ Simulates the tone of a guitar speaker cabinet using shelving filters plus a
 midrange scoop.  Helpful for creating amp-like patches without external IRs.
 """)]
 [SynthCategory("Filter")]
-class CabinetEffect : Recyclable, IEffect
+public class CabinetEffect : Recyclable, IEffect
 {
     // shelves + mid scoop
     Biquad.State low, mid, high;
