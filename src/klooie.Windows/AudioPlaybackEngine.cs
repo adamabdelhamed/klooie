@@ -46,7 +46,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             MasterVolume = VolumeKnob.Create();
             sfxMixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
-            mixer = new MixingSampleProvider(new ISampleProvider[] { sfxMixer, scheduledSynthProvider }) { ReadFully = true };
+            mixer = new MixingSampleProvider([sfxMixer, new SilenceProvider(new WaveFormat(SoundProvider.SampleRate, SoundProvider.BitsPerSample, SoundProvider.ChannelCount)), scheduledSynthProvider]) { ReadFully = true };
 
             outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 60);
             outputDevice.Init(mixer);
@@ -171,7 +171,16 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     /// <param name="elapsedMilliseconds"></param>
     protected virtual void LogSoundLoaded(long elapsedMilliseconds) { }
 }
-
+public class SilenceProvider : ISampleProvider
+{
+    public WaveFormat WaveFormat { get; }
+    public SilenceProvider(WaveFormat format) => WaveFormat = format;
+    public int Read(float[] buffer, int offset, int count)
+    {
+        Array.Clear(buffer, offset, count);
+        return count;
+    }
+}
 
 internal class VoiceCountTracker : Recyclable
 {
