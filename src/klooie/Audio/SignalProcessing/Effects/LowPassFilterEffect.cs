@@ -6,14 +6,19 @@ using System.Threading.Tasks;
 
 namespace klooie;
 [SynthDescription("""
-Simple low-pass filter that rolls off frequencies above the cutoff.
+Simple low-pass filter that reduces high frequencies.
+The cutoff can be fixed in hertz or follow the note's
+pitch by using a multiplier.
+Use a fixed cutoff for consistent tone or a multiplier
+to keep the filter in tune with each note.
 """)]
 [SynthCategory("Filter")]
 class LowPassFilterEffect : Recyclable, IEffect
 {
     private float alpha;
     private float state;
-    private float cutoffHz;
+    private float? fixedCutoffHz;
+    private float? noteFrequencyMultiplier;
     private float mix = 1f;
     private bool velocityAffectsMix;
     private Func<float, float> mixVelocityCurve = EffectContext.EaseLinear;
@@ -23,16 +28,24 @@ class LowPassFilterEffect : Recyclable, IEffect
     private LowPassFilterEffect() { }
 
     [SynthDescription("""
-Settings describing the cutoff frequency and how strongly the filtered
-signal is mixed in.
-""")]
+    Settings describing how the cutoff is chosen and how
+    strongly the filtered signal is mixed in. Specify either
+    a fixed cutoff in hertz or a multiplier that is applied
+    to the note's frequency.
+    """)]
     public struct Settings
     {
         [SynthDescription("""
-Cutoff frequency in hertz above which the signal is
-attenuated.
-""")]
-        public float CutoffHz;
+        Fixed cutoff frequency in hertz. Leave null to use
+        NoteFrequencyMultiplier instead.
+        """)]
+        public float? CutoffHz;
+
+        [SynthDescription("""
+        If set, cutoff = note frequency × this multiplier.
+        Leave null to use CutoffHz.
+        """)]
+        public float? NoteFrequencyMultiplier;
 
         [SynthDescription("""
 Mix level between the original and filtered signal
@@ -55,28 +68,37 @@ multiplier.
 
     public static LowPassFilterEffect Create(in Settings settings)
     {
+        if (settings.CutoffHz.HasValue == settings.NoteFrequencyMultiplier.HasValue)
+            throw new ArgumentException("Specify exactly one of CutoffHz or NoteFrequencyMultiplier.");
+
         var fx = _pool.Value.Rent();
-        fx.Construct(settings.CutoffHz);
-        fx.mix = settings.Mix;
-        fx.velocityAffectsMix = settings.VelocityAffectsMix;
-        fx.mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
+        fx.Construct(in settings);
         return fx;
     }
 
-    protected void Construct(float cutoffHz)
+    protected void Construct(in Settings settings)
     {
-        this.cutoffHz = cutoffHz;
-        float dt = 1f / SoundProvider.SampleRate;
-        float rc = 1f / (2f * MathF.PI * cutoffHz);
-        alpha = dt / (rc + dt);
         state = 0f;
+        fixedCutoffHz = settings.CutoffHz;
+        noteFrequencyMultiplier = settings.NoteFrequencyMultiplier;
+        mix = settings.Mix;
+        velocityAffectsMix = settings.VelocityAffectsMix;
+        mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
+
+        if (fixedCutoffHz.HasValue)
+        {
+            float dt = 1f / SoundProvider.SampleRate;
+            float rc = 1f / (2f * MathF.PI * fixedCutoffHz.Value);
+            alpha = dt / (rc + dt);
+        }
     }
 
     public IEffect Clone()
     {
         var settings = new Settings
         {
-            CutoffHz = cutoffHz,
+            CutoffHz = fixedCutoffHz,
+            NoteFrequencyMultiplier = noteFrequencyMultiplier,
             Mix = mix,
             VelocityAffectsMix = velocityAffectsMix,
             MixVelocityCurve = mixVelocityCurve
@@ -87,7 +109,15 @@ multiplier.
     public float Process(in EffectContext ctx)
     {
         float input = ctx.Input;
-        state += alpha * (input - state);
+        float a = alpha;
+        if (!fixedCutoffHz.HasValue)
+        {
+            float cutoff = ctx.Note.FrequencyHz * noteFrequencyMultiplier!.Value;
+            float dt = 1f / SoundProvider.SampleRate;
+            float rc = 1f / (2f * MathF.PI * cutoff);
+            a = dt / (rc + dt);
+        }
+        state += a * (input - state);
         float wet = state;
         float mixAmt = mix;
         if (velocityAffectsMix)
@@ -99,7 +129,8 @@ multiplier.
     {
         state = 0f;
         alpha = 0f;
-        cutoffHz = 0f;
+        fixedCutoffHz = null;
+        noteFrequencyMultiplier = null;
         mix = 1f;
         velocityAffectsMix = false;
         mixVelocityCurve = EffectContext.EaseLinear;

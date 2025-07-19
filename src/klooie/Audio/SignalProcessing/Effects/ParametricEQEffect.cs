@@ -4,13 +4,17 @@ public enum BiquadType { Peak, LowShelf, HighShelf }
 
 [SynthDescription("""
 Flexible parametric EQ supporting peak, low‑shelf and high‑shelf modes.
+The filter frequency can be a fixed value or a multiple of
+the note being played. Use note-relative mode to keep the EQ
+centered around each note.
 """)]
 [SynthCategory("Filter")]
 public class ParametricEQEffect : Recyclable, IEffect
 {
     // Filter params
     private BiquadType type;
-    private float freq;
+    private float? fixedFreq;
+    private float? noteFrequencyMultiplier;
     private float gainDb;
     private float q;
     private bool velocityAffectsGain = true;
@@ -26,9 +30,11 @@ public class ParametricEQEffect : Recyclable, IEffect
     private ParametricEQEffect() { }
 
     [SynthDescription("""
-Settings that configure the filter type, frequency and how gain responds to
-note velocity.
-""")]
+    Settings that configure the filter type, how its center
+    frequency is determined and how gain responds to velocity.
+    Provide either a fixed frequency or a multiplier relative
+    to the note being played.
+    """)]
     public struct Settings
     {
         [SynthDescription("""
@@ -38,9 +44,16 @@ shelf).
         public BiquadType Type;
 
         [SynthDescription("""
-Center frequency in hertz.
-""")]
-        public float Freq;
+        Fixed center frequency in hertz. Leave null to use
+        NoteFrequencyMultiplier.
+        """)]
+        public float? Freq;
+
+        [SynthDescription("""
+        If set, center frequency = note frequency × this
+        multiplier.
+        """)]
+        public float? NoteFrequencyMultiplier;
 
         [SynthDescription("""
 Boost or cut amount in decibels.
@@ -72,30 +85,41 @@ curve.
 
     public static ParametricEQEffect Create(in Settings settings)
     {
-        var fx = _pool.Value.Rent();
-        fx.type = settings.Type;
-        fx.freq = settings.Freq;
-        fx.gainDb = settings.GainDb;
-        fx.q = settings.Q;
-        fx.velocityAffectsGain = settings.VelocityAffectsGain;
-        fx.gainVelocityCurve = settings.GainVelocityCurve ?? EffectContext.EaseLinear;
-        fx.gainVelocityScale = settings.GainVelocityScale;
-        fx.state = new Biquad.State();
+        if (settings.Freq.HasValue == settings.NoteFrequencyMultiplier.HasValue)
+            throw new ArgumentException("Specify exactly one of Freq or NoteFrequencyMultiplier.");
 
-        // Design coeffs
-        switch (settings.Type)
-        {
-            case BiquadType.Peak:
-                Biquad.DesignPeak(settings.Freq, settings.Q, settings.GainDb, out fx.b0, out fx.b1, out fx.b2, out fx.a1, out fx.a2);
-                break;
-            case BiquadType.LowShelf:
-                Biquad.DesignLowShelf(settings.Freq, settings.GainDb, out fx.b0, out fx.b1, out fx.b2, out fx.a1, out fx.a2);
-                break;
-            case BiquadType.HighShelf:
-                Biquad.DesignHighShelf(settings.Freq, settings.GainDb, out fx.b0, out fx.b1, out fx.b2, out fx.a1, out fx.a2);
-                break;
-        }
+        var fx = _pool.Value.Rent();
+        fx.Construct(in settings);
         return fx;
+    }
+
+    private void Construct(in Settings settings)
+    {
+        type = settings.Type;
+        fixedFreq = settings.Freq;
+        noteFrequencyMultiplier = settings.NoteFrequencyMultiplier;
+        gainDb = settings.GainDb;
+        q = settings.Q;
+        velocityAffectsGain = settings.VelocityAffectsGain;
+        gainVelocityCurve = settings.GainVelocityCurve ?? EffectContext.EaseLinear;
+        gainVelocityScale = settings.GainVelocityScale;
+        state = new Biquad.State();
+
+        if (fixedFreq.HasValue)
+        {
+            switch (type)
+            {
+                case BiquadType.Peak:
+                    Biquad.DesignPeak(fixedFreq.Value, q, gainDb, out b0, out b1, out b2, out a1, out a2);
+                    break;
+                case BiquadType.LowShelf:
+                    Biquad.DesignLowShelf(fixedFreq.Value, gainDb, out b0, out b1, out b2, out a1, out a2);
+                    break;
+                case BiquadType.HighShelf:
+                    Biquad.DesignHighShelf(fixedFreq.Value, gainDb, out b0, out b1, out b2, out a1, out a2);
+                    break;
+            }
+        }
     }
 
     public float Process(in EffectContext ctx)
@@ -103,8 +127,11 @@ curve.
         float gDb = gainDb;
         if (velocityAffectsGain)
             gDb *= 1f + gainVelocityScale * (gainVelocityCurve(ctx.VelocityNorm) - 1f);
-        float b0m=b0,b1m=b1,b2m=b2,a1m=a1,a2m=a2;
-        if (gDb != gainDb)
+
+        float freq = fixedFreq ?? ctx.Note.FrequencyHz * noteFrequencyMultiplier!.Value;
+
+        float b0m = b0, b1m = b1, b2m = b2, a1m = a1, a2m = a2;
+        if (!fixedFreq.HasValue || gDb != gainDb)
         {
             switch (type)
             {
@@ -127,7 +154,8 @@ curve.
         var settings = new Settings
         {
             Type = type,
-            Freq = freq,
+            Freq = fixedFreq,
+            NoteFrequencyMultiplier = noteFrequencyMultiplier,
             GainDb = gainDb,
             Q = q,
             VelocityAffectsGain = velocityAffectsGain,
@@ -143,6 +171,8 @@ curve.
         velocityAffectsGain = true;
         gainVelocityCurve = EffectContext.EaseLinear;
         gainVelocityScale = 1f;
+        fixedFreq = null;
+        noteFrequencyMultiplier = null;
         base.OnReturn();
     }
 }
