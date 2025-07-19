@@ -2,8 +2,11 @@ using System;
 
 namespace klooie;
 [SynthDescription("""
-Basic high-pass filter for removing low frequencies below the chosen cutoff.
-Cutoff can be either an absolute frequency or a multiple of the note's fundamental frequency.
+Basic high-pass filter that removes rumble and low-end energy.
+You can provide a fixed cutoff in hertz or specify a multiplier
+of the note's pitch so the filter tracks the note. Use a fixed
+cutoff to clean up sub bass, or a multiplier for patches that
+stay consistent across the keyboard.
 """)]
 [SynthCategory("Filter")]
 public class HighPassFilterEffect : Recyclable, IEffect
@@ -33,7 +36,7 @@ Fixed cutoff frequency in hertz. Must not be set if NoteFrequencyMultiplier is s
         public float? CutoffHz;
 
         [SynthDescription("""
-If set, cutoff frequency is computed as note frequency × this multiplier.
+If set, cutoff frequency is computed as note frequency Ã— this multiplier.
 Must not be set if CutoffHz is set.
 """)]
         public float? NoteFrequencyMultiplier;

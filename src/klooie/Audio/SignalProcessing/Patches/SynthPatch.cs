@@ -209,6 +209,17 @@ public static class SynthPatchExtensions
         return patch.WithEffect(LowPassFilterEffect.Create(in settings));
     }
 
+    public static ISynthPatch WithLowPassRelative(this ISynthPatch patch, float multiplier = 1f)
+    {
+        var settings = new LowPassFilterEffect.Settings
+        {
+            NoteFrequencyMultiplier = multiplier,
+            Mix = 1f,
+            VelocityAffectsMix = true
+        };
+        return patch.WithEffect(LowPassFilterEffect.Create(in settings));
+    }
+
     public static ISynthPatch WithDistortion(this ISynthPatch patch, float drive = 6f, float stageRatio = 0.6f, float bias = 0.15f)
     {
         var settings = new DistortionEffect.Settings
@@ -362,6 +373,20 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ParametricEQEffect.Create(in settings));
     }
 
+    public static ISynthPatch WithPeakEQRelative(this ISynthPatch patch, float multiplier, float gainDb, float q = 1.0f)
+    {
+        var settings = new ParametricEQEffect.Settings
+        {
+            Type = BiquadType.Peak,
+            NoteFrequencyMultiplier = multiplier,
+            GainDb = gainDb,
+            Q = q,
+            VelocityAffectsGain = true,
+            GainVelocityScale = 1f
+        };
+        return patch.WithEffect(ParametricEQEffect.Create(in settings));
+    }
+
     public static ISynthPatch WithLowShelf(this ISynthPatch patch, float freq, float gainDb)
     {
         var settings = new ParametricEQEffect.Settings
@@ -376,12 +401,40 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ParametricEQEffect.Create(in settings));
     }
 
+    public static ISynthPatch WithLowShelfRelative(this ISynthPatch patch, float multiplier, float gainDb)
+    {
+        var settings = new ParametricEQEffect.Settings
+        {
+            Type = BiquadType.LowShelf,
+            NoteFrequencyMultiplier = multiplier,
+            GainDb = gainDb,
+            Q = 1f,
+            VelocityAffectsGain = true,
+            GainVelocityScale = 1f
+        };
+        return patch.WithEffect(ParametricEQEffect.Create(in settings));
+    }
+
     public static ISynthPatch WithHighShelf(this ISynthPatch patch, float freq, float gainDb)
     {
         var settings = new ParametricEQEffect.Settings
         {
             Type = BiquadType.HighShelf,
             Freq = freq,
+            GainDb = gainDb,
+            Q = 1f,
+            VelocityAffectsGain = true,
+            GainVelocityScale = 1f
+        };
+        return patch.WithEffect(ParametricEQEffect.Create(in settings));
+    }
+
+    public static ISynthPatch WithHighShelfRelative(this ISynthPatch patch, float multiplier, float gainDb)
+    {
+        var settings = new ParametricEQEffect.Settings
+        {
+            Type = BiquadType.HighShelf,
+            NoteFrequencyMultiplier = multiplier,
             GainDb = gainDb,
             Q = 1f,
             VelocityAffectsGain = true,
