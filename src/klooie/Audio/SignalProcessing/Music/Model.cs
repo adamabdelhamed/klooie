@@ -23,6 +23,8 @@ public sealed class InstrumentExpression
 public sealed class NoteExpression
 {
     public int MidiNote { get; }
+
+    public float FrequencyHz => MidiNoteToFrequency(MidiNote);
     public double StartBeat { get; }
     public double DurationBeats { get; }
     public int Velocity { get; }
@@ -77,6 +79,10 @@ public sealed class NoteExpression
     public NoteExpression WithDuration(double beats) => new(MidiNote, StartBeat, beats, Velocity, Instrument);
     public NoteExpression WithStartBeat(double startBeat) => new(MidiNote, startBeat, DurationBeats, Velocity, Instrument);
 
+    public static float MidiNoteToFrequency(int noteNumber)
+    {
+        return 440f * (float)Math.Pow(2, (noteNumber - 69) / 12.0);
+    }
     public override string ToString() => $"Note(Midi: {MidiNote}, Start: {StartBeat}, Duration: {DurationBeats}, Velocity: {Velocity})";
 }
 

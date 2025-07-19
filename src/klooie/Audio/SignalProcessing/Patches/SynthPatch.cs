@@ -187,6 +187,16 @@ public static class SynthPatchExtensions
         };
         return patch.WithEffect(HighPassFilterEffect.Create(in settings));
     }
+    public static ISynthPatch WithHighPassRelative(this ISynthPatch patch, float multiplier = 2f)
+    {
+        var settings = new HighPassFilterEffect.Settings
+        {
+            NoteFrequencyMultiplier = multiplier,
+            Mix = 1f,
+            VelocityAffectsMix = true
+        };
+        return patch.WithEffect(HighPassFilterEffect.Create(in settings));
+    }
 
     public static ISynthPatch WithLowPass(this ISynthPatch patch, float cutoffHz = 200f)
     {

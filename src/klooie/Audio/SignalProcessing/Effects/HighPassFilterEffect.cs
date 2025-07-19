@@ -3,32 +3,40 @@ using System;
 namespace klooie;
 [SynthDescription("""
 Basic high-pass filter for removing low frequencies below the chosen cutoff.
+Cutoff can be either an absolute frequency or a multiple of the note's fundamental frequency.
 """)]
 [SynthCategory("Filter")]
 public class HighPassFilterEffect : Recyclable, IEffect
 {
     private float prevInput;
     private float prevOutput;
-    private float alpha;
-    private float cutoffHz;
     private float mix = 1f;
     private bool velocityAffectsMix;
     private Func<float, float> mixVelocityCurve = EffectContext.EaseLinear;
 
+    private float? fixedCutoffHz;
+    private float? noteFrequencyMultiplier;
+
     private static readonly LazyPool<HighPassFilterEffect> _pool = new(() => new HighPassFilterEffect());
+
     protected HighPassFilterEffect() { }
 
     [SynthDescription("""
-Settings describing the cutoff frequency and how the mix reacts to
-note velocity.
+Settings describing how to compute the cutoff frequency and how the mix reacts
+to note velocity. Specify exactly one of CutoffHz or NoteFrequencyMultiplier.
 """)]
     public struct Settings
     {
         [SynthDescription("""
-Frequency above which audio passes through,
-measured in hertz.
+Fixed cutoff frequency in hertz. Must not be set if NoteFrequencyMultiplier is set.
 """)]
-        public float CutoffHz;
+        public float? CutoffHz;
+
+        [SynthDescription("""
+If set, cutoff frequency is computed as note frequency × this multiplier.
+Must not be set if CutoffHz is set.
+""")]
+        public float? NoteFrequencyMultiplier;
 
         [SynthDescription("""
 Amount of filtered signal mixed with the original
@@ -51,29 +59,32 @@ mix multiplier.
 
     public static HighPassFilterEffect Create(in Settings settings)
     {
+        if (settings.CutoffHz.HasValue == settings.NoteFrequencyMultiplier.HasValue)
+            throw new ArgumentException("Specify exactly one of CutoffHz or NoteFrequencyMultiplier.");
+
         var ret = _pool.Value.Rent();
-        ret.Construct(settings.CutoffHz);
-        ret.mix = settings.Mix;
-        ret.velocityAffectsMix = settings.VelocityAffectsMix;
-        ret.mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
+        ret.Construct(settings);
         return ret;
     }
 
-    protected void Construct(float cutoffHz)
+    protected void Construct(in Settings settings)
     {
-        float dt = 1f / SoundProvider.SampleRate;
-        float rc = 1f / (2f * MathF.PI * cutoffHz);
-        alpha = rc / (rc + dt);
         prevInput = 0f;
         prevOutput = 0f;
-        this.cutoffHz = cutoffHz;
+
+        fixedCutoffHz = settings.CutoffHz;
+        noteFrequencyMultiplier = settings.NoteFrequencyMultiplier;
+        mix = settings.Mix;
+        velocityAffectsMix = settings.VelocityAffectsMix;
+        mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
     }
 
     public IEffect Clone()
     {
         var settings = new Settings
         {
-            CutoffHz = cutoffHz,
+            CutoffHz = fixedCutoffHz,
+            NoteFrequencyMultiplier = noteFrequencyMultiplier,
             Mix = mix,
             VelocityAffectsMix = velocityAffectsMix,
             MixVelocityCurve = mixVelocityCurve
@@ -83,13 +94,20 @@ mix multiplier.
 
     public float Process(in EffectContext ctx)
     {
+        float cutoff = fixedCutoffHz ?? (ctx.Note.FrequencyHz * noteFrequencyMultiplier!.Value);
+        float dt = 1f / SoundProvider.SampleRate;
+        float rc = 1f / (2f * MathF.PI * cutoff);
+        float alpha = rc / (rc + dt);
+
         float input = ctx.Input;
         float output = alpha * (prevOutput + input - prevInput);
         prevInput = input;
         prevOutput = output;
+
         float mixAmt = mix;
         if (velocityAffectsMix)
             mixAmt *= mixVelocityCurve(ctx.VelocityNorm);
+
         return input * (1 - mixAmt) + output * mixAmt;
     }
 
@@ -97,10 +115,11 @@ mix multiplier.
     {
         prevInput = 0f;
         prevOutput = 0f;
-        alpha = 0f;
         mix = 1f;
         velocityAffectsMix = false;
         mixVelocityCurve = EffectContext.EaseLinear;
+        fixedCutoffHz = null;
+        noteFrequencyMultiplier = null;
         base.OnReturn();
     }
 }
