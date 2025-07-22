@@ -258,7 +258,9 @@ public sealed class SynthTweaker : Recyclable, IDisposable
 
             if (token.IsKeyword())
                 color = SyntaxHighlightingPalette.Keyword;
-            else if (token.IsKind(SyntaxKind.StringLiteralToken))
+            else if (token.IsKind(SyntaxKind.StringLiteralToken) ||
+         token.IsKind(SyntaxKind.MultiLineRawStringLiteralToken) ||
+         token.IsKind(SyntaxKind.SingleLineRawStringLiteralToken)) // just in case
                 color = SyntaxHighlightingPalette.StringLiteral;
             else if (token.IsKind(SyntaxKind.NumericLiteralToken))
                 color = SyntaxHighlightingPalette.NumberLiteral;
