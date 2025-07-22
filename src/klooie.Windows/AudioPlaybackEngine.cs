@@ -70,7 +70,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
     private void WithSpawnedVoices(NoteExpression note, Action<ISynthPatch, RecyclableList<SynthSignalSource>> action)
     {
-        var patch = note.Instrument?.PatchFunc() ?? SynthPatches.CreateBass();
+        var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
         patch.WithVolume(note.Velocity / 127f);
         if (!patch.IsNotePlayable(note.MidiNote))
         {
