@@ -154,4 +154,51 @@ relative to the original pitch.
 """)]
         public int[]? Transposes;
     }
+
+    public static LayeredPatchBuilder CreateBuilder()
+       => new LayeredPatchBuilder();
+}
+
+
+public sealed class LayeredPatchBuilder
+{
+    private readonly List<ISynthPatch> _patches = new();
+    private readonly List<float> _volumes = new();
+    private readonly List<float> _pans = new();
+    private readonly List<int> _transposes = new();
+
+    /// <summary>
+    /// Adds a layer with configurable mixing and transposition.
+    /// </summary>
+    public LayeredPatchBuilder AddLayer(
+        float volume = 1f,
+        float pan = 0f,
+        int transpose = 0,
+        ISynthPatch patch = null)
+    {
+        if (patch == null)
+            throw new ArgumentNullException(nameof(patch), "Layer patch cannot be null");
+        _patches.Add(patch);
+        _volumes.Add(volume);
+        _pans.Add(pan);
+        _transposes.Add(transpose);
+        return this;
+    }
+
+    /// <summary>
+    /// Finalizes and builds the LayeredPatch.
+    /// </summary>
+    public LayeredPatch Build()
+    {
+        if (_patches.Count == 0)
+            throw new InvalidOperationException("At least one layer must be added.");
+
+        return LayeredPatch.Create(new LayeredPatch.Settings
+        {
+            Patches = _patches.ToArray(),
+            Volumes = _volumes.ToArray(),
+            Pans = _pans.ToArray(),
+            Transposes = _transposes.ToArray()
+        });
+    }
 }

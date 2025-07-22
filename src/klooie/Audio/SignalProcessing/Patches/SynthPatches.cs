@@ -69,9 +69,6 @@ public static class SynthPatches
         .WithReverb()
         .WithEffect(EnvelopeEffect.Create(0.5f, 1.0f, 0.75f, 1.5f));
 
-    public static ISynthPatch CreateRockGuitar()
-            => AmpedRockGuitarPatch.Create();
-
     public static ISynthPatch CreateRockGuitar2()
         => RockGuitar2.Create();
 
