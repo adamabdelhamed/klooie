@@ -40,6 +40,29 @@ public class SynthSignalSource : Recyclable
     private static int _globalId = 1;
     public int Id { get; private set; }
 
+    // === LFO support ===
+    public enum LfoTarget { Pitch, FilterCutoff, Amp, Pan }
+
+    public struct LfoSettings
+    {
+        public LfoTarget Target;
+        public float RateHz;
+        public float Depth;
+        public int Shape; // 0=sine, 1=triangle
+        public float PhaseOffset;
+        public bool VelocityAffectsDepth;
+        public Func<float, float>? DepthVelocityCurve;
+    }
+
+    private struct LfoState
+    {
+        public LfoSettings Settings;
+        public float Phase;
+        public float PhaseInc;
+    }
+
+    private LfoState[]? lfos;
+
     public virtual void ReleaseNote()
     {
         noteReleaseTime = time;
@@ -87,6 +110,23 @@ public class SynthSignalSource : Recyclable
 
         oscPhase = 0.0;
         oscPhaseSub = 0.0;
+
+        // === LFO: initialize state per patch ===
+        if (patch.Lfos != null && patch.Lfos.Count > 0)
+        {
+            lfos = new LfoState[patch.Lfos.Count];
+            for (int i = 0; i < lfos.Length; i++)
+            {
+                var set = patch.Lfos[i];
+                lfos[i].Settings = set;
+                lfos[i].Phase = set.PhaseOffset;
+                lfos[i].PhaseInc = set.RateHz / (float)sampleRate;
+            }
+        }
+        else
+        {
+            lfos = null;
+        }
 
         InitVolume(master, knob);
         knob?.Dispose();
@@ -167,6 +207,29 @@ public class SynthSignalSource : Recyclable
             for (int i = 0; i < pitchMods.Count; i++)
             {
                 totalCents += pitchMods[i].GetPitchOffsetCents(pmCtx);
+            }
+        }
+
+        // === LFO: apply LFO pitch modulation (cents) ===
+        if (lfos != null)
+        {
+            for (int i = 0; i < lfos.Length; i++)
+            {
+                var st = lfos[i];
+                if (st.Settings.Target == LfoTarget.Pitch)
+                {
+                    float lfo = 0f;
+                    if (st.Settings.Shape == 0)
+                        lfo = MathF.Sin(2 * MathF.PI * st.Phase);
+                    else
+                        lfo = 2f * MathF.Abs(2f * (st.Phase - MathF.Floor(st.Phase + 0.5f))) - 1f;
+
+                    float lfoDepth = st.Settings.Depth;
+                    if (st.Settings.VelocityAffectsDepth)
+                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(note.Velocity/127f);
+
+                    totalCents += lfo * lfoDepth;
+                }
             }
         }
 
@@ -285,6 +348,7 @@ public class SynthSignalSource : Recyclable
         ctx = default;
         oscPhase = 0.0;
         oscPhaseSub = 0.0;
+        lfos = null;
         base.OnReturn();
     }
 
@@ -305,6 +369,43 @@ public class SynthSignalSource : Recyclable
             ctx.FrameIndex = n / 2;
             ctx.Time = time;
             ctx.Input = 0f;
+
+            // === LFO: Compute non-pitch modulation ===
+            float lfoCutoff = 0f, lfoAmp = 0f, lfoPan = 0f;
+            if (lfos != null)
+            {
+                for (int i = 0; i < lfos.Length; i++)
+                {
+                    var st = lfos[i];
+                    float lfo = 0f;
+                    if (st.Settings.Shape == 0)
+                        lfo = MathF.Sin(2 * MathF.PI * st.Phase);
+                    else
+                        lfo = 2f * MathF.Abs(2f * (st.Phase - MathF.Floor(st.Phase + 0.5f))) - 1f;
+
+                    float lfoDepth = st.Settings.Depth;
+                    if (st.Settings.VelocityAffectsDepth)
+                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(note.Velocity/127f);
+
+                    switch (st.Settings.Target)
+                    {
+                        case LfoTarget.FilterCutoff:
+                            lfoCutoff += lfo * lfoDepth;
+                            break;
+                        case LfoTarget.Amp:
+                            lfoAmp += lfo * lfoDepth;
+                            break;
+                        case LfoTarget.Pan:
+                            lfoPan += lfo * lfoDepth;
+                            break;
+                    }
+
+                    // Advance phase for all targets
+                    lfos[i].Phase += lfos[i].PhaseInc;
+                    if (lfos[i].Phase >= 1f) lfos[i].Phase -= 1f;
+                }
+            }
+
             float sample = 0f;
             for (int s = 0; s < pipeline.Count; s++)
             {
@@ -312,10 +413,24 @@ public class SynthSignalSource : Recyclable
                 sample = pipeline[s](ctx);
             }
 
-            float finalSample = Math.Clamp(sample * effectiveVolume, -1f, 1f);
+            // === LFO: Apply non-pitch LFO modulations before output ===
+            float finalSample = sample;
 
-            buffer[offset + n] = finalSample;
-            buffer[offset + n + 1] = finalSample;
+            // Apply LFO amplitude (tremolo)
+            finalSample *= (1f + lfoAmp);
+
+            // Apply pan (lfoPan)
+            float pan = effectivePan + lfoPan;
+            pan = Math.Max(-1f, Math.Min(1f, pan));
+
+            float left = finalSample * (1 - pan) * effectiveVolume;
+            float right = finalSample * (1 + pan) * effectiveVolume;
+
+            left = Math.Clamp(left, -1f, 1f);
+            right = Math.Clamp(right, -1f, 1f);
+
+            buffer[offset + n] = left;
+            buffer[offset + n + 1] = right;
 
             localTime += 1f / (float)sampleRate;
             samplesWritten += 2;

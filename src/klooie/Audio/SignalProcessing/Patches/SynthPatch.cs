@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static klooie.SynthSignalSource;
 
 namespace klooie;
 public interface ICompositePatch : ISynthPatch 
@@ -56,6 +57,8 @@ public class SynthPatch : Recyclable, ISynthPatch
         return patch;
     }
 
+    public List<LfoSettings> Lfos { get; } = new();
+
     public WaveformType Waveform { get; set; }
     public bool EnableTransient { get; set; }
     public float TransientDurationSeconds { get; set; }
@@ -95,6 +98,7 @@ public class SynthPatch : Recyclable, ISynthPatch
         VibratoRateHz = 0f;
         VibratoDepthCents = 0f;
         VibratoPhaseOffset = 0f;
+        Lfos.Clear();
     }
 
     protected override void OnReturn()
@@ -121,13 +125,14 @@ public static class SynthPatchExtensions
     // ----- Effect: applies to all leaves -----
 
 
-
+    [ExtensionToEffect(typeof(CabinetEffect))]
     public static ISynthPatch WithCabinet(this ISynthPatch patch)
     {
         var settings = new CabinetEffect.Settings { VelocityScale = 1f };
         return patch.WithEffect(CabinetEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(ReverbEffect))]
     public static ISynthPatch WithReverb(this ISynthPatch patch, float feedback = 0.78f, float diffusion = 0.5f, float wet = 0.3f, float dry = 0.7f)
     {
         var settings = new ReverbEffect.Settings
@@ -141,6 +146,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ReverbEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(DelayEffect))]
     public static ISynthPatch WithDelay(this ISynthPatch patch, int delaySamples, float feedback = .3f, float mix = .4f)
     {
         var settings = new DelayEffect.Settings
@@ -153,6 +159,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(DelayEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(StereoChorusEffect))]
     public static ISynthPatch WithChorus(this ISynthPatch patch, int delayMs = 22, int depthMs = 7, float rateHz = 0.22f, float mix = 0.19f)
     {
         var settings = new StereoChorusEffect.Settings
@@ -166,6 +173,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(StereoChorusEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(TremoloEffect))]
     public static ISynthPatch WithTremolo(this ISynthPatch patch, float depth = 0.5f, float rateHz = 5f)
     {
         var settings = new TremoloEffect.Settings
@@ -177,6 +185,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(TremoloEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(HighPassFilterEffect))]
     public static ISynthPatch WithHighPass(this ISynthPatch patch, float cutoffHz = 200f)
     {
         var settings = new HighPassFilterEffect.Settings
@@ -187,6 +196,8 @@ public static class SynthPatchExtensions
         };
         return patch.WithEffect(HighPassFilterEffect.Create(in settings));
     }
+
+    [ExtensionToEffect(typeof(HighPassFilterEffect))]
     public static ISynthPatch WithHighPassRelative(this ISynthPatch patch, float multiplier = 2f)
     {
         var settings = new HighPassFilterEffect.Settings
@@ -197,7 +208,8 @@ public static class SynthPatchExtensions
         };
         return patch.WithEffect(HighPassFilterEffect.Create(in settings));
     }
-
+    
+    [ExtensionToEffect(typeof(LowPassFilterEffect))]
     public static ISynthPatch WithLowPass(this ISynthPatch patch, float cutoffHz = 200f)
     {
         var settings = new LowPassFilterEffect.Settings
@@ -209,6 +221,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(LowPassFilterEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(LowPassFilterEffect))]
     public static ISynthPatch WithLowPassRelative(this ISynthPatch patch, float multiplier = 1f)
     {
         var settings = new LowPassFilterEffect.Settings
@@ -220,6 +233,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(LowPassFilterEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(DistortionEffect))]
     public static ISynthPatch WithDistortion(this ISynthPatch patch, float drive = 6f, float stageRatio = 0.6f, float bias = 0.15f)
     {
         var settings = new DistortionEffect.Settings
@@ -232,6 +246,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(DistortionEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(AggroDistortionEffect))]
     public static ISynthPatch WithAggroDistortion(this ISynthPatch patch, float drive = 12f, float stageRatio = 0.8f, float bias = 0.12f)
     {
         var settings = new AggroDistortionEffect.Settings
@@ -244,12 +259,14 @@ public static class SynthPatchExtensions
         return patch.WithEffect(AggroDistortionEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(VolumeEffect))]
     public static ISynthPatch WithVolume(this ISynthPatch patch, float volume = 1.0f)
     {
         var settings = new VolumeEffect.Settings { Gain = volume, VelocityScale = 1f };
         return patch.WithEffect(VolumeEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(PitchBendEffect))]
     public static ISynthPatch WithPitchBend(
         this ISynthPatch patch,
         Func<float, float> attackBendFunc, float attackDuration,
@@ -265,6 +282,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(PitchBendEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(PitchBendEffect))]
     public static ISynthPatch WithPitchBend(
     this ISynthPatch patch,
     Func<float, float> bendFunc, float duration)
@@ -279,6 +297,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(PitchBendEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(NoiseGateEffect))]
     public static ISynthPatch WithNoiseGate(this ISynthPatch patch, float openThresh = 0.05f, float closeThresh = 0.04f, float attackMs = 2f, float releaseMs = 60f)
     {
         var settings = new NoiseGateEffect.Settings
@@ -292,6 +311,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(NoiseGateEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(FadeInEffect))]
     public static ISynthPatch WithFadeIn(this ISynthPatch patch, float durationSeconds = 1.5f)
     {
         var settings = new FadeInEffect.Settings
@@ -302,6 +322,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(FadeInEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(FadeOutEffect))]
     public static ISynthPatch WithFadeOut(this ISynthPatch patch, float durationSeconds = 1.5f)
     {
         var settings = new FadeOutEffect.Settings
@@ -313,6 +334,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(FadeOutEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(EnvelopeEffect))]
     public static ISynthPatch WithEnvelope(this ISynthPatch patch, double attackMs, double decayMs, double sustainLevel, double releaseMs)
     {
         var settings = new EnvelopeEffect.Settings
@@ -325,6 +347,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(EnvelopeEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(ToneStackEffect))]
     public static ISynthPatch WithToneStack(this ISynthPatch patch, float bass = 1f, float mid = 1f, float treble = 1f)
     {
         var settings = new ToneStackEffect.Settings
@@ -337,6 +360,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ToneStackEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(PresenceShelfEffect))]
     public static ISynthPatch WithPresenceShelf(this ISynthPatch patch, float presenceDb = +3f)
     {
         var settings = new PresenceShelfEffect.Settings
@@ -347,18 +371,21 @@ public static class SynthPatchExtensions
         return patch.WithEffect(PresenceShelfEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(PickTransientEffect))]
     public static ISynthPatch WithPickTransient(this ISynthPatch patch, float dur = .005f, float gain = .6f)
     {
         var settings = new PickTransientEffect.Settings { Duration = dur, Gain = gain };
         return patch.WithEffect(PickTransientEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(DCBlockerEffect))]
     public static ISynthPatch WithDCBlocker(this ISynthPatch patch)
     {
         var settings = new DCBlockerEffect.Settings();
         return patch.WithEffect(DCBlockerEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(ParametricEQEffect))]
     public static ISynthPatch WithPeakEQ(this ISynthPatch patch, float freq, float gainDb, float q = 1.0f)
     {
         var settings = new ParametricEQEffect.Settings
@@ -373,6 +400,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ParametricEQEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(ParametricEQEffect))]
     public static ISynthPatch WithPeakEQRelative(this ISynthPatch patch, float multiplier, float gainDb, float q = 1.0f)
     {
         var settings = new ParametricEQEffect.Settings
@@ -387,6 +415,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ParametricEQEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(ParametricEQEffect))]
     public static ISynthPatch WithLowShelf(this ISynthPatch patch, float freq, float gainDb)
     {
         var settings = new ParametricEQEffect.Settings
@@ -401,6 +430,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ParametricEQEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(ParametricEQEffect))]
     public static ISynthPatch WithLowShelfRelative(this ISynthPatch patch, float multiplier, float gainDb)
     {
         var settings = new ParametricEQEffect.Settings
@@ -415,6 +445,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ParametricEQEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(ParametricEQEffect))]
     public static ISynthPatch WithHighShelf(this ISynthPatch patch, float freq, float gainDb)
     {
         var settings = new ParametricEQEffect.Settings
@@ -429,6 +460,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ParametricEQEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(ParametricEQEffect))]
     public static ISynthPatch WithHighShelfRelative(this ISynthPatch patch, float multiplier, float gainDb)
     {
         var settings = new ParametricEQEffect.Settings
@@ -443,6 +475,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(ParametricEQEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(PingPongDelayEffect))]
     public static ISynthPatch WithPingPongDelay(this ISynthPatch patch, float delayMs = 330f, float feedback = 0.45f, float mix = 0.36f)
     {
         int delaySamples = (int)(delayMs * SoundProvider.SampleRate / 1000.0);
@@ -475,6 +508,7 @@ public static class SynthPatchExtensions
         return patch;
     }
 
+    [CoreEffect]
     public static ISynthPatch WithTransient(this ISynthPatch patch, float transientDurationSeconds = .01f)
     {
         var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
@@ -495,6 +529,7 @@ public static class SynthPatchExtensions
         return patch;
     }
 
+    [CoreEffect]
     public static ISynthPatch WithPitchDrift(this ISynthPatch patch, float driftFrequencyHz = 0.5f, float driftAmountCents = 5f)
     {
         var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
@@ -516,6 +551,7 @@ public static class SynthPatchExtensions
         return patch;
     }
 
+    [CoreEffect]
     public static ISynthPatch WithVibrato(this ISynthPatch patch, float rateHz = 5.8f, float depthCents = 35f, float phaseOffset = 0f)
     {
         var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
@@ -538,6 +574,7 @@ public static class SynthPatchExtensions
         return patch;
     }
 
+    [CoreEffect]
     public static ISynthPatch WithSubOscillator(this ISynthPatch patch, float subOscLevel = .5f, int subOscOctaveOffset = -1)
     {
         var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
@@ -558,6 +595,48 @@ public static class SynthPatchExtensions
         return patch;
     }
 
+    [CoreEffect]
+    public static ISynthPatch WithLFO(
+        this ISynthPatch patch,
+        SynthSignalSource.LfoTarget target,
+        float rateHz,
+        float depth,
+        int shape = 0,
+        float phaseOffset = 0f,
+        bool velocityAffectsDepth = false,
+        Func<float, float>? depthVelocityCurve = null)
+    {
+        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
+        try
+        {
+            patch.GetAllLeafPatches(leaves);
+            for (int i = 0; i < leaves.Items.Count; i++)
+            {
+                if (leaves.Items[i] is SynthPatch s)
+                {
+                    var lfo = new SynthSignalSource.LfoSettings
+                    {
+                        Target = target,
+                        RateHz = rateHz,
+                        Depth = depth,
+                        Shape = shape,
+                        PhaseOffset = phaseOffset,
+                        VelocityAffectsDepth = velocityAffectsDepth,
+                        DepthVelocityCurve = depthVelocityCurve
+                    };
+                    s.Lfos.Add(lfo);
+                }
+            }
+        }
+        finally
+        {
+            leaves.Dispose();
+        }
+        return patch;
+    }
+
+
+    [CoreEffect]
     public static ISynthPatch WithWaveForm(this ISynthPatch patch, WaveformType waveform)
     {
         var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
@@ -575,6 +654,8 @@ public static class SynthPatchExtensions
         return patch;
     }
 
+
+    [ExtensionToEffect(typeof(CompressorEffect))]
     public static ISynthPatch WithCompressor(this ISynthPatch patch, float threshold = 0.5f, float ratio = 4f, float attackMs = 0.01f, float releaseMs = 0.05f)
     {
         var settings = new CompressorEffect.Settings
@@ -588,6 +669,7 @@ public static class SynthPatchExtensions
         return patch.WithEffect(CompressorEffect.Create(in settings));
     }
 
+    [ExtensionToPatch(typeof(UnisonPatch))]
     public static ISynthPatch WrapWithUnison(this ISynthPatch patch, int numVoices = 2, float detuneCents = 0, float panSpread = 1)
     {
         var ret = UnisonPatch.Create(new UnisonPatch.Settings
@@ -600,6 +682,7 @@ public static class SynthPatchExtensions
         return ret;
     }
 
+    [ExtensionToPatch(typeof(PowerChordPatch))]
     public static ISynthPatch WrapWithPowerChord(this ISynthPatch patch, int[] intervals, float detuneCents = 0, float panSpread = 1)
     {
         var ret = PowerChordPatch.Create(new PowerChordPatch.Settings
