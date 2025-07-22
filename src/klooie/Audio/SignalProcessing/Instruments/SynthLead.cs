@@ -5,7 +5,7 @@ namespace klooie;
 [SynthCategory("Lead")]
 [SynthDescription("""
 Wide, aggressive synth lead designed for heroic melodies. Combines detuned saw stacks,
-harmonic square layers and octave‑sub reinforcement with time‑synced modulation,
+harmonic square layers and octave-sub reinforcement with time-synced modulation,
 chorus, delay and reverb for an epic, evolving tone.
 """)]
 public static class SynthLead
