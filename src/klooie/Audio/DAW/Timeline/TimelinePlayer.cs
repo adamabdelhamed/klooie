@@ -111,7 +111,7 @@ public class TimelinePlayer
         double elapsedSeconds = Stopwatch.GetElapsedTime(playbackStartTimestamp.Value).TotalSeconds;
         var beat = playheadStartBeat + elapsedSeconds * BeatsPerMinute / 60.0;
         var maxBeat = maxBeatProvider();
-        if (StopAtEnd && beat > maxBeat)
+        if (StopAtEnd && beat > maxBeat + 4)
         {
             CurrentBeat = maxBeat;
             Stop();
