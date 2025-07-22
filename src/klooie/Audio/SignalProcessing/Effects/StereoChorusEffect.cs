@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-[SynthDescription("""
+[SynthDocumentation("""
 Classic stereo chorus that modulates a short delay time to produce a wide,
 swirling sound.
 """)]
@@ -23,39 +23,39 @@ public class StereoChorusEffect : Recyclable, IEffect
 
     private static LazyPool<StereoChorusEffect> _pool = new(() => new StereoChorusEffect());
     protected StereoChorusEffect() { }
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings defining the base delay time, modulation depth and how the mix
 responds to note velocity.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Initial delay in milliseconds before modulation.
 """)]
         public int DelayMs;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Amount the delay is modulated in milliseconds.
 """)]
         public int DepthMs;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Speed of the modulation LFO in hertz.
 """)]
         public float RateHz;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Mix between the original and modulated signals
 (0 = dry, 1 = fully wet).
 """)]
         public float Mix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 If true, note velocity affects the wet/dry mix.
 """)]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function converting velocity to a mix multiplier.
 """)]
         public Func<float, float>? MixVelocityCurve;

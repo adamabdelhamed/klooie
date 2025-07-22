@@ -2,7 +2,7 @@
 
 namespace klooie;
 
-[SynthDescription("""
+[SynthDocumentation("""
 Multi-stage distortion designed for saturated guitar tones.  Oversampling is
 used to reduce aliasing so the result stays aggressive without unwanted
 high‑frequency artifacts.
@@ -29,37 +29,37 @@ public sealed class AggroDistortionEffect : Recyclable, IEffect
 
     private AggroDistortionEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings used when constructing an AggroDistortionEffect.  These values
 control how hard the signal is driven and how each stage behaves.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Pre-gain applied before the distortion stages.  Higher
 values push the effect harder.
 """)]
         public float Drive;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Relative gain drop applied to each successive
 distortion stage.
 """)]
         public float StageRatio;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Offset that introduces asymmetry into the clipping
 curve.
 """)]
         public float Bias;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function mapping note velocity to a gain
 multiplier.
 """)]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Overall multiplier applied after evaluating the
 velocity curve.
 """)]

@@ -7,7 +7,7 @@ namespace klooie;
 /// Duration & level track the patch’s <c>TransientDurationSeconds</c>.
 /// Place very early in the chain (before distortion) for realism.
 /// </summary>
-[SynthDescription("""
+[SynthDocumentation("""
 Inserts a brief burst of noise when a note begins.  This mimics the pick or
 pluck sound heard on real instruments.
 """)]
@@ -24,17 +24,17 @@ public sealed class PickTransientEffect : Recyclable, IEffect
         new(() => new PickTransientEffect());
     private PickTransientEffect() { rng = new Random(); }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings controlling how long the noise burst lasts and how loud it is.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Length of the noise burst in seconds.
 """)]
         public float Duration;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Volume of the transient noise.
 """)]
         public float Gain;

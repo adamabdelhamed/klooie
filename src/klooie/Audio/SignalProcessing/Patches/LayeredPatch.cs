@@ -1,7 +1,7 @@
 ﻿using klooie;
 
 [SynthCategory("Complex Patch")]
-[SynthDescription("""
+[SynthDocumentation("""
 Allows several patches to be played together as layers.  Each layer
 has its own volume, stereo pan and pitch offset so you can build rich,
 multi-voice instruments.
@@ -123,32 +123,32 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
         base.OnReturn();
     }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Configuration describing which patches are layered together and
 how each layer is mixed in terms of volume, pan position and
 transpose amount.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Array of patches that will play at the same time.  The
 index of each patch matches the entries in Volumes, Pans and Transposes.
 """)]
         public ISynthPatch[] Patches;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Relative volume of each layer from 0 to 1.  Values
 above 1 will boost that layer while values below 1 reduce it.
 """)]
         public float[]? Volumes;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Stereo pan for each layer where -1 is full left and
 +1 is full right.
 """)]
         public float[]? Pans;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Number of semitones each layer is transposed
 relative to the original pitch.
 """)]

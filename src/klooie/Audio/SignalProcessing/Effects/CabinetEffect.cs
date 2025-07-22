@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-[SynthDescription("""
+[SynthDocumentation("""
 Simulates the tone of a guitar speaker cabinet using shelving filters plus a
 midrange scoop.  Helpful for creating amp-like patches without external IRs.
 """)]
@@ -23,19 +23,19 @@ public class CabinetEffect : Recyclable, IEffect
     static readonly LazyPool<CabinetEffect> _pool =
         new(() => new CabinetEffect());
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings controlling the cabinet simulation.  These include an optional
 curve for scaling output based on note velocity.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function that adjusts output level based on the
 note's velocity.
 """)]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Additional multiplier applied after evaluating the
 velocity curve.
 """)]

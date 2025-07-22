@@ -36,7 +36,7 @@ public interface ISynthPatch
 }
 
 [SynthCategory("Core")]
-[SynthDescription("""
+[SynthDocumentation("""
 Single-oscillator patch that forms the basis of most instruments.  Optional
 components include a sub oscillator, vibrato, gentle pitch drift and a
 pluggable effects chain.  Use this as a starting point for custom patches.

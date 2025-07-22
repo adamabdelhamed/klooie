@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-[SynthDescription("""
+[SynthDocumentation("""
 Implements a simple delay line that plays back the input after a fixed number
 of samples.  The feedback setting routes some of the delayed signal back in so
 you can create repeating echoes.
@@ -22,36 +22,36 @@ public class DelayEffect : Recyclable, IEffect
     private static LazyPool<DelayEffect> _pool = new(() => new DelayEffect()); // Default 1 second delay at 44100Hz
     protected DelayEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings for constructing a DelayEffect.  DelaySamples is specified in
 audio samples while the other values range between 0 and 1.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Length of the delay buffer measured in samples.
 """)]
         public int DelaySamples;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Fraction of the delayed output that is fed back for
 repeated echoes (0 = none, 1 = infinite).
 """)]
         public float Feedback;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Mix between the original signal and the delayed
 signal. 0 gives only the dry signal, 1 gives only delay.
 """)]
         public float Mix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 When true, harder played notes increase the mix
 amount.
 """)]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function that converts normalized velocity into a
 multiplier applied to the mix.
 """)]

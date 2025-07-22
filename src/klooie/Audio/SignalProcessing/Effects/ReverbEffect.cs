@@ -87,7 +87,7 @@ class CombFilter : Recyclable
     }
 }
 
-[SynthDescription("""
+[SynthDocumentation("""
 Stereo reverb constructed from multiple comb and all-pass filters.  Feedback and
 diffusion settings shape the size and character of the virtual space.
 """)]
@@ -106,41 +106,41 @@ public class ReverbEffect : Recyclable, IEffect
 
     private static LazyPool<ReverbEffect> _pool = new(() => new ReverbEffect());
     protected ReverbEffect() { }
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings controlling reverb decay, diffusion and how the wet/dry mix reacts
 to note velocity.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Amount of feedback which determines how long the
 reverb tail lasts.
 """)]
         public float Feedback;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 How dense the reflections become. Higher values
 create a smoother tail.
 """)]
         public float Diffusion;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Volume of the reverberated (wet) signal.
 """)]
         public float Wet;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Volume of the unaffected (dry) signal.
 """)]
         public float Dry;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 If true, note velocity influences the wet mix
 level.
 """)]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function mapping velocity to a multiplier applied
 to the wet level.
 """)]

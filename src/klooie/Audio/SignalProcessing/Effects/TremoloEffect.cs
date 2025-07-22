@@ -1,7 +1,7 @@
 using System;
 
 namespace klooie;
-[SynthDescription("""
+[SynthDocumentation("""
 Periodic volume modulation (tremolo) using a low-frequency oscillator.
 """)]
 [SynthCategory("Modulation")]
@@ -16,29 +16,29 @@ public class TremoloEffect : Recyclable, IEffect
     private static readonly LazyPool<TremoloEffect> _pool = new(() => new TremoloEffect());
     protected TremoloEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings for tremolo depth, rate and optional velocity-based scaling.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Amount of volume modulation from 0 (none) to 1
 (full).
 """)]
         public float Depth;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Frequency of the modulation LFO in hertz.
 """)]
         public float RateHz;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 If true, note velocity changes the modulation
 depth.
 """)]
         public bool VelocityAffectsDepth;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function mapping velocity to a depth multiplier.
 """)]
         public Func<float, float>? DepthVelocityCurve;

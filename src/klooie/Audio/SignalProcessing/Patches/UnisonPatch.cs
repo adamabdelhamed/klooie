@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace klooie;
 
 [SynthCategory("Complex Patch")]
-[SynthDescription("""
+[SynthDocumentation("""
 Generates several slightly detuned copies of a patch.  Each voice can be panned
 across the stereo field to create a wide, lush sound.
 """)]
@@ -125,29 +125,29 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
         _innerPatches = null!;
     }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings describing the base patch and how many detuned voices to create
 along with their pan spread.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Patch that will be duplicated for every voice.
 """)]
         public ISynthPatch BasePatch;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 How many detuned voices to spawn.
 """)]
         public int NumVoices;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Total amount of detuning across all voices in
 cents.
 """)]
         public float DetuneCents;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Stereo spread of the voices where -1 is hard left
 and +1 is hard right.
 """)]

@@ -1,7 +1,7 @@
 using System;
 
 namespace klooie;
-[SynthDescription("""
+[SynthDocumentation("""
 Basic high-pass filter that removes rumble and low-end energy.
 You can provide a fixed cutoff in hertz or specify a multiplier
 of the note's pitch so the filter tracks the note. Use a fixed
@@ -24,36 +24,36 @@ public class HighPassFilterEffect : Recyclable, IEffect
 
     protected HighPassFilterEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings describing how to compute the cutoff frequency and how the mix reacts
 to note velocity. Specify exactly one of CutoffHz or NoteFrequencyMultiplier.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Fixed cutoff frequency in hertz. Must not be set if NoteFrequencyMultiplier is set.
 """)]
         public float? CutoffHz;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 If set, cutoff frequency is computed as note frequency × this multiplier.
 Must not be set if CutoffHz is set.
 """)]
         public float? NoteFrequencyMultiplier;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Amount of filtered signal mixed with the original
 (0 = dry, 1 = fully filtered).
 """)]
         public float Mix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 When true, harder played notes increase the mix of
 the filtered signal.
 """)]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function mapping normalized velocity to a
 mix multiplier.
 """)]

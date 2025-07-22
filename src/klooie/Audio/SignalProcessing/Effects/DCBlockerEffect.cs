@@ -6,7 +6,7 @@ namespace klooie;
 /// First-order DC-block / 15 Hz high-pass.
 /// Removes sub-audible offsets that become “pops” after heavy drive.
 /// </summary>
-[SynthDescription("""
+[SynthDocumentation("""
 Very low high-pass filter (around 15 Hz) that removes DC offsets.
 Use this to eliminate sub-audible shifts that can cause pops after heavy
 processing.
@@ -25,19 +25,19 @@ public sealed class DCBlockerEffect : Recyclable, IEffect
         new(() => new DCBlockerEffect());
     private DCBlockerEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Configuration options for the DC blocker including optional velocity
 sensitivity.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 When true, the output level is scaled by the
 incoming note velocity.
 """)]
         public bool VelocityAffectsOutput;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function applied to velocity when computing the
 output scale.
 """)]

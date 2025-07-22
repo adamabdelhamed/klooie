@@ -3,7 +3,7 @@
 namespace klooie;
 
 [SynthCategory("Lead")]
-[SynthDescription("""
+[SynthDocumentation("""
 High‑gain guitar patch composed of multiple distortion stages, tone shaping
 filters, cabinet simulation and ambience effects.  Ideal for aggressive rock
 parts.

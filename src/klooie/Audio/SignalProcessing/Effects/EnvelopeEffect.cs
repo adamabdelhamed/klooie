@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-[SynthDescription("""
+[SynthDocumentation("""
 Applies an Attack‑Decay‑Sustain‑Release envelope to shape the level of the
 incoming signal.
 """)]
@@ -18,28 +18,28 @@ public class EnvelopeEffect : Recyclable, IEffect
 
     private EnvelopeEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Timing values used to construct the ADSR envelope.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Duration of the attack phase in seconds.
 """)]
         public double Attack;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Time for the level to drop from the peak to the
 sustain level.
 """)]
         public double Decay;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Normalized sustain level (0–1) held until release.
 """)]
         public double Sustain;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Time for the level to fade out after a note is
 released.
 """)]

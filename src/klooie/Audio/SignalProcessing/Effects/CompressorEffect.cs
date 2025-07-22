@@ -6,7 +6,7 @@ namespace klooie;
 /// Simple peak/RMS hybrid compressor – great for taming post-amp transients
 /// without crushing pick attack.
 /// </summary>
-[SynthDescription("""
+[SynthDocumentation("""
 Combines peak and RMS detection to smooth out volume spikes while
 preserving natural attack transients.
 """)]
@@ -29,41 +29,41 @@ public sealed class CompressorEffect : Recyclable, IEffect
     private static readonly LazyPool<CompressorEffect> _pool = new(() => new CompressorEffect());
     private CompressorEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings that define how the compressor reacts to incoming audio.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Input level (0–1) above which compression begins.
 """)]
         public float Threshold;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Amount of gain reduction applied once above the
 threshold.
 """)]
         public float Ratio;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 How quickly the compressor engages when the
 threshold is exceeded.
 """)]
         public float Attack;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 How quickly the compression relaxes after the
 signal falls below the threshold.
 """)]
         public float Release;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function mapping note velocity to a gain
 multiplier.
 """)]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Multiplier applied after evaluating the velocity
 curve.
 """)]

@@ -1,6 +1,6 @@
 ﻿using klooie;
 
-[SynthDescription("""
+[SynthDocumentation("""
 Delay effect that bounces echoes between the left and right speakers,
 creating a ping‑pong stereo field.
 """)]
@@ -20,36 +20,36 @@ public class PingPongDelayEffect : Recyclable, IEffect
 
     private PingPongDelayEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings that define the delay time, feedback and how the echoes mix with
 the original signal.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Length of the delay line in samples.
 """)]
         public int DelaySamples;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Portion of the delayed signal fed back for more
 repeats (0 = none, 1 = infinite).
 """)]
         public float Feedback;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Mix between original and delayed signals (0 = dry,
 1 = fully wet).
 """)]
         public float Mix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 If true, harder notes produce a stronger delay
 mix.
 """)]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function mapping velocity to a mix multiplier.
 """)]
         public Func<float, float>? MixVelocityCurve;

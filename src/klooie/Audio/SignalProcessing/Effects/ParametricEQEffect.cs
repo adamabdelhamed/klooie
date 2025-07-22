@@ -2,7 +2,7 @@
 
 public enum BiquadType { Peak, LowShelf, HighShelf }
 
-[SynthDescription("""
+[SynthDocumentation("""
 Flexible parametric EQ supporting peak, low‑shelf and high‑shelf modes.
 The filter frequency can be a fixed value or a multiple of
 the note being played. Use note-relative mode to keep the EQ
@@ -29,7 +29,7 @@ public class ParametricEQEffect : Recyclable, IEffect
 
     private ParametricEQEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     Settings that configure the filter type, how its center
     frequency is determined and how gain responds to velocity.
     Provide either a fixed frequency or a multiplier relative
@@ -37,46 +37,46 @@ public class ParametricEQEffect : Recyclable, IEffect
     """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Which biquad filter to use (peak, low shelf or high
 shelf).
 """)]
         public BiquadType Type;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
         Fixed center frequency in hertz. Leave null to use
         NoteFrequencyMultiplier.
         """)]
         public float? Freq;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
         If set, center frequency = note frequency × this
         multiplier.
         """)]
         public float? NoteFrequencyMultiplier;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Boost or cut amount in decibels.
 """)]
         public float GainDb;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Resonance or bandwidth of the filter.
 """)]
         public float Q;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 If true, note velocity modulates the filter's
 gain.
 """)]
         public bool VelocityAffectsGain;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function mapping velocity to a gain multiplier.
 """)]
         public Func<float, float>? GainVelocityCurve;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Multiplier applied after evaluating the velocity
 curve.
 """)]

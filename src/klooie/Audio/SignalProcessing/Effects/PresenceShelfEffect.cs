@@ -7,7 +7,7 @@ namespace klooie;
 /// Emulates the electrical resonance of passive guitar pickups
 /// and the presence control on high-gain amps.
 /// </summary>
-[SynthDescription("""
+[SynthDocumentation("""
 Combines a resonant low‑pass with a high‑shelf boost to mimic the presence
 control found on many guitar amplifiers.
 """)]
@@ -35,24 +35,24 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
 
     private PresenceShelfEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings controlling the amount of high-frequency boost and optional
 velocity-based scaling.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Boost applied to the high frequencies in decibels.
 """)]
         public float PresenceDb;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function used to scale the boost based on note
 velocity.
 """)]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Additional multiplier applied to the velocity
 curve's output.
 """)]

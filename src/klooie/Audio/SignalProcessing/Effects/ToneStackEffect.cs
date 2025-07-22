@@ -10,7 +10,7 @@ namespace klooie;
 /// •  <c>high &gt;  2 500 Hz</c>
 /// Gains are linear (1 = unity, 2 = +6 dB, 0.5 = -6 dB).
 /// </summary>
-[SynthDescription("""
+[SynthDocumentation("""
 Three‑band tone stack emulating the bass, mid and treble controls of many
 guitar amplifiers.
 """)]
@@ -33,34 +33,34 @@ public sealed class ToneStackEffect : Recyclable, IEffect
         new(() => new ToneStackEffect());
     private ToneStackEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings controlling the bass, mid and treble gains and optional
 velocity-based scaling.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Linear gain applied to the low frequencies.
 """)]
         public float Bass;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Linear gain applied to the midrange.
 """)]
         public float Mid;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Linear gain applied to the high frequencies.
 """)]
         public float Treble;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 If true, note velocity scales the bass, mid and
 treble gains.
 """)]
         public bool VelocityAffectsGain;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function mapping velocity to a gain multiplier
 applied to all bands.
 """)]

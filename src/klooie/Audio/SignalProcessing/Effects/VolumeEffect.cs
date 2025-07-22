@@ -9,7 +9,7 @@ namespace klooie;
 /// Scales the input by a constant gain and optionally modulates that gain with
 /// note velocity.
 /// </summary>
-[SynthDescription("""
+[SynthDocumentation("""
 Applies a constant gain to the signal.  Optionally the gain can respond to note
 velocity for expressive dynamics.
 """)]
@@ -23,23 +23,23 @@ public class VolumeEffect : Recyclable, IEffect
     private VolumeEffect() { }
     static readonly LazyPool<VolumeEffect> _pool = new(() => new VolumeEffect());
 
-[SynthDescription("""
+[SynthDocumentation("""
 Settings defining the fixed gain and optional velocity response.
 """)]
 public struct Settings
 {
-    [SynthDescription("""
+    [SynthDocumentation("""
 Gain multiplier applied to the input signal.
 """)]
     public float Gain;
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Function that converts note velocity into a gain
 multiplier.
 """)]
     public Func<float, float>? VelocityCurve;
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Additional multiplier applied after the velocity
 curve.
 """)]

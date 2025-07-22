@@ -416,14 +416,14 @@ public static class SynthPatchExtensions
 
     [CoreEffect]
     public static ISynthPatch WithPitchDrift(this ISynthPatch patch,
-    [SynthDescription("""
+    [SynthDocumentation("""
     The speed of the pitch drift in Hertz (Hz).  
     This sets how quickly the pitch wobbles up and down, similar to subtle analog oscillator instability or "wow and flutter."  
     Typical values range from 0.1 Hz (very slow, barely noticeable) to 2 Hz (more pronounced, warbly effect).  
     Lower values give a gentle, organic feel; higher values sound more dramatic.
     """)] float driftFrequencyHz = 0.5f,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     The depth of the pitch drift in cents (1/100th of a semitone).  
     This controls how far the pitch moves above and below the note’s true pitch.  
     Small values (2–10 cents) mimic classic analog synth imperfections; larger values will sound more unstable or detuned.
@@ -451,20 +451,20 @@ public static class SynthPatchExtensions
     [CoreEffect]
     public static ISynthPatch WithVibrato(
     this ISynthPatch patch,
-    [SynthDescription("""
+    [SynthDocumentation("""
     Vibrato rate in Hertz (Hz).  
     This sets how quickly the pitch oscillates up and down, producing a trembling effect.  
     Common rates are 4–8 Hz for a typical synth vibrato.  
     Lower values sound slow and gentle; higher values are more dramatic or unnatural.
     """)] float rateHz = 5.8f,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     Vibrato depth in cents (1/100th of a semitone).  
     This controls how far the pitch moves above and below the original note.  
     Subtle values (5–20 cents) add warmth and realism, while larger values (30+ cents) are more noticeable or stylized.
     """)] float depthCents = 35f,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     Starting phase of the vibrato cycle, from 0 to 1 (0 = start, 0.5 = halfway, 1 = full cycle).  
     Use this to offset the vibrato timing for unison voices or to avoid phase alignment between layers.
     """)] float phaseOffset = 0f)
@@ -492,13 +492,13 @@ public static class SynthPatchExtensions
     [CoreEffect]
     public static ISynthPatch WithSubOscillator(
     this ISynthPatch patch,
-    [SynthDescription("""
+    [SynthDocumentation("""
     The level (volume) of the sub-oscillator as a fraction of the main oscillator (0–1).  
     Higher values blend more of the deep sub-bass tone into the sound.  
     Typical values are 0.3–0.7 for a noticeable bass boost, or set to 0 to disable.
     """)] float subOscLevel = .5f,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     The pitch offset for the sub-oscillator, in octaves.  
     Negative values (like -1) shift the sub-oscillator down one octave for classic fat bass.  
     0 keeps it at the same pitch as the main oscillator, while +1 raises it one octave.
@@ -525,38 +525,38 @@ public static class SynthPatchExtensions
     [CoreEffect]
     public static ISynthPatch WithLFO(
     this ISynthPatch patch,
-    [SynthDescription("""
+    [SynthDocumentation("""
     The destination parameter modulated by the LFO.  
     Common targets include pitch, filter cutoff, amplitude (tremolo), and pan.
     """)] SynthSignalSource.LfoTarget target,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     The speed of the LFO cycle, in Hertz (Hz).  
     Typical values range from very slow (0.1 Hz, for gradual sweeps) to fast (10+ Hz, for FM or AM effects).
     """)] float rateHz,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     How strongly the LFO modulates the target parameter.  
     The exact range depends on the target (e.g., cents for pitch, dB for volume, percent for pan).
     """)] float depth,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     LFO waveform shape.  
     0 = Sine, 1 = Triangle, 2 = Square, 3 = Sawtooth, etc.  
     Each shape produces a distinct modulation character.
     """)] int shape = 0,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     Starting phase of the LFO (0 = beginning of cycle, 1 = end).  
     Useful for stereo or layered sounds to prevent phase alignment and create motion.
     """)] float phaseOffset = 0f,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     If true, the velocity of the note will scale the depth of the LFO.  
     This makes harder-played notes more strongly modulated, for expressive or dynamic effects.
     """)] bool velocityAffectsDepth = false,
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     Optional function to map velocity (0–1) to an LFO depth multiplier.  
     Use this for custom dynamic response curves beyond linear scaling.
     """)] Func<float, float>? depthVelocityCurve = null)
@@ -594,7 +594,7 @@ public static class SynthPatchExtensions
     [CoreEffect]
     public static ISynthPatch WithWaveForm(
     this ISynthPatch patch,
-    [SynthDescription("""
+    [SynthDocumentation("""
     The type of oscillator waveform to use.  
     Common types:  
     - Sine: Smooth, pure tone  

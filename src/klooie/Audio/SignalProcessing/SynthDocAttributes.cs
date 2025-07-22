@@ -1,10 +1,10 @@
 namespace klooie;
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field | AttributeTargets.Parameter)]
-public sealed class SynthDescriptionAttribute : Attribute
+public sealed class SynthDocumentationAttribute : Attribute
 {
-    public string Description { get; }
-    public SynthDescriptionAttribute(string description) => Description = description;
+    public string Markdown { get; }
+    public SynthDocumentationAttribute(string markdown) => Markdown = markdown;
 }
 
 [AttributeUsage(AttributeTargets.Class)]

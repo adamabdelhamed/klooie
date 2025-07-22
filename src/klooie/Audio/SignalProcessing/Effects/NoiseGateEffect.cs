@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-[SynthDescription("""
+[SynthDocumentation("""
 Silences the signal whenever its level drops below a defined threshold,
 helping remove background noise between notes.
 """)]
@@ -26,38 +26,38 @@ public class NoiseGateEffect : Recyclable, IEffect
     static readonly LazyPool<NoiseGateEffect> _pool =
         new(() => new NoiseGateEffect());
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings that determine how the gate opens and closes.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Signal level above which the gate opens.
 """)]
         public float OpenThresh;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Level below which the gate starts to close.
 """)]
         public float CloseThresh;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Time in milliseconds for the gate to fully open
 """)]
         public float AttackMs;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Time in milliseconds for the gate to fully close
 """)]
         public float ReleaseMs;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 If true, note velocity scales the open and close
 thresholds.
 """)]
         public bool VelocityAffectsThreshold;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function that maps velocity to a multiplier used
 when scaling the thresholds.
 """)]

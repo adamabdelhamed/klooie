@@ -122,7 +122,7 @@ public static class SynthDocGenerator
     public static bool IsTypeMatch(Type type, Type baseType)
     {
         if (type.HasAttr<SynthCategoryAttribute>() == false ||
-            type.HasAttr<SynthDescriptionAttribute>() == false) return false;
+            type.HasAttr<SynthDocumentationAttribute>() == false) return false;
         if(baseType == typeof(ISynthPatch))
         {
             if (type == typeof(ElectricGuitar))
@@ -147,21 +147,21 @@ public static class SynthDocGenerator
         foreach (var type in types)
         {
             if (!IsTypeMatch(type, baseType)) continue;
-            var desc = type.GetCustomAttribute<SynthDescriptionAttribute>();
+            var desc = type.GetCustomAttribute<SynthDocumentationAttribute>();
             var cat = type.GetCustomAttribute<SynthCategoryAttribute>();
             if (desc == null || cat == null)
                 continue;
 
             ParamDoc? paramDoc = null;
             var paramType = type.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic)
-                .FirstOrDefault(t => t.IsValueType && t.GetCustomAttribute<SynthDescriptionAttribute>() != null && t.Name.ToLower().Contains("setting"));
+                .FirstOrDefault(t => t.IsValueType && t.GetCustomAttribute<SynthDocumentationAttribute>() != null && t.Name.ToLower().Contains("setting"));
             if (paramType != null)
             {
-                var pDesc = paramType.GetCustomAttribute<SynthDescriptionAttribute>()!.Description;
+                var pDesc = paramType.GetCustomAttribute<SynthDocumentationAttribute>()!.Markdown;
                 var fields = new List<FieldDoc>();
                 foreach (var field in paramType.GetFields(BindingFlags.Public | BindingFlags.Instance))
                 {
-                    var fDesc = field.GetCustomAttribute<SynthDescriptionAttribute>()?.Description ?? "No description.";
+                    var fDesc = field.GetCustomAttribute<SynthDocumentationAttribute>()?.Markdown ?? "No description.";
                     fields.Add(new FieldDoc(field.Name, fDesc));
                 }
                 paramDoc = new ParamDoc(paramType.Name, pDesc, fields);
@@ -177,7 +177,7 @@ public static class SynthDocGenerator
                 )
                 .ToList();
 
-            docs.Add(new ItemDoc(cat.Category, type.Name, desc.Description, paramDoc, extensions));
+            docs.Add(new ItemDoc(cat.Category, type.Name, desc.Markdown, paramDoc, extensions));
         }
         return docs;
     }
@@ -238,7 +238,7 @@ public static class SynthDocGenerator
 
                 // Build summary (first XML doc line or attribute, or just a default)
                 string summary = method.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description
-                    ?? method.GetCustomAttribute<SynthDescriptionAttribute>()?.Description
+                    ?? method.GetCustomAttribute<SynthDocumentationAttribute>()?.Markdown
                     ?? "See parameters below.";
 
                 // === PARAMETER DOCS ===
@@ -250,7 +250,7 @@ public static class SynthDocGenerator
                     for (int i = 1; i < ps.Length; i++)
                     {
                         var p = ps[i];
-                        string desc = p.GetCustomAttribute<SynthDescriptionAttribute>()?.Description ?? "";
+                        string desc = p.GetCustomAttribute<SynthDocumentationAttribute>()?.Markdown ?? "";
                         paramDocs.Add((p.Name, "NA", desc));
                     }
                 }
@@ -270,7 +270,7 @@ public static class SynthDocGenerator
                         if (settingsFields.TryGetValue(p.Name, out var fi))
                         {
                             mapped = fi.Name;
-                            desc = fi.GetCustomAttribute<SynthDescriptionAttribute>()?.Description ?? "";
+                            desc = fi.GetCustomAttribute<SynthDocumentationAttribute>()?.Markdown ?? "";
                         }
                         else
                         {
@@ -279,7 +279,7 @@ public static class SynthDocGenerator
                             if (match != null)
                             {
                                 mapped = match.Name;
-                                desc = match.GetCustomAttribute<SynthDescriptionAttribute>()?.Description ?? "";
+                                desc = match.GetCustomAttribute<SynthDocumentationAttribute>()?.Markdown ?? "";
                             }
                         }
                         paramDocs.Add((p.Name, mapped, desc));

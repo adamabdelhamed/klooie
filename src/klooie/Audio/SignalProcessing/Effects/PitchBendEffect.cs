@@ -7,7 +7,7 @@ public interface IPitchModEffect : IEffect
 }
 
 
-[SynthDescription("""
+[SynthDocumentation("""
 Modulates pitch during note attack and release using user-provided curves
 expressed in cents.
 """)]
@@ -23,29 +23,29 @@ public class PitchBendEffect : Recyclable, IPitchModEffect
 
     private PitchBendEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Functions and timing values defining the attack and release pitch bends.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function that returns a pitch offset (in cents)
 over the course of the attack.
 """)]
         public Func<float, float> AttackBend;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Length of the attack bend in seconds.
 """)]
         public float AttackDuration;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function providing the pitch offset curve during
 the release phase.
 """)]
         public Func<float, float> ReleaseBend;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Length of the release bend in seconds.
 """)]
         public float ReleaseDuration;

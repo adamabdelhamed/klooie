@@ -6,7 +6,7 @@ namespace klooie;
 /// First-order tilt-EQ centred around a gentle low-pass.
 /// Positive <c>tilt</c> brightens; negative warms.
 /// </summary>
-[SynthDescription("""
+[SynthDocumentation("""
 Tilt EQ that boosts highs while cutting lows (or the reverse).
 The internal low‑pass cutoff may be a fixed frequency or a
 multiple of the played note. Use the multiplier when you want
@@ -24,26 +24,26 @@ public sealed class TiltEQEffect : Recyclable, IEffect
     private static readonly LazyPool<TiltEQEffect> _pool = new(() => new TiltEQEffect());
     private TiltEQEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     Settings defining the tilt amount and how the low‑pass cutoff
     is determined. Provide either a fixed cutoff or a multiplier
     of the note frequency so the EQ follows the pitch.
     """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Tilt amount from -1 (bass boost) to +1 (treble
 boost).
 """)]
         public float Tilt;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
         Fixed cutoff for the internal low-pass in hertz. Leave
         null to use NoteFrequencyMultiplier.
         """)]
         public float? CutoffHz;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
         If set, cutoff = note frequency × this multiplier. Leave
         null to use CutoffHz.
         """)]

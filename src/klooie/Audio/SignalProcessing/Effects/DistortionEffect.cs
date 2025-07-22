@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-[SynthDescription("""
+[SynthDocumentation("""
 Distortion built from several soft‑clipping stages.  Basic oversampling is used
 to lessen aliasing so the tone stays smoother even at high drive levels.
 """)]
@@ -24,37 +24,37 @@ public class DistortionEffect : Recyclable, IEffect
     private DistortionEffect() { }
     static readonly LazyPool<DistortionEffect> _pool = new(() => new DistortionEffect());
 
-    [SynthDescription("""
+    [SynthDocumentation("""
 Settings used to build a DistortionEffect.  They define the drive level and
 how each clipping stage behaves.
 """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
 Gain applied before the first clipping stage.  Higher
 values yield more distortion.
 """)]
         public float Drive;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Multiplier controlling how much the gain decreases
 at each successive stage.
 """)]
         public float StageRatio;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Offset added before clipping to produce asymmetric
 distortion.
 """)]
         public float Bias;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Optional function mapping note velocity to a gain
 multiplier.
 """)]
         public Func<float, float>? VelocityCurve;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Additional multiplier applied after evaluating the
 velocity curve.
 """)]

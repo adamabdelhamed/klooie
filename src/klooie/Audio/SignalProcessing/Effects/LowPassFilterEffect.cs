@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-[SynthDescription("""
+[SynthDocumentation("""
 Simple low-pass filter that reduces high frequencies.
 The cutoff can be fixed in hertz or follow the note's
 pitch by using a multiplier.
@@ -27,7 +27,7 @@ public class LowPassFilterEffect : Recyclable, IEffect
 
     private LowPassFilterEffect() { }
 
-    [SynthDescription("""
+    [SynthDocumentation("""
     Settings describing how the cutoff is chosen and how
     strongly the filtered signal is mixed in. Specify either
     a fixed cutoff in hertz or a multiplier that is applied
@@ -35,31 +35,31 @@ public class LowPassFilterEffect : Recyclable, IEffect
     """)]
     public struct Settings
     {
-        [SynthDescription("""
+        [SynthDocumentation("""
         Fixed cutoff frequency in hertz. Leave null to use
         NoteFrequencyMultiplier instead.
         """)]
         public float? CutoffHz;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
         If set, cutoff = note frequency × this multiplier.
         Leave null to use CutoffHz.
         """)]
         public float? NoteFrequencyMultiplier;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Mix level between the original and filtered signal
 (0 = dry, 1 = filtered).
 """)]
         public float Mix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 If true, note velocity changes how much of the
 filtered signal is heard.
 """)]
         public bool VelocityAffectsMix;
 
-        [SynthDescription("""
+        [SynthDocumentation("""
 Function converting velocity into a mix
 multiplier.
 """)]
