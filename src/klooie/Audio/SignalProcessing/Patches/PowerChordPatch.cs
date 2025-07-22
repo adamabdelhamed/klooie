@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace klooie;
 
-[SynthCategory("Utility")]
+[SynthCategory("Complex Patch")]
 [SynthDescription("""
 Creates power chords by layering transposed copies of a base patch.  Each layer
 can be slightly detuned and panned for a wide stereo effect.

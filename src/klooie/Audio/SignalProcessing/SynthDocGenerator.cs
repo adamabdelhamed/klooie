@@ -119,13 +119,34 @@ public static class SynthDocGenerator
         };
     }
 
+    public static bool IsTypeMatch(Type type, Type baseType)
+    {
+        if (type.HasAttr<SynthCategoryAttribute>() == false ||
+            type.HasAttr<SynthDescriptionAttribute>() == false) return false;
+        if(baseType == typeof(ISynthPatch))
+        {
+            if (type == typeof(ElectricGuitar))
+            {
+
+            }
+            var isAssignable = baseType.IsAssignableFrom(type);
+            var factory = type.GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .Where(m => m.ReturnType == typeof(ISynthPatch) && m.GetParameters().Length == 0)
+                .FirstOrDefault();
+            var isFactory = factory != null && factory.GetParameters().Length == 0;
+            var isAcceptableType = isAssignable || isFactory;
+            return isAcceptableType;
+        }
+
+        return baseType.IsAssignableFrom(type) && type.IsAbstract == false && type.IsInterface == false;
+    }
+
     private static List<ItemDoc> CollectDocs(IEnumerable<Type> types, Type baseType, List<ExtensionDoc> allExtensions)
     {
         var docs = new List<ItemDoc>();
         foreach (var type in types)
         {
-            if (!baseType.IsAssignableFrom(type) || type.IsAbstract || type.IsInterface)
-                continue;
+            if (!IsTypeMatch(type, baseType)) continue;
             var desc = type.GetCustomAttribute<SynthDescriptionAttribute>();
             var cat = type.GetCustomAttribute<SynthCategoryAttribute>();
             if (desc == null || cat == null)

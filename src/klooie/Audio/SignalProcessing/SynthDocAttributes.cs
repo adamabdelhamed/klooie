@@ -1,6 +1,6 @@
 namespace klooie;
 
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field | AttributeTargets.Parameter)]
 public sealed class SynthDescriptionAttribute : Attribute
 {
     public string Description { get; }

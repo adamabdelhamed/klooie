@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace klooie;
 
-[SynthCategory("Utility")]
+[SynthCategory("Complex Patch")]
 [SynthDescription("""
 Generates several slightly detuned copies of a patch.  Each voice can be panned
 across the stereo field to create a wide, lush sound.

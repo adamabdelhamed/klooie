@@ -530,7 +530,19 @@ public static class SynthPatchExtensions
     }
 
     [CoreEffect]
-    public static ISynthPatch WithPitchDrift(this ISynthPatch patch, float driftFrequencyHz = 0.5f, float driftAmountCents = 5f)
+    public static ISynthPatch WithPitchDrift(this ISynthPatch patch,
+    [SynthDescription("""
+    The speed of the pitch drift in Hertz (Hz).  
+    This sets how quickly the pitch wobbles up and down, similar to subtle analog oscillator instability or "wow and flutter."  
+    Typical values range from 0.1 Hz (very slow, barely noticeable) to 2 Hz (more pronounced, warbly effect).  
+    Lower values give a gentle, organic feel; higher values sound more dramatic.
+    """)] float driftFrequencyHz = 0.5f,
+
+    [SynthDescription("""
+    The depth of the pitch drift in cents (1/100th of a semitone).  
+    This controls how far the pitch moves above and below the note’s true pitch.  
+    Small values (2–10 cents) mimic classic analog synth imperfections; larger values will sound more unstable or detuned.
+    """)] float driftAmountCents = 5f)
     {
         var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
         try

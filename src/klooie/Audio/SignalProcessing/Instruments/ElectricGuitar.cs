@@ -2,13 +2,13 @@
 
 namespace klooie;
 
-[SynthCategory("Guitar")]
+[SynthCategory("Lead")]
 [SynthDescription("""
 High‑gain guitar patch composed of multiple distortion stages, tone shaping
 filters, cabinet simulation and ambience effects.  Ideal for aggressive rock
 parts.
 """)]
-public static class ElecrticGuitar
+public static class ElectricGuitar
 {
     public static ISynthPatch Create() => LayeredPatch.CreateBuilder()
         .AddLayer(volume: 0.6f, pan: -0.6f, transpose: 0, patch: SynthPatch.Create()

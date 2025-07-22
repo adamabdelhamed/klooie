@@ -1,6 +1,6 @@
 ﻿using klooie;
 
-[SynthCategory("Utility")]
+[SynthCategory("Complex Patch")]
 [SynthDescription("""
 Allows several patches to be played together as layers.  Each layer
 has its own volume, stereo pan and pitch offset so you can build rich,
