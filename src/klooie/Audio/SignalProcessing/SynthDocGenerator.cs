@@ -230,7 +230,10 @@ public static class SynthDocGenerator
                 var sb = new StringBuilder();
                 sb.Append(method.ReturnType.Name + " ");
                 sb.Append(method.Name + "(");
-                sb.Append(string.Join(", ", ps.Select(p => (p.IsOptional ? p.ParameterType.Name + " " + p.Name + " = " + (p.DefaultValue ?? "null") : p.ParameterType.Name + " " + p.Name))));
+                sb.Append(string.Join(", ", ps.Select(p =>
+                    (p.IsOptional ? p.ParameterType.Name + " " + p.Name + " = " + (p.DefaultValue ?? "null")
+                                 : p.ParameterType.Name + " " + p.Name)
+                )));
                 sb.Append(")");
 
                 // Build summary (first XML doc line or attribute, or just a default)
@@ -238,34 +241,49 @@ public static class SynthDocGenerator
                     ?? method.GetCustomAttribute<SynthDescriptionAttribute>()?.Description
                     ?? "See parameters below.";
 
-                // For each parameter beyond the first (which is the 'this'), try to map to documented fields
+                // === PARAMETER DOCS ===
                 var paramDocs = new List<(string, string, string)>();
-                var settingsType = FindSettingsTypeFromExtension(method, targetType);
-                var settingsFields = settingsType?.GetFields(BindingFlags.Public | BindingFlags.Instance)
-                    .ToDictionary(f => f.Name, f => f) ?? new Dictionary<string, FieldInfo>();
 
-                for (int i = 1; i < ps.Length; i++)
+                if (kind == "Core")
                 {
-                    var p = ps[i];
-                    string mapped = "?";
-                    string desc = "";
-                    // Try to map parameter to field by name (case-insensitive, ignoring common differences)
-                    if (settingsFields.TryGetValue(p.Name, out var fi))
+                    // For CoreEffect, pull from parameter SynthDescriptionAttribute directly.
+                    for (int i = 1; i < ps.Length; i++)
                     {
-                        mapped = fi.Name;
-                        desc = fi.GetCustomAttribute<SynthDescriptionAttribute>()?.Description ?? "";
+                        var p = ps[i];
+                        string desc = p.GetCustomAttribute<SynthDescriptionAttribute>()?.Description ?? "";
+                        paramDocs.Add((p.Name, "NA", desc));
                     }
-                    else
+                }
+                else
+                {
+                    // For Effect/Patch, retain previous behavior: map to settings struct fields
+                    var settingsType = FindSettingsTypeFromExtension(method, targetType);
+                    var settingsFields = settingsType?.GetFields(BindingFlags.Public | BindingFlags.Instance)
+                        .ToDictionary(f => f.Name, f => f) ?? new Dictionary<string, FieldInfo>();
+
+                    for (int i = 1; i < ps.Length; i++)
                     {
-                        // Try to match by partial name
-                        var match = settingsFields.Values.FirstOrDefault(f => string.Equals(f.Name, p.Name, StringComparison.OrdinalIgnoreCase));
-                        if (match != null)
+                        var p = ps[i];
+                        string mapped = "?";
+                        string desc = "";
+                        // Try to map parameter to field by name (case-insensitive, ignoring common differences)
+                        if (settingsFields.TryGetValue(p.Name, out var fi))
                         {
-                            mapped = match.Name;
-                            desc = match.GetCustomAttribute<SynthDescriptionAttribute>()?.Description ?? "";
+                            mapped = fi.Name;
+                            desc = fi.GetCustomAttribute<SynthDescriptionAttribute>()?.Description ?? "";
                         }
+                        else
+                        {
+                            // Try to match by partial name
+                            var match = settingsFields.Values.FirstOrDefault(f => string.Equals(f.Name, p.Name, StringComparison.OrdinalIgnoreCase));
+                            if (match != null)
+                            {
+                                mapped = match.Name;
+                                desc = match.GetCustomAttribute<SynthDescriptionAttribute>()?.Description ?? "";
+                            }
+                        }
+                        paramDocs.Add((p.Name, mapped, desc));
                     }
-                    paramDocs.Add((p.Name, mapped, desc));
                 }
 
                 extensions.Add(new ExtensionDoc(
