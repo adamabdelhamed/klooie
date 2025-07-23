@@ -33,7 +33,9 @@ class AllPassFilter : Recyclable
     {
         float bufOut = buffer[pos];
         float output = -input + bufOut;
+        if (Math.Abs(output) < 1e-12f) output = 0f;
         buffer[pos] = input + bufOut * feedback;
+        if (Math.Abs(buffer[pos]) < 1e-12f) buffer[pos] = 0f;
         pos = (pos + 1) % buffer.Length;
         return output;
     }
@@ -74,7 +76,9 @@ class CombFilter : Recyclable
     public float Process(float input)
     {
         float output = buffer[pos];
+        if (Math.Abs(output) < 1e-12f) output = 0f;
         buffer[pos] = input + output * feedback;
+        if (Math.Abs(buffer[pos]) < 1e-12f) buffer[pos] = 0f;
         pos = (pos + 1) % buffer.Length;
         return output;
     }
