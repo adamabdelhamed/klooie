@@ -175,16 +175,11 @@ public class SynthSignalSource : Recyclable
 
         wetPipeline = wetPipeline ?? new List<SignalProcess>(20);
         wetPipeline.Clear();
-        wetPipeline.Add(OscillatorStage);
-        if (patch.EnableSubOsc)
-            wetPipeline.Add(SubOscillatorStage);
-        if (patch.EnableTransient)
-            wetPipeline.Add(TransientStage);
 
         if (patch.Effects != null)
         {
             foreach (var effect in patch.Effects.Items)
-                if (!(effect is EnvelopeEffect))
+                if (effect is not EnvelopeEffect)
                     wetPipeline.Add(effect.Process);
         }
     }
@@ -426,16 +421,21 @@ public class SynthSignalSource : Recyclable
                 }
             }
 
+            bool envelopeFinishedEarly = envelope.IsDone(time);
+
             // === 1. Render pre-envelope synth (osc + core fx) ===
             float synthSample = 0f;
+            if (!envelopeFinishedEarly)
+            {
             for (int s = 0; s < pipeline.Count; s++)
             {
                 ctx.Input = synthSample;
                 synthSample = pipeline[s](ctx);
 
-                // Stop at first envelope for pre-envelope sample
-                if (pipeline[s].Method.Name.Contains("EnvelopeEffect"))
+                // Stop at the first envelope for pre-envelope sample
+                if (pipeline[s].Target is EnvelopeEffect)
                     break;
+            }
             }
 
             // === 2. DRY: Apply rest of pipeline (including envelope) ===
@@ -443,7 +443,7 @@ public class SynthSignalSource : Recyclable
             bool envelopeFound = false;
             for (int s = 0; s < pipeline.Count; s++)
             {
-                if (!envelopeFound && pipeline[s].Method.Name.Contains("EnvelopeEffect"))
+                if (!envelopeFound && pipeline[s].Target is EnvelopeEffect)
                     envelopeFound = true;
                 if (envelopeFound)
                 {
@@ -453,7 +453,7 @@ public class SynthSignalSource : Recyclable
             }
 
             // === 3. WET: Wet FX path (skip envelope, process through reverb/delay etc.) ===
-            float wetSample = synthSample;
+            float wetSample = envelopeFinishedEarly ? 0f : synthSample;
             for (int s = 0; s < wetPipeline.Count; s++)
             {
                 ctx.Input = wetSample;
