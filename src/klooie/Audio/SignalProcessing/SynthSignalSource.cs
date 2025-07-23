@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace klooie;
@@ -12,7 +13,6 @@ public class SynthSignalSource : Recyclable
     private float frequency;
     private double sampleRate;
     private float time;
-    private float filteredSample;
     private SynthPatch patch;
 
     private float driftPhase;
@@ -27,7 +27,8 @@ public class SynthSignalSource : Recyclable
     protected float effectiveVolume;
     protected float effectivePan;
     private List<IPitchModEffect>? pitchMods;
-    private List<SignalProcess> pipeline;
+    private List<SignalProcess> pipeline; // All stages (dry)
+    private List<SignalProcess> wetPipeline; // Stages for wet (skip envelope)
     private ADSREnvelope envelope;
     private float? noteReleaseTime = null; // in seconds
 
@@ -42,6 +43,11 @@ public class SynthSignalSource : Recyclable
 
     // === LFO support ===
     public enum LfoTarget { Pitch, FilterCutoff, Amp, Pan }
+
+    private float tailEnergyAccumulator = 0f;
+    private int tailFrames = 0;
+    private const float SilenceThreshold = 1e-5f;
+    private const int MinTailFrames = 2048; // e.g., ~50ms at 44.1kHz
 
     public struct LfoSettings
     {
@@ -98,7 +104,6 @@ public class SynthSignalSource : Recyclable
         frequency = frequencyHz;
         sampleRate = 44100;
         time = 0;
-        filteredSample = 0;
         this.patch = patch;
         this.note = note;
         ctx = new EffectContext { Note = note };
@@ -130,6 +135,8 @@ public class SynthSignalSource : Recyclable
 
         InitVolume(master, knob);
         knob?.Dispose();
+
+        // Find envelope for dry path
         this.envelope = patch.FindEnvelopeEffect().Envelope;
         envelope.Trigger(0, sampleRate);
 
@@ -147,7 +154,7 @@ public class SynthSignalSource : Recyclable
                 pluckBuffer[i] = (float)(Random.Shared.NextDouble() * 2.0 - 1.0);
         }
 
-        // Build DSP pipeline
+        // Build DSP pipeline (for dry)
         pipeline = pipeline ?? new List<SignalProcess>(20);
         pipeline.Clear();
         pipeline.Add(OscillatorStage);
@@ -157,13 +164,28 @@ public class SynthSignalSource : Recyclable
             pipeline.Add(TransientStage);
 
         pitchMods = patch.Effects.Items.OfType<IPitchModEffect>().ToList();
-        // After all core DSP, add effect stages
+
         if (patch.Effects != null)
         {
             foreach (var effect in patch.Effects.Items)
             {
                 pipeline.Add(effect.Process);
             }
+        }
+
+        wetPipeline = wetPipeline ?? new List<SignalProcess>(20);
+        wetPipeline.Clear();
+        wetPipeline.Add(OscillatorStage);
+        if (patch.EnableSubOsc)
+            wetPipeline.Add(SubOscillatorStage);
+        if (patch.EnableTransient)
+            wetPipeline.Add(TransientStage);
+
+        if (patch.Effects != null)
+        {
+            foreach (var effect in patch.Effects.Items)
+                if (!(effect is EnvelopeEffect))
+                    wetPipeline.Add(effect.Process);
         }
     }
 
@@ -226,7 +248,7 @@ public class SynthSignalSource : Recyclable
 
                     float lfoDepth = st.Settings.Depth;
                     if (st.Settings.VelocityAffectsDepth)
-                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(note.Velocity/127f);
+                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(note.Velocity / 127f);
 
                     totalCents += lfo * lfoDepth;
                 }
@@ -344,11 +366,15 @@ public class SynthSignalSource : Recyclable
         envelope = null;
         noteReleaseTime = null;
         pipeline?.Clear();
+        wetPipeline?.Clear();
         note = null!;
         ctx = default;
         oscPhase = 0.0;
         oscPhaseSub = 0.0;
         lfos = null;
+        tailEnergyAccumulator = 0f;
+        tailFrames = 0;
+
         base.OnReturn();
     }
 
@@ -365,13 +391,11 @@ public class SynthSignalSource : Recyclable
         for (int n = 0; n < count; n += 2)
         {
             time = localTime;
-
             ctx.FrameIndex = n / 2;
             ctx.Time = time;
-            ctx.Input = 0f;
 
             // === LFO: Compute non-pitch modulation ===
-            float lfoCutoff = 0f, lfoAmp = 0f, lfoPan = 0f;
+            float lfoAmp = 0f, lfoPan = 0f;
             if (lfos != null)
             {
                 for (int i = 0; i < lfos.Length; i++)
@@ -385,13 +409,10 @@ public class SynthSignalSource : Recyclable
 
                     float lfoDepth = st.Settings.Depth;
                     if (st.Settings.VelocityAffectsDepth)
-                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(note.Velocity/127f);
+                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(note.Velocity / 127f);
 
                     switch (st.Settings.Target)
                     {
-                        case LfoTarget.FilterCutoff:
-                            lfoCutoff += lfo * lfoDepth;
-                            break;
                         case LfoTarget.Amp:
                             lfoAmp += lfo * lfoDepth;
                             break;
@@ -399,27 +420,56 @@ public class SynthSignalSource : Recyclable
                             lfoPan += lfo * lfoDepth;
                             break;
                     }
-
-                    // Advance phase for all targets
+                    // Advance phase
                     lfos[i].Phase += lfos[i].PhaseInc;
                     if (lfos[i].Phase >= 1f) lfos[i].Phase -= 1f;
                 }
             }
 
-            float sample = 0f;
+            // === 1. Render pre-envelope synth (osc + core fx) ===
+            float synthSample = 0f;
             for (int s = 0; s < pipeline.Count; s++)
             {
-                ctx.Input = sample;
-                sample = pipeline[s](ctx);
+                ctx.Input = synthSample;
+                synthSample = pipeline[s](ctx);
+
+                // Stop at first envelope for pre-envelope sample
+                if (pipeline[s].Method.Name.Contains("EnvelopeEffect"))
+                    break;
             }
 
-            // === LFO: Apply non-pitch LFO modulations before output ===
-            float finalSample = sample;
+            // === 2. DRY: Apply rest of pipeline (including envelope) ===
+            float drySample = synthSample;
+            bool envelopeFound = false;
+            for (int s = 0; s < pipeline.Count; s++)
+            {
+                if (!envelopeFound && pipeline[s].Method.Name.Contains("EnvelopeEffect"))
+                    envelopeFound = true;
+                if (envelopeFound)
+                {
+                    ctx.Input = drySample;
+                    drySample = pipeline[s](ctx);
+                }
+            }
 
-            // Apply LFO amplitude (tremolo)
+            // === 3. WET: Wet FX path (skip envelope, process through reverb/delay etc.) ===
+            float wetSample = synthSample;
+            for (int s = 0; s < wetPipeline.Count; s++)
+            {
+                ctx.Input = wetSample;
+                wetSample = wetPipeline[s](ctx);
+            }
+
+            // Optionally allow adjustable dry/wet levels:
+            const float DryLevel = 1.0f;
+            const float WetLevel = 1.0f;
+
+            float finalSample = drySample * DryLevel + wetSample * WetLevel;
+
+            // === LFO: Apply amplitude (tremolo)
             finalSample *= (1f + lfoAmp);
 
-            // Apply pan (lfoPan)
+            // === LFO pan
             float pan = effectivePan + lfoPan;
             pan = Math.Max(-1f, Math.Min(1f, pan));
 
@@ -435,7 +485,26 @@ public class SynthSignalSource : Recyclable
             localTime += 1f / (float)sampleRate;
             samplesWritten += 2;
 
-            if (envelope.IsDone(time))
+            tailEnergyAccumulator += Math.Abs((left + right) / 2f);
+            tailFrames++;
+
+            // Decide when to actually kill the voice
+            bool envelopeFinished = envelope.IsDone(time);
+            bool tailSilent = false;
+
+            if (envelopeFinished)
+            {
+                if (tailFrames >= MinTailFrames)
+                {
+                    float avg = tailEnergyAccumulator / tailFrames;
+                    if (avg < SilenceThreshold)
+                        tailSilent = true;
+                    tailEnergyAccumulator = 0;
+                    tailFrames = 0;
+                }
+            }
+
+            if (envelopeFinished && tailSilent)
             {
                 isDone = true;
                 break;
