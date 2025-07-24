@@ -17,8 +17,6 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     public float[] LayerPans => layerPans;
     public int[] LayerTransposes => layerTransposes;
 
-    public ISynthPatch InnerPatch => layers.Length > 0 ? layers[0] : null;
-
     private static readonly LazyPool<LayeredPatch> _pool = new(() => new LayeredPatch());
 
     private LayeredPatch() { }

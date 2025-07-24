@@ -13,7 +13,6 @@ can be slightly detuned and panned for a wide stereo effect.
 public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 {
     private ISynthPatch basePatch;
-    public ISynthPatch InnerPatch => basePatch;
     private int[] intervals;
     private float detuneCents;
     private float panSpread;

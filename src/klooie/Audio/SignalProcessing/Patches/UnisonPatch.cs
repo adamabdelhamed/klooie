@@ -14,7 +14,6 @@ across the stereo field to create a wide, lush sound.
 public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
 {
     private ISynthPatch basePatch;
-    public ISynthPatch InnerPatch => basePatch;
     private int numVoices;
     private float detuneCents;
     private float panSpread;

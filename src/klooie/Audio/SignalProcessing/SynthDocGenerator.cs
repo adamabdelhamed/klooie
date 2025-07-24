@@ -125,10 +125,6 @@ public static class SynthDocGenerator
             type.HasAttr<SynthDocumentationAttribute>() == false) return false;
         if(baseType == typeof(ISynthPatch))
         {
-            if (type == typeof(ElectricGuitar))
-            {
-
-            }
             var isAssignable = baseType.IsAssignableFrom(type);
             var factory = type.GetMethods(BindingFlags.Public | BindingFlags.Static)
                 .Where(m => m.ReturnType == typeof(ISynthPatch) && m.GetParameters().Length == 0)

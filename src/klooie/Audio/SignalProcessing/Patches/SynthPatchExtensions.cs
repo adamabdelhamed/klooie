@@ -17,7 +17,6 @@ public static class SynthPatchExtensions
         return patch.WithEffect(CabinetEffect.Create(in settings));
     }
 
-    [ExtensionToEffect(typeof(ReverbEffect))]
     public static ISynthPatch WithReverb(
         this ISynthPatch patch,
         float feedback = 0.78f,            // Decay length: 0.7-0.85 = medium-long tail
@@ -25,13 +24,14 @@ public static class SynthPatchExtensions
         float wet = 0.27f,                 // Wet level
         float dry = 0.73f,                 // Dry level
         float damping = 0.45f,             // High-freq tail rolloff (0.2–0.7 typical)
+        float duration = .2f,
         float inputLowpassHz = 9500f,      // Pre-reverb hi-cut (7000–12000 typical)
         bool velocityAffectsMix = true,    // Velocity-sensitive reverb amount
         Func<float, float>? mixVelocityCurve = null, // Curve for velocity mix, null=linear
         bool enableModulation = true       // Enable comb LFO modulation for richer tail (false=lower cpu)
     )
     {
-        var settings = new ReverbEffect.Settings
+        var effectSettings = new ReverbEffect.Settings
         {
             Feedback = feedback,
             Diffusion = diffusion,
@@ -43,8 +43,15 @@ public static class SynthPatchExtensions
             MixVelocityCurve = mixVelocityCurve,
             EnableModulation = enableModulation
         };
-        return patch.WithEffect(ReverbEffect.Create(in settings));
+        var patchSettings = new ReverbPatch.Settings
+        {
+            BasePatch = patch,
+            Duration = duration,
+            EffectSettings = effectSettings
+        };
+        return ReverbPatch.Create(patchSettings);
     }
+
 
     [ExtensionToEffect(typeof(DelayEffect))]
     public static ISynthPatch WithDelay(this ISynthPatch patch, int delaySamples, float feedback = .3f, float mix = .4f)
@@ -235,14 +242,14 @@ public static class SynthPatchExtensions
     }
 
     [ExtensionToEffect(typeof(EnvelopeEffect))]
-    public static ISynthPatch WithEnvelope(this ISynthPatch patch, double attackMs, double decayMs, double sustainLevel, double releaseMs)
+    public static ISynthPatch WithEnvelope(this ISynthPatch patch, double attack, double decay, double sustainLevel, double release)
     {
         var settings = new EnvelopeEffect.Settings
         {
-            Attack = attackMs,
-            Decay = decayMs,
+            Attack = attack,
+            Decay = decay,
             Sustain = sustainLevel,
-            Release = releaseMs
+            Release = release
         };
         return patch.WithEffect(EnvelopeEffect.Create(in settings));
     }

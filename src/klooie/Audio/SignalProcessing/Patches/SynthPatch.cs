@@ -14,7 +14,6 @@ public interface ICompositePatch : ISynthPatch
 public interface ISynthPatch
 {
     bool IsNotePlayable(int midiNote) => true;  // default: always playable
-    ISynthPatch InnerPatch { get; }
     void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note, List<SynthSignalSource> outVoices);
     ISynthPatch Clone();
 }
