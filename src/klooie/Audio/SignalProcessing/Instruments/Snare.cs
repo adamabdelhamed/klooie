@@ -4,33 +4,36 @@ namespace klooie;
 
 [SynthCategory("Drums")]
 [SynthDocumentation("""
-A basic kick drum patch with a punchy attack and a short decay.
+
 """)]
 public static class Snare
 {
     private const float Duration = .1f;
     public static ISynthPatch Create() => LayeredPatch.CreateBuilder()
         .AddLayer(patch: SynthPatch.Create()
-            .WithEnvelope(.001f, Duration, 0f, .2f)
-            .WithPeakEQRelative(multiplier: .5f, gainDb: -5f, q: 2f)
-            .WithPeakEQRelative(multiplier: 1.5f, gainDb: -20f, q: 1f)
+            .WithEnvelope(.01f, Duration, 0f, .001f)
             .WithWaveForm(WaveformType.Sine)
-            .WithPitchBend(KickPitchBend, .1f)
-            .WithReverb(feedback: .1f,diffusion: .7f,wet: 1f, dry: 0f ))
+            .WithReverb(feedback: .7f, diffusion: .4f, damping: 0f, wet: 0.02f, dry: .8f)
+           .WithPitchBend(KickPitchBend, Duration))
         .AddLayer(patch: SynthPatch.Create()
             .WithWaveForm(WaveformType.Noise)
-            .WithEnvelope(0f, Duration, 0f, .2f)
-            .WithLowPass(cutoffHz: 100)
-            .WithVolume(.5f)
-            .WithReverb(feedback: .1f, diffusion: .7f, wet: 1f, dry: 0f))
+            .WithEnvelope(.001f, .1f, 0f, .001f)
+         //   .WithLowPass(4000)
+          //  .WithVolume(.2f)
+            .WithReverb(feedback: .7f, diffusion: .4f, damping: 0f, wet: 0.02f, dry: .8f)
+            .WithVolume(.3f))
         .Build()
-        .WithVolume(3f);
+       // .WithCompressor(threshold: .5f, ratio: 4f, attackMs:.1f, releaseMs: .05f)
+        .WithVolume(1f);
 
     private static float KickPitchBend(float time)
     {
         float maxCents = 1200f;
-        if (time > .1f) return 0;
-        float progress = time / .1f;
-        return maxCents * (1f - progress) * (1f - progress);
+        if (time > Duration) return 0f;
+
+        float progress = time / Duration;
+        // Cubic for a more pronounced drop at the end:
+        float curve = 1f - (progress * progress);
+        return maxCents * curve;
     }
 }

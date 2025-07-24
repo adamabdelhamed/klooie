@@ -21,23 +21,6 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
 
     private static LazyPool<UnisonPatch> _pool = new(() => new UnisonPatch());
 
-    public WaveformType Waveform => basePatch.Waveform;
-    public float DriftFrequencyHz => basePatch.DriftFrequencyHz;
-    public float DriftAmountCents => basePatch.DriftAmountCents;
-    public bool EnablePitchDrift => basePatch.EnablePitchDrift;
-    public bool EnableSubOsc => basePatch.EnableSubOsc;
-    public int SubOscOctaveOffset => basePatch.SubOscOctaveOffset;
-    public float SubOscLevel => basePatch.SubOscLevel;
-    public bool EnableTransient => basePatch.EnableTransient;
-    public float TransientDurationSeconds => basePatch.TransientDurationSeconds;
-    public int Velocity => basePatch.Velocity;
-    public bool EnableVibrato => basePatch.EnableVibrato;
-    public float VibratoRateHz => basePatch.VibratoRateHz;
-    public float VibratoDepthCents => basePatch.VibratoDepthCents;
-    public float VibratoPhaseOffset => basePatch.VibratoPhaseOffset;
-
-    public RecyclableList<IEffect> Effects { get; private set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
-
     private ISynthPatch[] _innerPatches;
     public void GetPatches(List<ISynthPatch> patches)
     {
@@ -53,6 +36,14 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
         return patch;
     }
 
+    public ISynthPatch Clone() => UnisonPatch.Create(new Settings
+    {
+        BasePatch = this.basePatch.Clone(),
+        NumVoices = this.numVoices,
+        DetuneCents = this.detuneCents,
+        PanSpread = this.panSpread,
+    });
+
     protected void Construct(Settings settings)
     {
         this.basePatch = settings.BasePatch ?? throw new ArgumentNullException(nameof(settings.BasePatch));
@@ -63,38 +54,8 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
         _innerPatches = new ISynthPatch[numVoices];
         for (int i = 0; i < numVoices; i++)
         {
-            var nestedPatch = SynthPatch.Create();
+            var nestedPatch = basePatch.Clone();
             _innerPatches[i] = nestedPatch;
-            nestedPatch.Waveform = basePatch.Waveform;
-            nestedPatch.DriftFrequencyHz = basePatch.DriftFrequencyHz;
-            nestedPatch.DriftAmountCents = basePatch.DriftAmountCents;
-            nestedPatch.EnablePitchDrift = basePatch.EnablePitchDrift;
-            nestedPatch.EnableSubOsc = basePatch.EnableSubOsc;
-            nestedPatch.SubOscOctaveOffset = basePatch.SubOscOctaveOffset;
-            nestedPatch.SubOscLevel = basePatch.SubOscLevel;
-            nestedPatch.EnableTransient = basePatch.EnableTransient;
-            nestedPatch.TransientDurationSeconds = basePatch.TransientDurationSeconds;
-            nestedPatch.Velocity = basePatch.Velocity;
-
-            var leaf = basePatch.GetLeafSynthPatch();
-            if (leaf == null)
-                throw new InvalidOperationException("UnisonPatch basePatch does not contain a leaf SynthPatch.");
-
-            for (var j = 0; j < leaf.Effects?.Count; j++)
-                nestedPatch.Effects.Items.Add(leaf.Effects[j].Clone());
-
-            // Optional: Validate Envelope
-            bool hasEnvelope = false;
-            for (int k = 0; k < nestedPatch.Effects.Items.Count; k++)
-            {
-                if (nestedPatch.Effects.Items[k] is EnvelopeEffect)
-                {
-                    hasEnvelope = true;
-                    break;
-                }
-            }
-            if (!hasEnvelope)
-                throw new InvalidOperationException("UnisonPatch requires the base patch to include an EnvelopeEffect.");
         }
     }
 

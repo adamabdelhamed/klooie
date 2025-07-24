@@ -18,15 +18,30 @@ public static class SynthPatchExtensions
     }
 
     [ExtensionToEffect(typeof(ReverbEffect))]
-    public static ISynthPatch WithReverb(this ISynthPatch patch, float feedback = 0.78f, float diffusion = 0.5f, float wet = 0.3f, float dry = 0.7f)
+    public static ISynthPatch WithReverb(
+        this ISynthPatch patch,
+        float feedback = 0.78f,            // Decay length: 0.7-0.85 = medium-long tail
+        float diffusion = 0.65f,           // Reflection density: 0.5–0.8 = smooth
+        float wet = 0.27f,                 // Wet level
+        float dry = 0.73f,                 // Dry level
+        float damping = 0.45f,             // High-freq tail rolloff (0.2–0.7 typical)
+        float inputLowpassHz = 9500f,      // Pre-reverb hi-cut (7000–12000 typical)
+        bool velocityAffectsMix = true,    // Velocity-sensitive reverb amount
+        Func<float, float>? mixVelocityCurve = null, // Curve for velocity mix, null=linear
+        bool enableModulation = true       // Enable comb LFO modulation for richer tail (false=lower cpu)
+    )
     {
         var settings = new ReverbEffect.Settings
         {
             Feedback = feedback,
             Diffusion = diffusion,
+            Damping = damping,
             Wet = wet,
             Dry = dry,
-            VelocityAffectsMix = true
+            InputLowpassHz = inputLowpassHz,
+            VelocityAffectsMix = velocityAffectsMix,
+            MixVelocityCurve = mixVelocityCurve,
+            EnableModulation = enableModulation
         };
         return patch.WithEffect(ReverbEffect.Create(in settings));
     }

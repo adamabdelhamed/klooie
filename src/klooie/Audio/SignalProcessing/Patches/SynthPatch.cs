@@ -14,25 +14,9 @@ public interface ICompositePatch : ISynthPatch
 public interface ISynthPatch
 {
     bool IsNotePlayable(int midiNote) => true;  // default: always playable
-    WaveformType Waveform { get; }
-    float DriftFrequencyHz { get; }
-    float DriftAmountCents { get; }
-    bool EnablePitchDrift { get; }
-    bool EnableSubOsc { get; }
-    int SubOscOctaveOffset { get; }
-    float SubOscLevel { get; }
-    bool EnableTransient { get; }
-    float TransientDurationSeconds { get; }
-    int Velocity { get; }
-
-    public bool EnableVibrato { get;  }
-    public float VibratoRateHz { get;  }
-    public float VibratoDepthCents { get;  }
-    public float VibratoPhaseOffset { get;  }
-
-    RecyclableList<IEffect> Effects { get; }
     ISynthPatch InnerPatch { get; }
     void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note, List<SynthSignalSource> outVoices);
+    ISynthPatch Clone();
 }
 
 [SynthCategory("Core")]
@@ -99,6 +83,34 @@ public class SynthPatch : Recyclable, ISynthPatch
         VibratoDepthCents = 0f;
         VibratoPhaseOffset = 0f;
         Lfos.Clear();
+    }
+
+    public ISynthPatch Clone()
+    {
+        var clone = SynthPatch.Create();
+        clone.Waveform = this.Waveform;
+        clone.DriftFrequencyHz = this.DriftFrequencyHz;
+        clone.DriftAmountCents = this.DriftAmountCents;
+        clone.EnablePitchDrift = this.EnablePitchDrift;
+        clone.EnableSubOsc = this.EnableSubOsc;
+        clone.SubOscOctaveOffset = this.SubOscOctaveOffset;
+        clone.SubOscLevel = this.SubOscLevel;
+        clone.EnableTransient = this.EnableTransient;
+        clone.TransientDurationSeconds = this.TransientDurationSeconds;
+        clone.Velocity = this.Velocity;
+        clone.EnableVibrato = this.EnableVibrato;
+        clone.VibratoRateHz = this.VibratoRateHz;
+        clone.VibratoDepthCents = this.VibratoDepthCents;
+        clone.VibratoPhaseOffset = this.VibratoPhaseOffset;
+        // ...copy other fields as needed
+
+        // Clone all effects (deep clone)
+        if (this.Effects != null)
+        {
+            for (int i = 0; i < this.Effects.Count; i++)
+                clone.Effects.Items.Add(this.Effects[i].Clone());
+        }
+        return clone;
     }
 
     protected override void OnReturn()

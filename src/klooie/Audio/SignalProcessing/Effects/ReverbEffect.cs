@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace klooie;
 
+// =========================
+// AllPassFilter (unchanged, with buffer clearing on return)
+// =========================
 class AllPassFilter : Recyclable
 {
     private float[] buffer;
@@ -42,166 +42,227 @@ class AllPassFilter : Recyclable
 
     protected override void OnReturn()
     {
+        if (buffer != null)
+            Array.Clear(buffer, 0, buffer.Length);
         buffer = null;
         pos = 0;
         base.OnReturn();
     }
 }
 
-
+// =========================
+// CombFilter with damping and modulation
+// =========================
 class CombFilter : Recyclable
 {
     private float[] buffer;
-    private int pos;
+    private int baseDelay, pos;
     private float feedback;
-
+    private float lastFiltered; // for damping
+    private float damping;
+    private float lfoPhase, lfoInc, lfoDepth; // for mod
+    private bool enableMod;
     private static LazyPool<CombFilter> _pool = new(() => new CombFilter());
 
     protected CombFilter() { }
 
-    public static CombFilter Create(int delaySamples, float feedback)
+    public static CombFilter Create(int delaySamples, float feedback, float damping = 0.5f,
+        bool enableMod = false, float lfoFreq = 0.15f, float lfoDepthSamples = 2f, float sampleRate = 44100f)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(delaySamples, feedback);
+        ret.Construct(delaySamples, feedback, damping, enableMod, lfoFreq, lfoDepthSamples, sampleRate);
         return ret;
     }
 
-    protected void Construct(int delaySamples, float feedback)
+    protected void Construct(int delaySamples, float feedback, float damping, bool enableMod,
+        float lfoFreq, float lfoDepthSamples, float sampleRate)
     {
-        buffer = new float[delaySamples];
+        baseDelay = delaySamples;
+        buffer = new float[delaySamples + (int)Math.Ceiling(lfoDepthSamples) + 2]; // pad for mod
         this.feedback = feedback;
+        this.damping = damping;
         pos = 0;
+        lastFiltered = 0f;
+        this.enableMod = enableMod;
+        lfoPhase = 0f;
+        lfoInc = (float)(2 * Math.PI * lfoFreq / sampleRate);
+        this.lfoDepth = lfoDepthSamples;
     }
 
     public float Process(float input)
     {
-        float output = buffer[pos];
-        if (Math.Abs(output) < 1e-12f) output = 0f;
-        buffer[pos] = input + output * feedback;
-        if (Math.Abs(buffer[pos]) < 1e-12f) buffer[pos] = 0f;
+        // Modulate delay (if enabled)
+        int modDelay = baseDelay;
+        if (enableMod)
+        {
+            float lfo = (float)Math.Sin(lfoPhase);
+            lfoPhase += lfoInc;
+            if (lfoPhase > 2 * Math.PI) lfoPhase -= 2 * (float)Math.PI;
+            modDelay += (int)(lfo * lfoDepth);
+        }
+        int readPos = pos - modDelay;
+        if (readPos < 0) readPos += buffer.Length;
+        float output = buffer[readPos];
+
+        // Damping (lowpass)
+        lastFiltered = (1f - damping) * output + damping * lastFiltered;
+
+        buffer[pos] = input + lastFiltered * feedback;
+
         pos = (pos + 1) % buffer.Length;
         return output;
     }
 
     protected override void OnReturn()
     {
+        if (buffer != null)
+            Array.Clear(buffer, 0, buffer.Length);
         buffer = null;
         pos = 0;
+        lastFiltered = 0f;
+        lfoPhase = 0f;
         base.OnReturn();
     }
 }
 
+// =========================
+// Simple one-pole input highcut filter
+// =========================
+class OnePoleLowpass : Recyclable
+{
+    private float a, y;
+    public static OnePoleLowpass Create(float cutoffHz, float sampleRate)
+    {
+        var f = _pool.Value.Rent();
+        float x = (float)Math.Exp(-2.0 * Math.PI * cutoffHz / sampleRate);
+        f.a = 1f - x;
+        f.y = 0f;
+        return f;
+    }
+
+    private static LazyPool<OnePoleLowpass> _pool = new(() => new OnePoleLowpass());
+    protected OnePoleLowpass() { }
+    public float Process(float x)
+    {
+        y += a * (x - y);
+        return y;
+    }
+    protected override void OnReturn() { y = 0; base.OnReturn(); }
+}
+
+// =========================
+// Stereo ReverbEffect
+// =========================
 [SynthDocumentation("""
-Stereo reverb constructed from multiple comb and all-pass filters.  Feedback and
-diffusion settings shape the size and character of the virtual space.
+Stereo reverb constructed from multiple comb and all-pass filters.  
+Decay, diffusion, damping, input filtering, and delay modulation are all adjustable for tone/cpu tradeoff.
 """)]
 [SynthCategory("Reverb")]
 public class ReverbEffect : Recyclable, IEffect
 {
+    // === Quality Knobs (CPU vs quality) ===
+    // To lower CPU: reduce NUM_COMBS, NUM_ALLPASSES, disable MOD_COMBS, or lower SAMPLE_RATE.
+    private const int NUM_COMBS = 6;        // 4–8 recommended; reduce for less CPU
+    private const int NUM_ALLPASSES = 4;    // 2–8; reduce for less density/CPU
+    private const bool MOD_COMBS = true;    // true = better, false = lower CPU
+    private const float SAMPLE_RATE = 44100f;
+
+    // Classic prime delays for combs (pick from well-known lists for variety)
+    private static readonly int[] combDelays = { 1557, 1617, 1491, 1422, 1277, 1356, 1188, 1111 };
+    private static readonly int[] allpassDelays = { 225, 556, 441, 341, 191, 143, 89, 61 };
+
     private CombFilter[] combs;
     private AllPassFilter[] allpasses;
-    private float feedback, diffusion, wet, dry;
+    private float feedback, diffusion, wet, dry, damping;
+    private OnePoleLowpass inputFilter;
+    private float inputCutoffHz;
     private bool velocityAffectsMix;
     private Func<float, float> mixVelocityCurve = EffectContext.EaseLinear;
 
-    // Some classic reverb delay times (in samples, for 44.1kHz sample rate)
-    private static readonly int[] combDelays = { 1557, 1617, 1491, 1422 };
-    private static readonly int[] allpassDelays = { 225, 556 };
-
-    private static LazyPool<ReverbEffect> _pool = new(() => new ReverbEffect());
-    protected ReverbEffect() { }
     [SynthDocumentation("""
-Settings controlling reverb decay, diffusion and how the wet/dry mix reacts
-to note velocity.
+Settings controlling reverb decay, diffusion, high-frequency damping, pre-filtering, delay modulation, and how the wet/dry mix reacts to note velocity.
 """)]
     public struct Settings
     {
-        [SynthDocumentation("""
-Amount of feedback which determines how long the
-reverb tail lasts.
-""")]
-        public float Feedback;
-
-        [SynthDocumentation("""
-How dense the reflections become. Higher values
-create a smoother tail.
-""")]
-        public float Diffusion;
-
-        [SynthDocumentation("""
-Volume of the reverberated (wet) signal.
-""")]
-        public float Wet;
-
-        [SynthDocumentation("""
-Volume of the unaffected (dry) signal.
-""")]
-        public float Dry;
-
-        [SynthDocumentation("""
-If true, note velocity influences the wet mix
-level.
-""")]
+        public float Feedback;      // 0.7–0.85 is typical for long tails
+        public float Diffusion;     // 0.5–0.8 for smoothness
+        public float Damping;       // 0.2–0.7 for realistic HF rolloff
+        public float Wet;           // Wet level
+        public float Dry;           // Dry level
+        public float InputLowpassHz;// High-cut for pre-filter (7000–12000 typical)
         public bool VelocityAffectsMix;
-
-        [SynthDocumentation("""
-Function mapping velocity to a multiplier applied
-to the wet level.
-""")]
         public Func<float, float>? MixVelocityCurve;
+        public bool EnableModulation; // Enable comb LFO modulation
     }
 
     public static ReverbEffect Create(in Settings settings)
     {
         var ret = _pool.Value.Rent();
-        ret.Construct(settings.Feedback, settings.Diffusion, settings.Wet, settings.Dry);
-        ret.velocityAffectsMix = settings.VelocityAffectsMix;
-        ret.mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
+        ret.Construct(settings);
         return ret;
     }
 
-    protected void Construct(float feedback = 0.78f, float diffusion = 0.5f, float wet = 0.3f, float dry = 0.7f)
+    private static LazyPool<ReverbEffect> _pool = new(() => new ReverbEffect());
+    protected ReverbEffect() { }
+
+    protected void Construct(Settings s)
     {
-        this.feedback = feedback;
-        this.diffusion = diffusion;
-        // Allocate combs
-        combs = new CombFilter[combDelays.Length];
-        for (int i = 0; i < combs.Length; i++)
-            combs[i] = CombFilter.Create(combDelays[i], feedback);
+        feedback = s.Feedback;
+        diffusion = s.Diffusion;
+        wet = s.Wet;
+        dry = s.Dry;
+        damping = s.Damping;
+        inputCutoffHz = s.InputLowpassHz > 0 ? s.InputLowpassHz : 12000f;
+        velocityAffectsMix = s.VelocityAffectsMix;
+        mixVelocityCurve = s.MixVelocityCurve ?? EffectContext.EaseLinear;
 
-        // Allocate allpasses
-        allpasses = new AllPassFilter[allpassDelays.Length];
-        for (int i = 0; i < allpasses.Length; i++)
+        // --- Setup pre-reverb input filter (high-cut) ---
+        inputFilter = OnePoleLowpass.Create(inputCutoffHz, SAMPLE_RATE);
+
+        // --- Setup combs ---
+        int usedCombs = Math.Min(NUM_COMBS, combDelays.Length);
+        combs = new CombFilter[usedCombs];
+        for (int i = 0; i < usedCombs; i++)
+        {
+            bool enableMod = s.EnableModulation && MOD_COMBS;
+            // LFO freq can be randomized per-comb for lushness
+            float lfoFreq = enableMod ? 0.11f + 0.05f * (i % 3) : 0f;
+            combs[i] = CombFilter.Create(combDelays[i], feedback, damping, enableMod, lfoFreq, 2.3f, SAMPLE_RATE);
+        }
+
+        // --- Setup allpasses ---
+        int usedAllpasses = Math.Min(NUM_ALLPASSES, allpassDelays.Length);
+        allpasses = new AllPassFilter[usedAllpasses];
+        for (int i = 0; i < usedAllpasses; i++)
             allpasses[i] = AllPassFilter.Create(allpassDelays[i], diffusion);
-
-        this.wet = wet;
-        this.dry = dry;
     }
 
     public IEffect Clone()
     {
-        var settings = new Settings
+        return Create(new Settings
         {
             Feedback = feedback,
             Diffusion = diffusion,
+            Damping = damping,
             Wet = wet,
             Dry = dry,
+            InputLowpassHz = inputCutoffHz,
             VelocityAffectsMix = velocityAffectsMix,
-            MixVelocityCurve = mixVelocityCurve
-        };
-        return Create(in settings);
+            MixVelocityCurve = mixVelocityCurve,
+            EnableModulation = MOD_COMBS
+        });
     }
 
     public float Process(in EffectContext ctx)
     {
-        float input = ctx.Input;
-        // Mix combs in parallel
+        float input = inputFilter != null ? inputFilter.Process(ctx.Input) : ctx.Input;
+        // --- Mix combs in parallel ---
         float combOut = 0f;
         for (int i = 0; i < combs.Length; i++)
             combOut += combs[i].Process(input);
         combOut /= combs.Length;
 
-        // Pass through allpasses in series
+        // --- Pass through allpasses in series ---
         float apOut = combOut;
         for (int i = 0; i < allpasses.Length; i++)
             apOut = allpasses[i].Process(apOut);
@@ -209,25 +270,23 @@ to the wet level.
         float mixAmt = wet;
         if (velocityAffectsMix)
             mixAmt *= mixVelocityCurve(ctx.VelocityNorm);
-        return dry * input + mixAmt * apOut;
+        return dry * ctx.Input + mixAmt * apOut;
     }
-
 
     protected override void OnReturn()
     {
-        for (int i = 0; i < combs.Length; i++)
+        if (combs != null)
         {
-            CombFilter? c = combs[i];
-            c.Dispose();
+            foreach (var c in combs) c?.Dispose();
+            combs = null;
         }
-        combs = null;
-        for (int i1 = 0; i1 < allpasses.Length; i1++)
+        if (allpasses != null)
         {
-            AllPassFilter? a = allpasses[i1];
-            a.Dispose();
+            foreach (var a in allpasses) a?.Dispose();
+            allpasses = null;
         }
-        allpasses = null;
-        velocityAffectsMix = false;
+        inputFilter?.Dispose();
+        inputFilter = null;
         mixVelocityCurve = EffectContext.EaseLinear;
         base.OnReturn();
     }

@@ -36,19 +36,14 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
         return p;
     }
 
-    // Optional: maintain legacy overload for convenience
-    public static LayeredPatch Create(
-        ISynthPatch[] patches,
-        float[]? volumes = null,
-        float[]? pans = null,
-        int[]? transposes = null)
-        => Create(new Settings
-        {
-            Patches = patches,
-            Volumes = volumes,
-            Pans = pans,
-            Transposes = transposes
-        });
+    public ISynthPatch Clone() => LayeredPatch.Create(new Settings
+    {
+        Patches = this.layers.Select(p => p.Clone()).ToArray(),
+        Volumes = this.LayerVolumes,
+        Pans = this.layerPans,
+        Transposes = this.layerTransposes
+    });
+
 
     private static float[] ValidateOrCreate(float[]? arr, int count, float def)
     {
@@ -64,24 +59,6 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
         for (int i = 0; i < count; i++) a[i] = def;
         return a;
     }
-
-    // Proxy properties from the first layer
-    public WaveformType Waveform => layers[0].Waveform;
-    public float DriftFrequencyHz => layers[0].DriftFrequencyHz;
-    public float DriftAmountCents => layers[0].DriftAmountCents;
-    public bool EnablePitchDrift => layers[0].EnablePitchDrift;
-    public bool EnableSubOsc => layers[0].EnableSubOsc;
-    public int SubOscOctaveOffset => layers[0].SubOscOctaveOffset;
-    public float SubOscLevel => layers[0].SubOscLevel;
-    public bool EnableTransient => layers[0].EnableTransient;
-    public float TransientDurationSeconds => layers[0].TransientDurationSeconds;
-    public int Velocity => layers[0].Velocity;
-    public RecyclableList<IEffect> Effects => layers[0].Effects;
-
-    public bool EnableVibrato => layers[0].EnableVibrato;
-    public float VibratoRateHz => layers[0].VibratoRateHz;
-    public float VibratoDepthCents => layers[0].VibratoDepthCents;
-    public float VibratoPhaseOffset => layers[0].VibratoPhaseOffset;
 
     public void GetPatches(List<ISynthPatch> patches)
         => patches.AddRange(layers);

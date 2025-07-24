@@ -20,24 +20,6 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 
     private static LazyPool<PowerChordPatch> _pool = new(() => new PowerChordPatch());
 
-    public WaveformType Waveform => basePatch.Waveform;
-    public float DriftFrequencyHz => basePatch.DriftFrequencyHz;
-    public float DriftAmountCents => basePatch.DriftAmountCents;
-    public bool EnablePitchDrift => basePatch.EnablePitchDrift;
-    public bool EnableSubOsc => basePatch.EnableSubOsc;
-    public int SubOscOctaveOffset => basePatch.SubOscOctaveOffset;
-    public float SubOscLevel => basePatch.SubOscLevel;
-    public bool EnableTransient => basePatch.EnableTransient;
-    public float TransientDurationSeconds => basePatch.TransientDurationSeconds;
-    public int Velocity => basePatch.Velocity;
-
-    public bool EnableVibrato => basePatch.EnableVibrato;
-    public float VibratoRateHz => basePatch.VibratoRateHz;
-    public float VibratoDepthCents => basePatch.VibratoDepthCents;
-    public float VibratoPhaseOffset => basePatch.VibratoPhaseOffset;
-
-    public RecyclableList<IEffect> Effects { get; private set; } = RecyclableListPool<IEffect>.Instance.Rent(20);
-
     private ISynthPatch[] patches;
     public void GetPatches(List<ISynthPatch> patches)
     {
@@ -52,6 +34,14 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
         patch.Construct(settings);
         return patch;
     }
+
+    public ISynthPatch Clone() => PowerChordPatch.Create(new Settings
+    {
+        BasePatch = this.basePatch.Clone(),
+        Intervals = this.intervals,
+        DetuneCents = this.detuneCents,
+        PanSpread = this.panSpread,
+    });
 
     protected void Construct(Settings settings)
     {
@@ -72,39 +62,8 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
             float pan = rel * panSpread / Math.Max(numLayers - 1, 1);
 
             // Clone basePatch for each layer (deep copy of effects)
-            var layerPatch = SynthPatch.Create();
-            patches[i] = layerPatch;
-            layerPatch.Waveform = basePatch.Waveform;
-            layerPatch.DriftFrequencyHz = basePatch.DriftFrequencyHz;
-            layerPatch.DriftAmountCents = basePatch.DriftAmountCents;
-            layerPatch.EnablePitchDrift = basePatch.EnablePitchDrift;
-            layerPatch.EnableSubOsc = basePatch.EnableSubOsc;
-            layerPatch.SubOscOctaveOffset = basePatch.SubOscOctaveOffset;
-            layerPatch.SubOscLevel = basePatch.SubOscLevel;
-            layerPatch.EnableTransient = basePatch.EnableTransient;
-            layerPatch.TransientDurationSeconds = basePatch.TransientDurationSeconds;
-            layerPatch.Velocity = basePatch.Velocity;
-
-            var leaf = basePatch.GetLeafSynthPatch();
-            if (leaf == null)
-                throw new InvalidOperationException("basePatch does not contain a leaf SynthPatch.");
-
-            for (var j = 0; j < leaf.Effects?.Count; j++)
-                layerPatch.Effects.Items.Add(leaf.Effects[j].Clone());
-
-            // Optional: Validate Envelope
-            bool hasEnvelope = false;
-            for (int k = 0; k < layerPatch.Effects.Items.Count; k++)
-            {
-                if (layerPatch.Effects.Items[k] is EnvelopeEffect)
-                {
-                    hasEnvelope = true;
-                    break;
-                }
-            }
-            if (!hasEnvelope)
-                throw new InvalidOperationException("PowerChordPatch requires the base patch to include an EnvelopeEffect.");
-        }
+            var layerPatch = basePatch.Clone();
+            patches[i] = layerPatch; }
     }
 
     public void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note, List<SynthSignalSource> outVoices)
