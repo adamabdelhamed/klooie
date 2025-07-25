@@ -37,9 +37,9 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     public ISynthPatch Clone() => LayeredPatch.Create(new Settings
     {
         Patches = this.layers.Select(p => p.Clone()).ToArray(),
-        Volumes = this.LayerVolumes,
-        Pans = this.layerPans,
-        Transposes = this.layerTransposes
+        Volumes = (float[])this.LayerVolumes.Clone(),
+        Pans = (float[])this.LayerPans.Clone(),
+        Transposes = (int[])this.LayerTransposes.Clone()
     });
 
 

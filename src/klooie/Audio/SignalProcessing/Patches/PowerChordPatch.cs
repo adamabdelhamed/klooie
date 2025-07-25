@@ -37,7 +37,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
     public ISynthPatch Clone() => PowerChordPatch.Create(new Settings
     {
         BasePatch = this.basePatch.Clone(),
-        Intervals = this.intervals,
+        Intervals = (int[])this.intervals.Clone(),
         DetuneCents = this.detuneCents,
         PanSpread = this.panSpread,
     });
@@ -79,7 +79,20 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 
             float freq = frequencyHz * MathF.Pow(2f, interval / 12.0f) * MathF.Pow(2f, detune / 1200.0f);
 
-            outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)patches[i], master, note));
+            var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(8);
+            try
+            {
+                patches[i].GetAllLeafPatches(leaves);
+                foreach (var leaf in leaves.Items)
+                {
+                    outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)leaf, master, note));
+                }
+            }
+            finally
+            {
+                leaves.Dispose();
+            }
+
         }
     }
 

@@ -24,7 +24,7 @@ public static class SynthLead
              .WithChorus(delayMs: 17, depthMs: 6, rateHz: 0.25f, mix: 0.25f)
              .WithPingPongDelay(delayMs: 260, feedback: 0.42f, mix: 0.28f)
              .WithReverb(feedback: 0.75f, diffusion: 0.55f, wet: 0.35f, dry: 0.65f)
-             .WithCompressor(0.55f, 3.5f, 0.008f, 0.032f)
+            // .WithCompressor(0.55f, 3.5f, 0.008f, 0.032f)
              .WrapWithUnison(numVoices: 5, detuneCents: 12f, panSpread: 0.9f))
          .AddLayer(volume: 0.65f, pan: 0.3f, transpose: 12, patch: SynthPatch.Create()
              .WithWaveForm(WaveformType.Square)
@@ -45,7 +45,7 @@ public static class SynthLead
              .WithEnvelope(0.004, 0.11, 0.80, 0.20)
              .WithLowPassRelative(1.8f)
              .WithPresenceShelf(+2.5f)
-             .WithReverb(feedback: 0.70f, diffusion: 0.50f, wet: 0.30f, dry: 0.70f)
-             .WithCompressor(0.50f, 2.8f, 0.007f, 0.030f))
+             .WithReverb(feedback: 0.70f, diffusion: 0.50f, wet: 0.30f, dry: 0.70f))
+           //  .WithCompressor(0.50f, 2.8f, 0.007f, 0.030f))
          .Build();
 }

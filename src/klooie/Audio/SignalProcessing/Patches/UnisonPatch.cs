@@ -71,7 +71,23 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
             float pan = rel * panSpread / Math.Max(numVoices - 1, 1);
             float detunedFreq = frequencyHz * MathF.Pow(2f, detune / 1200f);
 
-            outVoices.Add(SynthSignalSource.Create(detunedFreq, (SynthPatch)_innerPatches[i], master, note));
+            var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(8);
+            try
+            {
+                _innerPatches[i].GetAllLeafPatches(leaves);
+                foreach (var leaf in leaves.Items)
+                {
+                    if (leaf is SynthPatch synthLeaf)
+                    {
+                        outVoices.Add(SynthSignalSource.Create(detunedFreq, synthLeaf, master, note));
+                    }
+                }
+            }
+            finally
+            {
+                leaves.Dispose();
+            }
+  
         }
     }
 
