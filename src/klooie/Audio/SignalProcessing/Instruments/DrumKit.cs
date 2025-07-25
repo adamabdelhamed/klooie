@@ -46,7 +46,7 @@ A basic kick drum patch with a punchy attack and a short decay.
         .AddLayer(patch: SynthPatch.Create()
             .WithWaveForm(WaveformType.Noise)
             .WithEnvelope(.001f, .1f, .1f, .01f)
-            .WithReverb(feedback: .8f, diffusion: .55f, damping: .5f, wet: .5f, dry: .5f, duration: .05f)
+            .WithReverb(feedback: .95f, diffusion: .55f, damping: .5f, wet: .5f, dry: .5f, duration: .2f)
             .WithVolume(.05f))
         .Build()
         .WithVolume(1f);
@@ -60,5 +60,39 @@ A basic kick drum patch with a punchy attack and a short decay.
         // Cubic for a more pronounced drop at the end:
         float curve = 1f - (progress * progress);
         return maxCents * curve;
+    }
+
+    public static ISynthPatch Clap()
+    {
+        var builder = LayeredPatch.CreateBuilder();
+        var attackSpacing = .04f;
+        var decayDecay = .2f;
+        var volumeDecay = .4f;
+        var layers = 8;
+
+        var freqInc = 5f;
+
+        var currentVolume = 1f;
+        var currentAttack = .01f;
+        var currentDecay = .08f;
+        for(var i = 0; i < layers; i++)
+        {
+            builder.AddLayer(1, 0, 0, SynthPatch.Create()
+            .WithWaveForm(WaveformType.Noise)
+            .WithEnvelope(currentAttack, currentDecay, 0.0f, 0.1f)
+            .WithVolume(currentVolume)
+            .WithPeakEQ(freq: freqInc * i, gainDb: -8f, q: 1)
+            .WithPeakEQ(freq: 500 + freqInc * i, gainDb: -2f, q: 1)
+            .WithPeakEQ(freq: 2000 + freqInc * i, gainDb: 4f, q: 1));
+
+            currentAttack = currentAttack + attackSpacing;
+            currentDecay = currentDecay * decayDecay;
+            currentVolume = currentVolume * volumeDecay;
+
+        }
+
+        var ret = builder.Build()
+            .WithVolume(1);
+        return ret;
     }
 }
