@@ -11,62 +11,60 @@ public class SingleNoteEditor : ProtectedConsolePanel
     private SingleNoteEditor() { }
     public static SingleNoteEditor Create() => _pool.Value.Rent().Construct();
 
-    public Event NoteChanged { get; } = Event.Create();
+    private Event _noteChanged;
+    public Event NoteChanged => _noteChanged ??= Event.Create();
 
-    private int _midiNote = 36; // Default to C2
-    private int _velocity = 127; // Default velocity
-    public int MidiNote
-    {
-        get => _midiNote;
-        set
-        {
-            if (_midiNote != value)
-            {
-                _midiNote = Math.Clamp(value, 0, 127);
-                UpdateNoteLabel();
-                NoteChanged.Fire();
-            }
-        }
-    }
-    public int Velocity
-    {
-        get => _velocity;
-        set
-        {
-            if (_velocity != value)
-            {
-                _velocity = Math.Clamp(value, 0, 127);
-                UpdateVelocityLabel();
-                NoteChanged.Fire();
-            }
-        }
-    }
+    private int _midiNote = 36;
+    private int _velocity = 127;
+    private double _durationSeconds = 1.0;
 
+    public int MidiNote { get => _midiNote; set => SetInt(ref _midiNote, value, 0, 127, UpdateNoteLabel);  }
+    public int Velocity { get => _velocity; set => SetInt(ref _velocity, value, 0, 127, UpdateVelocityLabel); }
+    public double DurationSeconds { get => _durationSeconds; set => SetDouble(ref _durationSeconds, value, 0.05, 30.0, UpdateDurationLabel); }
+    public NoteExpression NoteExpression => NoteExpression.Create(MidiNote, DurationSeconds, Velocity);
 
     private ConsoleStringRenderer noteLabel;
     private ConsoleStringRenderer velocityLabel;
+    private ConsoleStringRenderer durationLabel;
     private ConsoleStringRenderer titleLabel;
     private Recyclable? focusLifetime;
-    public NoteExpression NoteExpression => NoteExpression.Create(MidiNote, 1, Velocity);
+
     private SingleNoteEditor Construct()
     {
         CanFocus = true;
+        SetDefaults();
         Focused.Subscribe(OnFocused, this);
         Unfocused.Subscribe(OnUnfocused, this);
-        var stack = ProtectedPanel.Add(new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both }).DockToTop(padding:1).DockToLeft(padding: 2);
 
-        titleLabel = stack.Add(new ConsoleStringRenderer("Single Note Editor".ToWhite()));
-        stack.Add(new ConsoleStringRenderer("".ToWhite()));
+        var stack = ProtectedPanel.Add(new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both }).DockToTop(padding: 1).DockToLeft(padding: 2);
 
-        stack.Add(new ConsoleStringRenderer("Note".ToYellow()));
-        noteLabel = stack.Add(new ConsoleStringRenderer("".ToWhite()));
-        stack.Add(new ConsoleStringRenderer("".ToWhite()));
+        titleLabel = stack.Add(RentLabel("Single Note Editor".ToWhite()));
+        stack.Add(RentLabel());
+
+        stack.Add(RentLabel(nameof(MidiNote).ToYellow()));
+        noteLabel = stack.Add(RentLabel("".ToWhite()));
+        stack.Add(RentLabel());
         UpdateNoteLabel();
 
-        stack.Add(new ConsoleStringRenderer("Velocity".ToYellow()));
-        velocityLabel = stack.Add(new ConsoleStringRenderer("".ToWhite()));
+        stack.Add(RentLabel(nameof(NoteExpression.Velocity).ToYellow()));
+        velocityLabel = stack.Add(RentLabel("".ToWhite()));
+        stack.Add(RentLabel());
         UpdateVelocityLabel();
+
+        stack.Add(RentLabel(nameof(NoteExpression.DurationTime).ToYellow()));
+        durationLabel = stack.Add(RentLabel("".ToWhite()));
+        UpdateDurationLabel();
+
         return this;
+    }
+
+    private ConsoleStringRenderer RentLabel(ConsoleString? initialValue = null)
+    {
+        initialValue = initialValue ?? ConsoleString.Empty;
+        // visual tree will dispose when the panel is disposed
+        var ret = ConsoleStringRendererPool.Instance.Rent();
+        ret.Content = initialValue;
+        return ret;
     }
 
     private void OnUnfocused()
@@ -80,53 +78,73 @@ public class SingleNoteEditor : ProtectedConsolePanel
     {
         focusLifetime = DefaultRecyclablePool.Instance.Rent();
         titleLabel.Content = titleLabel.Content.ToBlack(RGB.Cyan);
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.UpArrow, IncrementNoteNumber, focusLifetime);
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.W, IncrementNoteNumber, focusLifetime);
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.DownArrow, DecrementNoteNumber, focusLifetime);
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.S, DecrementNoteNumber, focusLifetime);
-
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.UpArrow, ConsoleModifiers.Alt, IncrementVelocity, focusLifetime);
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.W, ConsoleModifiers.Alt, IncrementVelocity, focusLifetime);
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.DownArrow, ConsoleModifiers.Alt, DecrementVelocity, focusLifetime);
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.S, ConsoleModifiers.Alt, DecrementVelocity, focusLifetime);
+        RegisterKeys();
     }
 
-    private void IncrementNoteNumber()
+    private void RegisterKeys()
     {
-        MidiNote = Math.Min(MidiNote + 1, 127);
-        UpdateNoteLabel();
-        NoteChanged.Fire();
+        Bind(ConsoleKey.UpArrow, IncrementNoteNumber);
+        Bind(ConsoleKey.W, IncrementNoteNumber);
+        Bind(ConsoleKey.DownArrow, DecrementNoteNumber);
+        Bind(ConsoleKey.S, DecrementNoteNumber);
+
+        Bind(ConsoleKey.UpArrow, IncrementVelocity, ConsoleModifiers.Alt);
+        Bind(ConsoleKey.W, IncrementVelocity, ConsoleModifiers.Alt);
+        Bind(ConsoleKey.DownArrow, DecrementVelocity, ConsoleModifiers.Alt);
+        Bind(ConsoleKey.S, DecrementVelocity, ConsoleModifiers.Alt);
+
+        Bind(ConsoleKey.RightArrow, IncrementDuration);
+        Bind(ConsoleKey.D, IncrementDuration);
+        Bind(ConsoleKey.LeftArrow, DecrementDuration);
+        Bind(ConsoleKey.A, DecrementDuration);
     }
 
-    private void DecrementNoteNumber()
+    private void Bind(ConsoleKey key, Action action, ConsoleModifiers modifiers = ConsoleModifiers.None) => ConsoleApp.Current.PushKeyForLifetime(key, modifiers, action, focusLifetime);
+    private void IncrementNoteNumber() => MidiNote = Math.Min(MidiNote + 1, 127);
+    private void DecrementNoteNumber() => MidiNote = Math.Max(MidiNote - 1, 0);
+    private void IncrementVelocity() => Velocity = Math.Min(Velocity + 1, 127);
+    private void DecrementVelocity() => Velocity = Math.Max(Velocity - 1, 0);
+    private void IncrementDuration() => DurationSeconds += 0.05;
+    private void DecrementDuration() => DurationSeconds -= 0.05;
+    private void UpdateNoteLabel() => noteLabel.Content = $"{PianoPanel.NoteName(MidiNote).DisplayString}".ToWhite();
+    private void UpdateVelocityLabel() => velocityLabel.Content = $"{Velocity}".ToWhite();
+    private void UpdateDurationLabel() => durationLabel.Content = $"{DurationSeconds:0.00}".ToWhite();
+
+    protected override void OnReturn()
     {
-        MidiNote = Math.Max(MidiNote - 1, 0);
-        UpdateNoteLabel();
-        NoteChanged.Fire();
+        _noteChanged?.Dispose();
+        _noteChanged = null;
+        SetDefaults();
+        base.OnReturn();
     }
 
-    private void IncrementVelocity()
+    private void SetDefaults()
     {
-        Velocity = Math.Min(Velocity + 1, 127);
-        UpdateVelocityLabel();
-        NoteChanged.Fire();
+        MidiNote = 36; // Reset to default
+        Velocity = 127; // Reset to default
+        DurationSeconds = 1.0; // Reset to default
     }
 
-    private void DecrementVelocity()
+    private void SetInt(ref int field, int newValue, int min, int max, Action onChanged)
     {
-        Velocity = Math.Max(Velocity - 1, 0);
-        UpdateVelocityLabel();
-        NoteChanged.Fire();
+        var clamped = Math.Clamp(newValue, min, max);
+        if (field != clamped)
+        {
+            field = clamped;
+            onChanged();
+            NoteChanged.Fire();
+        }
     }
 
-    private void UpdateNoteLabel()
+    private void SetDouble(ref double field, double newValue, double min, double max, Action onChanged)
     {
-        var displayInfo = PianoPanel.NoteName(MidiNote);
-        noteLabel.Content = $"{displayInfo.DisplayString}".ToWhite();
-    }
-
-    private void UpdateVelocityLabel()
-    {
-        velocityLabel.Content = $"{Velocity}".ToWhite();
+        var clamped = Math.Clamp(newValue, min, max);
+        clamped = Math.Round(clamped, 2); // Snap to 2 decimal places
+        if (Math.Abs(field - clamped) > 0.0001)
+        {
+            field = clamped;
+            onChanged();
+            NoteChanged.Fire();
+        }
     }
 }

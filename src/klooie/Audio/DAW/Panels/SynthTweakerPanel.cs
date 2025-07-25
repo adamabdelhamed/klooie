@@ -33,6 +33,7 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         LoadSettings();
         noteEditor.MidiNote = settings.LatestMidiNote;
         noteEditor.Velocity = settings.LatestVelocity;
+        noteEditor.DurationSeconds = settings.LatestDuration;
         if (settings.LatestSourcePath != null && File.Exists(settings.LatestSourcePath))
         {
             this.Ready.SubscribeOnce(()=> LoadFile(settings.LatestSourcePath));
@@ -104,10 +105,10 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         if (currentPatch == null || noteEditor.NoteExpression == null) return;
         settings.LatestMidiNote = noteEditor.MidiNote;
         settings.LatestVelocity = noteEditor.Velocity;
+        settings.LatestDuration = noteEditor.DurationSeconds;
         SaveSettings();
         var noteExpression = noteEditor.NoteExpression
-            .WithInstrument(InstrumentExpression.Create("Current Patch", currentPatch.Factory))
-            .WithDuration(1);
+            .WithInstrument(InstrumentExpression.Create("Current Patch", currentPatch.Factory));
         var noteList = NoteCollection.Create(noteExpression);
         var song = new Song(noteList, 60);
         SoundProvider.Current.Play(song);
@@ -137,7 +138,7 @@ public class SynthTweakerPanel : ProtectedConsolePanel
                 ConsoleApp.Current.WriteLine($"Failed to load settings: {ex.Message}");
             }
         }
-        settings = new SynthTweakerSettings() { LatestMidiNote = 36, LatestVelocity = 127 };
+        settings = new SynthTweakerSettings() { LatestMidiNote = 36, LatestVelocity = 127, LatestDuration = 1 };
     }
 
     protected override void OnReturn()
@@ -152,4 +153,5 @@ public class SynthTweakerSettings
     public string? LatestSourcePath { get; set; }
     public int LatestMidiNote { get; set; }
     public int LatestVelocity { get; set; }
+    public double LatestDuration { get; set; } 
 }
