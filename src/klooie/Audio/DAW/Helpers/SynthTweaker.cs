@@ -192,7 +192,14 @@ public sealed class SynthTweaker : Recyclable, IDisposable
         }
         public override string ToString()
         {
-            return Name;
+            var isCreateFactory = Name.EndsWith(".Create");
+            if (isCreateFactory) return Name;
+
+            var lastDot = Name.LastIndexOf('.');
+            if(lastDot < 0) return Name;
+
+            // Return just the method name after the last dot
+            return Name.Substring(lastDot + 1);
         }
     }
 
