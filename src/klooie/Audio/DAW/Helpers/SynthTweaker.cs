@@ -116,6 +116,7 @@ public sealed class SynthTweaker : Recyclable, IDisposable
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ISynthPatch).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(ConsoleString).Assembly.Location),
             };
             // Add critical BCL assemblies explicitly (no ambiguous Select)
             var bclDir = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
