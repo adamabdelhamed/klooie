@@ -8,46 +8,43 @@ public class SynthTweakerPanel : ProtectedConsolePanel
 {
     private GridLayout layout;
     private Label codeLabel;
-    private MelodyMaker melodyMaker;
+    private Menu<SynthTweaker.PatchFactoryInfo> patchMenu;
+    private SingleNoteEditor noteEditor;
     private SynthTweaker? tweaker;
     private string? currentPath;
+    private SynthTweaker.PatchFactoryInfo? currentPatch => patchMenu?.SelectedItem;
+    private SynthTweakerSettings settings;
 
-    public MelodyMaker MelodyMaker => melodyMaker;
-
-    private static readonly SynthTweakerSettings settings = LoadSettings();
-
-    private static SynthTweakerSettings LoadSettings()
-    {
-        if (File.Exists(SettingsFilePath))
-        {
-            try
-            {
-                var json = File.ReadAllText(SettingsFilePath);
-                return JsonSerializer.Deserialize<SynthTweakerSettings>(json) ?? new SynthTweakerSettings();
-            }
-            catch (Exception ex)
-            {
-                ConsoleApp.Current.WriteLine($"Failed to load settings: {ex.Message}");
-                return new SynthTweakerSettings();
-            }
-        }
-        return new SynthTweakerSettings();
-    }
 
     private static string SettingsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SynthTweakerSettings.json");
 
     public SynthTweakerPanel(IMidiInput midiInput, double bpm = 60)
     {
         // Layout: 1 row, 2 columns: code on left, melody on right
-        layout = ProtectedPanel.Add(new GridLayout("1r", "90p;1r")).Fill();
-        codeLabel = layout.Add(new Label("Press ALT + O to open a file.".ToWhite()) , 0, 0);
-        melodyMaker = layout.Add(new MelodyMaker(midiInput, bpm), 1, 0);
+        layout = ProtectedPanel.Add(new GridLayout("1r", "30p;1r;25p")).Fill();
+        var codeContainer = layout.Add(new ConsolePanel(), 1, 0);
+        codeLabel = codeContainer.Add(new Label()).Fill(new Thickness(2,2,1,1));
+        codeLabel.CompositionMode = CompositionMode.BlendBackground;
+        codeLabel.Background = new RGB(20,20,20);
+        codeContainer.Background = codeLabel.Background;
+        noteEditor = layout.Add(SingleNoteEditor.Create(), 2, 0);
+        noteEditor.NoteChanged.Subscribe(PlayCurrentNote, noteEditor);
         this.Ready.SubscribeOnce(ListenForFileOpenShortcut);
-
-        if(settings.LatestSourcePath != null && File.Exists(settings.LatestSourcePath))
+        LoadSettings();
+        noteEditor.MidiNote = settings.LatestMidiNote;
+        noteEditor.Velocity = settings.LatestVelocity;
+        if (settings.LatestSourcePath != null && File.Exists(settings.LatestSourcePath))
         {
-            LoadFile(settings.LatestSourcePath);
+            this.Ready.SubscribeOnce(()=> LoadFile(settings.LatestSourcePath));
         }
+
+
+
+        ProtectedPanel.Add(new ConsoleStringRenderer(ConsoleString.Parse("[White]Press [B=Cyan][Black] ALT + O [D][White] to open a file.")) { CompositionMode = CompositionMode.BlendBackground })
+            .CenterHorizontally()
+            .DockToBottom(padding: 1);
+
+        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Spacebar, PlayCurrentNote, this);
     }
 
     private void ListenForFileOpenShortcut() => ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.O, ConsoleModifiers.Alt, () => ConsoleApp.Current.Invoke(async()=> await OpenFileDialog()), this);
@@ -69,23 +66,51 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         this.currentPath = path;
         tweaker?.Dispose();
         tweaker = SynthTweaker.Create();
-        tweaker.CodeChanged.Subscribe(code => codeLabel.Text = code, tweaker);
-        tweaker.Initialize(path, melodyMaker.Notes, melodyMaker.BeatsPerMinute);
-        tweaker.PatchCompiled.Subscribe(_ =>
+        tweaker.CodeChanged.Subscribe(code => codeLabel.Text = code.ToDifferentBackground(codeLabel.Background), tweaker);
+        tweaker.PatchesCompiled.Subscribe(patches =>
         {
-            if(melodyMaker.Player.CurrentBeat > melodyMaker.Timeline.NoteSource.Select(n => n.StartBeat).DefaultIfEmpty(0).Max())
+            patchMenu = layout.Add(new Menu<SynthTweaker.PatchFactoryInfo>(patches), 0, 0);
+            var found = false;
+            for (var i = 0; i < patches.Count; i++)
             {
-                melodyMaker.Player.Seek(0);
+                if (patches[i].Name == currentPatch?.Name)
+                {
+                    patchMenu.SelectedIndex = i;
+                    found = true;
+                    break;
+                }
             }
-            melodyMaker.Timeline.Player.StopAtEnd = true;
-            melodyMaker.StartPlayback();
-        }, melodyMaker);
-        var newNotes = melodyMaker.Notes.Select(n => n.WithInstrument(InstrumentExpression.Create("Synth", tweaker.CurrentFactory.Factory)));
-        (melodyMaker.Notes as ListNoteSource).Clear();
-        (melodyMaker.Notes as ListNoteSource).AddRange(newNotes);
-        melodyMaker.Timeline.InstrumentFactory = () => tweaker.CurrentFactory?.Factory();
+
+            if (found == false && patches.Count > 0) patchMenu.SelectedIndex = 0;
+
+            if(patches.Count == 1)
+            {
+                noteEditor.Focus();
+            }
+            else
+            {
+                patchMenu.Focus();
+            }    
+
+            PlayCurrentNote();
+        }, tweaker);
+        tweaker.Initialize(path);
         settings.LatestSourcePath = path;
         SaveSettings();
+    }
+
+    private void PlayCurrentNote()
+    {
+        if (currentPatch == null || noteEditor.NoteExpression == null) return;
+        settings.LatestMidiNote = noteEditor.MidiNote;
+        settings.LatestVelocity = noteEditor.Velocity;
+        SaveSettings();
+        var noteExpression = noteEditor.NoteExpression
+            .WithInstrument(InstrumentExpression.Create("Current Patch", currentPatch.Factory))
+            .WithDuration(1);
+        var noteList = NoteCollection.Create(noteExpression);
+        var song = new Song(noteList, 60);
+        SoundProvider.Current.Play(song);
     }
 
     private void SaveSettings()
@@ -93,6 +118,26 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         var json = JsonSerializer.Serialize(settings);
         if(!Directory.Exists(Path.GetDirectoryName(SettingsFilePath))) Directory.CreateDirectory(Path.GetDirectoryName(SettingsFilePath)!);
         File.WriteAllText(SettingsFilePath, json);
+    }
+
+    private void LoadSettings()
+    {
+        if (File.Exists(SettingsFilePath))
+        {
+            try
+            {
+                var json = File.ReadAllText(SettingsFilePath);
+                if(string.IsNullOrWhiteSpace(json)) throw new InvalidOperationException("Settings file is empty.");
+                if (!json.Trim().StartsWith("{") || !json.Trim().EndsWith("}")) throw new InvalidOperationException("Settings file is not in valid JSON format.");
+                settings = JsonSerializer.Deserialize<SynthTweakerSettings>(json);
+                return;
+            }
+            catch (Exception ex)
+            {
+                ConsoleApp.Current.WriteLine($"Failed to load settings: {ex.Message}");
+            }
+        }
+        settings = new SynthTweakerSettings() { LatestMidiNote = 36, LatestVelocity = 127 };
     }
 
     protected override void OnReturn()
@@ -105,4 +150,6 @@ public class SynthTweakerPanel : ProtectedConsolePanel
 public class SynthTweakerSettings
 {
     public string? LatestSourcePath { get; set; }
+    public int LatestMidiNote { get; set; }
+    public int LatestVelocity { get; set; }
 }

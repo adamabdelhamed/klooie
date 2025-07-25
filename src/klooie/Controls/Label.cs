@@ -80,8 +80,11 @@ public class ConsoleStringRenderer : ConsoleControl
         }
     }
 
-    public ConsoleStringRenderer() { }
-    public ConsoleStringRenderer(ConsoleString? content = null) => this.Content = content ?? ConsoleString.Empty;
+    public ConsoleStringRenderer()
+    {
+        CanFocus = false;
+    }
+    public ConsoleStringRenderer(ConsoleString? content = null) : this() => this.Content = content ?? ConsoleString.Empty;
 
     protected override void OnPaint(ConsoleBitmap context) => context.DrawString(Content, 0, 0);
 }

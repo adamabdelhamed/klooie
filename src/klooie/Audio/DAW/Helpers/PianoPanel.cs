@@ -52,7 +52,7 @@ public class PianoPanel : ProtectedConsolePanel
     }
 
 
-    private static (string, bool) NoteName(int midi)
+    public static (string DisplayString, bool IsWhite) NoteName(int midi)
     {
         // 0 = C, 1 = C#, 2 = D, ... 11 = B
         var names = new[] { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };

@@ -18,7 +18,7 @@ public static class Snare
         .AddLayer(patch: SynthPatch.Create()
             .WithWaveForm(WaveformType.Noise)
             .WithEnvelope(.001f, .1f, .1f, .01f)
-            .WithReverb(feedback: .8f, diffusion: .55f, damping: .5f, wet: .5f, dry: .5f, duration: .25f)
+            .WithReverb(feedback: .8f, diffusion: .55f, damping: .5f, wet: .5f, dry: .5f, duration: .05f)
             .WithVolume(.05f))
         .Build()
         .WithVolume(1f);

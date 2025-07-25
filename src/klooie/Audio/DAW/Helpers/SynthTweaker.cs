@@ -33,7 +33,7 @@ public sealed class SynthTweaker : Recyclable, IDisposable
         .ToHashSet();
 
     public Event<ConsoleString> CodeChanged { get; private set; } = Event<ConsoleString>.Create();
-    public Event<Func<ISynthPatch>> PatchCompiled { get; private set; } = Event<Func<ISynthPatch>>.Create();
+    public Event<List<PatchFactoryInfo>> PatchesCompiled { get; private set; } = Event<List<PatchFactoryInfo>>.Create();
 
     private static readonly LazyPool<SynthTweaker> _pool =
         new(() => new SynthTweaker());
@@ -46,46 +46,15 @@ public sealed class SynthTweaker : Recyclable, IDisposable
 
     // ────────── State ──────────
     private string _path = null!;
-    private INoteSource _notes = null!;
-    private double _bpm;
     private FileSystemWatcher? _watcher;
     private Timer? _debounce;
     private CancellationTokenSource? _playCts;
-    private List<PatchFactoryInfo> _history = new();
-    private PatchFactoryInfo? _currentFactory;
-    public IReadOnlyList<PatchFactoryInfo> History => _history;
-
-    // List of factories found in last compile, for UI to enumerate/select
-    private List<PatchFactoryInfo> _factories = new();
-    public IReadOnlyList<PatchFactoryInfo> Factories => _factories;
-    public PatchFactoryInfo? CurrentFactory => _currentFactory;
-
-    // For multi-patch files: allow switching by name/index
-    public bool SelectFactory(string name)
-    {
-        var match = _factories.FirstOrDefault(f => f.Name == name);
-        if (match == null) return false;
-        _currentFactory = match;
-        PatchCompiled.Fire(_currentFactory.Factory);
-        return true;
-    }
-    public bool SelectFactory(int idx)
-    {
-        if (idx < 0 || idx >= _factories.Count) return false;
-        _currentFactory = _factories[idx];
-        PatchCompiled.Fire(_currentFactory.Factory);
-        return true;
-    }
+ 
 
     // ────────── Setup ──────────
-    public void Initialize(string path, INoteSource notes, double bpm)
+    public void Initialize(string path)
     {
         _path = path;
-        _notes = notes;
-        _bpm = bpm;
-        _history.Clear();
-        _factories.Clear();
-        _currentFactory = null;
 
         TryCompileAndPlay();
         var app = ConsoleApp.Current;
@@ -185,8 +154,6 @@ public sealed class SynthTweaker : Recyclable, IDisposable
                     errorString+= $"{d.Severity}: {d.GetMessage()}";
                 }
                 CodeChanged.Fire($"Compilation failed:\n{errorString}\n\n{srcText}".ToRed());
-                _factories.Clear();
-                _currentFactory = null;
                 return;
             }
 
@@ -200,17 +167,12 @@ public sealed class SynthTweaker : Recyclable, IDisposable
             if (!factories.Any())
             {
                 CodeChanged.Fire($"No static ISynthPatch methods found\n\n{srcText}".ToRed());
-                _factories.Clear();
-                _currentFactory = null;
                 alc.Unload();
                 return;
             }
 
-            _factories = factories;
-            _currentFactory = _factories.First();
-            RegisterSuccess(_currentFactory);
             CodeChanged.Fire(RenderHighlightedSource(srcText));
-            PatchCompiled.Fire(_currentFactory.Factory);
+            PatchesCompiled.Fire(factories);
         }
         catch (Exception ex)
         {
@@ -219,7 +181,20 @@ public sealed class SynthTweaker : Recyclable, IDisposable
     }
 
  
-    public record PatchFactoryInfo(string Name, Func<ISynthPatch> Factory);
+    public class PatchFactoryInfo
+    {
+        public string Name { get; }
+        public Func<ISynthPatch> Factory { get; }
+        public PatchFactoryInfo(string Name, Func<ISynthPatch> Factory)
+        {
+            this.Name = Name ?? throw new ArgumentNullException(nameof(Name));
+            this.Factory = Factory ?? throw new ArgumentNullException(nameof(Factory));
+        }
+        public override string ToString()
+        {
+            return Name;
+        }
+    }
 
     // Find all public static ISynthPatch methods with zero params
     private static IEnumerable<PatchFactoryInfo> FindPatchFactories(Assembly asm)
@@ -238,12 +213,6 @@ public sealed class SynthTweaker : Recyclable, IDisposable
                 }
             }
         }
-    }
-
-    private void RegisterSuccess(PatchFactoryInfo info)
-    {
-        _history.Add(info);
-        if (_history.Count > 50) _history.RemoveAt(0);
     }
 
     private ConsoleString RenderHighlightedSource(string source)
@@ -354,27 +323,6 @@ public sealed class SynthTweaker : Recyclable, IDisposable
     }
 
 
-
-    // ──────── Playback ────────
-    private void PlayNotes(Func<ISynthPatch> patchFactory)
-    {
-        _playCts?.Cancel();
-        _playCts = new CancellationTokenSource();
-        var ct = _playCts.Token;
-
-        ConsoleApp.Current.Invoke(async () =>
-        {
-            try
-            {
-                var inst = InstrumentExpression.Create("Tweaker", patchFactory);
-                var toPlay = new NoteCollection(_notes.Select(n => n.WithInstrumentIfNull(inst)));
-                ConsoleApp.Current.Sound.Play(new Song(toPlay, _bpm));
-                await Task.Delay(TimeSpan.FromSeconds(toPlay.GetEndBeat() * 60 / _bpm), ct);
-            }
-            catch (OperationCanceledException) { }
-        });
-    }
-
     // ──────── Disposal ────────
     protected override void OnReturn() => Dispose();
 
@@ -385,9 +333,5 @@ public sealed class SynthTweaker : Recyclable, IDisposable
         _playCts?.Cancel();
         _playCts?.Dispose();
         _path = null!;
-        _notes = null!;
-        _history.Clear();
-        _factories.Clear();
-        _currentFactory = null;
     }
 }
