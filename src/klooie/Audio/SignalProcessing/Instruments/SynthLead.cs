@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
-
+using PowerArgs;
+using System;
 namespace klooie;
 
 [SynthCategory("Lead")]
@@ -10,7 +11,10 @@ chorus, delay and reverb for an epic, evolving tone.
 """)]
 public static class SynthLead
 {
-    public static ISynthPatch Create() => LayeredPatch.CreateBuilder()
+    public static ISynthPatch Create()
+    {
+        SoundProvider.Debug($"DEBUG: {DateTime.Now}".ToGreen());
+        return LayeredPatch.CreateBuilder()
          .AddLayer(volume: 0.8f, pan: -0.3f, transpose: 0, patch: SynthPatch.Create()
              .WithWaveForm(WaveformType.Saw)
              .WithEnvelope(0.005, 0.10, 0.90, 0.18)
@@ -33,4 +37,5 @@ public static class SynthLead
              .WithWaveForm(WaveformType.Saw)
              .WithEnvelope(0.004, 0.11, 0.80, 0.20))
          .Build();
+    }
 }
