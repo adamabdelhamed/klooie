@@ -72,6 +72,10 @@ public class SingleNoteEditor : ProtectedConsolePanel
         focusLifetime?.Dispose();
         focusLifetime = null;
         titleLabel.Content = titleLabel.Content.ToWhite(RGB.Black);
+
+        UpdateNoteLabel();
+        UpdateVelocityLabel();
+        UpdateDurationLabel();
     }
 
     private void OnFocused()
@@ -79,6 +83,9 @@ public class SingleNoteEditor : ProtectedConsolePanel
         focusLifetime = DefaultRecyclablePool.Instance.Rent();
         titleLabel.Content = titleLabel.Content.ToBlack(RGB.Cyan);
         RegisterKeys();
+        UpdateNoteLabel();
+        UpdateVelocityLabel();
+        UpdateDurationLabel();
     }
 
     private void RegisterKeys()
@@ -106,9 +113,11 @@ public class SingleNoteEditor : ProtectedConsolePanel
     private void DecrementVelocity() => Velocity = Math.Max(Velocity - 1, 0);
     private void IncrementDuration() => DurationSeconds += 0.05;
     private void DecrementDuration() => DurationSeconds -= 0.05;
-    private void UpdateNoteLabel() => noteLabel.Content = $"{PianoPanel.NoteName(MidiNote).DisplayString}".ToWhite();
-    private void UpdateVelocityLabel() => velocityLabel.Content = $"{Velocity}".ToWhite();
-    private void UpdateDurationLabel() => durationLabel.Content = $"{DurationSeconds:0.00}".ToWhite();
+    private void UpdateNoteLabel() => noteLabel.Content = $"{PianoPanel.NoteName(MidiNote).DisplayString}".ToWhite() + GetKeyHintLabel("WS");
+    private void UpdateVelocityLabel() => velocityLabel.Content = $"{Velocity}".ToWhite() + GetKeyHintLabel("ALT + WS");
+    private void UpdateDurationLabel() => durationLabel.Content = $"{DurationSeconds:0.00}".ToWhite() + GetKeyHintLabel("AD");
+
+    private ConsoleString GetKeyHintLabel(string hint) => HasFocus ?"  ".ToWhite() + $" {hint} ".ToBlack(RGB.Cyan) : ConsoleString.Empty;
 
     protected override void OnReturn()
     {
