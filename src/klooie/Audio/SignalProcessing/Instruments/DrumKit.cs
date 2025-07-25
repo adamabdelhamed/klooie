@@ -1,15 +1,16 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace klooie;
 
-[SynthCategory("Drums")]
-[SynthDocumentation("""
-A basic kick drum patch with a punchy attack and a short decay.
-""")]
-public static class KickOne
+public static class DrumKit
 {
     private const float Duration = .18f;
-    public static ISynthPatch Create() => LayeredPatch.CreateBuilder()
+
+    [SynthCategory("Drums")]
+    [SynthDocumentation("""
+A basic kick drum patch with a punchy attack and a short decay.
+""")]
+    public static ISynthPatch KickClassic() => LayeredPatch.CreateBuilder()
         .AddLayer(patch: SynthPatch.Create()
             .WithWaveForm(WaveformType.Sine)
             .WithEnvelope(0f, Duration, 0f, 0.02f)
@@ -23,6 +24,10 @@ public static class KickOne
             .WithVolume(.03f))
         .Build()
         .WithVolume(1f);
+
+    [SynthCategory("Drums")]
+    [SynthDocumentation("A softer kick drum with lower output level.")]
+    public static ISynthPatch KickSoft() => KickClassic().WithVolume(0.7f);
 
     private static float KickPitchBend(float time)
     {
