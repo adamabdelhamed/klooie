@@ -13,6 +13,10 @@ public static class SoundProvider
     public const int ChannelCount = 2;
     public const int BitsPerSample = 16;
     public static ISoundProvider Current { get; set; }
+
+    public static void Debug(ConsoleString str) => Current?.EventLoop?.Invoke(()=> ConsoleApp.Current?.WriteLine(str));
+    public static void Debug(string str) => Debug(str?.ToConsoleString() ?? "null".ToRed());
+    public static void Debug(object o) => Debug(o?.ToString());
 }
 
 
