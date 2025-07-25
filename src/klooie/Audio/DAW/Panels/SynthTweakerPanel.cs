@@ -92,7 +92,7 @@ public class SynthTweakerPanel : ProtectedConsolePanel
             {
                 patchMenu.Focus();
             }    
-
+            patchMenu.SelectedIndexChanged.Subscribe(PlayCurrentNote,patchMenu);
             PlayCurrentNote();
         }, tweaker);
         tweaker.Initialize(path);
