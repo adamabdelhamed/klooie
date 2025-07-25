@@ -70,11 +70,12 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         tweaker.CodeChanged.Subscribe(code => codeLabel.Text = code.ToDifferentBackground(codeLabel.Background), tweaker);
         tweaker.PatchesCompiled.Subscribe(patches =>
         {
+            var currentPatchName = currentPatch?.Name;
             patchMenu = layout.Add(new Menu<SynthTweaker.PatchFactoryInfo>(patches), 0, 0);
             var found = false;
             for (var i = 0; i < patches.Count; i++)
             {
-                if (patches[i].Name == currentPatch?.Name)
+                if (patches[i].Name == currentPatchName)
                 {
                     patchMenu.SelectedIndex = i;
                     found = true;
