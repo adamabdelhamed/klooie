@@ -45,7 +45,7 @@ A basic kick drum patch with a punchy attack and a short decay.
         .AddLayer(patch: SynthPatch.Create()
             .WithWaveForm(WaveformType.Noise)
             .WithEnvelope(.001f, .1f, .1f, .01f)
-            .WithReverb(feedback: .95f, diffusion: .55f, damping: .5f, wet: .5f, dry: .5f, duration: .2f)
+            .WithReverb(feedback: .95f, diffusion: .55f, damping: .7f, wet: .5f, dry: .5f, duration: .1f)
             .WithVolume(.02f))
         .Build()
         .WithVolume(4f)
