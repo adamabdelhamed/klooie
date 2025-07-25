@@ -111,6 +111,7 @@ public static class SynthDocGenerator
 
         var effectDocs = CollectDocs(allTypes, effectType, allExtensionDocs);
         var patchDocs = CollectDocs(allTypes, patchType, allExtensionDocs);
+        patchDocs.AddRange(CollectFactoryMethodDocs(allTypes, patchType));
 
         return new List<SectionDoc>
         {
@@ -174,6 +175,24 @@ public static class SynthDocGenerator
                 .ToList();
 
             docs.Add(new ItemDoc(cat.Category, type.Name, desc.Markdown, paramDoc, extensions));
+        }
+        return docs;
+    }
+
+    private static List<ItemDoc> CollectFactoryMethodDocs(IEnumerable<Type> types, Type baseType)
+    {
+        var docs = new List<ItemDoc>();
+        foreach (var type in types)
+        {
+            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (method.ReturnType != baseType) continue;
+                var desc = method.GetCustomAttribute<SynthDocumentationAttribute>();
+                var cat = method.GetCustomAttribute<SynthCategoryAttribute>();
+                if (desc == null || cat == null) continue;
+
+                docs.Add(new ItemDoc(cat.Category, method.Name, desc.Markdown, null, new List<ExtensionDoc>()));
+            }
         }
         return docs;
     }
@@ -471,7 +490,7 @@ public static class SynthDocGenerator
     <div id="home" class="section active">
         <h1>Welcome to the Synth Documentation</h1>
         <p>This interactive documentation gives you a deep dive into every synth effect and patch available in your system.</p>
-        <p>Select a category on the left under <b>Patches</b> or <b>Effects</b> to explore your custom audio engine’s palette of sounds and creative tools.</p>
+        <p>Select a category on the left under <b>Patches</b> or <b>Effects</b> to explore your custom audio engines palette of sounds and creative tools.</p>
         <p>Each effect and patch includes detailed descriptions, parameter explanations, and C# extension method examples for fast prototyping.</p>
     </div>
     """);
