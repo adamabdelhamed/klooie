@@ -14,16 +14,15 @@ A basic kick drum patch with a punchy attack and a short decay.
         .AddLayer(patch: SynthPatch.Create()
             .WithWaveForm(WaveformType.Sine)
             .WithEnvelope(0f, KickDecay, 0f, 0.02f)
-            .WithPeakEQRelative(multiplier: .75f, gainDb: 2f, q: 3f)
-            .WithPeakEQRelative(multiplier: 1.25f, gainDb: -2f, q: 3f)
             .WithPitchBend(KickPitchBend, KickDecay))
         .AddLayer(patch: SynthPatch.Create()
             .WithWaveForm(WaveformType.Noise)
             .WithEnvelope(0f, KickDecay, 0f, .01f)
             .WithLowPass(cutoffHz: 80)
-            .WithVolume(.03f))
+            .WithVolume(.06f))
         .Build()
-        .WithVolume(1f);
+        .WithVolume(7f)
+        .WithHighPass(400);
     
     private static float KickPitchBend(float time)
     {
@@ -47,9 +46,10 @@ A basic kick drum patch with a punchy attack and a short decay.
             .WithWaveForm(WaveformType.Noise)
             .WithEnvelope(.001f, .1f, .1f, .01f)
             .WithReverb(feedback: .95f, diffusion: .55f, damping: .5f, wet: .5f, dry: .5f, duration: .2f)
-            .WithVolume(.05f))
+            .WithVolume(.02f))
         .Build()
-        .WithVolume(1f);
+        .WithVolume(4f)
+        .WithHighPass(400f);
 
     private static float SnarePitchBend(float time)
     {
@@ -81,18 +81,21 @@ A basic kick drum patch with a punchy attack and a short decay.
             .WithWaveForm(WaveformType.Noise)
             .WithEnvelope(currentAttack, currentDecay, 0.0f, 0.1f)
             .WithVolume(currentVolume)
+            .WithChorus(delayMs: 22, depthMs: 15, rateHz: 4f, mix: .4f)
             .WithPeakEQ(freq: freqInc * i, gainDb: -8f, q: 1)
             .WithPeakEQ(freq: 500 + freqInc * i, gainDb: -2f, q: 1)
-            .WithPeakEQ(freq: 2000 + freqInc * i, gainDb: 4f, q: 1));
-
+            .WithPeakEQ(freq: 2000 + freqInc * i, gainDb: 4f, q: 1)
+            .WithLowPass(cutoffHz: 8000 - (i*100))
+            .WithReverb(feedback: .2f, diffusion: .6f, damping: .2f,duration: .04f, wet: .15f, dry: .85f)
+            .WithVolume(1));
+            
             currentAttack = currentAttack + attackSpacing;
             currentDecay = currentDecay * decayDecay;
             currentVolume = currentVolume * volumeDecay;
 
         }
 
-        var ret = builder.Build()
-            .WithVolume(1);
+        var ret = builder.Build().WithVolume(.5f);
         return ret;
     }
 }

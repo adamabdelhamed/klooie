@@ -123,7 +123,7 @@ public static class SynthPatchExtensions
         {
             CutoffHz = cutoffHz,
             Mix = 1f,
-            VelocityAffectsMix = true
+            VelocityAffectsMix = false
         };
         return patch.WithEffect(LowPassFilterEffect.Create(in settings));
     }
