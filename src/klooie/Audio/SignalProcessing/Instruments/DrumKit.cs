@@ -62,6 +62,8 @@ A basic kick drum patch with a punchy attack and a short decay.
         return maxCents * curve;
     }
 
+    [SynthCategory("Drums")]
+    [SynthDocumentation("A basic clap drum.")]
     public static ISynthPatch Clap()
     {
         var builder = LayeredPatch.CreateBuilder();
