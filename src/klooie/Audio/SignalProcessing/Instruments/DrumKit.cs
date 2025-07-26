@@ -85,12 +85,10 @@ A basic kick drum patch with a punchy attack and a short decay.
             .WithWaveForm(WaveformType.PinkNoise)
             .WithEnvelope(currentAttack, currentDecay, 0.0f, 0.1f)
             .WithVolume(currentVolume)
-            .WithChorus(delayMs: 22, depthMs: 15, rateHz: 4f, mix: .4f)
             .WithPeakEQ(freq: freqInc * i, gainDb: -8f, q: 1)
             .WithPeakEQ(freq: 500 + freqInc * i, gainDb: -2f, q: 1)
             .WithPeakEQ(freq: 2000 + freqInc * i, gainDb: 4f, q: 1)
             .WithLowPass(cutoffHz: 8000 - (i*100))
-            .WithReverb(feedback: .2f, diffusion: .6f, damping: .2f,duration: .04f, wet: .15f, dry: .85f)
             .WithVolume(1));
             
             currentAttack = currentAttack + attackSpacing;
