@@ -13,11 +13,10 @@ public class ScheduledNoteEvent : Recyclable
 
     private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
     protected ScheduledNoteEvent() { }
-    public static ScheduledNoteEvent Create(long startSample, NoteExpression note, SynthSignalSource voice)
+    public static ScheduledNoteEvent Create(NoteExpression note, SynthSignalSource voice)
     {
         var ret = pool.Value.Rent();
         ret.Note = note;
-        ret.StartSample = startSample;
         ret.Voice = voice;
         return ret;
     }
@@ -34,7 +33,8 @@ public class ScheduledNoteEvent : Recyclable
 
 public class ScheduledSignalSourceMixer
 {
-    private readonly ConcurrentQueue<ScheduledNoteEvent> scheduledNotes = new();
+    private readonly Queue<ScheduledNoteEvent> scheduledNotes = new();
+    private readonly ConcurrentQueue<RecyclableList<ScheduledNoteEvent>> scheduledTracks = new();
     private readonly List<ActiveVoice> activeVoices = new();
     private long samplesRendered = 0;
 
@@ -45,7 +45,10 @@ public class ScheduledSignalSourceMixer
 
     public ScheduledSignalSourceMixer() { }
 
-    public void ScheduleNote(ScheduledNoteEvent note) => scheduledNotes.Enqueue(note);
+    public void ScheduleTrack(RecyclableList<ScheduledNoteEvent> track)
+    {
+        scheduledTracks.Enqueue(track);
+    }
 
     public int Read(float[] buffer, int offset, int count)
     {
@@ -53,6 +56,17 @@ public class ScheduledSignalSourceMixer
         int samplesRequested = count / channels;
         long bufferStart = samplesRendered;
         long bufferEnd = bufferStart + samplesRequested;
+
+        while(scheduledTracks.TryDequeue(out var track))
+        {
+            for (int i = 0; i < track.Items.Count; i++)
+            {
+                var noteEvent = track.Items[i];
+                noteEvent.StartSample = samplesRendered + (long)Math.Round(noteEvent.Note.StartTime.TotalSeconds * SoundProvider.SampleRate);
+                scheduledNotes.Enqueue(noteEvent);
+            }
+            track.Dispose();
+        }
 
         // 1. Promote any scheduled notes whose start time lands in or before this buffer
         while (scheduledNotes.TryPeek(out var note) && note.StartSample < bufferEnd)

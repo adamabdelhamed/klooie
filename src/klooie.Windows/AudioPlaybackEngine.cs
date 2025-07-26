@@ -109,16 +109,16 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
     public void Play(Song song, ILifetime? lifetime = null)
     {
-        long scheduleZero = SamplesRendered;
+        RecyclableList<ScheduledNoteEvent> track = RecyclableListPool<ScheduledNoteEvent>.Instance.Rent(song.Count);
         for (int i = 0; i < song.Count; i++)
         {
             var note = song[i];
             WithSpawnedVoices(note, (patch, voices) =>
             {
-                long startSample = scheduleZero + (long)Math.Round(note.StartTime.TotalSeconds * SoundProvider.SampleRate);
                 for (int i = 0; i < voices.Items.Count; i++)
                 {
-                    var scheduledNote = ScheduledNoteEvent.Create(startSample, note, voices.Items[i]);
+                    var scheduledNote = ScheduledNoteEvent.Create(note, voices.Items[i]);
+                    track.Items.Add(scheduledNote);
                     if (lifetime != null)
                     {
                         var tracker = LeaseHelper.Track(scheduledNote);
@@ -131,10 +131,11 @@ public abstract class AudioPlaybackEngine : ISoundProvider
                             t.Dispose();
                         });
                     }
-                    scheduledSynthProvider.ScheduleNote(scheduledNote);
                 }
             });
         }
+
+        scheduledSynthProvider.ScheduleTrack(track);
     }
 
 
