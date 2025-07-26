@@ -27,7 +27,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
 
     protected override void OnReturn()
     {
-        source?.TryDispose();
+        SoundProvider.DisposeIfNotNull(source);
         source = null;
         base.OnReturn();
     }

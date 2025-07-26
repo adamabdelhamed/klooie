@@ -89,7 +89,7 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     {
         if (layers != null)
             foreach (var l in layers)
-                if (l is Recyclable r) r.TryDispose();
+                if (l is Recyclable r) SoundProvider.Dispose(r);
 
         layers = null!;
         layerVolumes = null!;

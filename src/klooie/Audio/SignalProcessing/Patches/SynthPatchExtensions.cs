@@ -416,7 +416,7 @@ public static class SynthPatchExtensions
         }
         finally
         {
-            leaves.Dispose();
+            SoundProvider.Dispose(leaves);
         }
         return patch;
     }
@@ -437,7 +437,7 @@ public static class SynthPatchExtensions
         }
         finally
         {
-            leaves.Dispose();
+            SoundProvider.Dispose(leaves);
         }
         return patch;
     }
@@ -474,7 +474,7 @@ public static class SynthPatchExtensions
         }
         finally
         {
-            leaves.Dispose();
+            SoundProvider.Dispose(leaves);
         }
         return patch;
     }
@@ -508,7 +508,7 @@ public static class SynthPatchExtensions
         }
         finally
         {
-            leaves.Dispose();
+            SoundProvider.Dispose(leaves);
         }
         return patch;
     }
@@ -549,7 +549,7 @@ public static class SynthPatchExtensions
         }
         finally
         {
-            leaves.Dispose();
+            SoundProvider.Dispose(leaves);
         }
         return patch;
     }
@@ -582,7 +582,7 @@ public static class SynthPatchExtensions
         }
         finally
         {
-            leaves.Dispose();
+            SoundProvider.Dispose(leaves);
         }
         return patch;
     }
@@ -650,7 +650,7 @@ public static class SynthPatchExtensions
         }
         finally
         {
-            leaves.Dispose();
+            SoundProvider.Dispose(leaves);
         }
         return patch;
     }
@@ -680,7 +680,7 @@ public static class SynthPatchExtensions
         }
         finally
         {
-            leaves.Dispose();
+            SoundProvider.Dispose(leaves);
         }
         return patch;
     }
@@ -751,7 +751,7 @@ public static class SynthPatchExtensions
             }
             finally
             {
-                children.Dispose();
+                SoundProvider.Dispose(children);
             }
         }
         else
@@ -762,7 +762,7 @@ public static class SynthPatchExtensions
         if (isRoot)
         {
             // outputBuffer now contains only leaves
-            outputBuffer.Dispose();
+            SoundProvider.Dispose(outputBuffer);
         }
     }
 
@@ -789,7 +789,7 @@ public static class SynthPatchExtensions
             }
             finally
             {
-                children.Dispose();
+                SoundProvider.Dispose(children);
             }
         }
 

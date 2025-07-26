@@ -33,7 +33,7 @@ public class ScheduledNoteEvent : Recyclable
     protected override void OnReturn()
     {
         Note = null;
-        if (Patch is Recyclable r) r.TryDispose();
+        if (Patch is Recyclable r) SoundProvider.Dispose(r);
         Patch = null!;
         StartSample = 0;
         IsCancelled = false;
@@ -82,7 +82,7 @@ public class ScheduledSignalSourceMixer
 
                 scheduledNotes.Enqueue(noteEvent);
             }
-            track.Dispose();
+            SoundProvider.Dispose(track);
         }
 
         // 1. Promote any scheduled notes whose start time lands in or before this buffer
@@ -91,7 +91,7 @@ public class ScheduledSignalSourceMixer
             scheduledNotes.TryDequeue(out note);
             if (note.IsCancelled)
             {
-                SoundProvider.Current.EventLoop.Invoke(note, static n => n.TryDispose());
+                SoundProvider.Dispose(note);
                 continue;
             }
             var voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
@@ -114,7 +114,7 @@ public class ScheduledSignalSourceMixer
             }
             finally
             {
-                voices.Dispose();
+                SoundProvider.Dispose(voices);
             }
         }
 
@@ -131,12 +131,12 @@ public class ScheduledSignalSourceMixer
 
             if (noteEvent.IsCancelled)
             {
-                // Voice or note may already be disposed via other lifetimes
-                // (e.g., patch or provider).  TryDispose avoids double faults.
-                SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.TryDispose());
+                SoundProvider.Dispose(voice);
                 noteEvent.RemainingVoices--;
                 if (noteEvent.RemainingVoices <= 0)
-                    SoundProvider.Current.EventLoop.Invoke(noteEvent, static (n) => n.TryDispose());
+                {
+                    SoundProvider.Dispose(noteEvent);
+                }
                 activeVoices.RemoveAt(v);
                 continue;
             }
@@ -181,12 +181,12 @@ public class ScheduledSignalSourceMixer
 
             if (voice.IsDone)
             {
-                // SynthSignalSource.Render() or patch disposal may have already queued
-                // a cleanup.  Use TryDispose to be safe.
-                SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.TryDispose());
+                SoundProvider.Dispose(voice);
                 noteEvent.RemainingVoices--;
                 if (noteEvent.RemainingVoices <= 0)
-                    SoundProvider.Current.EventLoop.Invoke(noteEvent, static (n) => n.TryDispose());
+                {
+                    SoundProvider.Dispose(noteEvent);
+                }
                 activeVoices.RemoveAt(v);
             }
             else

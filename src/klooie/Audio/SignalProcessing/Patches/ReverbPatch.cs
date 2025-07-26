@@ -38,7 +38,7 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
         }
         finally
         {
-            leaves.Dispose();
+            SoundProvider.Dispose(leaves);
         }
         return this;
     }
@@ -73,9 +73,9 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
 
     protected override void OnReturn()
     {
-        (dry as Recyclable)?.Dispose();
+        SoundProvider.DisposeIfNotNull(dry as Recyclable);
         dry = null!;
-        (wet as Recyclable)?.Dispose();
+        SoundProvider.DisposeIfNotNull(wet as Recyclable);
         wet = null!;
         patchSettings = default;
         base.OnReturn();

@@ -189,7 +189,10 @@ public class SynthSignalSource : Recyclable
         }
 
         InitVolume(master, knob);
-        knob?.Dispose();
+        if(knob != null)
+        {
+            SoundProvider.Dispose(knob);
+        }
         this.envelope = patch.FindEnvelopeEffect().Envelope;
         envelope.Trigger(0, sampleRate);
 
@@ -485,7 +488,10 @@ public class SynthSignalSource : Recyclable
 
     protected override void OnReturn()
     {
-        sampleKnob?.TryDispose();
+        if(sampleKnob != null)
+        {
+            SoundProvider.Dispose(sampleKnob);
+        }
         sampleKnob = null;
         masterKnob = null;
         effectiveVolume = 0f;
@@ -521,9 +527,9 @@ public class SynthSignalSource : Recyclable
 
     public virtual int Render(float[] buffer, int offset, int count)
     {
-        if (isDone)
+        if (isDone || IsStillValid(Lease) == false)
         {
-            SoundProvider.Current.EventLoop.Invoke(this, Recyclable.TryDisposeMe);
+            SoundProvider.Dispose(this);
             return 0;
         }
 

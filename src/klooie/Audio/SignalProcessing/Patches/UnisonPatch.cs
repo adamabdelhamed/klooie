@@ -85,7 +85,7 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
             }
             finally
             {
-                leaves.Dispose();
+                SoundProvider.Dispose(leaves);
             }
   
         }

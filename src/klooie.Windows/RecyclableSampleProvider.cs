@@ -85,7 +85,7 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
 
     private void ScheduleDisposal()
     {
-        eventLoop.Invoke(this, static o => { TryDisposeMe(o); return Task.CompletedTask; });
+        SoundProvider.Dispose(this);
     }
 
     protected override void OnReturn()

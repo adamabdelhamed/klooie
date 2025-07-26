@@ -48,6 +48,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
             mixer = new MixingSampleProvider([sfxMixer, new SilenceProvider(new WaveFormat(SoundProvider.SampleRate, SoundProvider.BitsPerSample, SoundProvider.ChannelCount)), scheduledSynthProvider]) { ReadFully = true };
             outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 60);
+            outputDevice.PlaybackStopped += OutputDevice_PlaybackStopped;
             outputDevice.Init(mixer);
             outputDevice.Play();
             soundCache = new SoundCache(LoadSounds());
@@ -57,6 +58,16 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         catch (Exception ex)
         {
             OnSoundFailedToLoad(ex);
+        }
+    }
+
+    private void OutputDevice_PlaybackStopped(object? sender, StoppedEventArgs e)
+    {
+        if (e.Exception != null)
+        {
+#if DEBUG
+            SoundProvider.Debug($"Playback stopped with exception: {e.Exception.ToString()}".ToRed());
+#endif
         }
     }
 

@@ -277,15 +277,15 @@ Settings controlling reverb decay, diffusion, high-frequency damping, pre-filter
     {
         if (combs != null)
         {
-            foreach (var c in combs) c?.Dispose();
+            foreach (var c in combs) SoundProvider.Dispose(c);
             combs = null;
         }
         if (allpasses != null)
         {
-            foreach (var a in allpasses) a?.Dispose();
+            foreach (var a in allpasses) SoundProvider.DisposeIfNotNull(a);
             allpasses = null;
         }
-        inputFilter?.Dispose();
+        SoundProvider.DisposeIfNotNull(inputFilter);
         inputFilter = null;
         mixVelocityCurve = EffectContext.EaseLinear;
         base.OnReturn();

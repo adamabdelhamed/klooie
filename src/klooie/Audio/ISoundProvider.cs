@@ -17,6 +17,16 @@ public static class SoundProvider
     public static void Debug(ConsoleString str) => Current?.EventLoop?.Invoke(()=> ConsoleApp.Current?.WriteLine(str));
     public static void Debug(string str) => Debug(str?.ToConsoleString() ?? "null".ToRed());
     public static void Debug(object o) => Debug(o?.ToString());
+
+    public static void Dispose(Recyclable r) => Current.EventLoop.Invoke(r, static r => r.TryDispose());
+
+    public static void DisposeIfNotNull(Recyclable? r)
+    {
+        if (r != null)
+        {
+            Dispose(r);
+        }
+    }
 }
 
 

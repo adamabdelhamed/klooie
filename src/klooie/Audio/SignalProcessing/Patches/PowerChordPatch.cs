@@ -90,7 +90,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
             }
             finally
             {
-                leaves.Dispose();
+                SoundProvider.Dispose(leaves);
             }
 
         }

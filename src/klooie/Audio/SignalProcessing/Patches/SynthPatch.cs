@@ -122,9 +122,12 @@ public class SynthPatch : Recyclable, ISynthPatch
         base.OnReturn();
         for (var i = 0; i < Effects?.Count; i++)
         {
-            if (Effects[i] is Recyclable r) r.TryDispose();
+            if (Effects[i] is Recyclable r)
+            {
+               SoundProvider.Dispose(r);
+            }
         }
-        Effects.Dispose();
+        SoundProvider.Dispose(Effects);
         Effects = null!;
     }
 

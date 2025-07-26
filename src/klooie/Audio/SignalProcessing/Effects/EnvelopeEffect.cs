@@ -84,7 +84,11 @@ released.
 
     protected override void OnReturn()
     {
-        Envelope?.Dispose();
+        if(Envelope != null)
+        {
+            SoundProvider.Dispose(Envelope);
+        }
+
         Envelope = null!;
         base.OnReturn();
     }
