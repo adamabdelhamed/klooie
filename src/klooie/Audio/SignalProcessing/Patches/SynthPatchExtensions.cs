@@ -205,10 +205,9 @@ public static class SynthPatchExtensions
     }
 
     [ExtensionToEffect(typeof(PortamentoEffect))]
-    public static ISynthPatch WithPortamento(this ISynthPatch patch, float glideSeconds = 0.05f)
+    public static ISynthPatch WithPortamento(this ISynthPatch patch)
     {
-        var settings = new PortamentoEffect.Settings { GlideSeconds = glideSeconds };
-        return patch.WithEffect(PortamentoEffect.Create(in settings));
+        return patch.WithEffect(PortamentoEffect.Create());
     }
 
     [ExtensionToEffect(typeof(NoiseGateEffect))]
