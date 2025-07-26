@@ -35,6 +35,26 @@ public class SynthSignalSource : Recyclable
     private double oscPhase = 0.0;
     private double oscPhaseSub = 0.0; // For sub-oscillator
 
+    //--------------- Noise fields ---------------
+    // For Pink Noise (Paul Kellet filter)
+    private float pink_b0, pink_b1, pink_b2;
+
+    // For Brown Noise
+    private float brownLast = 0;
+
+    // For Blue Noise (differentiated white)
+    private float blueLast = 0;
+
+    // For Violet Noise (highpass on white)
+    private float violetLast = 0;
+    //---------------------------------------------
+
+    // For Sample & Hold
+    private float sAndHValue = 0;
+    private int sAndHCounter = 0;
+    private int sAndHSamplesPerHold = 100; // Change for faster/slower steps
+
+
     public bool IsDone => isDone;
 
     private static int _globalId = 1;
@@ -257,12 +277,82 @@ public class SynthSignalSource : Recyclable
                 return 2f * (sawFrac - MathF.Floor(sawFrac + 0.5f));
             case WaveformType.Noise:
                 return (float)(Random.Shared.NextDouble() * 2 - 1);
+            case WaveformType.PinkNoise:
+                return GetPinkNoiseSample(); // Implement this as a method with state
+
+            case WaveformType.BrownNoise:
+                return GetBrownNoiseSample(); // Implement this as a method with state
+
+            case WaveformType.BlueNoise:
+                return GetBlueNoiseSample(); // Implement this as a method with state
+
+            case WaveformType.VioletNoise:
+                return GetVioletNoiseSample(); // Implement this as a method with state
+
+            case WaveformType.SampleAndHoldNoise:
+                return GetSampleAndHoldNoiseSample();
             case WaveformType.PluckedString:
                 return GetPluckedSample();
             default:
                 return 0f;
         }
     }
+
+    // Pink Noise using Paul Kellet's filter (very common for synths)
+    private float GetPinkNoiseSample()
+    {
+        float white = (float)(Random.Shared.NextDouble() * 2 - 1);
+        pink_b0 = 0.99765f * pink_b0 + white * 0.0990460f;
+        pink_b1 = 0.96300f * pink_b1 + white * 0.2965164f;
+        pink_b2 = 0.57000f * pink_b2 + white * 1.0526913f;
+        return pink_b0 + pink_b1 + pink_b2 + white * 0.1848f;
+    }
+
+    // Brown Noise (integrated white, clamped to [-1,1])
+    private float GetBrownNoiseSample()
+    {
+        float white = (float)(Random.Shared.NextDouble() * 2 - 1);
+        brownLast += 0.02f * white; // 0.02f sets "roughness"
+                                    // Clamp to [-1,1]
+        if (brownLast < -1f) brownLast = -1f;
+        if (brownLast > 1f) brownLast = 1f;
+        return brownLast;
+    }
+
+    // Blue Noise (difference of consecutive white samples)
+    private float GetBlueNoiseSample()
+    {
+        float white = (float)(Random.Shared.NextDouble() * 2 - 1);
+        float blue = white - blueLast;
+        blueLast = white;
+        // Normalize amplitude
+        return Math.Clamp(blue * 2f, -1f, 1f);
+    }
+
+    // Violet Noise (difference of consecutive blue samples)
+    private float GetVioletNoiseSample()
+    {
+        float white = (float)(Random.Shared.NextDouble() * 2 - 1);
+        float blue = white - violetLast;
+        float violet = blue - (violetLast - violetLast);
+        violetLast = white;
+        // Amplitude may need scaling down
+        return Math.Clamp(violet * 4f, -1f, 1f);
+    }
+
+    // Sample & Hold Noise (holds a random value for N samples)
+    private float GetSampleAndHoldNoiseSample()
+    {
+        if (sAndHCounter <= 0)
+        {
+            sAndHValue = (float)(Random.Shared.NextDouble() * 2 - 1);
+            // sAndHSamplesPerHold can be modulated per sample rate
+            sAndHCounter = sAndHSamplesPerHold;
+        }
+        sAndHCounter--;
+        return sAndHValue;
+    }
+
 
     // Pipeline stage for main oscillator
     private float OscillatorStage(in EffectContext ctx)
@@ -349,6 +439,17 @@ public class SynthSignalSource : Recyclable
         oscPhase = 0.0;
         oscPhaseSub = 0.0;
         lfos = null;
+
+        // Reset noise state fields
+        pink_b0 = 0f;
+        pink_b1 = 0f;
+        pink_b2 = 0f;
+        brownLast = 0f;
+        blueLast = 0f;
+        violetLast = 0f;
+        sAndHValue = 0f;
+        sAndHCounter = 0;
+        sAndHSamplesPerHold = 100;
         base.OnReturn();
     }
 

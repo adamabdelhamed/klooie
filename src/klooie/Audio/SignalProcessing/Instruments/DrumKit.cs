@@ -45,7 +45,7 @@ A basic kick drum patch with a punchy attack and a short decay.
            .WithPitchBend(SnarePitchBend, SnareDecay)
            .WithVolume(1))
         .AddLayer(patch: SynthPatch.Create()
-            .WithWaveForm(WaveformType.Noise)
+            .WithWaveForm(WaveformType.VioletNoise)
             .WithEnvelope(.001f, .1f, .1f, .01f)
             .WithReverb(feedback: .95f, diffusion: .55f, damping: .7f, wet: .5f, dry: .5f, duration: .1f)
             .WithVolume(.02f))
@@ -69,8 +69,8 @@ A basic kick drum patch with a punchy attack and a short decay.
     public static ISynthPatch Clap()
     {
         var builder = LayeredPatch.CreateBuilder();
-        var attackSpacing = .04f;
-        var decayDecay = .2f;
+        var attackSpacing = .053f;
+        var decayDecay = .55f;
         var volumeDecay = .4f;
         var layers = 8;
 
@@ -82,7 +82,7 @@ A basic kick drum patch with a punchy attack and a short decay.
         for(var i = 0; i < layers; i++)
         {
             builder.AddLayer(1, 0, 0, SynthPatch.Create()
-            .WithWaveForm(WaveformType.Noise)
+            .WithWaveForm(WaveformType.PinkNoise)
             .WithEnvelope(currentAttack, currentDecay, 0.0f, 0.1f)
             .WithVolume(currentVolume)
             .WithChorus(delayMs: 22, depthMs: 15, rateHz: 4f, mix: .4f)

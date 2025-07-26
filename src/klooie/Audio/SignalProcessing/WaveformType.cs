@@ -12,5 +12,10 @@ public enum WaveformType
     Saw,
     Triangle,
     Noise,
+    PinkNoise,
+    BrownNoise, 
+    BlueNoise,
+    VioletNoise,
+    SampleAndHoldNoise,
     PluckedString,
 }
