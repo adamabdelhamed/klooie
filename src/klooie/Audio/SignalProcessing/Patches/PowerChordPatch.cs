@@ -65,7 +65,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
             patches[i] = layerPatch; }
     }
 
-    public void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note, List<SynthSignalSource> outVoices)
+    public void SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent, List<SynthSignalSource> outVoices)
     {
         int numLayers = intervals.Length;
         for (int i = 0; i < numLayers; i++)
@@ -85,7 +85,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
                 patches[i].GetAllLeafPatches(leaves);
                 foreach (var leaf in leaves.Items)
                 {
-                    outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)leaf, master, note));
+                    outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)leaf, master, noteEvent));
                 }
             }
             finally

@@ -65,10 +65,10 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
         buffer.Add(wet);
     }
 
-    public void SpawnVoices(float frequencyHz, VolumeKnob master, NoteExpression note, List<SynthSignalSource> outVoices)
+    public void SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent, List<SynthSignalSource> outVoices)
     {
-        dry.SpawnVoices(frequencyHz, master, note, outVoices);
-        wet.SpawnVoices(frequencyHz, master, note, outVoices);
+        dry.SpawnVoices(frequencyHz, master, noteEvent, outVoices);
+        wet.SpawnVoices(frequencyHz, master, noteEvent, outVoices);
     }
 
     protected override void OnReturn()
