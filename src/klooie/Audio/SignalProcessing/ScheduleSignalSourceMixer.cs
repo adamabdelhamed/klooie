@@ -91,7 +91,7 @@ public class ScheduledSignalSourceMixer
             scheduledNotes.TryDequeue(out note);
             if (note.IsCancelled)
             {
-                SoundProvider.Current.EventLoop.Invoke(note, static n => n.Dispose());
+                SoundProvider.Current.EventLoop.Invoke(note, static n => n.TryDispose());
                 continue;
             }
             var voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
@@ -131,10 +131,12 @@ public class ScheduledSignalSourceMixer
 
             if (noteEvent.IsCancelled)
             {
-                SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.Dispose());
+                // Voice or note may already be disposed via other lifetimes
+                // (e.g., patch or provider).  TryDispose avoids double faults.
+                SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.TryDispose());
                 noteEvent.RemainingVoices--;
                 if (noteEvent.RemainingVoices <= 0)
-                    SoundProvider.Current.EventLoop.Invoke(noteEvent, static (n) => n.Dispose());
+                    SoundProvider.Current.EventLoop.Invoke(noteEvent, static (n) => n.TryDispose());
                 activeVoices.RemoveAt(v);
                 continue;
             }
@@ -179,10 +181,12 @@ public class ScheduledSignalSourceMixer
 
             if (voice.IsDone)
             {
-                SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.Dispose());
+                // SynthSignalSource.Render() or patch disposal may have already queued
+                // a cleanup.  Use TryDispose to be safe.
+                SoundProvider.Current.EventLoop.Invoke(voice, static (v) => v.TryDispose());
                 noteEvent.RemainingVoices--;
                 if (noteEvent.RemainingVoices <= 0)
-                    SoundProvider.Current.EventLoop.Invoke(noteEvent, static (n) => n.Dispose());
+                    SoundProvider.Current.EventLoop.Invoke(noteEvent, static (n) => n.TryDispose());
                 activeVoices.RemoveAt(v);
             }
             else
