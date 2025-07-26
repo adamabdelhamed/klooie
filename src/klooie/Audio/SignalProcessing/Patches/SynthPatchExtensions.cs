@@ -9,7 +9,6 @@ public static class SynthPatchExtensions
 {
     // ----- Effect: applies to all leaves -----
 
-
     [ExtensionToEffect(typeof(CabinetEffect))]
     public static ISynthPatch WithCabinet(this ISynthPatch patch)
     {
@@ -51,7 +50,6 @@ public static class SynthPatchExtensions
         };
         return ReverbPatch.Create(patchSettings);
     }
-
 
     [ExtensionToEffect(typeof(DelayEffect))]
     public static ISynthPatch WithDelay(this ISynthPatch patch, int delaySamples, float feedback = .3f, float mix = .4f)
@@ -191,8 +189,8 @@ public static class SynthPatchExtensions
 
     [ExtensionToEffect(typeof(PitchBendEffect))]
     public static ISynthPatch WithPitchBend(
-    this ISynthPatch patch,
-    Func<float, float> bendFunc, float duration)
+        this ISynthPatch patch,
+        Func<float, float> bendFunc, float duration)
     {
         var settings = new PitchBendEffect.Settings
         {
@@ -406,42 +404,27 @@ public static class SynthPatchExtensions
 
     public static ISynthPatch WithEffect(this ISynthPatch patch, IEffect effect)
     {
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-        try
+        patch.ForEachLeafPatch(p =>
         {
-            patch.GetAllLeafPatches(leaves);
-            for (int i = 0; i < leaves.Items.Count; i++)
-                if (leaves.Items[i] is SynthPatch s)
-                    s.Effects.Items.Add(effect.Clone());
-        }
-        finally
-        {
-            SoundProvider.Dispose(leaves);
-        }
+            if (p is SynthPatch s)
+                s.Effects.Items.Add(effect.Clone());
+        });
         return patch;
     }
 
     [CoreEffect]
     public static ISynthPatch WithTransient(this ISynthPatch patch, float transientDurationSeconds = .01f)
     {
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-        try
+        patch.ForEachLeafPatch(p =>
         {
-            patch.GetAllLeafPatches(leaves);
-            for (int i = 0; i < leaves.Items.Count; i++)
-                if (leaves.Items[i] is SynthPatch s)
-                {
-                    s.EnableTransient = true;
-                    s.TransientDurationSeconds = transientDurationSeconds;
-                }
-        }
-        finally
-        {
-            SoundProvider.Dispose(leaves);
-        }
+            if (p is SynthPatch s)
+            {
+                s.EnableTransient = true;
+                s.TransientDurationSeconds = transientDurationSeconds;
+            }
+        });
         return patch;
     }
-
 
     [CoreEffect]
     [SynthDocumentation("""
@@ -460,231 +443,181 @@ public static class SynthPatchExtensions
     """)]
     public static ISynthPatch WithFrequencyOverride(this ISynthPatch patch, float frequency)
     {
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-        try
+        patch.ForEachLeafPatch(p =>
         {
-            patch.GetAllLeafPatches(leaves);
-            for (int i = 0; i < leaves.Items.Count; i++)
-            {
-                if (leaves.Items[i] is SynthPatch s)
-                {
-                    s.FrequencyOverride = frequency;
-                }
-            }
-        }
-        finally
-        {
-            SoundProvider.Dispose(leaves);
-        }
+            if (p is SynthPatch s)
+                s.FrequencyOverride = frequency;
+        });
         return patch;
     }
 
     [CoreEffect]
     public static ISynthPatch WithPitchDrift(this ISynthPatch patch,
-    [SynthDocumentation("""
-    The speed of the pitch drift in Hertz (Hz).  
-    This sets how quickly the pitch wobbles up and down, similar to subtle analog oscillator instability or "wow and flutter."  
-    Typical values range from 0.1 Hz (very slow, barely noticeable) to 2 Hz (more pronounced, warbly effect).  
-    Lower values give a gentle, organic feel; higher values sound more dramatic.
-    """)] float driftFrequencyHz = 0.5f,
+        [SynthDocumentation("""
+        The speed of the pitch drift in Hertz (Hz).  
+        This sets how quickly the pitch wobbles up and down, similar to subtle analog oscillator instability or "wow and flutter."  
+        Typical values range from 0.1 Hz (very slow, barely noticeable) to 2 Hz (more pronounced, warbly effect).  
+        Lower values give a gentle, organic feel; higher values sound more dramatic.
+        """)] float driftFrequencyHz = 0.5f,
 
-    [SynthDocumentation("""
-    The depth of the pitch drift in cents (1/100th of a semitone).  
-    This controls how far the pitch moves above and below the note’s true pitch.  
-    Small values (2–10 cents) mimic classic analog synth imperfections; larger values will sound more unstable or detuned.
-    """)] float driftAmountCents = 5f)
+        [SynthDocumentation("""
+        The depth of the pitch drift in cents (1/100th of a semitone).  
+        This controls how far the pitch moves above and below the note’s true pitch.  
+        Small values (2–10 cents) mimic classic analog synth imperfections; larger values will sound more unstable or detuned.
+        """)] float driftAmountCents = 5f)
     {
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-        try
+        patch.ForEachLeafPatch(p =>
         {
-            patch.GetAllLeafPatches(leaves);
-            for (int i = 0; i < leaves.Items.Count; i++)
-                if (leaves.Items[i] is SynthPatch s)
-                {
-                    s.EnablePitchDrift = true;
-                    s.DriftFrequencyHz = driftFrequencyHz;
-                    s.DriftAmountCents = driftAmountCents;
-                }
-        }
-        finally
-        {
-            SoundProvider.Dispose(leaves);
-        }
+            if (p is SynthPatch s)
+            {
+                s.EnablePitchDrift = true;
+                s.DriftFrequencyHz = driftFrequencyHz;
+                s.DriftAmountCents = driftAmountCents;
+            }
+        });
         return patch;
     }
 
     [CoreEffect]
     public static ISynthPatch WithVibrato(
-    this ISynthPatch patch,
-    [SynthDocumentation("""
-    Vibrato rate in Hertz (Hz).  
-    This sets how quickly the pitch oscillates up and down, producing a trembling effect.  
-    Common rates are 4–8 Hz for a typical synth vibrato.  
-    Lower values sound slow and gentle; higher values are more dramatic or unnatural.
-    """)] float rateHz = 5.8f,
+        this ISynthPatch patch,
+        [SynthDocumentation("""
+        Vibrato rate in Hertz (Hz).  
+        This sets how quickly the pitch oscillates up and down, producing a trembling effect.  
+        Common rates are 4–8 Hz for a typical synth vibrato.  
+        Lower values sound slow and gentle; higher values are more dramatic or unnatural.
+        """)] float rateHz = 5.8f,
 
-    [SynthDocumentation("""
-    Vibrato depth in cents (1/100th of a semitone).  
-    This controls how far the pitch moves above and below the original note.  
-    Subtle values (5–20 cents) add warmth and realism, while larger values (30+ cents) are more noticeable or stylized.
-    """)] float depthCents = 35f,
+        [SynthDocumentation("""
+        Vibrato depth in cents (1/100th of a semitone).  
+        This controls how far the pitch moves above and below the original note.  
+        Subtle values (5–20 cents) add warmth and realism, while larger values (30+ cents) are more noticeable or stylized.
+        """)] float depthCents = 35f,
 
-    [SynthDocumentation("""
-    Starting phase of the vibrato cycle, from 0 to 1 (0 = start, 0.5 = halfway, 1 = full cycle).  
-    Use this to offset the vibrato timing for unison voices or to avoid phase alignment between layers.
-    """)] float phaseOffset = 0f)
+        [SynthDocumentation("""
+        Starting phase of the vibrato cycle, from 0 to 1 (0 = start, 0.5 = halfway, 1 = full cycle).  
+        Use this to offset the vibrato timing for unison voices or to avoid phase alignment between layers.
+        """)] float phaseOffset = 0f)
     {
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-        try
+        patch.ForEachLeafPatch(p =>
         {
-            patch.GetAllLeafPatches(leaves);
-            for (int i = 0; i < leaves.Items.Count; i++)
-                if (leaves.Items[i] is SynthPatch s)
-                {
-                    s.EnableVibrato = true;
-                    s.VibratoRateHz = rateHz;
-                    s.VibratoDepthCents = depthCents;
-                    s.VibratoPhaseOffset = phaseOffset;
-                }
-        }
-        finally
-        {
-            SoundProvider.Dispose(leaves);
-        }
+            if (p is SynthPatch s)
+            {
+                s.EnableVibrato = true;
+                s.VibratoRateHz = rateHz;
+                s.VibratoDepthCents = depthCents;
+                s.VibratoPhaseOffset = phaseOffset;
+            }
+        });
         return patch;
     }
 
     [CoreEffect]
     public static ISynthPatch WithSubOscillator(
-    this ISynthPatch patch,
-    [SynthDocumentation("""
-    The level (volume) of the sub-oscillator as a fraction of the main oscillator (0–1).  
-    Higher values blend more of the deep sub-bass tone into the sound.  
-    Typical values are 0.3–0.7 for a noticeable bass boost, or set to 0 to disable.
-    """)] float subOscLevel = .5f,
+        this ISynthPatch patch,
+        [SynthDocumentation("""
+        The level (volume) of the sub-oscillator as a fraction of the main oscillator (0–1).  
+        Higher values blend more of the deep sub-bass tone into the sound.  
+        Typical values are 0.3–0.7 for a noticeable bass boost, or set to 0 to disable.
+        """)] float subOscLevel = .5f,
 
-    [SynthDocumentation("""
-    The pitch offset for the sub-oscillator, in octaves.  
-    Negative values (like -1) shift the sub-oscillator down one octave for classic fat bass.  
-    0 keeps it at the same pitch as the main oscillator, while +1 raises it one octave.
-    """)] int subOscOctaveOffset = -1)
+        [SynthDocumentation("""
+        The pitch offset for the sub-oscillator, in octaves.  
+        Negative values (like -1) shift the sub-oscillator down one octave for classic fat bass.  
+        0 keeps it at the same pitch as the main oscillator, while +1 raises it one octave.
+        """)] int subOscOctaveOffset = -1)
     {
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-        try
+        patch.ForEachLeafPatch(p =>
         {
-            patch.GetAllLeafPatches(leaves);
-            for (int i = 0; i < leaves.Items.Count; i++)
-                if (leaves.Items[i] is SynthPatch s)
-                {
-                    s.SubOscLevel = subOscLevel;
-                    s.SubOscOctaveOffset = subOscOctaveOffset;
-                }
-        }
-        finally
-        {
-            SoundProvider.Dispose(leaves);
-        }
+            if (p is SynthPatch s)
+            {
+                s.SubOscLevel = subOscLevel;
+                s.SubOscOctaveOffset = subOscOctaveOffset;
+            }
+        });
         return patch;
     }
 
     [CoreEffect]
     public static ISynthPatch WithLFO(
-    this ISynthPatch patch,
-    [SynthDocumentation("""
-    The destination parameter modulated by the LFO.  
-    Common targets include pitch, filter cutoff, amplitude (tremolo), and pan.
-    """)] SynthSignalSource.LfoTarget target,
+        this ISynthPatch patch,
+        [SynthDocumentation("""
+        The destination parameter modulated by the LFO.  
+        Common targets include pitch, filter cutoff, amplitude (tremolo), and pan.
+        """)] SynthSignalSource.LfoTarget target,
 
-    [SynthDocumentation("""
-    The speed of the LFO cycle, in Hertz (Hz).  
-    Typical values range from very slow (0.1 Hz, for gradual sweeps) to fast (10+ Hz, for FM or AM effects).
-    """)] float rateHz,
+        [SynthDocumentation("""
+        The speed of the LFO cycle, in Hertz (Hz).  
+        Typical values range from very slow (0.1 Hz, for gradual sweeps) to fast (10+ Hz, for FM or AM effects).
+        """)] float rateHz,
 
-    [SynthDocumentation("""
-    How strongly the LFO modulates the target parameter.  
-    The exact range depends on the target (e.g., cents for pitch, dB for volume, percent for pan).
-    """)] float depth,
+        [SynthDocumentation("""
+        How strongly the LFO modulates the target parameter.  
+        The exact range depends on the target (e.g., cents for pitch, dB for volume, percent for pan).
+        """)] float depth,
 
-    [SynthDocumentation("""
-    LFO waveform shape.  
-    0 = Sine, 1 = Triangle, 2 = Square, 3 = Sawtooth, etc.  
-    Each shape produces a distinct modulation character.
-    """)] int shape = 0,
+        [SynthDocumentation("""
+        LFO waveform shape.  
+        0 = Sine, 1 = Triangle, 2 = Square, 3 = Sawtooth, etc.  
+        Each shape produces a distinct modulation character.
+        """)] int shape = 0,
 
-    [SynthDocumentation("""
-    Starting phase of the LFO (0 = beginning of cycle, 1 = end).  
-    Useful for stereo or layered sounds to prevent phase alignment and create motion.
-    """)] float phaseOffset = 0f,
+        [SynthDocumentation("""
+        Starting phase of the LFO (0 = beginning of cycle, 1 = end).  
+        Useful for stereo or layered sounds to prevent phase alignment and create motion.
+        """)] float phaseOffset = 0f,
 
-    [SynthDocumentation("""
-    If true, the velocity of the note will scale the depth of the LFO.  
-    This makes harder-played notes more strongly modulated, for expressive or dynamic effects.
-    """)] bool velocityAffectsDepth = false,
+        [SynthDocumentation("""
+        If true, the velocity of the note will scale the depth of the LFO.  
+        This makes harder-played notes more strongly modulated, for expressive or dynamic effects.
+        """)] bool velocityAffectsDepth = false,
 
-    [SynthDocumentation("""
-    Optional function to map velocity (0–1) to an LFO depth multiplier.  
-    Use this for custom dynamic response curves beyond linear scaling.
-    """)] Func<float, float>? depthVelocityCurve = null)
+        [SynthDocumentation("""
+        Optional function to map velocity (0–1) to an LFO depth multiplier.  
+        Use this for custom dynamic response curves beyond linear scaling.
+        """)] Func<float, float>? depthVelocityCurve = null)
     {
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-        try
+        patch.ForEachLeafPatch(p =>
         {
-            patch.GetAllLeafPatches(leaves);
-            for (int i = 0; i < leaves.Items.Count; i++)
+            if (p is SynthPatch s)
             {
-                if (leaves.Items[i] is SynthPatch s)
+                var lfo = new SynthSignalSource.LfoSettings
                 {
-                    var lfo = new SynthSignalSource.LfoSettings
-                    {
-                        Target = target,
-                        RateHz = rateHz,
-                        Depth = depth,
-                        Shape = shape,
-                        PhaseOffset = phaseOffset,
-                        VelocityAffectsDepth = velocityAffectsDepth,
-                        DepthVelocityCurve = depthVelocityCurve
-                    };
-                    s.Lfos.Add(lfo);
-                }
+                    Target = target,
+                    RateHz = rateHz,
+                    Depth = depth,
+                    Shape = shape,
+                    PhaseOffset = phaseOffset,
+                    VelocityAffectsDepth = velocityAffectsDepth,
+                    DepthVelocityCurve = depthVelocityCurve
+                };
+                s.Lfos.Add(lfo);
             }
-        }
-        finally
-        {
-            SoundProvider.Dispose(leaves);
-        }
+        });
         return patch;
     }
-
 
     [CoreEffect]
     public static ISynthPatch WithWaveForm(
-    this ISynthPatch patch,
-    [SynthDocumentation("""
-    The type of oscillator waveform to use.  
-    Common types:  
-    - Sine: Smooth, pure tone  
-    - Triangle: Soft, flute-like  
-    - Saw: Bright, buzzy, good for synth leads  
-    - Square: Hollow, woody, good for basses  
-    - PluckedString: Physical model for guitar/bass/plucked instruments  
-    Each waveform has its own overtone spectrum and character.
-    """)] WaveformType waveform)
+        this ISynthPatch patch,
+        [SynthDocumentation("""
+        The type of oscillator waveform to use.  
+        Common types:  
+        - Sine: Smooth, pure tone  
+        - Triangle: Soft, flute-like  
+        - Saw: Bright, buzzy, good for synth leads  
+        - Square: Hollow, woody, good for basses  
+        - PluckedString: Physical model for guitar/bass/plucked instruments  
+        Each waveform has its own overtone spectrum and character.
+        """)] WaveformType waveform)
     {
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-        try
+        patch.ForEachLeafPatch(p =>
         {
-            patch.GetAllLeafPatches(leaves);
-            for (int i = 0; i < leaves.Items.Count; i++)
-                if (leaves.Items[i] is SynthPatch s)
-                    s.Waveform = waveform;
-        }
-        finally
-        {
-            SoundProvider.Dispose(leaves);
-        }
+            if (p is SynthPatch s)
+                s.Waveform = waveform;
+        });
         return patch;
     }
-
 
     [ExtensionToEffect(typeof(CompressorEffect))]
     public static ISynthPatch WithCompressor(this ISynthPatch patch, float threshold = 0.5f, float ratio = 4f, float attackMs = 0.01f, float releaseMs = 0.05f)
@@ -726,102 +659,42 @@ public static class SynthPatchExtensions
         return ret;
     }
 
-
     // ----- Utility -----
 
-    public static void GetAllLeafPatches(this ISynthPatch patch, RecyclableList<ISynthPatch>? outputBuffer = null)
+    public static void ForEachLeafPatch(this ISynthPatch patch, Action<ISynthPatch> action)
     {
-        bool isRoot = false;
-        if (outputBuffer == null)
-        {
-            isRoot = true;
-            outputBuffer = RecyclableListPool<ISynthPatch>.Instance.Rent(20);
-        }
-
         if (patch is ICompositePatch composite)
         {
-            var children = RecyclableListPool<ISynthPatch>.Instance.Rent(8);
-            try
+            foreach (var child in composite.GetPatches())
             {
-                composite.GetPatches(children.Items);
-                for (int i = 0; i < children.Items.Count; i++)
-                {
-                    children.Items[i].GetAllLeafPatches(outputBuffer);
-                }
-            }
-            finally
-            {
-                SoundProvider.Dispose(children);
+                child.ForEachLeafPatch(action);
             }
         }
         else
         {
-            outputBuffer.Items.Add(patch);
-        }
-
-        if (isRoot)
-        {
-            // outputBuffer now contains only leaves
-            SoundProvider.Dispose(outputBuffer);
+            action(patch);
         }
     }
 
-    public static SynthPatch? GetLeafSynthPatch(this ISynthPatch patch)
-    {
-        if (patch is SynthPatch s)
-            return s;
-
-        if (patch is ICompositePatch composite)
-        {
-            var children = RecyclableListPool<ISynthPatch>.Instance.Rent(8);
-            try
-            {
-                composite.GetPatches(children.Items);
-
-                for (int i = 0; i < children.Items.Count; i++)
-                {
-                    var leaf = children.Items[i].GetLeafSynthPatch();
-                    if (leaf != null)
-                    {
-                        return leaf;
-                    }
-                }
-            }
-            finally
-            {
-                SoundProvider.Dispose(children);
-            }
-        }
-
-        return null;
-    }
-
-
-
-    private static RecyclableList<ISynthPatch> envelopeBuffer = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
-
+ 
     public static EnvelopeEffect? FindEnvelopeEffect(this ISynthPatch patch)
     {
-        envelopeBuffer.Items.Clear();
-        patch.GetAllLeafPatches(envelopeBuffer);
-
-        for (int i = 0; i < envelopeBuffer.Items.Count; i++)
+        EnvelopeEffect ret = null;
+        patch.ForEachLeafPatch(leaf =>
         {
-            if (envelopeBuffer.Items[i] is SynthPatch s && s.Effects.Items != null)
+            if (leaf is SynthPatch s && s.Effects.Items != null)
             {
                 for (int j = 0; j < s.Effects.Items.Count; j++)
                 {
                     if (s.Effects.Items[j] is EnvelopeEffect env)
                     {
-                        return env;
+                        ret = env;
+                        return;
                     }
                 }
             }
-        }
+        });
 
-        return null;
+        return ret;
     }
-
 }
-
-

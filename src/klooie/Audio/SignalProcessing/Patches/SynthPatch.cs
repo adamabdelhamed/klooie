@@ -8,13 +8,13 @@ using static klooie.SynthSignalSource;
 namespace klooie;
 public interface ICompositePatch : ISynthPatch 
 {
-    void GetPatches(List<ISynthPatch> buffer);
+    IEnumerable<ISynthPatch> GetPatches();
 }
 
 public interface ISynthPatch
 {
     bool IsNotePlayable(int midiNote) => true;  // default: always playable
-    void SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent, List<SynthSignalSource> outVoices);
+    IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent);
     ISynthPatch Clone();
 }
 
@@ -131,11 +131,11 @@ public class SynthPatch : Recyclable, ISynthPatch
         Effects = null!;
     }
 
-    public virtual void SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent, List<SynthSignalSource> outVoices)
+    public virtual IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent)
     {
         var innerVoice = SynthSignalSource.Create(frequencyHz, this, master, noteEvent);
         this.OnDisposed(innerVoice, Recyclable.TryDisposeMe);
-        outVoices.Add(innerVoice);
+        yield return innerVoice;
     }
 }
 

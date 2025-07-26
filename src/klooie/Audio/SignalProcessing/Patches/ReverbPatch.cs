@@ -25,21 +25,14 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
         this.dry = s.BasePatch ?? throw new ArgumentNullException(nameof(s.BasePatch));
         this.wet = dry.Clone();
         this.patchSettings = s;
-        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(8);
-        try
+
+        wet.ForEachLeafPatch(leaf =>
         {
-            wet.GetAllLeafPatches(leaves);
-            foreach (var leaf in leaves.Items)
-            {
-                if (leaf is SynthPatch wetLeaf == false) continue;
-                ReplaceEnvelopeWithLongerRelease(wetLeaf);
-                wetLeaf.Effects.Items.Add(ReverbEffect.Create(s.EffectSettings));
-            }
-        }
-        finally
-        {
-            SoundProvider.Dispose(leaves);
-        }
+            if (leaf is SynthPatch wetLeaf == false) return;
+            ReplaceEnvelopeWithLongerRelease(wetLeaf);
+            wetLeaf.Effects.Items.Add(ReverbEffect.Create(s.EffectSettings));
+        });
+     
         return this;
     }
 
@@ -59,16 +52,22 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
         if(wet.Effects.OfType<EnvelopeEffect>().Count() != 1) throw new InvalidOperationException("ReverbPatch requires a single EnvelopeEffect in the base patch.");
     }
 
-    public void GetPatches(List<ISynthPatch> buffer)
+    public IEnumerable<ISynthPatch> GetPatches()
     {
-        buffer.Add(dry);
-        buffer.Add(wet);
+        yield return dry;
+        yield return wet;
     }
 
-    public void SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent, List<SynthSignalSource> outVoices)
+    public IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent)
     {
-        dry.SpawnVoices(frequencyHz, master, noteEvent, outVoices);
-        wet.SpawnVoices(frequencyHz, master, noteEvent, outVoices);
+        foreach(var voice in dry.SpawnVoices(frequencyHz, master, noteEvent))
+        {
+            yield return voice;
+        }
+        foreach(var voice in wet.SpawnVoices(frequencyHz, master, noteEvent))
+        {
+            yield return voice;
+        }
     }
 
     protected override void OnReturn()

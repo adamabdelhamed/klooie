@@ -20,9 +20,9 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
     private static LazyPool<PowerChordPatch> _pool = new(() => new PowerChordPatch());
 
     private ISynthPatch[] patches;
-    public void GetPatches(List<ISynthPatch> patches)
+    public IEnumerable<ISynthPatch> GetPatches()
     {
-        patches.AddRange(this.patches);
+        return patches;
     }
 
     private PowerChordPatch() { }
@@ -65,9 +65,10 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
             patches[i] = layerPatch; }
     }
 
-    public void SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent, List<SynthSignalSource> outVoices)
+    public IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent)
     {
         int numLayers = intervals.Length;
+        List<SynthSignalSource> ret = new List<SynthSignalSource>();
         for (int i = 0; i < numLayers; i++)
         {
             int interval = intervals[i];
@@ -79,21 +80,12 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 
             float freq = frequencyHz * MathF.Pow(2f, interval / 12.0f) * MathF.Pow(2f, detune / 1200.0f);
 
-            var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(8);
-            try
+            patches[i].ForEachLeafPatch(leaf =>
             {
-                patches[i].GetAllLeafPatches(leaves);
-                foreach (var leaf in leaves.Items)
-                {
-                    outVoices.Add(SynthSignalSource.Create(freq, (SynthPatch)leaf, master, noteEvent));
-                }
-            }
-            finally
-            {
-                SoundProvider.Dispose(leaves);
-            }
-
+                ret.Add(SynthSignalSource.Create(freq, (SynthPatch)leaf, master, noteEvent));
+            });
         }
+        return ret;
     }
 
     protected override void OnReturn()

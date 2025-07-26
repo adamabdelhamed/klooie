@@ -58,8 +58,7 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
         return a;
     }
 
-    public void GetPatches(List<ISynthPatch> patches)
-        => patches.AddRange(layers);
+    public IEnumerable<ISynthPatch> GetPatches() => layers;
 
     public bool IsNotePlayable(int midiNote)
     {
@@ -69,11 +68,10 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
         return false;
     }
 
-    public void SpawnVoices(
+    public IEnumerable<SynthSignalSource> SpawnVoices(
         float freq,
         VolumeKnob master,
-        ScheduledNoteEvent noteEvent,
-        List<SynthSignalSource> outVoices)
+        ScheduledNoteEvent noteEvent)
     {
         for (int i = 0; i < layers.Length; i++)
         {
@@ -81,7 +79,10 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
                 ? freq
                 : freq * MathF.Pow(2f, layerTransposes[i] / 12f);
 
-            layers[i].SpawnVoices(transFreq, master, noteEvent, outVoices);
+            foreach (var voice in layers[i].SpawnVoices(transFreq, master, noteEvent))
+            {
+                yield return voice;
+            }
         }
     }
 

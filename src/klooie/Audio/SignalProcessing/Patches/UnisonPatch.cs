@@ -21,9 +21,9 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
     private static LazyPool<UnisonPatch> _pool = new(() => new UnisonPatch());
 
     private ISynthPatch[] _innerPatches;
-    public void GetPatches(List<ISynthPatch> patches)
-    {
-        patches.AddRange(_innerPatches);
+    public IEnumerable<ISynthPatch> GetPatches()
+    { 
+        return _innerPatches;
     }
 
     private UnisonPatch() { }
@@ -58,37 +58,28 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
         }
     }
 
-    public void SpawnVoices(
+    public IEnumerable<SynthSignalSource> SpawnVoices(
         float frequencyHz,
         VolumeKnob master,
-        ScheduledNoteEvent noteEvent,
-        List<SynthSignalSource> outVoices)
+        ScheduledNoteEvent noteEvent)
     {
+        var ret = new List<SynthSignalSource>();
         for (int i = 0; i < numVoices; i++)
         {
             float rel = (i - (numVoices - 1) / 2.0f);
             float detune = rel * detuneCents / Math.Max(numVoices - 1, 1);
             float pan = rel * panSpread / Math.Max(numVoices - 1, 1);
             float detunedFreq = frequencyHz * MathF.Pow(2f, detune / 1200f);
-
-            var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(8);
-            try
+             
+            _innerPatches[i].ForEachLeafPatch((leaf) =>
             {
-                _innerPatches[i].GetAllLeafPatches(leaves);
-                foreach (var leaf in leaves.Items)
+                if (leaf is SynthPatch synthLeaf)
                 {
-                    if (leaf is SynthPatch synthLeaf)
-                    {
-                        outVoices.Add(SynthSignalSource.Create(detunedFreq, synthLeaf, master, noteEvent));
-                    }
+                    ret.Add(SynthSignalSource.Create(detunedFreq, synthLeaf, master, noteEvent));
                 }
-            }
-            finally
-            {
-                SoundProvider.Dispose(leaves);
-            }
-  
+            });  
         }
+        return ret;
     }
 
     protected override void OnReturn()

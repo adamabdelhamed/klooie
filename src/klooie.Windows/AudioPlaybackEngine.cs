@@ -92,7 +92,10 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         try
         {
             var tempEvent = ScheduledNoteEvent.Create(note, patch);
-            patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), MasterVolume, tempEvent, voices.Items);
+            foreach (var voice in patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), MasterVolume, tempEvent))
+            {
+                voices.Items.Add(voice);
+            }
             VoiceCountTracker.Track(voices.Items);
             action(patch, voices);
             tempEvent.Dispose();

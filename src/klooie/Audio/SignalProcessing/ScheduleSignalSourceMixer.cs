@@ -94,28 +94,20 @@ public class ScheduledSignalSourceMixer
                 SoundProvider.Dispose(note);
                 continue;
             }
-            var voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
-            try
-            {
-                note.Patch.SpawnVoices(
+          
+                var voices =note.Patch.SpawnVoices(
                     NoteExpression.MidiNoteToFrequency(note.Note.MidiNote),
                     SoundProvider.Current.MasterVolume,
-                    note,
-                    voices.Items);
-                note.RemainingVoices = voices.Count;
+                    note).ToArray();
+                note.RemainingVoices = voices.Length;
 
                 int durSamples = (int)(note.DurationSeconds * SoundProvider.SampleRate);
                 long releaseSample = note.StartSample + durSamples;
 
-                for (int i = 0; i < voices.Items.Count; i++)
+                for (int i = 0; i < voices.Length; i++)
                 {
-                    activeVoices.Add(new ActiveVoice(note, voices.Items[i], 0, releaseSample));
-                }
-            }
-            finally
-            {
-                SoundProvider.Dispose(voices);
-            }
+                    activeVoices.Add(new ActiveVoice(note, voices[i], 0, releaseSample));
+                }    
         }
 
         Array.Clear(buffer, offset, count);
