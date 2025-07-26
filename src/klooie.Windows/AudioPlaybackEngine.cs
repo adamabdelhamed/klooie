@@ -47,7 +47,6 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             sfxMixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
             mixer = new MixingSampleProvider([sfxMixer, new SilenceProvider(new WaveFormat(SoundProvider.SampleRate, SoundProvider.BitsPerSample, SoundProvider.ChannelCount)), scheduledSynthProvider]) { ReadFully = true };
-
             outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 60);
             outputDevice.Init(mixer);
             outputDevice.Play();
@@ -195,8 +194,15 @@ public class SilenceProvider : ISampleProvider
 {
     public WaveFormat WaveFormat { get; }
     public SilenceProvider(WaveFormat format) => WaveFormat = format;
+    bool once = false;
     public int Read(float[] buffer, int offset, int count)
     {
+        if(once == false)
+        {
+            Thread.CurrentThread.Name = "AudioPlayback";
+            Thread.CurrentThread.Priority = ThreadPriority.Highest;
+            once = true;
+        }
         Array.Clear(buffer, offset, count);
         return count;
     }
