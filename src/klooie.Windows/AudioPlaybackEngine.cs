@@ -109,7 +109,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
     public void Play(Song song, ILifetime? lifetime = null)
     {
-        RecyclableList<ScheduledNoteEvent> track = RecyclableListPool<ScheduledNoteEvent>.Instance.Rent(song.Count);
+        RecyclableList<ScheduledNoteEvent> track = RecyclableListPool<ScheduledNoteEvent>.Instance.Rent(song.Count * 8);
         for (int i = 0; i < song.Count; i++)
         {
             var note = song[i];
