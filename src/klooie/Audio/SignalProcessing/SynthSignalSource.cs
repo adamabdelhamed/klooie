@@ -7,7 +7,6 @@ namespace klooie;
 public class SynthSignalSource : Recyclable
 {
     private static readonly LazyPool<SynthSignalSource> _pool = new(() => new SynthSignalSource());
-
     // DSP & signal state
     private float frequency;
     private double sampleRate;
@@ -114,10 +113,49 @@ public class SynthSignalSource : Recyclable
     private NoteExpression note => noteEvent.Note;
     private EffectContext ctx;
 
+    // === Performance constants / LUTs ===
+    private const float INV_TWO_PI = 1f / (2f * MathF.PI);
+    private const float LN2 = 0.69314718056f;
+    private const int SIN_LUT_SIZE = 2048;
+    private static readonly float[] _sinLut = CreateSinLut();
+    private static float[] CreateSinLut()
+    {
+        var lut = new float[SIN_LUT_SIZE + 1];
+        for (int i = 0; i <= SIN_LUT_SIZE; i++)
+        {
+            float t = i / (float)SIN_LUT_SIZE;
+            lut[i] = MathF.Sin(2f * MathF.PI * t);
+        }
+        return lut;
+    }
+    private static float FastSin01(float t) // t in [0,1)
+    {
+        float x = t * SIN_LUT_SIZE;
+        int i = (int)x;
+        float frac = x - i;
+        float a = _sinLut[i];
+        float b = _sinLut[i + 1];
+        return a + (b - a) * frac;
+    }
+    private static float FastSin(float radians)
+    {
+        float t = radians * INV_TWO_PI;
+        t -= MathF.Floor(t);
+        return FastSin01(t);
+    }
+
+    // Cached per-instance rates
+    private float invSampleRateF;
+    private double twoPiOverSampleRate;
+    private float subOscMul;
+
     protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, ScheduledNoteEvent noteEvent, VolumeKnob? knob)
     {
         frequency = patch.FrequencyOverride.HasValue ? patch.FrequencyOverride.Value : frequencyHz;
         sampleRate = 44100;
+        invSampleRateF = 1f / (float)sampleRate;
+        twoPiOverSampleRate = 2.0 * Math.PI / sampleRate;
+        subOscMul = (float)Math.Pow(2, patch.SubOscOctaveOffset);
         time = 0;
         filteredSample = 0;
         this.patch = patch;
@@ -202,7 +240,7 @@ public class SynthSignalSource : Recyclable
     // Sub oscillator: pass in the sub-phase accumulator, frequency, and always sine wave
     private float OscillateSub()
     {
-        float subFreq = frequency * (float)Math.Pow(2, patch.SubOscOctaveOffset);
+        float subFreq = frequency * subOscMul;
         return Oscillate(ref oscPhaseSub, subFreq, WaveformType.Sine);
     }
 
@@ -213,13 +251,13 @@ public class SynthSignalSource : Recyclable
 
         // Pitch Drift (only for main oscillator)
         if (wave == patch.Waveform && patch.EnablePitchDrift)
-            totalCents += patch.DriftAmountCents * MathF.Sin(driftPhase + driftRandomOffset);
+            totalCents += patch.DriftAmountCents * FastSin(driftPhase + driftRandomOffset);
 
         // Vibrato LFO (only for main oscillator)
         if (wave == patch.Waveform && patch.EnableVibrato)
         {
             float vibratoPhase = 2 * MathF.PI * patch.VibratoRateHz * time + patch.VibratoPhaseOffset;
-            totalCents += MathF.Sin(vibratoPhase) * patch.VibratoDepthCents;
+            totalCents += FastSin(vibratoPhase) * patch.VibratoDepthCents;
         }
 
         if (pitchMods != null && wave == patch.Waveform)
@@ -239,11 +277,11 @@ public class SynthSignalSource : Recyclable
                 var st = lfos[i];
                 if (st.Settings.Target == LfoTarget.Pitch)
                 {
-                    float lfo = 0f;
+                    float lfo;
                     if (st.Settings.Shape == 0)
-                        lfo = MathF.Sin(2 * MathF.PI * st.Phase);
+                        lfo = FastSin01(st.Phase);
                     else
-                        lfo = 2f * MathF.Abs(2f * (st.Phase - MathF.Floor(st.Phase + 0.5f))) - 1f;
+                        lfo = 1f - 4f * MathF.Abs(st.Phase - 0.5f);
 
                     float lfoDepth = st.Settings.Depth;
                     if (st.Settings.VelocityAffectsDepth)
@@ -254,48 +292,66 @@ public class SynthSignalSource : Recyclable
             }
         }
 
-        float modulatedFrequency = freq * MathF.Pow(2f, totalCents / 1200f);
+        // freq * 2^(cents/1200)  ==>  freq * exp(ln(2) * cents/1200)
+        float modulatedFrequency = freq * MathF.Exp(LN2 * (totalCents * (1f / 1200f)));
 
         driftPhase += driftPhaseIncrement;
 
         // Phase accumulator step
-        double phaseIncr = 2.0 * Math.PI * modulatedFrequency / sampleRate;
-        phase += phaseIncr;
-        if (phase > 2.0 * Math.PI) phase -= 2.0 * Math.PI;
-        if (phase < 0) phase += 2.0 * Math.PI;
+        phase += twoPiOverSampleRate * modulatedFrequency;
+        if (phase >= 2.0 * Math.PI) phase -= 2.0 * Math.PI;
 
-        switch (wave)
+        // Waveform generation (if-else to minimize switch overhead)
+        if (wave == WaveformType.Sine)
         {
-            case WaveformType.Sine:
-                return (float)Math.Sin(phase);
-            case WaveformType.Square:
-                return MathF.Sign(MathF.Sin((float)phase));
-            case WaveformType.Triangle:
-                float frac = (float)(phase / (2.0 * Math.PI));
-                return 2f * MathF.Abs(2f * (frac % 1f) - 1f) - 1f;
-            case WaveformType.Saw:
-                float sawFrac = (float)(phase / (2.0 * Math.PI));
-                return 2f * (sawFrac - MathF.Floor(sawFrac + 0.5f));
-            case WaveformType.Noise:
-                return (float)(Random.Shared.NextDouble() * 2 - 1);
-            case WaveformType.PinkNoise:
-                return GetPinkNoiseSample(); // Implement this as a method with state
-
-            case WaveformType.BrownNoise:
-                return GetBrownNoiseSample(); // Implement this as a method with state
-
-            case WaveformType.BlueNoise:
-                return GetBlueNoiseSample(); // Implement this as a method with state
-
-            case WaveformType.VioletNoise:
-                return GetVioletNoiseSample(); // Implement this as a method with state
-
-            case WaveformType.SampleAndHoldNoise:
-                return GetSampleAndHoldNoiseSample();
-            case WaveformType.PluckedString:
-                return GetPluckedSample();
-            default:
-                return 0f;
+            return FastSin((float)phase);
+        }
+        else if (wave == WaveformType.Square)
+        {
+            float s = FastSin((float)phase);
+            return s >= 0f ? 1f : -1f;
+        }
+        else if (wave == WaveformType.Triangle)
+        {
+            float t = (float)(phase * INV_TWO_PI);
+            return 1f - 4f * MathF.Abs(t - 0.5f);
+        }
+        else if (wave == WaveformType.Saw)
+        {
+            float t = (float)(phase * INV_TWO_PI);
+            return (t + t) - 1f;
+        }
+        else if (wave == WaveformType.Noise)
+        {
+            return (float)(Random.Shared.NextDouble() * 2 - 1);
+        }
+        else if (wave == WaveformType.PinkNoise)
+        {
+            return GetPinkNoiseSample();
+        }
+        else if (wave == WaveformType.BrownNoise)
+        {
+            return GetBrownNoiseSample();
+        }
+        else if (wave == WaveformType.BlueNoise)
+        {
+            return GetBlueNoiseSample();
+        }
+        else if (wave == WaveformType.VioletNoise)
+        {
+            return GetVioletNoiseSample();
+        }
+        else if (wave == WaveformType.SampleAndHoldNoise)
+        {
+            return GetSampleAndHoldNoiseSample();
+        }
+        else if (wave == WaveformType.PluckedString)
+        {
+            return GetPluckedSample();
+        }
+        else
+        {
+            return 0f;
         }
     }
 
@@ -451,6 +507,12 @@ public class SynthSignalSource : Recyclable
         sAndHValue = 0f;
         sAndHCounter = 0;
         sAndHSamplesPerHold = 100;
+
+        // Reset cached rates
+        invSampleRateF = 0f;
+        twoPiOverSampleRate = 0.0;
+        subOscMul = 0f;
+
         base.OnReturn();
     }
 
@@ -479,11 +541,11 @@ public class SynthSignalSource : Recyclable
                 for (int i = 0; i < lfos.Length; i++)
                 {
                     var st = lfos[i];
-                    float lfo = 0f;
+                    float lfo;
                     if (st.Settings.Shape == 0)
-                        lfo = MathF.Sin(2 * MathF.PI * st.Phase);
+                        lfo = FastSin01(st.Phase);
                     else
-                        lfo = 2f * MathF.Abs(2f * (st.Phase - MathF.Floor(st.Phase + 0.5f))) - 1f;
+                        lfo = 1f - 4f * MathF.Abs(st.Phase - 0.5f);
 
                     float lfoDepth = st.Settings.Depth;
                     if (st.Settings.VelocityAffectsDepth)
@@ -534,7 +596,7 @@ public class SynthSignalSource : Recyclable
             buffer[offset + n] = left;
             buffer[offset + n + 1] = right;
 
-            localTime += 1f / (float)sampleRate;
+            localTime += invSampleRateF;
             samplesWritten += 2;
 
             if (envelope.IsDone(time))
