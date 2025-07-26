@@ -44,8 +44,9 @@ public class SynthSignalSource : Recyclable
     // For Blue Noise (differentiated white)
     private float blueLast = 0;
 
-    // For Violet Noise (highpass on white)
-    private float violetLast = 0;
+    // For Violet Noise (difference of consecutive blue samples)
+    private float violetLastWhite = 0;
+    private float violetLastBlue = 0;
     //---------------------------------------------
 
     // For Sample & Hold
@@ -115,8 +116,8 @@ public class SynthSignalSource : Recyclable
 
     // === Performance constants / LUTs ===
     private const float INV_TWO_PI = 1f / (2f * MathF.PI);
-    private const float LN2 = 0.69314718056f;
-    private const int SIN_LUT_SIZE = 2048;
+    private static readonly float LN2 = MathF.Log(2f);
+    private const int SIN_LUT_SIZE = 2048;    // LUT size impacts sine accuracy
     private static readonly float[] _sinLut = CreateSinLut();
     private static float[] CreateSinLut()
     {
@@ -128,19 +129,19 @@ public class SynthSignalSource : Recyclable
         }
         return lut;
     }
-    private static float FastSin01(float t) // t in [0,1)
+    private static float FastSin01(float t) // t should be in [0,1)
     {
         float x = t * SIN_LUT_SIZE;
         int i = (int)x;
-        float frac = x - i;
+        float frac = x - i; // frac should never be >1 if t in range
         float a = _sinLut[i];
-        float b = _sinLut[i + 1];
+        float b = _sinLut[i + 1]; // assumes i + 1 < lut length
         return a + (b - a) * frac;
     }
     private static float FastSin(float radians)
     {
         float t = radians * INV_TWO_PI;
-        t -= MathF.Floor(t);
+        t -= MathF.Floor(t); // wrap angle to [0,1)
         return FastSin01(t);
     }
 
@@ -155,7 +156,7 @@ public class SynthSignalSource : Recyclable
         sampleRate = 44100;
         invSampleRateF = 1f / (float)sampleRate;
         twoPiOverSampleRate = 2.0 * Math.PI / sampleRate;
-        subOscMul = (float)Math.Pow(2, patch.SubOscOctaveOffset);
+        subOscMul = (float)Math.Pow(2, patch.SubOscOctaveOffset); // precompute sub-osc factor
         time = 0;
         filteredSample = 0;
         this.patch = patch;
@@ -299,16 +300,16 @@ public class SynthSignalSource : Recyclable
 
         // Phase accumulator step
         phase += twoPiOverSampleRate * modulatedFrequency;
-        if (phase >= 2.0 * Math.PI) phase -= 2.0 * Math.PI;
+        if (phase >= 2.0 * Math.PI) phase -= 2.0 * Math.PI; // assumes phase never negative
 
         // Waveform generation (if-else to minimize switch overhead)
         if (wave == WaveformType.Sine)
         {
-            return FastSin((float)phase);
+            return FastSin((float)phase); // LUT approximation
         }
         else if (wave == WaveformType.Square)
         {
-            float s = FastSin((float)phase);
+            float s = FastSin((float)phase); // LUT approximation
             return s >= 0f ? 1f : -1f;
         }
         else if (wave == WaveformType.Triangle)
@@ -382,7 +383,7 @@ public class SynthSignalSource : Recyclable
         float white = (float)(Random.Shared.NextDouble() * 2 - 1);
         float blue = white - blueLast;
         blueLast = white;
-        // Normalize amplitude
+        // Normalize amplitude (2x gain chosen empirically)
         return Math.Clamp(blue * 2f, -1f, 1f);
     }
 
@@ -390,10 +391,11 @@ public class SynthSignalSource : Recyclable
     private float GetVioletNoiseSample()
     {
         float white = (float)(Random.Shared.NextDouble() * 2 - 1);
-        float blue = white - violetLast;
-        float violet = blue - (violetLast - violetLast);
-        violetLast = white;
-        // Amplitude may need scaling down
+        float blue = white - violetLastWhite;
+        float violet = blue - violetLastBlue;
+        violetLastWhite = white;
+        violetLastBlue = blue;
+        // Normalize amplitude (4x gain chosen empirically)
         return Math.Clamp(violet * 4f, -1f, 1f);
     }
 
@@ -503,7 +505,8 @@ public class SynthSignalSource : Recyclable
         pink_b2 = 0f;
         brownLast = 0f;
         blueLast = 0f;
-        violetLast = 0f;
+        violetLastWhite = 0f;
+        violetLastBlue = 0f;
         sAndHValue = 0f;
         sAndHCounter = 0;
         sAndHSamplesPerHold = 100;
