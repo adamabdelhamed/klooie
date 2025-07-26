@@ -109,10 +109,17 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
     public void Play(Song song, ILifetime? lifetime = null)
     {
-        RecyclableList<ScheduledNoteEvent> track = RecyclableListPool<ScheduledNoteEvent>.Instance.Rent(song.Count * 8);
+        var tracks = new Dictionary<string, RecyclableList<ScheduledNoteEvent>>();
         for (int i = 0; i < song.Count; i++)
         {
             var note = song[i];
+            var trackKey = note.Instrument?.Name ?? "Default";
+            if (tracks.TryGetValue(trackKey, out var track) == false)
+            {
+                track = RecyclableListPool<ScheduledNoteEvent>.Instance.Rent(song.Count * 8);
+                tracks[trackKey] = track;
+            }
+
             WithSpawnedVoices(note, (patch, voices) =>
             {
                 for (int i = 0; i < voices.Items.Count; i++)
@@ -135,7 +142,15 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             });
         }
 
-        scheduledSynthProvider.ScheduleTrack(track);
+        foreach(var track in tracks.Values)
+        {
+            if(track.Count == 0)
+            {
+                track.Dispose();
+                continue;
+            }
+            scheduledSynthProvider.ScheduleTrack(track);
+        }
     }
 
 

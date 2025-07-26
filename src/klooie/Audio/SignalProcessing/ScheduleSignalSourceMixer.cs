@@ -9,6 +9,9 @@ public class ScheduledNoteEvent : Recyclable
     public NoteExpression Note { get; private set; }
     public bool IsCancelled;
 
+    public ScheduledNoteEvent Next;
+    public ScheduledNoteEvent Previous;
+
     public void Cancel() => IsCancelled = true;
 
     private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
@@ -18,6 +21,10 @@ public class ScheduledNoteEvent : Recyclable
         var ret = pool.Value.Rent();
         ret.Note = note;
         ret.Voice = voice;
+        ret.StartSample = 0;
+        ret.IsCancelled = false;
+        ret.Next = null;
+        ret.Previous = null;
         return ret;
     }
 
@@ -27,6 +34,8 @@ public class ScheduledNoteEvent : Recyclable
         Voice = null!;
         StartSample = 0;
         IsCancelled = false;
+        Next = null;
+        Previous = null;
         base.OnReturn();
     }
 }
@@ -63,6 +72,10 @@ public class ScheduledSignalSourceMixer
             {
                 var noteEvent = track.Items[i];
                 noteEvent.StartSample = samplesRendered + (long)Math.Round(noteEvent.Note.StartTime.TotalSeconds * SoundProvider.SampleRate);
+                
+                if (i > 0)                     noteEvent.Previous = track.Items[i - 1];
+                if(i < track.Items.Count - 1)  noteEvent.Next = track.Items[i + 1];
+
                 scheduledNotes.Enqueue(noteEvent);
             }
             track.Dispose();
