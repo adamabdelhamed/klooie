@@ -109,8 +109,7 @@ public class ScheduledSignalSourceMixer
                 continue;
 
             int bufferWriteOffset = (int)Math.Max(0, voiceAbsoluteSample - bufferStart);
-            int voiceReadOffset = (int)Math.Max(0, bufferStart - startSample);
-
+          
             int samplesAvailable = samplesRequested - bufferWriteOffset;
             if (samplesAvailable <= 0)
                 continue;
