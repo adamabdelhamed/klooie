@@ -10,10 +10,21 @@ public class Recyclable : ILifetime
     public static Recyclable Forever => forever;
 
     private SubscriberCollection? disposalSubscribers;
-    private SubscriberCollection DisposalSubscribers => disposalSubscribers ??= SubscriberCollection.Create();
+    private SubscriberCollection DisposalSubscribers
+    {
+        get
+        {
+            var ret = disposalSubscribers ??= SubscriberCollection.Create();
+            if(ret.ThreadId != this.ThreadId)
+            {
+                throw new InvalidOperationException("Cannot access disposal subscribers from a different thread");
+            }
+            return ret;
+        }
+    }
 
     internal IObjectPool? Pool { get; set; }
-
+    internal int ThreadId { get; set; }
     private bool IsExpiring { get; set; }
     private bool IsExpired { get; set; }
 
@@ -31,6 +42,7 @@ public class Recyclable : ILifetime
 
     public Recyclable()
     {
+        ThreadId = Thread.CurrentThread.ManagedThreadId;
         Rent();
     }
 

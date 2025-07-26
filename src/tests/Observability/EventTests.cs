@@ -871,7 +871,7 @@ public class EventTests
     }
 
     [TestMethod]
-    public async Task EventThrottle_Unscoped_AllowsAfterWindow()
+    public void EventThrottle_Unscoped_AllowsAfterWindow()
     {
         var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
@@ -881,7 +881,7 @@ public class EventTests
 
             ev.SubscribeThrottled(() => callCount++, lt, maxHz: 10);
             ev.Fire();
-            await Task.Delay(120);
+            Thread.Sleep(120);
             ev.Fire();
 
             Assert.AreEqual(2, callCount, "Second event after window should be delivered.");
@@ -966,7 +966,7 @@ public class EventTests
     }
 
     [TestMethod]
-    public async Task EventThrottle_RepeatedWindows_CorrectCadence()
+    public void EventThrottle_RepeatedWindows_CorrectCadence()
     {
         var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
@@ -979,7 +979,7 @@ public class EventTests
             for (int i = 0; i < 4; i++)
             {
                 ev.Fire();
-                await Task.Delay(300);
+                Thread.Sleep(300);
             }
 
             Assert.AreEqual(4, callCount, "One invocation should pass per window over multiple windows.");
@@ -1018,7 +1018,7 @@ public class EventTests
     }
 
     [TestMethod]
-    public async Task EventThrottle_Scoped_Untyped_SecondFireAfterWindow()
+    public void EventThrottle_Scoped_Untyped_SecondFireAfterWindow()
     {
         var ev = Event.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
@@ -1034,7 +1034,7 @@ public class EventTests
             }, lt, maxCyclesPerSecond: 10);
 
             ev.Fire();
-            await Task.Delay(120);
+            Thread.Sleep(120);
             ev.Fire();
 
             Assert.AreEqual(2, callCount, "Non-generic scoped throttle should allow calls after throttle window.");
@@ -1104,7 +1104,7 @@ public class EventTests
     }
 
     [TestMethod]
-    public async Task EventThrottle_GenericUnscoped_SecondFireAfterWindow()
+    public void EventThrottle_GenericUnscoped_SecondFireAfterWindow()
     {
         var ev = Event<string>.Create();
         var lt = DefaultRecyclablePool.Instance.Rent();
@@ -1116,7 +1116,7 @@ public class EventTests
             ev.SubscribeThrottled(val => { callCount++; lastValue = val; }, lt, maxCyclesPerSecond: 4);
 
             ev.Fire("a");
-            await Task.Delay(260);
+            Thread.Sleep(260);
             ev.Fire("b");
 
             Assert.AreEqual(2, callCount, "Should get a callback for each event outside the throttle window.");

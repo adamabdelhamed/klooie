@@ -27,22 +27,13 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public HashSet<PendingRecyclableTracker> PendingReturns { get; } = new HashSet<PendingRecyclableTracker>();
     public StackHunter StackHunter { get; private set; } = new StackHunter() { Mode = Recyclable.StackHunterMode };
 #endif
-    private readonly Stack<T> _pool = new Stack<T>();
+    [ThreadStatic]
+    private static Stack<T> _pool;
     public abstract T Factory();
     public int DefaultFillSize { get; set; } = 10;
 
-
-    private void EnsureThreadAffinity()
-    {
-        if(ConsoleApp.Current == null)
-        {
-            //throw new InvalidOperationException("RecycleablePool must be used within a ConsoleApp context. Ensure you are using it in the correct thread.");
-        }
-    }
-
     protected RecycleablePool()
     {
-        EnsureThreadAffinity();
         PoolManager.Instance.Add(this);
     }
 
@@ -76,7 +67,6 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
     public T Rent(out int lease)
     {
-        EnsureThreadAffinity();
         if (Recyclable.PoolingEnabled == false)
         {
             var fresh = Factory();
@@ -85,6 +75,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
                 throw new InvalidOperationException("Factory returned null, cannot rent from pool.");
             }
             fresh.Pool = this;
+            fresh.ThreadId = Thread.CurrentThread.ManagedThreadId;
             lease = fresh.CurrentVersion;
             return fresh;
         }
@@ -99,6 +90,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         }
 #endif
         T ret;
+        _pool = _pool ?? new Stack<T>();
         if (_pool.Count > 0)
         {
             ret = _pool.Pop();
@@ -109,6 +101,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
             Created++;
             ret = Factory();
+            ret.ThreadId = Thread.CurrentThread.ManagedThreadId;
             if (ret == null)
             {
                 throw new InvalidOperationException("Factory returned null, cannot rent from pool.");
@@ -126,13 +119,11 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
     public T Rent()
     {
-        EnsureThreadAffinity();
         return Rent(out _);
     }
 
     public void ReturnThatShouldOnlyBeCalledInternally(Recyclable rented)
     {
-        EnsureThreadAffinity();
         T rentedT = (T)rented;
         if (rentedT == null)
         {
@@ -142,15 +133,17 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 #if DEBUG
         PendingReturns.Remove(new PendingRecyclableTracker(rentedT, null));
 #endif
-
+        if (rented.ThreadId != Thread.CurrentThread.ManagedThreadId) throw new InvalidOperationException
+                ("This pool was rented from a different thread");
         if (rentedT.Pool != this) throw new InvalidOperationException("Object returned to wrong pool");
         rentedT.Pool = null;
+        _pool = _pool ?? new Stack<T>();
         _pool.Push(rentedT);
     }
 
     public void Clear()
     {
-        EnsureThreadAffinity();
+        _pool = _pool ?? new Stack<T>();
         _pool.Clear();
         Created = 0;
         Rented = 0;
@@ -162,7 +155,6 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
     public IObjectPool Fill(int? count = null)
     {
-        EnsureThreadAffinity();
         count ??= DefaultFillSize;
         for (var i = 0; i < count.Value; i++)
         {
@@ -171,6 +163,7 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
             {
                 throw new InvalidOperationException("Factory returned null, cannot fill pool.");
             }
+            _pool = _pool ?? new Stack<T>();
             _pool.Push(fresh);
         }
         return this;

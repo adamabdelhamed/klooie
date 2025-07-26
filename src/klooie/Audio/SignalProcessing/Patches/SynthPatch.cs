@@ -134,7 +134,6 @@ public class SynthPatch : Recyclable, ISynthPatch
     public virtual IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent)
     {
         var innerVoice = SynthSignalSource.Create(frequencyHz, this, master, noteEvent);
-        this.OnDisposed(innerVoice, Recyclable.TryDisposeMe);
         yield return innerVoice;
     }
 }

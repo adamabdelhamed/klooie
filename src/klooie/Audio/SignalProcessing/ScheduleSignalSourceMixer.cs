@@ -33,7 +33,7 @@ public class ScheduledNoteEvent : Recyclable
     protected override void OnReturn()
     {
         Note = null;
-        if (Patch is Recyclable r) SoundProvider.Dispose(r);
+        if (Patch is Recyclable r) SoundProvider.DisposeMarshalled(r);
         Patch = null!;
         StartSample = 0;
         IsCancelled = false;
@@ -82,7 +82,7 @@ public class ScheduledSignalSourceMixer
 
                 scheduledNotes.Enqueue(noteEvent);
             }
-            SoundProvider.Dispose(track);
+            SoundProvider.DisposeMarshalled(track);
         }
 
         // 1. Promote any scheduled notes whose start time lands in or before this buffer
@@ -177,7 +177,7 @@ public class ScheduledSignalSourceMixer
                 noteEvent.RemainingVoices--;
                 if (noteEvent.RemainingVoices <= 0)
                 {
-                    SoundProvider.Dispose(noteEvent);
+                    SoundProvider.DisposeMarshalled(noteEvent);
                 }
                 activeVoices.RemoveAt(v);
             }

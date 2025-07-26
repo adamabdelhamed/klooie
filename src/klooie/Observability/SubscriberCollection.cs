@@ -6,27 +6,58 @@ using System.Threading.Tasks;
 namespace klooie;
 internal class SubscriberCollection
 {
-    private static Stack<SubscriberCollection> collectionLightPool = new Stack<SubscriberCollection>(100);
-    private static Stack<SubscriberEntry> entryLightPool = new Stack<SubscriberEntry>(100);
+    [ThreadStatic]
+    private static Stack<SubscriberCollection> collectionLightPool;
+    [ThreadStatic]
+    private static Stack<SubscriberEntry> entryLightPool;
+
+    internal int ThreadId;
 
     private List<SubscriberEntry> entries = new List<SubscriberEntry>(100);
     public int Count => RefreshAndCountActiveEntries();
-    public static SubscriberCollection Create() => collectionLightPool.Count > 0 ? collectionLightPool.Pop() : new SubscriberCollection();
-
-    private static SubscriberEntry GetEntry() => entryLightPool.Count > 0 ? entryLightPool.Pop() : new SubscriberEntry();
-
+    public static SubscriberCollection Create()
+    {
+        collectionLightPool = collectionLightPool ?? new Stack<SubscriberCollection>(100);
+        var ret = collectionLightPool.Count > 0 ? collectionLightPool.Pop() : new SubscriberCollection();
+        ret.ThreadId = Thread.CurrentThread.ManagedThreadId;
+        return ret;
+    }
+    private static SubscriberEntry GetEntry()
+    {
+        entryLightPool = entryLightPool ?? new Stack<SubscriberEntry>(100);
+        var ret = entryLightPool.Count > 0 ? entryLightPool.Pop() : new SubscriberEntry();
+        ret.ThreadId = Thread.CurrentThread.ManagedThreadId;
+        return ret;
+    }
     private SubscriberCollection() { }
 
     public void Track(ISubscription subscription)
     {
+        if (((Recyclable)subscription).ThreadId != this.ThreadId)
+        {
+            throw new InvalidOperationException("Cannot track a subscription that was created on a different thread.");
+        }
         var entry = GetEntry();
+        if (((Recyclable)subscription).ThreadId != entry.ThreadId)
+        {
+            throw new InvalidOperationException("Cannot track a subscription that was created on a different thread.");
+        }
         entry.Subscription = subscription;
         entry.Lease = subscription.Lease;
         entries.Add(entry);
     }
     public void TrackWithPriority(ISubscription subscription)
     {
+        if (((Recyclable)subscription).ThreadId != this.ThreadId)
+        {
+            throw new InvalidOperationException("Cannot track a subscription that was created on a different thread.");
+        }
         var entry = GetEntry();
+        if (((Recyclable)subscription).ThreadId != entry.ThreadId)
+        {
+            throw new InvalidOperationException("Cannot track a subscription that was created on a different thread.");
+        }
+
         entry.Subscription = subscription;
         entry.Lease = subscription.Lease;
         entries.Insert(0, entry); 
@@ -38,6 +69,7 @@ internal class SubscriberCollection
         entry.Subscription = null;
         entry.Lease = 0; 
         entries.RemoveAt(i);
+        entryLightPool = entryLightPool ?? new Stack<SubscriberEntry>(100);
         entryLightPool.Push(entry);
     }
 
@@ -56,6 +88,10 @@ internal class SubscriberCollection
 
     public void Dispose()
     {
+        if(ThreadId != Thread.CurrentThread.ManagedThreadId)
+        {
+            throw new InvalidOperationException("Cannot dispose SubscriberCollection from a different thread");
+        }
         while (entries.Count > 0)
         {
             var entry = entries[0];
@@ -65,6 +101,7 @@ internal class SubscriberCollection
             }
             DisposeEntryAt(0);
         }
+        collectionLightPool = collectionLightPool ?? new Stack<SubscriberCollection>(100);
         collectionLightPool.Push(this);
     }
 
@@ -126,6 +163,7 @@ internal class SubscriberCollection
 
     private class SubscriberEntry
     {
+        internal int ThreadId;
         public ISubscription Subscription { get; set; }
         public int Lease { get; set; }
     }

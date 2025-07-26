@@ -18,7 +18,32 @@ public static class SoundProvider
     public static void Debug(string str) => Debug(str?.ToConsoleString() ?? "null".ToRed());
     public static void Debug(object o) => Debug(o?.ToString());
 
-    public static void Dispose(Recyclable r) => Current.EventLoop.Invoke(r, static r => r.TryDispose());
+    /// <summary>
+    /// Disposes a Recyclable object on the event loop thread if that's where it originated.
+    /// Otherwise disposes on the current thread.
+    /// </summary>
+    /// <param name="r"></param>
+    public static void DisposeMarshalled(Recyclable r)
+    {
+        if (r.ThreadId != Thread.CurrentThread.ManagedThreadId)
+        {
+            Current.EventLoop.Invoke(r, static r => r.TryDispose());
+        }
+        else
+        {
+            r.Dispose();
+        }
+    }
+
+    public static void DisposeIfNotNullMarshalled(Recyclable? r)
+    {
+        if (r != null)
+        {
+            DisposeMarshalled(r);
+        }
+    }
+
+    public static void Dispose(Recyclable r) => r.Dispose();
 
     public static void DisposeIfNotNull(Recyclable? r)
     {

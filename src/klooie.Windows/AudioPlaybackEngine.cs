@@ -109,6 +109,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public RecyclableList<IReleasableNote> PlaySustainedNote(NoteExpression note)
     {
         RecyclableList<IReleasableNote>? result = null;
+        //TODO - This might break the next time I use a midi device. We'll either get an
+        // exception about wrong thread disposal or we'll have a leak where the voices are never disposed.
         WithSpawnedVoices(note, (patch, voices) =>
         {
             result = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
