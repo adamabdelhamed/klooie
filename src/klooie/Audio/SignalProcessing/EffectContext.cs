@@ -7,7 +7,8 @@ public struct EffectContext
     public float Input;
     public int FrameIndex;
     public float Time;
-    public NoteExpression Note;
+    public ScheduledNoteEvent NoteEvent;
+    public NoteExpression Note => NoteEvent.Note;
     public float VelocityNorm => Note.Velocity / 127f;
 
     public static float EaseLinear(float t) => t;
@@ -32,5 +33,6 @@ public struct PitchModContext
 {
     public float Time;
     public float? ReleaseTime;
-    public NoteExpression Note;
+    public ScheduledNoteEvent NoteEvent;
+    public NoteExpression Note => NoteEvent.Note;
 }

@@ -81,9 +81,11 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
         try
         {
-            patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), MasterVolume, note, voices.Items);
-            VoiceCountTracker.Track(voices.Items); 
+            var tempEvent = ScheduledNoteEvent.Create(note, patch);
+            patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), MasterVolume, tempEvent, voices.Items);
+            VoiceCountTracker.Track(voices.Items);
             action(patch, voices);
+            tempEvent.Dispose();
         }
         finally
         {
@@ -120,26 +122,28 @@ public abstract class AudioPlaybackEngine : ISoundProvider
                 tracks[trackKey] = track;
             }
 
-            WithSpawnedVoices(note, (patch, voices) =>
+            var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
+            patch.WithVolume(note.Velocity / 127f);
+            if (!patch.IsNotePlayable(note.MidiNote))
             {
-                for (int i = 0; i < voices.Items.Count; i++)
+                ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNote}[D] is not playable by the current instrument"));
+                continue;
+            }
+
+            var scheduledNote = ScheduledNoteEvent.Create(note, patch);
+            track.Items.Add(scheduledNote);
+            if (lifetime != null)
+            {
+                var tracker = LeaseHelper.Track(scheduledNote);
+                lifetime.OnDisposed(tracker, static t =>
                 {
-                    var scheduledNote = ScheduledNoteEvent.Create(note, voices.Items[i]);
-                    track.Items.Add(scheduledNote);
-                    if (lifetime != null)
+                    if (t.IsRecyclableValid)
                     {
-                        var tracker = LeaseHelper.Track(scheduledNote);
-                        lifetime.OnDisposed(tracker, static t =>
-                        {
-                            if (t.IsRecyclableValid)
-                            {
-                                t.Recyclable!.Cancel();
-                            }
-                            t.Dispose();
-                        });
+                        t.Recyclable!.Cancel();
                     }
-                }
-            });
+                    t.Dispose();
+                });
+            }
         }
 
         foreach(var track in tracks.Values)

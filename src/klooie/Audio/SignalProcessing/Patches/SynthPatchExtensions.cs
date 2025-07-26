@@ -204,6 +204,13 @@ public static class SynthPatchExtensions
         return patch.WithEffect(PitchBendEffect.Create(in settings));
     }
 
+    [ExtensionToEffect(typeof(PortamentoEffect))]
+    public static ISynthPatch WithPortamento(this ISynthPatch patch, float glideSeconds = 0.05f)
+    {
+        var settings = new PortamentoEffect.Settings { GlideSeconds = glideSeconds };
+        return patch.WithEffect(PortamentoEffect.Create(in settings));
+    }
+
     [ExtensionToEffect(typeof(NoiseGateEffect))]
     public static ISynthPatch WithNoiseGate(this ISynthPatch patch, float openThresh = 0.05f, float closeThresh = 0.04f, float attackMs = 2f, float releaseMs = 60f)
     {

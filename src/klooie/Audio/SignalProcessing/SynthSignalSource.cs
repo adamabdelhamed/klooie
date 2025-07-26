@@ -91,11 +91,11 @@ public class SynthSignalSource : Recyclable
 
     protected SynthSignalSource() { }
 
-    public static SynthSignalSource Create(float frequencyHz, SynthPatch patch, VolumeKnob master, NoteExpression note)
+    public static SynthSignalSource Create(float frequencyHz, SynthPatch patch, VolumeKnob master, ScheduledNoteEvent noteEvent)
     {
         var ret = _pool.Value.Rent();
         ret.Id = Interlocked.Increment(ref _globalId);
-        ret.Construct(frequencyHz, patch, master, note, null);
+        ret.Construct(frequencyHz, patch, master, noteEvent, null);
         return ret;
     }
 
@@ -110,18 +110,19 @@ public class SynthSignalSource : Recyclable
         return 0;
     };
 
-    private NoteExpression note;
+    private ScheduledNoteEvent noteEvent;
+    private NoteExpression note => noteEvent.Note;
     private EffectContext ctx;
 
-    protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, NoteExpression note, VolumeKnob? knob)
+    protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, ScheduledNoteEvent noteEvent, VolumeKnob? knob)
     {
         frequency = patch.FrequencyOverride.HasValue ? patch.FrequencyOverride.Value : frequencyHz;
         sampleRate = 44100;
         time = 0;
         filteredSample = 0;
         this.patch = patch;
-        this.note = note;
-        ctx = new EffectContext { Note = note };
+        this.noteEvent = noteEvent;
+        ctx = new EffectContext { NoteEvent = noteEvent };
         this.patch.Effects.Items.Sort(EnvelopesAtTheEndSortComparison);
         isDone = false;
         driftPhase = 0f;
@@ -223,7 +224,7 @@ public class SynthSignalSource : Recyclable
 
         if (pitchMods != null && wave == patch.Waveform)
         {
-            var pmCtx = new PitchModContext { Time = time, ReleaseTime = noteReleaseTime, Note = note };
+            var pmCtx = new PitchModContext { Time = time, ReleaseTime = noteReleaseTime, NoteEvent = noteEvent };
             for (int i = 0; i < pitchMods.Count; i++)
             {
                 totalCents += pitchMods[i].GetPitchOffsetCents(pmCtx);
@@ -246,7 +247,7 @@ public class SynthSignalSource : Recyclable
 
                     float lfoDepth = st.Settings.Depth;
                     if (st.Settings.VelocityAffectsDepth)
-                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(note.Velocity / 127f);
+                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(noteEvent.Note.Velocity / 127f);
 
                     totalCents += lfo * lfoDepth;
                 }
@@ -434,7 +435,7 @@ public class SynthSignalSource : Recyclable
         envelope = null;
         noteReleaseTime = null;
         pipeline?.Clear();
-        note = null!;
+        noteEvent = null!;
         ctx = default;
         oscPhase = 0.0;
         oscPhaseSub = 0.0;
@@ -486,7 +487,7 @@ public class SynthSignalSource : Recyclable
 
                     float lfoDepth = st.Settings.Depth;
                     if (st.Settings.VelocityAffectsDepth)
-                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(note.Velocity / 127f);
+                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(noteEvent.Note.Velocity / 127f);
 
                     switch (st.Settings.Target)
                     {
