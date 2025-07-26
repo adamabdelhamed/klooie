@@ -436,6 +436,43 @@ public static class SynthPatchExtensions
         return patch;
     }
 
+
+    [CoreEffect]
+    [SynthDocumentation("""
+        Sets a fixed MIDI note override for all leaf patches.
+        This allows you to force the patch to always play a specific note, regardless of the input note.
+        """)]
+    public static ISynthPatch WithMidiOverride(this ISynthPatch patch, int midiNote)
+    {
+        var frequency = NoteExpression.MidiNoteToFrequency(midiNote);
+        return WithFrequencyOverride(patch, frequency);
+    }
+
+    [CoreEffect]
+    [SynthDocumentation("""
+    Sets a fixed frequency override for all leaf patches.
+    """)]
+    public static ISynthPatch WithFrequencyOverride(this ISynthPatch patch, float frequency)
+    {
+        var leaves = RecyclableListPool<ISynthPatch>.Instance.Rent(16);
+        try
+        {
+            patch.GetAllLeafPatches(leaves);
+            for (int i = 0; i < leaves.Items.Count; i++)
+            {
+                if (leaves.Items[i] is SynthPatch s)
+                {
+                    s.FrequencyOverride = frequency;
+                }
+            }
+        }
+        finally
+        {
+            leaves.Dispose();
+        }
+        return patch;
+    }
+
     [CoreEffect]
     public static ISynthPatch WithPitchDrift(this ISynthPatch patch,
     [SynthDocumentation("""

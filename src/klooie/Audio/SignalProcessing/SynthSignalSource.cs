@@ -95,7 +95,7 @@ public class SynthSignalSource : Recyclable
 
     protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, NoteExpression note, VolumeKnob? knob)
     {
-        frequency = frequencyHz;
+        frequency = patch.FrequencyOverride.HasValue ? patch.FrequencyOverride.Value : frequencyHz;
         sampleRate = 44100;
         time = 0;
         filteredSample = 0;

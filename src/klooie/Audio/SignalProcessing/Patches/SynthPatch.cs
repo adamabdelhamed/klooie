@@ -37,6 +37,7 @@ public class SynthPatch : Recyclable, ISynthPatch
         patch.EnableSubOsc = false;
         patch.EnablePitchDrift = false; 
         patch.Velocity = 127;
+        patch.FrequencyOverride = null;
         return patch;
     }
 
@@ -60,6 +61,8 @@ public class SynthPatch : Recyclable, ISynthPatch
     public float VibratoRateHz { get; set; }
     public float VibratoDepthCents { get; set; }
     public float VibratoPhaseOffset { get; set; }
+    public float? FrequencyOverride { get; set; }
+
 
     public RecyclableList<IEffect> Effects { get; set; }
 
@@ -81,6 +84,7 @@ public class SynthPatch : Recyclable, ISynthPatch
         VibratoRateHz = 0f;
         VibratoDepthCents = 0f;
         VibratoPhaseOffset = 0f;
+        FrequencyOverride = null;
         Lfos.Clear();
     }
 
@@ -101,6 +105,7 @@ public class SynthPatch : Recyclable, ISynthPatch
         clone.VibratoRateHz = this.VibratoRateHz;
         clone.VibratoDepthCents = this.VibratoDepthCents;
         clone.VibratoPhaseOffset = this.VibratoPhaseOffset;
+        clone.FrequencyOverride = this.FrequencyOverride;
         // ...copy other fields as needed
 
         // Clone all effects (deep clone)
