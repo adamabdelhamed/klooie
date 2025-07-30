@@ -1,29 +1,14 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using PowerArgs;
 using System.Diagnostics;
 
 namespace klooie;
 
 public abstract class AudioPlaybackEngine : ISoundProvider
 {
-    private Event<NoteExpression> notePlaying;
-    public Event<NoteExpression> NotePlaying
-    {
-        get
-        {
-            if(notePlaying == null)
-            {
-                notePlaying = Event<NoteExpression>.Create();
-                scheduledSynthProvider.NotePlaying.Subscribe(notePlaying, (ev, note) => notePlaying.Fire(note), notePlaying);
-            }
-            return notePlaying;
-        }
-    }
-
-    public const int SampleRate = 44100;
-    private const int ChannelCount = 2;
+    public const int SampleRate = SoundProvider.SampleRate;
+    private const int ChannelCount = SoundProvider.ChannelCount;
     private readonly IWavePlayer outputDevice;
     private readonly MixingSampleProvider sfxMixer;
     public readonly ScheduledSynthProvider scheduledSynthProvider;
@@ -46,9 +31,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
             MasterVolume = VolumeKnob.Create();
             sfxMixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
-            mixer = new MixingSampleProvider([sfxMixer, new SilenceProvider(new WaveFormat(SoundProvider.SampleRate, SoundProvider.BitsPerSample, SoundProvider.ChannelCount)), scheduledSynthProvider]) { ReadFully = true };
+            mixer = new MixingSampleProvider([sfxMixer, scheduledSynthProvider]) { ReadFully = true };
             outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 60);
-            outputDevice.PlaybackStopped += OutputDevice_PlaybackStopped;
             outputDevice.Init(mixer);
             outputDevice.Play();
             soundCache = new SoundCache(LoadSounds());
@@ -61,16 +45,6 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         }
     }
 
-    private void OutputDevice_PlaybackStopped(object? sender, StoppedEventArgs e)
-    {
-        if (e.Exception != null)
-        {
-#if DEBUG
-            SoundProvider.Debug($"Playback stopped with exception: {e.Exception.ToString()}".ToRed());
-#endif
-        }
-    }
-
     public void Play(string? soundId, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null) 
         => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, maxDuration, false));
 
@@ -79,10 +53,8 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
 
    
-    public IReleasableNote? PlaySustainedNote(NoteExpression note)
-    {
-        return SynthVoiceProvider.PlaySustainedNote(note, MasterVolume);
-    }
+    public IReleasableNote? PlaySustainedNote(NoteExpression note) 
+        => SynthVoiceProvider.PlaySustainedNote(note, MasterVolume);
 
     public void Play(Song song, ILifetime? lifetime = null)
     {
@@ -104,7 +76,6 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
     public void Pause() => outputDevice?.Pause(); 
     public void Resume() => outputDevice?.Play();
-
     public void ClearCache() => soundCache.Clear();
 
     /// <summary>
@@ -127,35 +98,10 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     /// <param name="elapsedMilliseconds"></param>
     protected virtual void LogSoundLoaded(long elapsedMilliseconds) { }
 }
-public class SilenceProvider : ISampleProvider
-{
-    public WaveFormat WaveFormat { get; }
-    public SilenceProvider(WaveFormat format) => WaveFormat = format;
-    bool once = false;
-    public int Read(float[] buffer, int offset, int count)
-    {
-        if(once == false)
-        {
-            Thread.CurrentThread.Name = "AudioPlayback";
-            Thread.CurrentThread.Priority = ThreadPriority.Highest;
-            once = true;
-        }
-        Array.Clear(buffer, offset, count);
-        return count;
-    }
-}
-
-
-
 
 public class ScheduledSynthProvider : ScheduledSignalSourceMixer, ISampleProvider
 {
     private readonly WaveFormat waveFormat;
-
-    public ScheduledSynthProvider() 
-    {
-        waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(SoundProvider.SampleRate, SoundProvider.ChannelCount);
-    }
-
+    public ScheduledSynthProvider() => waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(SoundProvider.SampleRate, SoundProvider.ChannelCount);
     public WaveFormat WaveFormat => waveFormat;
 }

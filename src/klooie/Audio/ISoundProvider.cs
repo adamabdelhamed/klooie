@@ -32,12 +32,10 @@ public interface ISoundProvider
     IReleasableNote? PlaySustainedNote(NoteExpression note);
     void Play(Song song, ILifetime? lifetime = null);
     EventLoop EventLoop { get; }
-    Event<NoteExpression> NotePlaying { get; }
 }
 
 public class NoOpSoundProvider : ISoundProvider
 {
-    public Event<NoteExpression> NotePlaying => Event<NoteExpression>.Create();
     public EventLoop EventLoop => ConsoleApp.Current;
     public VolumeKnob MasterVolume { get; set; }
     public void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null) { }
