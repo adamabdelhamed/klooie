@@ -78,106 +78,17 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null) 
         => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
 
-    private void WithSpawnedVoices(NoteExpression note, Action<ISynthPatch, RecyclableList<SynthSignalSource>> action)
+   
+    public IReleasableNote? PlaySustainedNote(NoteExpression note)
     {
-        var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
-        patch.WithVolume(note.Velocity / 127f);
-        if (!patch.IsNotePlayable(note.MidiNote))
-        {
-            ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNote}[D] is not playable by the current instrument"));
-            return;
-        }
-
-        RecyclableList<SynthSignalSource> voices = RecyclableListPool<SynthSignalSource>.Instance.Rent(8);
-        try
-        {
-            var tempEvent = ScheduledNoteEvent.Create(note, patch);
-            foreach (var voice in patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), MasterVolume, tempEvent))
-            {
-                voices.Items.Add(voice);
-            }
-            VoiceCountTracker.Track(voices.Items);
-            action(patch, voices);
-            tempEvent.Dispose();
-        }
-        finally
-        {
-            voices.Dispose();
-        }
+        return SynthVoiceProvider.PlaySustainedNote(note, MasterVolume);
     }
 
-    public RecyclableList<IReleasableNote> PlaySustainedNote(NoteExpression note)
-    {
-        RecyclableList<IReleasableNote>? result = null;
-        //TODO - This might break the next time I use a midi device. We'll either get an
-        // exception about wrong thread disposal or we'll have a leak where the voices are never disposed.
-        WithSpawnedVoices(note, (patch, voices) =>
-        {
-            result = RecyclableListPool<IReleasableNote>.Instance.Rent(voices.Count);
-            for (int i = 0; i < voices.Items.Count; i++)
-            {
-                var voice = SynthVoiceProvider.Create(voices.Items[i]);
-                result.Items.Add(voice);
-                mixer.AddMixerInput(voice);
-            }
-        });
-        return result ?? RecyclableListPool<IReleasableNote>.Instance.Rent(0);
-    }
-
-    public void Play(Song song, ILifetime? lifetime = null)
-    {
-        var tracks = new Dictionary<string, RecyclableList<ScheduledNoteEvent>>();
-        for (int i = 0; i < song.Count; i++)
-        {
-            var note = song[i];
-            var trackKey = note.Instrument?.Name ?? "Default";
-            if (tracks.TryGetValue(trackKey, out var track) == false)
-            {
-                track = RecyclableListPool<ScheduledNoteEvent>.Instance.Rent(song.Count * 8);
-                tracks[trackKey] = track;
-            }
-
-            var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
-            patch.WithVolume(note.Velocity / 127f);
-            if (!patch.IsNotePlayable(note.MidiNote))
-            {
-                ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNote}[D] is not playable by the current instrument"));
-                continue;
-            }
-
-            var scheduledNote = ScheduledNoteEvent.Create(note, patch);
-            track.Items.Add(scheduledNote);
-            if (lifetime != null)
-            {
-                var tracker = LeaseHelper.Track(scheduledNote);
-                lifetime.OnDisposed(tracker, static t =>
-                {
-                    if (t.IsRecyclableValid)
-                    {
-                        t.Recyclable!.Cancel();
-                    }
-                    t.Dispose();
-                });
-            }
-        }
-
-        foreach(var track in tracks.Values)
-        {
-            if(track.Count == 0)
-            {
-                track.Dispose();
-                continue;
-            }
-            scheduledSynthProvider.ScheduleTrack(track);
-        }
-    }
-
-
+    public void Play(Song song, ILifetime? lifetime = null) => scheduledSynthProvider.ScheduleSong(song, lifetime);
 
     private void AddMixerInput(RecyclableSampleProvider? sample)
     {
         if (sample == null) return;
-
         sfxMixer?.AddMixerInput(sample);
     }
 
@@ -224,33 +135,7 @@ public class SilenceProvider : ISampleProvider
     }
 }
 
-internal class VoiceCountTracker : Recyclable
-{
-    private static LazyPool<VoiceCountTracker> _pool = new(() => new VoiceCountTracker());
-    private int remainingVoices;
-    private VoiceCountTracker() { }
 
-    public static VoiceCountTracker Track(List<SynthSignalSource> voices)
-    {
-        var tracker = _pool.Value.Rent();
-        tracker.remainingVoices = voices.Count;
-
-        for(int i = 0; i < voices.Count; i++)
-        {
-            var voice = voices[i];
-            voice.OnDisposed(tracker, static me =>
-            {
-                me.remainingVoices--;
-                if (me.remainingVoices <= 0)
-                {
-                    me.Dispose();
-                }
-            });
-        }
-
-        return tracker;
-    }
-}
 
 
 public class ScheduledSynthProvider : ScheduledSignalSourceMixer, ISampleProvider

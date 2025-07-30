@@ -55,13 +55,16 @@ public class MelodyMaker : ProtectedConsolePanel
     private void HandleNoteOn(IMidiEvent ev)
     {
         if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
-        Timeline.Player.StopAtEnd = false;
-        player.Start(player.CurrentBeat);
+
         var noteExpression = NoteExpression.Create(ev.NoteNumber, player.CurrentBeat, -1, ev.Velocity, InstrumentExpression.Create("Keyboard", Timeline.InstrumentFactory));
         var voices = app.Sound.PlaySustainedNote(noteExpression);
+        if (voices == null) return;
+
+        Timeline.Player.StopAtEnd = false;
+        player.Start(player.CurrentBeat);
         noteSource.Add(noteExpression);
         pianoWithTimeline.Timeline.RefreshVisibleSet();
-        noteTrackers[ev.NoteNumber] = new SustainedNoteTracker(noteExpression, voices);
+        noteTrackers[ev.NoteNumber] = SustainedNoteTracker.Create(noteExpression, voices);
     }
 
     private void HandleNoteOff(IMidiEvent ev, SustainedNoteTracker tracker)
@@ -73,7 +76,7 @@ public class MelodyMaker : ProtectedConsolePanel
         // Duration is from the note's start beat to the current playhead beat
         double duration = playheadBeat - tracker.Note.StartBeat;
         noteSource.Add(NoteExpression.Create(tracker.Note.MidiNote, tracker.Note.StartBeat, duration, tracker.Note.Velocity, tracker.Note.Instrument));
-        tracker.ReleaseAll();
+        tracker.ReleaseNote();
         noteTrackers.Remove(ev.NoteNumber);
     }
 
@@ -88,22 +91,32 @@ public class MelodyMaker : ProtectedConsolePanel
 
 }
 
-public class SustainedNoteTracker
+public class SustainedNoteTracker : Recyclable
 {
-    public NoteExpression Note { get; }
-    public RecyclableList<IReleasableNote> Voices { get; }
+    private SustainedNoteTracker() { }
+    private static LazyPool<SustainedNoteTracker> _pool = new(() => new SustainedNoteTracker());
+
+
+    public NoteExpression Note { get; private set; }
+    public IReleasableNote Releasable { get; private set; }
     NoteExpression NoteExpression { get; set; }
-    public SustainedNoteTracker(NoteExpression note, RecyclableList<IReleasableNote> voices)
+    public static SustainedNoteTracker Create(NoteExpression note, IReleasableNote releasable)
     {
-        this.Note = note;
-        Voices = voices;
+        var tracker = _pool.Value.Rent();
+        tracker.Note = note;
+        tracker.Releasable = releasable;
+        return tracker;
     }
-    public void ReleaseAll()
+    public void ReleaseNote()
     {
-        foreach (var voice in Voices.Items)
-        {
-            voice.ReleaseNote();
-        }
-        Voices.Dispose();
+        Releasable.ReleaseNote();
+        Dispose();
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Note = null!;
+        Releasable = null!;
     }
 }

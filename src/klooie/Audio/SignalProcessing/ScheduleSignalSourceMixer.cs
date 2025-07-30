@@ -1,29 +1,60 @@
 ﻿using klooie;
 using System.Collections.Concurrent;
 
+public class ScheduledSongEvent : Recyclable
+{
+    public Song Song { get; private set; }
+    // The cancellation lifetime for this song event. It was created on the app thread and should be disposed on the app thread so it only
+    // get's nulled within this system, but Dispose is managed by the app thread.
+    public ILifetime? AppThreadLifetime { get;private set; } 
+
+    private static LazyPool<ScheduledSongEvent> pool = new LazyPool<ScheduledSongEvent>(() => new ScheduledSongEvent());
+    protected ScheduledSongEvent() { }
+    public static ScheduledSongEvent Create(Song song, ILifetime? lifetime)
+    {
+        var ret = pool.Value.Rent();
+        ret.Song = song;
+        ret.AppThreadLifetime = lifetime;
+        return ret;
+    }
+
+    protected override void OnReturn()
+    {
+        AppThreadLifetime = null;
+        Song = null!;
+        base.OnReturn();
+    }
+}
+
 public class ScheduledNoteEvent : Recyclable
 {
     public long StartSample; // Absolute sample offset
     public ISynthPatch Patch;
     public double DurationSeconds => Note.DurationTime.TotalSeconds;
     public NoteExpression Note { get; private set; }
-    public bool IsCancelled;
-
+    public bool IsCancelled { get; private set; }
     public NoteExpression Next;
     public NoteExpression Previous;
     public int RemainingVoices;
 
-    public void Cancel() => IsCancelled = true;
+    private ILifetime? appThreadLifetime;
+
+    private void Cancel()
+    {
+        IsCancelled = true;
+        appThreadLifetime = null;
+    }
 
     private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
     protected ScheduledNoteEvent() { }
-    public static ScheduledNoteEvent Create(NoteExpression note, ISynthPatch patch)
+    public static ScheduledNoteEvent Create(NoteExpression note, ISynthPatch patch, ILifetime? lifetime)
     {
         var ret = pool.Value.Rent();
         ret.Note = note;
         ret.Patch = patch;
         ret.StartSample = 0;
-        ret.IsCancelled = false;
+        ret.appThreadLifetime = lifetime;
+        lifetime?.OnDisposed(ret, static me => me.Cancel());
         ret.Next = null;
         ret.Previous = null;
         ret.RemainingVoices = 0;
@@ -33,10 +64,10 @@ public class ScheduledNoteEvent : Recyclable
     protected override void OnReturn()
     {
         Note = null;
-        if (Patch is Recyclable r) SoundProvider.DisposeMarshalled(r);
+        if (Patch is Recyclable r) r.Dispose();
         Patch = null!;
         StartSample = 0;
-        IsCancelled = false;
+        appThreadLifetime = null;
         Next = null;
         Previous = null;
         RemainingVoices = 0;
@@ -47,7 +78,7 @@ public class ScheduledNoteEvent : Recyclable
 public class ScheduledSignalSourceMixer
 {
     private readonly Queue<ScheduledNoteEvent> scheduledNotes = new();
-    private readonly ConcurrentQueue<RecyclableList<ScheduledNoteEvent>> scheduledTracks = new();
+    private readonly ConcurrentQueue<ScheduledSongEvent> scheduledSongs = new();
     private readonly List<ActiveVoice> activeVoices = new();
     private long samplesRendered = 0;
 
@@ -58,9 +89,54 @@ public class ScheduledSignalSourceMixer
 
     public ScheduledSignalSourceMixer() { }
 
-    public void ScheduleTrack(RecyclableList<ScheduledNoteEvent> track)
+    public void ScheduleSong(Song s, ILifetime? lifetime)
     {
-        scheduledTracks.Enqueue(track);
+        scheduledSongs.Enqueue(ScheduledSongEvent.Create(s, lifetime));
+    }
+
+    private void DrainScheduledSongs()
+    {
+        while (scheduledSongs.TryDequeue(out var ev))
+        {
+            var song = ev.Song;
+            var tracks = new Dictionary<string, RecyclableList<ScheduledNoteEvent>>();
+            for (int i = 0; i < song.Count; i++)
+            {
+                var note = song[i];
+                var trackKey = note.Instrument?.Name ?? "Default";
+                if (tracks.TryGetValue(trackKey, out var track) == false)
+                {
+                    track = RecyclableListPool<ScheduledNoteEvent>.Instance.Rent(song.Count * 8);
+                    tracks[trackKey] = track;
+                }
+
+                var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
+                patch.WithVolume(note.Velocity / 127f);
+                if (!patch.IsNotePlayable(note.MidiNote))
+                {
+                    ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNote}[D] is not playable by the current instrument"));
+                    continue;
+                }
+
+                var scheduledNote = ScheduledNoteEvent.Create(note, patch, ev.AppThreadLifetime);
+                track.Items.Add(scheduledNote);
+            }
+
+            foreach(var track in tracks.Values)
+            {
+                for (int j = 0; j < track.Items.Count; j++)
+                {
+                    var noteEvent = track.Items[j];
+                    noteEvent.StartSample = samplesRendered + (long)Math.Round(noteEvent.Note.StartTime.TotalSeconds * SoundProvider.SampleRate);
+
+                    if (j > 0) noteEvent.Previous = track.Items[j - 1].Note;
+                    if (j < track.Items.Count - 1) noteEvent.Next = track.Items[j + 1].Note;
+
+                    scheduledNotes.Enqueue(noteEvent);
+                }
+                track.Dispose();
+            }
+        }
     }
 
     public int Read(float[] buffer, int offset, int count)
@@ -70,43 +146,30 @@ public class ScheduledSignalSourceMixer
         long bufferStart = samplesRendered;
         long bufferEnd = bufferStart + samplesRequested;
 
-        while(scheduledTracks.TryDequeue(out var track))
-        {
-            for (int i = 0; i < track.Items.Count; i++)
-            {
-                var noteEvent = track.Items[i];
-                noteEvent.StartSample = samplesRendered + (long)Math.Round(noteEvent.Note.StartTime.TotalSeconds * SoundProvider.SampleRate);
-                
-                if (i > 0)                     noteEvent.Previous = track.Items[i - 1].Note;
-                if(i < track.Items.Count - 1)  noteEvent.Next = track.Items[i + 1].Note;
+        DrainScheduledSongs();
+       
 
-                scheduledNotes.Enqueue(noteEvent);
-            }
-            SoundProvider.DisposeMarshalled(track);
-        }
-
-        // 1. Promote any scheduled notes whose start time lands in or before this buffer
-        while (scheduledNotes.TryPeek(out var note) && note.StartSample < bufferEnd)
+        while (scheduledNotes.TryPeek(out var scheduledNoteEvent) && scheduledNoteEvent.StartSample < bufferEnd)
         {
-            scheduledNotes.TryDequeue(out note);
-            if (note.IsCancelled)
+            scheduledNotes.TryDequeue(out scheduledNoteEvent);
+            if (scheduledNoteEvent.IsCancelled)
             {
-                SoundProvider.Dispose(note);
+                scheduledNoteEvent.Dispose();
                 continue;
             }
           
-                var voices =note.Patch.SpawnVoices(
-                    NoteExpression.MidiNoteToFrequency(note.Note.MidiNote),
+                var voices =scheduledNoteEvent.Patch.SpawnVoices(
+                    NoteExpression.MidiNoteToFrequency(scheduledNoteEvent.Note.MidiNote),
                     SoundProvider.Current.MasterVolume,
-                    note).ToArray();
-                note.RemainingVoices = voices.Length;
+                    scheduledNoteEvent).ToArray();
+                scheduledNoteEvent.RemainingVoices = voices.Length;
 
-                int durSamples = (int)(note.DurationSeconds * SoundProvider.SampleRate);
-                long releaseSample = note.StartSample + durSamples;
+                int durSamples = (int)(scheduledNoteEvent.DurationSeconds * SoundProvider.SampleRate);
+                long releaseSample = scheduledNoteEvent.StartSample + durSamples;
 
                 for (int i = 0; i < voices.Length; i++)
                 {
-                    activeVoices.Add(new ActiveVoice(note, voices[i], 0, releaseSample));
+                    activeVoices.Add(new ActiveVoice(scheduledNoteEvent, voices[i], 0, releaseSample));
                 }    
         }
 
@@ -123,11 +186,11 @@ public class ScheduledSignalSourceMixer
 
             if (noteEvent.IsCancelled)
             {
-                SoundProvider.Dispose(voice);
+                voice.Dispose();
                 noteEvent.RemainingVoices--;
                 if (noteEvent.RemainingVoices <= 0)
                 {
-                    SoundProvider.Dispose(noteEvent);
+                    noteEvent.Dispose();
                 }
                 activeVoices.RemoveAt(v);
                 continue;
@@ -173,11 +236,11 @@ public class ScheduledSignalSourceMixer
 
             if (voice.IsDone)
             {
-                SoundProvider.Dispose(voice);
+                voice.Dispose();
                 noteEvent.RemainingVoices--;
                 if (noteEvent.RemainingVoices <= 0)
                 {
-                    SoundProvider.DisposeMarshalled(noteEvent);
+                    noteEvent.Dispose();
                 }
                 activeVoices.RemoveAt(v);
             }

@@ -17,41 +17,6 @@ public static class SoundProvider
     public static void Debug(ConsoleString str) => Current?.EventLoop?.Invoke(()=> ConsoleApp.Current?.WriteLine(str));
     public static void Debug(string str) => Debug(str?.ToConsoleString() ?? "null".ToRed());
     public static void Debug(object o) => Debug(o?.ToString());
-
-    /// <summary>
-    /// Disposes a Recyclable object on the event loop thread if that's where it originated.
-    /// Otherwise disposes on the current thread.
-    /// </summary>
-    /// <param name="r"></param>
-    public static void DisposeMarshalled(Recyclable r)
-    {
-        if (r.ThreadId != Thread.CurrentThread.ManagedThreadId)
-        {
-            Current.EventLoop.Invoke(r, static r => r.TryDispose());
-        }
-        else
-        {
-            r.Dispose();
-        }
-    }
-
-    public static void DisposeIfNotNullMarshalled(Recyclable? r)
-    {
-        if (r != null)
-        {
-            DisposeMarshalled(r);
-        }
-    }
-
-    public static void Dispose(Recyclable r) => r.Dispose();
-
-    public static void DisposeIfNotNull(Recyclable? r)
-    {
-        if (r != null)
-        {
-            Dispose(r);
-        }
-    }
 }
 
 
@@ -64,7 +29,7 @@ public interface ISoundProvider
     void Resume();
     void ClearCache();
     long SamplesRendered { get; }
-    RecyclableList<IReleasableNote> PlaySustainedNote(NoteExpression note);
+    IReleasableNote? PlaySustainedNote(NoteExpression note);
     void Play(Song song, ILifetime? lifetime = null);
     EventLoop EventLoop { get; }
     Event<NoteExpression> NotePlaying { get; }
@@ -88,10 +53,7 @@ public class NoOpSoundProvider : ISoundProvider
 
     }
 
-    public RecyclableList<IReleasableNote> PlaySustainedNote(NoteExpression note)
-    {
-        return RecyclableListPool<IReleasableNote>.Instance.Rent();
-    }
+    public IReleasableNote? PlaySustainedNote(NoteExpression note) => null;
 
 }
 

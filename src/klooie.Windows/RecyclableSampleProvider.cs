@@ -83,10 +83,8 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
         return totalSamplesWritten;
     }
 
-    private void ScheduleDisposal()
-    {
-        SoundProvider.Dispose(this);
-    }
+    private void ScheduleDisposal() => SoundProvider.Current.EventLoop.Invoke(this, static me => me.Dispose());
+    
 
     protected override void OnReturn()
     {

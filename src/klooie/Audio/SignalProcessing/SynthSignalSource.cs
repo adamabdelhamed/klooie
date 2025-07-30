@@ -191,7 +191,7 @@ public class SynthSignalSource : Recyclable
         InitVolume(master, knob);
         if(knob != null)
         {
-            SoundProvider.Dispose(knob);
+            knob.Dispose();
         }
         this.envelope = patch.FindEnvelopeEffect().Envelope;
         envelope.Trigger(0, sampleRate);
@@ -488,10 +488,7 @@ public class SynthSignalSource : Recyclable
 
     protected override void OnReturn()
     {
-        if(sampleKnob != null)
-        {
-            SoundProvider.Dispose(sampleKnob);
-        }
+        sampleKnob?.Dispose();
         sampleKnob = null;
         masterKnob = null;
         effectiveVolume = 0f;
@@ -529,7 +526,7 @@ public class SynthSignalSource : Recyclable
     {
         if (isDone || IsStillValid(Lease) == false)
         {
-            SoundProvider.Dispose(this);
+            Dispose();
             return 0;
         }
 
