@@ -84,7 +84,17 @@ public abstract class AudioPlaybackEngine : ISoundProvider
         return SynthVoiceProvider.PlaySustainedNote(note, MasterVolume);
     }
 
-    public void Play(Song song, ILifetime? lifetime = null) => scheduledSynthProvider.ScheduleSong(song, lifetime);
+    public void Play(Song song, ILifetime? lifetime = null)
+    {
+        CancellationToken? token = null;
+        if(lifetime != null)
+        {
+            var source = new CancellationTokenSource();
+            lifetime.OnDisposed(source, static (source) => source.Cancel());
+            token = source.Token;
+        }
+        scheduledSynthProvider.ScheduleSong(song, token);
+    }
 
     private void AddMixerInput(RecyclableSampleProvider? sample)
     {

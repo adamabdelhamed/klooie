@@ -6,21 +6,21 @@ public class ScheduledSongEvent : Recyclable
     public Song Song { get; private set; }
     // The cancellation lifetime for this song event. It was created on the app thread and should be disposed on the app thread so it only
     // get's nulled within this system, but Dispose is managed by the app thread.
-    public ILifetime? AppThreadLifetime { get;private set; } 
+    public CancellationToken? CancellationToken { get;private set; } 
 
     private static LazyPool<ScheduledSongEvent> pool = new LazyPool<ScheduledSongEvent>(() => new ScheduledSongEvent());
     protected ScheduledSongEvent() { }
-    public static ScheduledSongEvent Create(Song song, ILifetime? lifetime)
+    public static ScheduledSongEvent Create(Song song, CancellationToken? cancellationToken)
     {
         var ret = pool.Value.Rent();
         ret.Song = song;
-        ret.AppThreadLifetime = lifetime;
+        ret.CancellationToken = cancellationToken;
         return ret;
     }
 
     protected override void OnReturn()
     {
-        AppThreadLifetime = null;
+        CancellationToken = null;
         Song = null!;
         base.OnReturn();
     }
@@ -36,28 +36,32 @@ public class ScheduledNoteEvent : Recyclable
     public NoteExpression Next;
     public NoteExpression Previous;
     public int RemainingVoices;
-
-    private ILifetime? appThreadLifetime;
-
+    private CancellationTokenRegistration? CancellationTokenRegistration;
     private void Cancel()
     {
         IsCancelled = true;
-        appThreadLifetime = null;
     }
 
     private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
     protected ScheduledNoteEvent() { }
-    public static ScheduledNoteEvent Create(NoteExpression note, ISynthPatch patch, ILifetime? lifetime)
+    public static ScheduledNoteEvent Create(NoteExpression note, ISynthPatch patch, CancellationToken? cancellationToken)
     {
         var ret = pool.Value.Rent();
         ret.Note = note;
         ret.Patch = patch;
         ret.StartSample = 0;
-        ret.appThreadLifetime = lifetime;
-        lifetime?.OnDisposed(ret, static me => me.Cancel());
         ret.Next = null;
         ret.Previous = null;
         ret.RemainingVoices = 0;
+        ret.IsCancelled = false;
+
+        if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
+        {
+            ret.Cancel();
+            return ret;
+        }
+
+        ret.CancellationTokenRegistration = cancellationToken.HasValue == false ? null : cancellationToken.Value.Register(static (state) => ((ScheduledNoteEvent)state).Cancel(), ret);
         return ret;
     }
 
@@ -65,9 +69,10 @@ public class ScheduledNoteEvent : Recyclable
     {
         Note = null;
         if (Patch is Recyclable r) r.Dispose();
+        CancellationTokenRegistration?.Dispose();
+        CancellationTokenRegistration = null;
         Patch = null!;
         StartSample = 0;
-        appThreadLifetime = null;
         Next = null;
         Previous = null;
         RemainingVoices = 0;
@@ -89,9 +94,9 @@ public class ScheduledSignalSourceMixer
 
     public ScheduledSignalSourceMixer() { }
 
-    public void ScheduleSong(Song s, ILifetime? lifetime)
+    public void ScheduleSong(Song s, CancellationToken? cancellationToken)
     {
-        scheduledSongs.Enqueue(ScheduledSongEvent.Create(s, lifetime));
+        scheduledSongs.Enqueue(ScheduledSongEvent.Create(s, cancellationToken));
     }
 
     private void DrainScheduledSongs()
@@ -118,7 +123,7 @@ public class ScheduledSignalSourceMixer
                     continue;
                 }
 
-                var scheduledNote = ScheduledNoteEvent.Create(note, patch, ev.AppThreadLifetime);
+                var scheduledNote = ScheduledNoteEvent.Create(note, patch, ev.CancellationToken);
                 track.Items.Add(scheduledNote);
             }
 
