@@ -22,7 +22,6 @@ public class SynthSignalSource : Recyclable
     private int pluckWriteIndex;
     public bool isDone;
     protected VolumeKnob masterKnob;
-    protected VolumeKnob? sampleKnob;
     protected float effectiveVolume;
     protected float effectivePan;
     private List<IPitchModEffect>? pitchMods;
@@ -95,7 +94,7 @@ public class SynthSignalSource : Recyclable
     {
         var ret = _pool.Value.Rent();
         ret.Id = Interlocked.Increment(ref _globalId);
-        ret.Construct(frequencyHz, patch, master, noteEvent, null);
+        ret.Construct(frequencyHz, patch, master, noteEvent);
         return ret;
     }
 
@@ -150,7 +149,7 @@ public class SynthSignalSource : Recyclable
     private double twoPiOverSampleRate;
     private float subOscMul;
 
-    protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, ScheduledNoteEvent noteEvent, VolumeKnob? knob)
+    protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, ScheduledNoteEvent noteEvent)
     {
         frequency = patch.FrequencyOverride.HasValue ? patch.FrequencyOverride.Value : frequencyHz;
         sampleRate = 44100;
@@ -188,11 +187,7 @@ public class SynthSignalSource : Recyclable
             lfos = null;
         }
 
-        InitVolume(master, knob);
-        if(knob != null)
-        {
-            knob.Dispose();
-        }
+        InitVolume(master);
         this.envelope = patch.FindEnvelopeEffect().Envelope;
         envelope.Trigger(0, sampleRate);
 
@@ -462,34 +457,22 @@ public class SynthSignalSource : Recyclable
         return current;
     }
 
-    public void InitVolume(VolumeKnob master, VolumeKnob? sample)
+    public void InitVolume(VolumeKnob master)
     {
         masterKnob = master ?? throw new ArgumentNullException(nameof(master));
-        sampleKnob = sample;
         master.VolumeChanged.Subscribe(this, static (me, v) => me.OnVolumeChanged(), this);
-        sample?.VolumeChanged.Subscribe(this, static (me, v) => me.OnVolumeChanged(), this);
-        sample?.PanChanged.Subscribe(this, static (me, v) => me.OnPanChanged(), this);
         OnVolumeChanged();
-        OnPanChanged();
     }
 
-    protected void OnPanChanged()
-    {
-        float pan = sampleKnob?.Pan ?? 0f;
-        effectivePan = Math.Max(-1f, Math.Min(1f, pan));
-    }
 
     protected void OnVolumeChanged()
     {
         float master = (float)Math.Pow(masterKnob.Volume, 1.2f);
-        float sample = (float)Math.Pow(sampleKnob?.Volume ?? 1, 1.2f);
-        effectiveVolume = Math.Clamp(master * sample, 0f, 1f);
+        effectiveVolume = Math.Clamp(master, 0f, 1f);
     }
 
     protected override void OnReturn()
     {
-        sampleKnob?.Dispose();
-        sampleKnob = null;
         masterKnob = null;
         effectiveVolume = 0f;
         effectivePan = 0f;
