@@ -33,7 +33,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
         base.OnReturn();
     }
 
-    public static IReleasableNote? PlaySustainedNote(NoteExpression note, VolumeKnob masterVolume)
+    public static SustainedNoteInfo? CreateSustainedNote(NoteExpression note, VolumeKnob masterVolume)
     {
         var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
         patch.WithVolume(note.Velocity / 127f);
@@ -44,30 +44,46 @@ public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
         }
 
 
-        var tempEvent = ScheduledNoteEvent.Create(note, patch, null);
+        var ev = ScheduledNoteEvent.Create(note, patch, null);
         var result = RecyclableListPool<SynthVoiceProvider>.Instance.Rent(8);
-        foreach (var voice in patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), masterVolume, tempEvent))
+        foreach (var voice in patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), masterVolume, ev))
         {
             result.Items.Add(Create(voice));
         }
-        tempEvent.Dispose();
-        return VoiceCountTracker.Track(result);
+        return SustainedNoteInfo.Create(ev, result);
     }
 }
 
-internal class VoiceCountTracker : Recyclable, IReleasableNote
+public class SustainedNoteInfo : Recyclable, IReleasableNote
 {
-    private static LazyPool<VoiceCountTracker> _pool = new(() => new VoiceCountTracker());
+    private static LazyPool<SustainedNoteInfo> _pool = new(() => new SustainedNoteInfo());
     private int remainingVoices;
     private RecyclableList<SynthVoiceProvider> voices;
-    private VoiceCountTracker() { }
+    private ScheduledNoteEvent ev;
+    public List<SynthVoiceProvider>? Voices => voices?.Items;
 
-    public static VoiceCountTracker Track(RecyclableList<SynthVoiceProvider> voices)
+    private SustainedNoteInfo() { }
+
+    public static SustainedNoteInfo Create(ScheduledNoteEvent ev, RecyclableList<SynthVoiceProvider> voices)
     {
-        var tracker = _pool.Value.Rent();
-        tracker.remainingVoices = voices.Count;
-        tracker.voices = voices;
-        return tracker;
+        var ret = _pool.Value.Rent();
+        ret.ev = ev;
+        ret.remainingVoices = voices.Count;
+        ret.voices = voices;
+
+        for(var i = 0; i < ret.remainingVoices; i++)
+        {
+            voices[i].OnDisposed(ret, static me =>
+            {
+                me.remainingVoices--;
+                if (me.remainingVoices <= 0)
+                {
+                    me.Dispose();
+                }
+            });
+        }
+
+        return ret;
     }
 
     public void ReleaseNote()
@@ -76,7 +92,6 @@ internal class VoiceCountTracker : Recyclable, IReleasableNote
         {
             voices[i].ReleaseNote();
         }
-        Dispose();
     }
 
     protected override void OnReturn()
@@ -84,5 +99,8 @@ internal class VoiceCountTracker : Recyclable, IReleasableNote
         base.OnReturn();
         voices.Dispose();
         voices = null!;
+        ev.Dispose();
+        ev = null!;
+        remainingVoices = 0;
     }
 }
