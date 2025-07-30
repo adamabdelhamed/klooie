@@ -52,9 +52,20 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null) 
         => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
 
-   
-    public IReleasableNote? PlaySustainedNote(NoteExpression note) 
-        => SynthVoiceProvider.PlaySustainedNote(note, MasterVolume);
+
+    public IReleasableNote? PlaySustainedNote(NoteExpression note)
+    {
+        var ret = SynthVoiceProvider.CreateSustainedNote(note, MasterVolume);
+        if (ret.Voices != null)
+        {
+            for (var i = 0; i < ret.Voices.Count; i++)
+            {
+                var voice = ret.Voices[i];
+                mixer.AddMixerInput(voice);
+            }
+        }
+        return ret;
+    }
 
     public void Play(Song song, ILifetime? lifetime = null)
     {
