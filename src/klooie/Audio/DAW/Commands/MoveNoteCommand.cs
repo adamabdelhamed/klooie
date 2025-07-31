@@ -37,6 +37,7 @@ public class MoveNoteCommand : ICommand
         grid.SelectedNotes.AddRange(newSelection);
         grid.RefreshVisibleSet();
         grid.StatusChanged.Fire($"Moved note {oldNote.MidiNote} to {newNote.MidiNote}".ToWhite());
+        WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
     }
 
     public void Undo()
@@ -49,6 +50,7 @@ public class MoveNoteCommand : ICommand
         grid.SelectedNotes.AddRange(oldSelection);
         grid.RefreshVisibleSet();
         grid.StatusChanged.Fire($"Undo move note".ToWhite());
+        WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
     }
 }
 

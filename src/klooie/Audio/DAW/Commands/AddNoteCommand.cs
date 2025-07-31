@@ -31,6 +31,7 @@ public class AddNoteCommand : ICommand
         grid.RefreshVisibleSet();
         grid.StatusChanged.Fire($"Added note {note.MidiNote}".ToWhite());
         grid.Editor.ClearAddNotePreview();
+        WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
     }
 
     public void Undo()
@@ -40,5 +41,6 @@ public class AddNoteCommand : ICommand
         grid.SelectedNotes.AddRange(oldSelection);
         grid.RefreshVisibleSet();
         grid.StatusChanged.Fire("Undo add note".ToWhite());
+        WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
     }
 }

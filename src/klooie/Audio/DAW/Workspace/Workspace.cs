@@ -23,7 +23,7 @@ public class Workspace
 
     public static async Task<Workspace> Bootstrap()
     {
-        var rootDirectory = Environment.GetEnvironmentVariable(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))+ "/klooie.DAW";
+        var rootDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "\\klooie.DAW";
         if (Directory.Exists(rootDirectory) == false) Directory.CreateDirectory(rootDirectory);
         var mru = MRUWorkspaceSettings.Load(rootDirectory);
         var workspace = mru.LastOpenedWorkspace != null ? await Workspace.LoadAsync(mru.LastOpenedWorkspace) : await Workspace.CreateNewAsync(rootDirectory);
@@ -119,11 +119,15 @@ public class Workspace
         }
     }
 
-    // --- Save all data (except patches, which are hot-reloadable .cs files) ---
-    public async Task SaveAsync()
+    private async Task SaveAsync()
     {
+        // Synchronously serialize all JSON
         var instrumentsJson = JsonSerializer.Serialize(Instruments, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(InstrumentsPath, instrumentsJson);
+        var settingsJson = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
+
+        // Prepare song file paths and JSON
+        var songFilePaths = new List<string>(Songs.Count);
+        var songJsons = new List<string>(Songs.Count);
 
         foreach (var song in Songs)
         {
@@ -131,37 +135,49 @@ public class Workspace
             {
                 song.Filename = Path.Combine(SongsDirectory, MakeSafeFileName(song.Title ?? "Untitled") + ".song.json");
             }
-            var songJson = JsonSerializer.Serialize(song, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(song.Filename, songJson);
+            songFilePaths.Add(song.Filename);
+            songJsons.Add(JsonSerializer.Serialize(song, new JsonSerializerOptions { WriteIndented = true }));
         }
 
-        var settingsJson = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(WorkspaceSettingsPath, settingsJson);
+        // Asynchronously write all files
+        var fileWriteTasks = new List<Task>
+    {
+        File.WriteAllTextAsync(InstrumentsPath, instrumentsJson),
+        File.WriteAllTextAsync(WorkspaceSettingsPath, settingsJson)
+    };
+
+        for (int i = 0; i < songFilePaths.Count; i++)
+        {
+            fileWriteTasks.Add(File.WriteAllTextAsync(songFilePaths[i], songJsons[i]));
+        }
+
+        await Task.WhenAll(fileWriteTasks);
     }
+
 
     // --- Consistent auto-saving mutations! ---
 
-    public async Task AddSongAsync(SongInfo song)
+    public void AddSong(SongInfo song)
     {
         if (song.Filename == null)
         {
             song.Filename = Path.Combine(SongsDirectory, MakeSafeFileName(song.Title ?? "Untitled") + ".song.json");
         }
         Songs.Add(song);
-        await SaveAsync();
+        SaveDebounced();
     }
 
-    public async Task RemoveSongAsync(SongInfo song)
+    public void RemoveSong(SongInfo song)
     {
         if (song.Filename != null && File.Exists(song.Filename))
         {
             File.Delete(song.Filename);
         }
         Songs.Remove(song);
-        await SaveAsync();
+        SaveDebounced();
     }
 
-    public async Task UpdateSongAsync(SongInfo song)
+    public void UpdateSong(SongInfo song)
     {
         // Replace the in-memory song with the new one (by reference)
         var idx = Songs.FindIndex(s => s.Filename == song.Filename);
@@ -169,35 +185,44 @@ public class Workspace
         {
             Songs[idx] = song;
         }
-        await SaveAsync();
+        SaveDebounced();
     }
 
-    public async Task AddInstrumentAsync(InstrumentInfo instrument)
+    public void AddInstrument(InstrumentInfo instrument)
     {
         Instruments.Add(instrument);
-        await SaveAsync();
+        SaveDebounced();
     }
 
-    public async Task RemoveInstrumentAsync(InstrumentInfo instrument)
+    public void InsertInstrument(int index, InstrumentInfo instrument)
+    {
+        if (index < 0 || index > Instruments.Count)
+            throw new ArgumentOutOfRangeException(nameof(index), "Index must be within the range of the Instruments list.");
+        
+        Instruments.Insert(index, instrument);
+        SaveDebounced();
+    }
+
+    public void RemoveInstrument(InstrumentInfo instrument)
     {
         Instruments.Remove(instrument);
-        await SaveAsync();
+        SaveDebounced();
     }
 
-    public async Task UpdateInstrumentAsync(InstrumentInfo instrument)
+    public void UpdateInstrument(InstrumentInfo instrument)
     {
         var idx = Instruments.FindIndex(i => i.Name == instrument.Name);
         if (idx >= 0)
         {
             Instruments[idx] = instrument;
         }
-        await SaveAsync();
+        SaveDebounced();
     }
 
-    public async Task UpdateSettingsAsync(Action<WorkspaceSettings> update)
+    public void UpdateSettings(Action<WorkspaceSettings> update)
     {
         update(Settings);
-        await SaveAsync();
+        SaveDebounced();
     }
 
     private static string MakeSafeFileName(string input)
@@ -221,6 +246,29 @@ public class Workspace
 
     public List<(InstrumentInfo Info, InstrumentExpression? Expression)> GetResolvedInstruments()
         => Instruments.Select(i => (i, ResolveInstrument(i))).ToList();
+
+    private Recyclable? saveLifetime;
+    private bool isSaving;
+    private void SaveDebounced()
+    {
+        if(isSaving)
+        {
+            ConsoleApp.Current.Scheduler.Delay(1000, SaveDebounced);
+            return;
+        }
+
+        saveLifetime?.Dispose();
+        saveLifetime = DefaultRecyclablePool.Instance.Rent();
+        ConsoleApp.Current.Scheduler.DelayIfValid(1000, DelayState.Create(saveLifetime), async (s) =>
+        {
+            isSaving = true;
+            await SaveAsync();
+            isSaving = false;
+            s.DisposeAllValidDependencies();
+            s.Dispose();
+            saveLifetime = null;
+        });
+    }
 }
 
 // --- InstrumentInfo: persisted in instruments.json ---
@@ -237,7 +285,7 @@ public class SongInfo
     public string? Title { get; set; }
     public string? Filename { get; set; }
     public double BeatsPerMinute { get; set; }
-    public List<NoteExpression> Notes { get; set; } = new();
+    public ListNoteSource Notes { get; set; } = new();
 }
 
 // --- PatchFactoryInfo: one per static ISynthPatch factory method ---

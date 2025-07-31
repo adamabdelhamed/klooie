@@ -115,7 +115,7 @@ public class ScheduledSignalSourceMixer
                     tracks[trackKey] = track;
                 }
 
-                var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
+                var patch = note.Instrument?.PatchFunc?.Invoke() ?? SynthLead.Create();
                 if (!patch.IsNotePlayable(note.MidiNote))
                 {
                     ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNote}[D] is not playable by the current instrument"));

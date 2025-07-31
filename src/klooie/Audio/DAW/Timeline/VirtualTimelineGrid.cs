@@ -85,6 +85,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             me.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
         }, this);
         TimelinePlayer.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
+        RefreshVisibleSet();
     }
 
     public void SetMode(TimelineInputMode mode)

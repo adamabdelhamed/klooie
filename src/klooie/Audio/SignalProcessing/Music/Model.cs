@@ -2,14 +2,19 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace klooie;
 
 
 public sealed class InstrumentExpression
 {
-    public string Name { get; }
-    public Func<ISynthPatch> PatchFunc { get; }
+    public string Name { get; set; }
+    [JsonIgnore]
+    public Func<ISynthPatch> PatchFunc { get; set; }
+
+    public InstrumentExpression() { }
+
     private InstrumentExpression(string name, Func<ISynthPatch> patchFunc)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Instrument name cannot be null or empty.", nameof(name));
@@ -22,20 +27,26 @@ public sealed class InstrumentExpression
 
 public sealed class NoteExpression
 {
-    public int MidiNote { get; }
+    public int MidiNote { get; set; }
 
+    [JsonIgnore]
     public float FrequencyHz => MidiNoteToFrequency(MidiNote);
-    public double StartBeat { get; }
-    public double DurationBeats { get; }
-    public int Velocity { get; }
+    public double StartBeat { get; set; }
+    public double DurationBeats { get; set; }
+    public int Velocity { get; set; }
     public double BeatsPerMinute { get; set; }
 
+    [JsonIgnore]
     public TimeSpan StartTime => TimeSpan.FromSeconds(StartBeat * (60.0 / BeatsPerMinute));
+    [JsonIgnore]
     public TimeSpan DurationTime => TimeSpan.FromSeconds(DurationBeats * (60.0 / BeatsPerMinute));
 
+    [JsonIgnore]
     public double EndBeat => StartBeat < 0 ? -1 : StartBeat + DurationBeats;
 
-    public InstrumentExpression? Instrument { get; }
+    public InstrumentExpression? Instrument { get; set; }
+
+    public NoteExpression() { }
 
     private NoteExpression(int midiNote, double startBeat, double durationBeats, int velocity, InstrumentExpression? instrument)
     {

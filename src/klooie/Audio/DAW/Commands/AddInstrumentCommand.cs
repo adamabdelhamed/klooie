@@ -17,8 +17,8 @@ public class AddInstrumentCommand : ICommand
         Description = "Add Instrument";
     }
 
-    public void Do() => _workspace.Instruments.Add(_instrument);
-    public void Undo() => _workspace.Instruments.Remove(_instrument);
+    public void Do() => _workspace.AddInstrument(_instrument);
+    public void Undo() => _workspace.RemoveInstrument(_instrument);
     public string Description { get; }
 }
 
@@ -37,14 +37,13 @@ public class RemoveInstrumentCommand : ICommand
 
     public void Do()
     {
-        _index = _workspace.Instruments.IndexOf(_instrument);
-        if (_index >= 0) _workspace.Instruments.RemoveAt(_index.Value);
+        _workspace.RemoveInstrument(_instrument);
     }
 
     public void Undo()
     {
         if (_index.HasValue)
-            _workspace.Instruments.Insert(_index.Value, _instrument);
+            _workspace.InsertInstrument(_index.Value, _instrument);
     }
     public string Description { get; }
 }

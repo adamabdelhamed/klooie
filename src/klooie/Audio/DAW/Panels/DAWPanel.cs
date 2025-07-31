@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 namespace klooie;
 public class DAWPanel : ProtectedConsolePanel
 {
@@ -10,18 +11,24 @@ public class DAWPanel : ProtectedConsolePanel
     public PianoWithTimeline PianoWithTimeline { get; private set; }
 
     private DAWMidi midi;
-
-    public DAWPanel(WorkspaceSession session, IMidiProductDiscoverer midiImpl)
+    private IMidiProductDiscoverer midiProvider;
+    public DAWPanel(WorkspaceSession session, IMidiProductDiscoverer midiProvider)
     {
         Session = session;
+        this.midiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
+        Ready.SubscribeOnce(async () => await InitializeAsync());
+    }
 
-        var lastOpenedSong = session.Workspace.Settings.LastOpenedSong != null ? session.Workspace.Songs.FirstOrDefault(s => s.Title == session.Workspace.Settings.LastOpenedSong) : new SongInfo() { Title = $"Song {DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}", BeatsPerMinute = 60, Notes = new List<NoteExpression>() };
+    private async Task InitializeAsync()
+    {
+        await Session.Initialize();
+
         var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Background = RGB.Green };
 
-        PianoWithTimeline = ProtectedPanel.Add(new PianoWithTimeline(session, new ListNoteSource(lastOpenedSong.Notes), commandBar)).Fill();
+        PianoWithTimeline = ProtectedPanel.Add(new PianoWithTimeline(Session, Session.CurrentSong.Notes, commandBar)).Fill();
         Ready.SubscribeOnce(PianoWithTimeline.Timeline.Focus);
 
-        this.midi = DAWMidi.Create(midiImpl ?? throw new ArgumentNullException(nameof(midiImpl)), PianoWithTimeline);
+        this.midi = DAWMidi.Create(midiProvider ?? throw new ArgumentNullException(nameof(midiProvider)), PianoWithTimeline);
         commandBar.Add(midi.CreateMidiProductDropdown());
     }
 

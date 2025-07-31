@@ -133,6 +133,7 @@ public class TimelineEditor
                 n.MidiNote,
                 Math.Max(0, n.StartBeat + offset),
                 n.DurationBeats,
+                Timeline.Notes.BeatsPerMinute,
                 n.Velocity,
                 n.Instrument);
             pasted.Add(nn);
@@ -167,7 +168,7 @@ public class TimelineEditor
             if (idx < 0) continue;
             int newMidi = Math.Clamp(n.MidiNote + midiDelta, 0, 127);
             double newBeat = Math.Max(0, n.StartBeat + beatDelta);
-            var nn = NoteExpression.Create(newMidi, newBeat, n.DurationBeats, n.Velocity, n.Instrument);
+            var nn = NoteExpression.Create(newMidi, newBeat, n.DurationBeats, Timeline.Notes.BeatsPerMinute, n.Velocity, n.Instrument);
             updated.Add(nn);
             moveCmds.Add(
                 new MoveNoteCommand(list, Timeline, n, nn, oldSelection, updated)
@@ -195,7 +196,7 @@ public class TimelineEditor
             int idx = list.IndexOf(n);
             if (idx < 0) continue;
             int newVel = Math.Clamp(n.Velocity + delta, 1, 127);
-            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, newVel, n.Instrument);
+            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, Timeline.Notes.BeatsPerMinute, newVel, n.Instrument);
             updated.Add(nn);
             velCmds.Add(
                 new ChangeVelocityCommand(list, Timeline, n, nn, oldSelection, updated)
@@ -245,7 +246,7 @@ public class TimelineEditor
         if (pendingAddNote == null) return;
         var (start, duration, midi) = pendingAddNote.Value;
 
-        var command = new AddNoteCommand(Timeline.Notes, Timeline, NoteExpression.Create(midi, start, duration, instrument: InstrumentExpression.Create("Keyboard", Timeline.InstrumentFactory)), Timeline.SelectedNotes, "Add Note");
+        var command = new AddNoteCommand(Timeline.Notes, Timeline, NoteExpression.Create(midi, start, duration, Timeline.Notes.BeatsPerMinute, instrument: InstrumentExpression.Create("Keyboard", Timeline.InstrumentFactory)), Timeline.SelectedNotes, "Add Note");
         Timeline.Session.Commands.Execute(command);
     }
 

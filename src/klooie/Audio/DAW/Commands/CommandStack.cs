@@ -42,10 +42,4 @@ public class CommandStack
         cmd.Do();
         _pointer++;
     }
-
-    public void Clear()
-    {
-        _history.Clear();
-        _pointer = 0;
-    }
 }

@@ -29,6 +29,7 @@ public class DeleteNoteCommand : ICommand
         grid.SelectedNotes.Clear();
         grid.RefreshVisibleSet();
         grid.StatusChanged.Fire($"Deleted note {note.MidiNote}".ToWhite());
+        WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
     }
 
     public void Undo()
@@ -38,5 +39,6 @@ public class DeleteNoteCommand : ICommand
         grid.SelectedNotes.AddRange(oldSelection);
         grid.RefreshVisibleSet();
         grid.StatusChanged.Fire("Undo delete note".ToWhite());
+        WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
     }
 }
