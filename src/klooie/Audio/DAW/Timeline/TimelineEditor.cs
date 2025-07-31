@@ -85,7 +85,7 @@ public class TimelineEditor
     private void SelectAll()
     {
         Timeline.SelectedNotes.Clear();
-        Timeline.SelectedNotes.AddRange(Timeline.NoteSource);
+        Timeline.SelectedNotes.AddRange(Timeline.Notes);
         Timeline.RefreshVisibleSet();
         Timeline.StatusChanged.Fire("All notes selected".ToWhite());
     }
@@ -99,7 +99,7 @@ public class TimelineEditor
 
     private void DeleteSelected()
     {
-        if (Timeline.NoteSource is not ListNoteSource list) return;
+        if (Timeline.Notes is not ListNoteSource list) return;
         if (Timeline.SelectedNotes.Count == 0) return;
 
         var oldSelection = Timeline.SelectedNotes.ToList();
@@ -119,7 +119,7 @@ public class TimelineEditor
 
     private void Paste()
     {
-        if (Timeline.NoteSource is not ListNoteSource list) return;
+        if (Timeline.Notes is not ListNoteSource list) return;
         if (clipboard.Count == 0) return;
         double offset = Timeline.CurrentBeat - clipboard.Min(n => n.StartBeat);
 
@@ -147,7 +147,7 @@ public class TimelineEditor
 
     private void MoveSelection(ConsoleKeyInfo k)
     {
-        if (Timeline.NoteSource is not ListNoteSource list) return;
+        if (Timeline.Notes is not ListNoteSource list) return;
         if (Timeline.SelectedNotes.Count == 0) return;
 
         double beatDelta = 0;
@@ -182,7 +182,7 @@ public class TimelineEditor
 
     private void AdjustVelocity(int delta)
     {
-        if (Timeline.NoteSource is not ListNoteSource list) return;
+        if (Timeline.Notes is not ListNoteSource list) return;
         if (Timeline.SelectedNotes.Count == 0) return;
 
         var oldSelection = Timeline.SelectedNotes.ToList();
@@ -245,7 +245,7 @@ public class TimelineEditor
         if (pendingAddNote == null) return;
         var (start, duration, midi) = pendingAddNote.Value;
 
-        var command = new AddNoteCommand(Timeline.NoteSource, Timeline, NoteExpression.Create(midi, start, duration, instrument: InstrumentExpression.Create("Keyboard", Timeline.InstrumentFactory)), Timeline.SelectedNotes, "Add Note");
+        var command = new AddNoteCommand(Timeline.Notes, Timeline, NoteExpression.Create(midi, start, duration, instrument: InstrumentExpression.Create("Keyboard", Timeline.InstrumentFactory)), Timeline.SelectedNotes, "Add Note");
         Timeline.Session.Commands.Execute(command);
     }
 

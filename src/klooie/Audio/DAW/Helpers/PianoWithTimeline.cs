@@ -12,7 +12,7 @@ public class PianoWithTimeline : ProtectedConsolePanel
     public VirtualTimelineGrid Timeline { get; private init; }
 
     public StatusBar StatusBar { get; private init; }
-    public TimelinePlayer Player => Timeline.Player;
+    public TimelinePlayer Player => Timeline.TimelinePlayer;
     public PianoWithTimeline(WorkspaceSession session, ListNoteSource notes, ConsoleControl? commandBar = null)
     {
         var rowSpecPrefix = commandBar == null ? "1r" : "1p;1r";

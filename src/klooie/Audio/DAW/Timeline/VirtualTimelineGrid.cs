@@ -14,14 +14,15 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
     public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
     public TimelineViewport Viewport { get; private init; }
-    private ListNoteSource notes;
-    public ListNoteSource NoteSource => notes;
+    
+    public ListNoteSource Notes { get; private set; }
     private readonly Dictionary<NoteExpression, NoteCell> live = new();
+    private HashSet<NoteExpression> visibleNow = new HashSet<NoteExpression>();
     private AlternatingBackgroundGrid backgroundGrid;
     public const int ColWidthChars = 1;
     public const int RowHeightChars = 1;
     private Recyclable? focusLifetime;
-    public TimelinePlayer Player { get; }
+    public TimelinePlayer TimelinePlayer { get; }
     public Event<double> PlaybackStarting { get; } = Event<double>.Create();
     public MelodyPlayer AudioPlayer { get; private set; }
     private double beatsPerColumn = 1/8.0;
@@ -48,7 +49,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         }
     }
 
-    public double CurrentBeat => Player.CurrentBeat;
+    public double CurrentBeat => TimelinePlayer.CurrentBeat;
     public double MaxBeat => maxBeat;
     private double maxBeat;
     private Dictionary<string, RGB> instrumentColorMap = new();
@@ -63,9 +64,9 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         this.Session = session;
         notes = notes ?? new ListNoteSource();
         this.userCyclableModes =  [new NavigationMode() { Timeline = this }, new SelectionMode() { Timeline = this }];
-        Viewport = new TimelineViewport();
-        Player = new TimelinePlayer(() => maxBeat, notes?.BeatsPerMinute ?? 60);
-        Player.BeatChanged.Subscribe(this, static (me,b) => me.OnBeatChanged(b), this);
+        Viewport = new TimelineViewport(this);
+        TimelinePlayer = new TimelinePlayer(this, () => maxBeat, notes?.BeatsPerMinute ?? 60);
+
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
         BoundsChanged.Sync(UpdateViewportBounds, this);
@@ -74,15 +75,15 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
         LoadNotes(notes);
-        AudioPlayer = new MelodyPlayer(this.notes, Player.BeatsPerMinute);
+        AudioPlayer = new MelodyPlayer(this.Notes, TimelinePlayer.BeatsPerMinute);
         CurrentMode = this.userCyclableModes[0];
         Editor = new TimelineEditor(session.Commands) { Timeline = this };
-        Player.Playing.Subscribe(this, static (me) =>
+        TimelinePlayer.Playing.Subscribe(this, static (me) =>
         {
-            var autoStopSuffix = me.Player.StopAtEnd ? " (auto-stop)" : "";
+            var autoStopSuffix = me.TimelinePlayer.StopAtEnd ? " (auto-stop)" : "";
             me.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
         }, this);
-        Player.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
+        TimelinePlayer.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
     }
 
     public void SetMode(TimelineInputMode mode)
@@ -101,12 +102,12 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
     private void LoadNotes(ListNoteSource? notes)
     {
-        this.notes = notes;
+        this.Notes = notes;
         if (notes == null)
         {
             maxBeat = 0;
             instrumentColorMap = new Dictionary<string, RGB>();
-            AudioPlayer = new MelodyPlayer(new ListNoteSource(), Player.BeatsPerMinute);
+            AudioPlayer = new MelodyPlayer(new ListNoteSource(), TimelinePlayer.BeatsPerMinute);
             return;
         }
         Viewport.FirstVisibleMidi = notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min();
@@ -117,19 +118,19 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             instrumentColorMap[instruments[i]] = instrumentColors[i];
         }
-        AudioPlayer = new MelodyPlayer(this.notes, Player.BeatsPerMinute);
+        AudioPlayer = new MelodyPlayer(this.Notes, TimelinePlayer.BeatsPerMinute);
     }
 
     private static readonly RGB[] BaseInstrumentColors = new[]
     {
-    new RGB(220, 60, 60),    // Red
-    new RGB(60, 180, 90),    // Green
-    new RGB(65, 105, 225),   // Blue
-    new RGB(240, 200, 60),   // Yellow/Gold
-    new RGB(200, 60, 200),   // Magenta
-    new RGB(50, 220, 210),   // Cyan
-    new RGB(245, 140, 30),   // Orange
-};
+        new RGB(220, 60, 60),    // Red
+        new RGB(60, 180, 90),    // Green
+        new RGB(65, 105, 225),   // Blue
+        new RGB(240, 200, 60),   // Yellow/Gold
+        new RGB(200, 60, 200),   // Magenta
+        new RGB(50, 220, 210),   // Cyan
+        new RGB(245, 140, 30),   // Orange
+    };
 
     private static readonly float[] PaleFractions = new[]
     {
@@ -150,27 +151,13 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         return color.ToOther(RGB.White, pale);
     }
 
-    private void OnBeatChanged(double beat)
-    {
-        if (beat > Viewport.FirstVisibleBeat + Viewport.BeatsOnScreen * 0.8)
-        {
-            Viewport.FirstVisibleBeat = ConsoleMath.Round(beat - Viewport.BeatsOnScreen * 0.2);
-            RefreshVisibleSet();
-        }
-        else if (beat < Viewport.FirstVisibleBeat)
-        {
-            Viewport.FirstVisibleBeat = Math.Max(0, ConsoleMath.Round(beat - Viewport.BeatsOnScreen * 0.8));
-            RefreshVisibleSet();
-        }
-    }
-
     private Recyclable? playLifetime;
     public void StartPlayback()
     {
-        if(Player.IsPlaying) return;
+        if(TimelinePlayer.IsPlaying) return;
         ConsoleApp.Current.Scheduler.Delay(60, () =>
         {
-            Player.Start(CurrentBeat);
+            TimelinePlayer.Start(CurrentBeat);
             PlaybackStarting.Fire(CurrentBeat);
         });
         playLifetime?.TryDispose();
@@ -178,20 +165,15 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         AudioPlayer?.PlayFrom(CurrentBeat, playLifetime);
     }
 
-    public void StopPlayback() => Player.Stop();
+    public void StopPlayback() => TimelinePlayer.Stop();
 
     protected override void OnPaint(ConsoleBitmap context)
     {
         base.OnPaint(context);
-
         CurrentMode?.Paint(context);
-
     }
 
-    private void UpdateAlternatingBackgroundOffset()
-    {
-        backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.FirstVisibleMidi / (double)RowHeightChars);
-    }
+    private void UpdateAlternatingBackgroundOffset() => backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.FirstVisibleMidi / (double)RowHeightChars);
 
     private void UpdateViewportBounds()
     {
@@ -208,11 +190,11 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             if (k.Key == ConsoleKey.Spacebar)
             {
-                if (Player.IsPlaying)
+                if (TimelinePlayer.IsPlaying)
                 {
                     playLifetime?.TryDispose();
                     playLifetime = null;
-                    Player.Pause();
+                    TimelinePlayer.Pause();
                 }
                 else
                 {
@@ -240,14 +222,13 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         }, focusLifetime);
     }
 
-    HashSet<NoteExpression> visibleNow = new HashSet<NoteExpression>();
     public void RefreshVisibleSet()
     {
-        if(live.Count == 0 && notes.Count > 0)
+        if(live.Count == 0 && Notes.Count > 0)
         {
-            Viewport.FirstVisibleMidi = Math.Max(0, notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min() - 12);
+            Viewport.FirstVisibleMidi = Math.Max(0, Notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min() - 12);
         }
-        maxBeat = notes.Select(n => n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : GetSustainedNoteDurationBeats(n))).DefaultIfEmpty(0).Max();
+        maxBeat = Notes.Select(n => n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : GetSustainedNoteDurationBeats(n))).DefaultIfEmpty(0).Max();
         double beatStart = Viewport.FirstVisibleBeat;
         double beatEnd = beatStart + Viewport.BeatsOnScreen;
         int midiTop = Viewport.FirstVisibleMidi;
@@ -256,9 +237,9 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         // Track visible notes this frame
         visibleNow.Clear();
 
-        for (int i = 0; i < notes.Count; i++)
+        for (int i = 0; i < Notes.Count; i++)
         {
-            var note = notes[i];
+            var note = Notes[i];
             if (note.Velocity == 0) continue;
 
             double durBeats = note.DurationBeats >= 0 ? note.DurationBeats : GetSustainedNoteDurationBeats(note);
@@ -317,13 +298,10 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     private double GetSustainedNoteDurationBeats(NoteExpression n)
     {
         // Show duration from note's start to current playhead position
-        double sustainedBeats = Player.CurrentBeat - n.StartBeat;
+        double sustainedBeats = TimelinePlayer.CurrentBeat - n.StartBeat;
         return Math.Max(0, sustainedBeats);
     }
     internal ConsoleControl AddPreviewControl() => ProtectedPanel.Add(new ConsoleControl());
-
-
-
 
     protected override void OnReturn()
     {

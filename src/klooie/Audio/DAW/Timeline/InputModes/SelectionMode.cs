@@ -230,14 +230,14 @@ public class SelectionMode : TimelineInputMode
             if (midi0 > midi1) (midi0, midi1) = (midi1, midi0);
 
             // Select notes from the underlying note source, not the UI
-            Timeline.SelectedNotes.AddRange(Timeline.NoteSource
+            Timeline.SelectedNotes.AddRange(Timeline.Notes
                 .Where(n => n.Velocity > 0
-                    && n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : Timeline.Player.CurrentBeat - n.StartBeat) >= beat0
+                    && n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : Timeline.TimelinePlayer.CurrentBeat - n.StartBeat) >= beat0
                     && n.StartBeat <= beat1
                     && n.MidiNote >= midi0
                     && n.MidiNote <= midi1));
 
-            bool canAddNote = Timeline.SelectedNotes.Count == 0 && midi0 == midi1 && Timeline.NoteSource is ListNoteSource;
+            bool canAddNote = Timeline.SelectedNotes.Count == 0 && midi0 == midi1;
             int colStart = Math.Min(ax, cx);
             int colEnd = Math.Max(ax, cx);
             double addStartBeat = Timeline.Viewport.FirstVisibleBeat + colStart * Timeline.BeatsPerColumn;

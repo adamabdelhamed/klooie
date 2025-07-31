@@ -14,7 +14,7 @@ public class NavigationMode : TimelineInputMode
     {
         if (key.Modifiers != 0) return; // ignore any modifiers
 
-        var player = Timeline.Player;
+        var player = Timeline.TimelinePlayer;
         var view = Timeline.Viewport;
         bool handled = true;
 
@@ -84,7 +84,7 @@ public class NavigationMode : TimelineInputMode
     private void EnsurePlayheadVisible()
     {
         var view = Timeline.Viewport;
-        double beat = Timeline.Player.CurrentBeat;
+        double beat = Timeline.TimelinePlayer.CurrentBeat;
 
         if (beat < view.FirstVisibleBeat)
         {

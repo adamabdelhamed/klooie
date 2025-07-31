@@ -17,9 +17,26 @@ public partial class TimelineViewport : IObservableObject
     public void ScrollRows(int delta) => FirstVisibleMidi = Math.Clamp(FirstVisibleMidi + delta, 0, 127);
     public void ScrollBeats(double dx) => FirstVisibleBeat = Math.Max(0, FirstVisibleBeat + dx);
 
-    public TimelineViewport()
+    public VirtualTimelineGrid Timeline { get; }
+
+    public TimelineViewport(VirtualTimelineGrid timeline)
     {
+        this.Timeline = timeline;
         // middle c
         FirstVisibleMidi = DefaultFirstVisibleMidi;
+    }
+
+    public void OnBeatChanged(double beat)
+    {
+        if (beat > FirstVisibleBeat + BeatsOnScreen * 0.8)
+        {
+            FirstVisibleBeat = ConsoleMath.Round(beat - BeatsOnScreen * 0.2);
+            Timeline.RefreshVisibleSet();
+        }
+        else if (beat < FirstVisibleBeat)
+        {
+            FirstVisibleBeat = Math.Max(0, ConsoleMath.Round(beat - BeatsOnScreen * 0.8));
+            Timeline.RefreshVisibleSet();
+        }
     }
 }

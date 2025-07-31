@@ -35,10 +35,15 @@ public class TimelinePlayer
     /// </summary>
     public Event<double> BeatChanged => beatChanged ??= Event<double>.Create();
 
-    public TimelinePlayer(Func<double> maxBeatProvider, double bpm)
+    public VirtualTimelineGrid Timeline { get; }
+
+    public TimelinePlayer(VirtualTimelineGrid timeline, Func<double> maxBeatProvider, double bpm)
     {
+        this.Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
         this.maxBeatProvider = maxBeatProvider;
         this.BeatsPerMinute = bpm;
+
+        BeatChanged.Subscribe(this, static (me, b) => me.Timeline.Viewport.OnBeatChanged(b), Timeline);
     }
 
     public void Start(double? startBeat = null)
