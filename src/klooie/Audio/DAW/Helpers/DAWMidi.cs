@@ -62,7 +62,7 @@ public class DAWMidi : Recyclable
         double playheadBeat = pianoWithTimeline.Timeline.TimelinePlayer.CurrentBeat;
         pianoWithTimeline.Timeline.Notes.Remove(tracker.Note);
         double duration = playheadBeat - tracker.Note.StartBeat;
-        pianoWithTimeline.Timeline.Notes.Add(NoteExpression.Create(tracker.Note.MidiNote, tracker.Note.StartBeat, duration, tracker.Note.Velocity, tracker.Note.Instrument));
+        WorkspaceSession.Current.Commands.Execute(new AddNoteCommand( pianoWithTimeline.Timeline.Notes, pianoWithTimeline.Timeline, NoteExpression.Create(tracker.Note.MidiNote, tracker.Note.StartBeat, duration, tracker.Note.Velocity, tracker.Note.Instrument),pianoWithTimeline.Timeline.SelectedNotes));
         tracker.ReleaseNote();
         noteTrackers.Remove(noteNumber);
     }
