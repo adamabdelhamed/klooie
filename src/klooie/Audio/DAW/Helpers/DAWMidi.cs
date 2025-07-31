@@ -60,11 +60,34 @@ public class DAWMidi : Recyclable
         if (!noteTrackers.TryGetValue(noteNumber, out var tracker)) return;
 
         double playheadBeat = pianoWithTimeline.Timeline.TimelinePlayer.CurrentBeat;
+
+        // Snap the start and end beats to the desired grid
+        double snappedStart = SnapToGrid(tracker.Note.StartBeat);
+        double snappedEnd = SnapToGrid(playheadBeat);
+
+        // If snappedEnd is accidentally less than snappedStart (possible with fast playing), set minimum length
+        if (snappedEnd <= snappedStart)
+            snappedEnd = snappedStart + pianoWithTimeline.Timeline.BeatsPerColumn;
+
+        double duration = snappedEnd - snappedStart;
+
         pianoWithTimeline.Timeline.Notes.Remove(tracker.Note);
-        double duration = playheadBeat - tracker.Note.StartBeat;
-        WorkspaceSession.Current.Commands.Execute(new AddNoteCommand( pianoWithTimeline.Timeline.Notes, pianoWithTimeline.Timeline, NoteExpression.Create(tracker.Note.MidiNote, tracker.Note.StartBeat, duration, tracker.Note.Velocity, tracker.Note.Instrument),pianoWithTimeline.Timeline.SelectedNotes));
+        WorkspaceSession.Current.Commands.Execute(
+            new AddNoteCommand(
+                pianoWithTimeline.Timeline.Notes,
+                pianoWithTimeline.Timeline,
+                NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument),
+                pianoWithTimeline.Timeline.SelectedNotes)
+        );
         tracker.ReleaseNote();
         noteTrackers.Remove(noteNumber);
+    }
+
+
+    private double SnapToGrid(double beat)
+    {
+        double grid = 0.25; // for 1/16th in 4/4 time (4 beats per measure, 16 subdivisions)
+        return Math.Round(beat / grid) * grid;
     }
 
     public Dropdown CreateMidiProductDropdown()

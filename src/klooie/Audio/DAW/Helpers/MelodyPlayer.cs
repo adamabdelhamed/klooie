@@ -15,9 +15,18 @@ public class MelodyPlayer
 
     public void PlayFrom(double startBeat, ILifetime? playLifetime = null)
     {
-        var subset = new List<NoteExpression>();
-        foreach(var n in notes)
+        var subset = new ListNoteSource() { BeatsPerMinute = bpm };
+
+        // TODO: I should not have to set the BPM for each note, but this is a quick fix
+        for (int i = 0; i < notes.Count; i++)
         {
+            notes[i].BeatsPerMinute = bpm;
+        }
+
+        notes.SortMelody();
+        for (int i = 0; i < notes.Count; i++)
+        {
+            NoteExpression? n = notes[i];
             double endBeat = n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : 0);
             if (endBeat <= startBeat) continue;
 
@@ -30,11 +39,11 @@ public class MelodyPlayer
                 duration = endBeat - startBeat;
             }
 
-            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, n.BeatsPerMinute, n.Velocity, n.Instrument));
+            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, bpm, n.Velocity, n.Instrument));
         }
 
         if(subset.Count == 0) return;
 
-        ConsoleApp.Current.Sound.Play(new Song(new ListNoteSource(subset), bpm), playLifetime);
+        ConsoleApp.Current.Sound.Play(new Song(subset), playLifetime);
     }
 }
