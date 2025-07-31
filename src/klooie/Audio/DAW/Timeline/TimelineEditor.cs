@@ -9,44 +9,61 @@ public class TimelineEditor
     public required VirtualTimelineGrid Timeline { get; init; }
     private readonly List<NoteExpression> clipboard = new();
 
+    private CommandStack CommandStack { get; init; }
+
+    public TimelineEditor(CommandStack commandStack)
+    {
+        this.CommandStack = commandStack;
+    }
+
     public bool HandleKeyInput(ConsoleKeyInfo k)
     {
-        if(k.Key == ConsoleKey.A && k.Modifiers == ConsoleModifiers.Control)
+        if (k.Key == ConsoleKey.A && k.Modifiers == ConsoleModifiers.Control)
         {
             SelectAll();
             return true;
         }
-        if(k.Key == ConsoleKey.D && k.Modifiers == ConsoleModifiers.Control)
+        if (k.Key == ConsoleKey.D && k.Modifiers == ConsoleModifiers.Control)
         {
             DeselectAll();
             return true;
         }
-        if(k.Key == ConsoleKey.Delete)
+        if (k.Key == ConsoleKey.Delete)
         {
             DeleteSelected();
             return true;
         }
-        if(k.Key == ConsoleKey.C && k.Modifiers == ConsoleModifiers.Shift)
+        if (k.Key == ConsoleKey.C && k.Modifiers == ConsoleModifiers.Shift)
         {
             Copy();
             return true;
         }
-        if(k.Key == ConsoleKey.V && k.Modifiers == ConsoleModifiers.Shift)
+        if (k.Key == ConsoleKey.V && k.Modifiers == ConsoleModifiers.Shift)
         {
             Paste();
             return true;
         }
-        if(k.Modifiers == ConsoleModifiers.Control && IsArrowKey(k))
+        if (k.Modifiers == ConsoleModifiers.Control && IsArrowKey(k))
         {
             MoveSelection(k);
             return true;
         }
-        if(k.Modifiers ==  ConsoleModifiers.Shift && (
+        if (k.Modifiers == ConsoleModifiers.Shift && (
             (k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.DownArrow) ||
             k.Key == ConsoleKey.W || k.Key == ConsoleKey.S))
         {
             var isUp = k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W;
             AdjustVelocity(isUp ? 1 : -1);
+            return true;
+        }
+        else if (k.Modifiers == ConsoleModifiers.Control && k.Key == ConsoleKey.Z)
+        {
+            CommandStack.Undo();
+            return true;
+        }
+        else if (k.Modifiers == ConsoleModifiers.Control && k.Key == ConsoleKey.Y)
+        {
+            CommandStack.Redo();
             return true;
         }
         return false;
@@ -69,14 +86,15 @@ public class TimelineEditor
 
     private void DeleteSelected()
     {
-        if(Timeline.NoteSource is not ListNoteSource list) return;
-        Timeline.StatusChanged.Fire($"Deleted {Timeline.SelectedNotes.Count} notes".ToWhite());
-        foreach (var note in Timeline.SelectedNotes)
-        {
-            list.Remove(note);
-        }
-        Timeline.SelectedNotes.Clear();
-        Timeline.RefreshVisibleSet();
+        if (Timeline.NoteSource is not ListNoteSource list) return;
+        if (Timeline.SelectedNotes.Count == 0) return;
+
+        var oldSelection = Timeline.SelectedNotes.ToList();
+        var deleteCmds = Timeline.SelectedNotes
+            .Select(note => new DeleteNoteCommand(list, Timeline, note, oldSelection))
+            .ToList<ICommand>();
+
+        CommandStack.Execute(new MultiCommand(deleteCmds, "Delete Selected Notes"));
     }
 
     private void Copy()
@@ -88,11 +106,15 @@ public class TimelineEditor
 
     private void Paste()
     {
-        if(Timeline.NoteSource is not ListNoteSource list) return;
-        if(clipboard.Count == 0) return;
+        if (Timeline.NoteSource is not ListNoteSource list) return;
+        if (clipboard.Count == 0) return;
         double offset = Timeline.CurrentBeat - clipboard.Min(n => n.StartBeat);
+
         var pasted = new List<NoteExpression>();
-        foreach(var n in clipboard)
+        var oldSelection = Timeline.SelectedNotes.ToList();
+        var addCmds = new List<ICommand>();
+
+        foreach (var n in clipboard)
         {
             var nn = NoteExpression.Create(
                 n.MidiNote,
@@ -100,65 +122,76 @@ public class TimelineEditor
                 n.DurationBeats,
                 n.Velocity,
                 n.Instrument);
-            list.Add(nn);
             pasted.Add(nn);
+            addCmds.Add(new AddNoteCommand(list, Timeline, nn, oldSelection));
         }
+
+        // After paste, only the new notes are selected
+        CommandStack.Execute(new MultiCommand(addCmds, "Paste Notes"));
         Timeline.SelectedNotes.Clear();
         Timeline.SelectedNotes.AddRange(pasted);
-        Timeline.RefreshVisibleSet();
-        Timeline.StatusChanged.Fire($"Pasted {pasted.Count} notes from clipboard".ToWhite());
     }
 
     private void MoveSelection(ConsoleKeyInfo k)
     {
-        if(Timeline.NoteSource is not ListNoteSource list) return;
+        if (Timeline.NoteSource is not ListNoteSource list) return;
+        if (Timeline.SelectedNotes.Count == 0) return;
+
         double beatDelta = 0;
         int midiDelta = 0;
-        if(k.Key == ConsoleKey.LeftArrow) beatDelta = -Timeline.BeatsPerColumn;
-        else if(k.Key == ConsoleKey.RightArrow) beatDelta = Timeline.BeatsPerColumn;
-        else if(k.Key == ConsoleKey.UpArrow) midiDelta = 1;
-        else if(k.Key == ConsoleKey.DownArrow) midiDelta = -1;
+        if (k.Key == ConsoleKey.LeftArrow) beatDelta = -Timeline.BeatsPerColumn;
+        else if (k.Key == ConsoleKey.RightArrow) beatDelta = Timeline.BeatsPerColumn;
+        else if (k.Key == ConsoleKey.UpArrow) midiDelta = 1;
+        else if (k.Key == ConsoleKey.DownArrow) midiDelta = -1;
+
+        var oldSelection = Timeline.SelectedNotes.ToList();
         var updated = new List<NoteExpression>();
-        foreach(var n in Timeline.SelectedNotes.ToArray())
+        var moveCmds = new List<ICommand>();
+
+        foreach (var n in oldSelection)
         {
             int idx = list.IndexOf(n);
-            if(idx < 0) continue;
+            if (idx < 0) continue;
             int newMidi = Math.Clamp(n.MidiNote + midiDelta, 0, 127);
             double newBeat = Math.Max(0, n.StartBeat + beatDelta);
             var nn = NoteExpression.Create(newMidi, newBeat, n.DurationBeats, n.Velocity, n.Instrument);
-            list[idx] = nn;
             updated.Add(nn);
+            moveCmds.Add(
+                new MoveNoteCommand(list, Timeline, n, nn, oldSelection, updated)
+            );
         }
-        Timeline.SelectedNotes.Clear();
-        Timeline.SelectedNotes.AddRange(updated);
-        Timeline.RefreshVisibleSet();
-        Timeline.StatusChanged.Fire($"Moved {updated.Count} notes".ToWhite());
+
+        if (moveCmds.Count > 0)
+        {
+            CommandStack.Execute(new MultiCommand(moveCmds, "Move Notes"));
+        }
     }
 
     private void AdjustVelocity(int delta)
     {
         if (Timeline.NoteSource is not ListNoteSource list) return;
+        if (Timeline.SelectedNotes.Count == 0) return;
+
+        var oldSelection = Timeline.SelectedNotes.ToList();
         var updated = new List<NoteExpression>();
+        var velCmds = new List<ICommand>();
         var isSingleNote = Timeline.SelectedNotes.Count == 1;
-        foreach (var n in Timeline.SelectedNotes.ToArray())
+
+        foreach (var n in oldSelection)
         {
             int idx = list.IndexOf(n);
             if (idx < 0) continue;
             int newVel = Math.Clamp(n.Velocity + delta, 1, 127);
             var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, newVel, n.Instrument);
-            list[idx] = nn;
             updated.Add(nn);
-            if(isSingleNote)
-            {
-                Timeline.StatusChanged.Fire($"Adjusted velocity of note {n.MidiNote} to {newVel}".ToWhite());
-            }
+            velCmds.Add(
+                new ChangeVelocityCommand(list, Timeline, n, nn, oldSelection, updated)
+            );
         }
-        Timeline.SelectedNotes.Clear();
-        Timeline.SelectedNotes.AddRange(updated);
-        Timeline.RefreshVisibleSet();
-        if (!isSingleNote)
+
+        if (velCmds.Count > 0)
         {
-            Timeline.StatusChanged.Fire($"Adjusted velocity of {updated.Count} notes".ToWhite());
+            CommandStack.Execute(new MultiCommand(velCmds, "Change Velocity"));
         }
     }
 

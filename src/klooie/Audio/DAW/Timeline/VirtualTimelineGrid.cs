@@ -14,8 +14,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
 
     public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
     public TimelineViewport Viewport { get; private init; }
-    private INoteSource notes;
-    public INoteSource NoteSource => notes;
+    private ListNoteSource notes;
+    public ListNoteSource NoteSource => notes;
     private readonly Dictionary<NoteExpression, NoteCell> live = new();
     private AlternatingBackgroundGrid backgroundGrid;
     public const int ColWidthChars = 1;
@@ -56,13 +56,18 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     private double maxBeat;
     private Dictionary<string, RGB> instrumentColorMap = new();
     private readonly TimelineInputMode[] userCyclableModes;
+
+    public WorkspaceSession Session { get; private init; }
+
     public TimelineInputMode CurrentMode { get; private set; }
     public Event<TimelineInputMode> ModeChanging { get; } = Event<TimelineInputMode>.Create();
-    public VirtualTimelineGrid(INoteSource notes, TimelinePlayer? player = null, TimelineInputMode[]? availableModes = null)
+    public VirtualTimelineGrid(WorkspaceSession session, ListNoteSource? notes = null)
     {
-        this.userCyclableModes = availableModes ?? [new NavigationMode() { Timeline = this }, new SelectionMode() { Timeline = this }];
+        this.Session = session;
+        notes = notes ?? new ListNoteSource();
+        this.userCyclableModes =  [new NavigationMode() { Timeline = this }, new SelectionMode() { Timeline = this }];
         Viewport = new TimelineViewport();
-        Player = player ?? new TimelinePlayer(() => maxBeat, notes?.BeatsPerMinute ?? 60);
+        Player = new TimelinePlayer(() => maxBeat, notes?.BeatsPerMinute ?? 60);
         Player.BeatChanged.Subscribe(this, static (me,b) => me.OnBeatChanged(b), this);
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
@@ -74,7 +79,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         LoadNotes(notes);
         AudioPlayer = new MelodyPlayer(this.notes, Player.BeatsPerMinute);
         CurrentMode = this.userCyclableModes[0];
-        Editor = new TimelineEditor { Timeline = this };
+        Editor = new TimelineEditor(session.Commands) { Timeline = this };
         Player.Playing.Subscribe(this, static (me) =>
         {
             var autoStopSuffix = me.Player.StopAtEnd ? " (auto-stop)" : "";
@@ -97,7 +102,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         SetMode(userCyclableModes[(i + 1) % userCyclableModes.Length]);
     }
 
-    private void LoadNotes(INoteSource? notes)
+    private void LoadNotes(ListNoteSource? notes)
     {
         this.notes = notes;
         if (notes == null)
@@ -236,7 +241,10 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                 if (BeatsPerColumn * 2 <= MaxBeatsPerColumn)
                     BeatsPerColumn *= 2; // zoom out
             }
-            else if (k.Key == ConsoleKey.M) NextMode(); // For mode cycling
+            else if (k.Key == ConsoleKey.M)
+            {
+                NextMode();  
+            }
             else if (!Editor.HandleKeyInput(k))
             {
                 CurrentMode.HandleKeyInput(k);
@@ -361,9 +369,9 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     {
         if (pendingAddNote == null || NoteSource is not ListNoteSource list) return;
         var (start, duration, midi) = pendingAddNote.Value;
-        list.Add(NoteExpression.Create(midi, start, duration,instrument: InstrumentExpression.Create("Keyboard", InstrumentFactory)));
-        ClearAddNotePreview();
-        RefreshVisibleSet();
+
+        var command = new AddNoteCommand(list, this, NoteExpression.Create(midi, start, duration, instrument: InstrumentExpression.Create("Keyboard", InstrumentFactory)), SelectedNotes, "Add Note");
+        Session.Commands.Execute(command);
     }
 
     protected override void OnReturn()

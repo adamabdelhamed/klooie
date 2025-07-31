@@ -110,8 +110,9 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         SaveSettings();
         var noteExpression = noteEditor.NoteExpression
             .WithInstrument(InstrumentExpression.Create("Current Patch", currentPatch.Factory));
-        var noteList = NoteCollection.Create(noteExpression);
-        var song = new Song(noteList, 60);
+        var noteList = new ListNoteSource([noteExpression]);
+        noteList.BeatsPerMinute = 60;
+        var song = new Song(noteList);
         SoundProvider.Current.Play(song);
     }
 

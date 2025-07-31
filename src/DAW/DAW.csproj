@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>exe</OutputType>
+    <TargetFramework>net9.0-windows7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Authors>Adam Abdelhamed</Authors>
+    <Description>Audio DAW.</Description>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <ProjectReference Include="..\klooie\klooie.csproj" />
+    <ProjectReference Include="..\klooie.Windows\klooie.Windows.csproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Prefer PowerArgs from super-repo if present, otherwise use klooie's own submodule -->
+    <Klooie_PowerArgs_Path Condition="Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+    <Klooie_PowerArgs_Path Condition="!Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(Klooie_PowerArgs_Path)" />
+  </ItemGroup>
+</Project>

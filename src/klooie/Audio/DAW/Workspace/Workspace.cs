@@ -20,6 +20,18 @@ public class Workspace
     public List<PatchFactoryInfo> PatchFactories { get; } = new();
     public WorkspaceSettings Settings { get; private set; } = new();
 
+
+    public static async Task<Workspace> Bootstrap()
+    {
+        var rootDirectory = Environment.GetEnvironmentVariable(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))+ "/klooie.DAW";
+        if (Directory.Exists(rootDirectory) == false) Directory.CreateDirectory(rootDirectory);
+        var mru = MRUWorkspaceSettings.Load(rootDirectory);
+        var workspace = mru.LastOpenedWorkspace != null ? await Workspace.LoadAsync(mru.LastOpenedWorkspace) : await Workspace.CreateNewAsync(rootDirectory);
+        mru.LastOpenedWorkspace = workspace.RootDirectory;
+        mru.Save(rootDirectory);
+        return workspace;
+    }
+
     public Workspace(string rootDirectory)
     {
         RootDirectory = rootDirectory;
@@ -244,4 +256,29 @@ public class WorkspaceSettings
 {
     public string? LastOpenedSong { get; set; }
     public string? LastMidiDevice { get; set; }
+}
+
+public class MRUWorkspaceSettings
+{
+    public string? LastOpenedWorkspace { get; set; }
+
+    public static MRUWorkspaceSettings Load(string rootDirectory)
+    {
+        var path = Path.Combine(rootDirectory, "mru_workspace.json");
+        
+        if (!File.Exists(path))
+        {
+            return new MRUWorkspaceSettings();
+        }
+
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<MRUWorkspaceSettings>(json) ?? new MRUWorkspaceSettings();
+    }
+
+    public void Save(string rootDirectory)
+    {
+        var path = Path.Combine(rootDirectory, "mru_workspace.json");
+        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(path, json);
+    }
 }

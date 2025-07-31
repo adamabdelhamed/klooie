@@ -28,7 +28,7 @@ public sealed class NoteExpression
     public double StartBeat { get; }
     public double DurationBeats { get; }
     public int Velocity { get; }
-    public double BeatsPerMinute { get; }
+    public double BeatsPerMinute { get; set; }
 
     public TimeSpan StartTime => TimeSpan.FromSeconds(StartBeat * (60.0 / BeatsPerMinute));
     public TimeSpan DurationTime => TimeSpan.FromSeconds(DurationBeats * (60.0 / BeatsPerMinute));
@@ -86,28 +86,32 @@ public sealed class NoteExpression
     public override string ToString() => $"Note(Midi: {MidiNote}, Start: {StartBeat}, Duration: {DurationBeats}, Velocity: {Velocity})";
 }
 
-public sealed class NoteCollection : IReadOnlyList<NoteExpression>
+
+/// <summary>
+/// A mutable list of notes with high-level sequencing and mapping helpers.
+/// </summary>
+public class ListNoteSource : List<NoteExpression>
 {
-    public int Count => Notes.Count;
+    public double BeatsPerMinute { get; set; } = 60;
 
-    public NoteExpression this[int index] =>  Notes[index];
+    public ListNoteSource() : base() { }
 
-    private List<NoteExpression> Notes { get; }
-    private static Comparison<NoteExpression> MelodyNoteComparer = (a, b) => a.StartTime.CompareTo(b.StartTime);
+    public ListNoteSource(IEnumerable<NoteExpression> notes)
+        : base(NormalizeStartBeats(notes)) { }
 
-    public NoteCollection(IEnumerable<NoteExpression> notes)
+    // Normalizes -1 StartBeats (auto-position)
+    private static IEnumerable<NoteExpression> NormalizeStartBeats(IEnumerable<NoteExpression> notes)
     {
         var newNotes = new List<NoteExpression>();
         var i = 0;
-        foreach(var note in notes)
-        {     
-            if(note.StartBeat < 0 && i == 0)
+        foreach (var note in notes)
+        {
+            if (note.StartBeat < 0 && i == 0)
             {
                 newNotes.Add(note.WithStartBeat(0));
             }
-            else if(note.StartBeat < 0 && i > 0)
+            else if (note.StartBeat < 0 && i > 0)
             {
-                // If the note has no start, set it to the end of the previous note
                 var prev = newNotes[i - 1];
                 newNotes.Add(note.WithStartBeat(prev.StartBeat + prev.DurationBeats));
             }
@@ -117,102 +121,126 @@ public sealed class NoteCollection : IReadOnlyList<NoteExpression>
             }
             i++;
         }
-        Notes = newNotes;
+        return newNotes;
     }
 
-    public void Sort()
+    // Sort notes in place by StartTime (for playback or display)
+    public void SortMelody()
     {
-        Notes.Sort(MelodyNoteComparer);
+        this.Sort((a, b) => a.StartTime.CompareTo(b.StartTime));
     }
 
-    public static NoteCollection Create(params NoteExpression[] notes)
-        => new(notes);
+    // Returns the end time (start + duration) of the last note
+    public double GetEndBeat()
+        => this.Count == 0 ? 0 : this.Max(n => n.StartBeat + n.DurationBeats);
 
-    // Returns the end time (start + duration) of the collection
-    public double GetEndBeat() => Notes.Count == 0
-        ? 0
-        : Notes.Max(n => n.StartBeat + n.DurationBeats);
-
-    // AddSequential: shift all incoming notes by this collection's end
-    public NoteCollection AddSequential(NoteCollection next, int toRemove = 0)
+    /// <summary>
+    /// Sequentially appends all notes from 'next', shifting their StartBeats after this source's end.
+    /// Optionally trims notes from the end before appending.
+    /// </summary>
+    public void AddSequential(IEnumerable<NoteExpression> next, int toRemove = 0)
     {
         double offset = GetEndBeat();
-
-        var myNotes = Notes.ToList();
-        while (toRemove > 0)
+        while (toRemove > 0 && this.Count > 0)
         {
-            // If the last note is a rest, remove it
-            offset-= myNotes.Last().DurationBeats;
-            myNotes.RemoveAt(myNotes.Count - 1);
+            offset -= this.Last().DurationBeats;
+            this.RemoveAt(this.Count - 1);
             toRemove--;
         }
-        var shifted = next.Notes.Select(n => n.WithStartBeat(n.StartBeat + offset));
-        return new NoteCollection(myNotes.Concat(shifted));
+        foreach (var n in next)
+            this.Add(n.WithStartBeat(n.StartBeat + offset));
     }
 
-    // AddParallel: overlays, just combines the two sets
-    public NoteCollection AddParallel(NoteCollection other)
-        => new(Notes.Concat(other.Notes));
-
-    public NoteCollection Repeat(int count)
+    /// <summary>
+    /// Adds all notes from 'other' in parallel (overlays, doesn't shift start).
+    /// </summary>
+    public void AddParallel(IEnumerable<NoteExpression> other)
     {
-        if (count < 1) return new([]);
-        var result = new List<NoteExpression>();
-        double loopLen = GetEndBeat();
-        for (int i = 0; i < count; i++)
+        this.AddRange(other);
+    }
+
+    /// <summary>
+    /// Appends multiple repeats of the current notes, each shifted by the loop length.
+    /// </summary>
+    public void RepeatInPlace(int count)
+    {
+        if (count < 2) return; // nothing to do for 0,1
+        var loopLen = GetEndBeat();
+        var original = this.ToList();
+        for (int i = 1; i < count; i++)
         {
             double offset = i * loopLen;
-            result.AddRange(Notes.Select(n => n.WithStartBeat(n.StartBeat + offset)));
+            this.AddRange(original.Select(n => n.WithStartBeat(n.StartBeat + offset)));
         }
-        return new(result);
     }
 
-    // Map helpers
-    public NoteCollection WithInstrument(InstrumentExpression instrument) => new(Notes.Select(n => n.WithInstrument(instrument)));
-    public NoteCollection WithInstrumentIfNull(InstrumentExpression instrument) => new(Notes.Select(n => n.WithInstrumentIfNull(instrument)));
-    public NoteCollection WithOctave(int octaveDelta) => new(Notes.Select(n => n.WithOctave(octaveDelta)));
-    public NoteCollection WithVelocity(int velocity) => new(Notes.Select(n => n.WithVelocity(velocity)));
-    public NoteCollection WithDuration(double beats) => new(Notes.Select(n => n.WithDuration(beats)));
+    // ----- In-place mapping helpers -----
 
-    public NoteCollection AddRest(double beats) => this.AddSequential(Create(NoteExpression.Rest(0, beats)));
-    public static NoteCollection Rest(double startBeat, double beats) => new([NoteExpression.Rest(startBeat, beats)]);
-
-    public IEnumerator<NoteExpression> GetEnumerator() => Notes.GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => Notes.GetEnumerator();
-}
-
-
-public interface INoteSource : IReadOnlyList<NoteExpression>
-{
-    double BeatsPerMinute { get; }
-}
-
-public class ListNoteSource : List<NoteExpression>, INoteSource
-{
-    public double BeatsPerMinute { get; init; } = 60;
-}
-
-public class Song : INoteSource
-{
-    public NoteCollection Notes { get; protected set; }
-    public int Count => Notes.Count;
-    public NoteExpression this[int index] => Notes[index];
-    public Song(NoteCollection notes, double bpm = 120)
+    public ListNoteSource SetInstrument(InstrumentExpression instrument)
     {
-        BeatsPerMinute = bpm;
-        Notes = new NoteCollection(notes.Select(n => NoteExpression.Create(n.MidiNote,n.StartBeat, n.DurationBeats, bpm, n.Velocity,n.Instrument)));
-        Notes.Sort();
+        for (int i = 0; i < this.Count; i++)
+            this[i] = this[i].WithInstrument(instrument);
+        return this;
     }
 
- 
-    public double BeatsPerMinute { get; private init; }
+    public ListNoteSource SetInstrumentIfNull(InstrumentExpression instrument)
+    {
+        for (int i = 0; i < this.Count; i++)
+            this[i] = this[i].WithInstrumentIfNull(instrument);
+        return this;
+    }
+
+    public ListNoteSource ShiftOctave(int octaveDelta)
+    {
+        for (int i = 0; i < this.Count; i++)
+            this[i] = this[i].WithOctave(octaveDelta);
+        return this;
+    }
+
+    public ListNoteSource SetVelocity(int velocity)
+    {
+        for (int i = 0; i < this.Count; i++)
+            this[i] = this[i].WithVelocity(velocity);
+        return this;
+    }
+
+    public ListNoteSource SetDuration(double beats)
+    {
+        for (int i = 0; i < this.Count; i++)
+            this[i] = this[i].WithDuration(beats);
+        return this;
+    }
+
+    // Add a rest of the specified beats at the end
+    public ListNoteSource AddRest(double beats)
+    {
+        this.Add(NoteExpression.Rest(GetEndBeat(), beats));
+        return this;
+    }
 
 
+    // Static: create a ListNoteSource with a single rest at the given beat
+    public static ListNoteSource Rest(double startBeat, double beats)
+        => new(new[] { NoteExpression.Rest(startBeat, beats) });
 
-    // Exports notes, skips velocity == 0 (rest), sorted by StartBeat
+}
 
-    public IEnumerator<NoteExpression> GetEnumerator() => Notes.GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => Notes.GetEnumerator();
+
+public class Song
+{
+    public ListNoteSource Notes { get; protected set; }
+    public int Count => Notes.Count;
+    public double BeatsPerMinute => Notes.BeatsPerMinute;
+    public NoteExpression this[int index] => Notes[index];
+    public Song(ListNoteSource notes, double bpm = 60)
+    {
+        Notes = notes;
+        Notes.BeatsPerMinute = bpm;
+        for(var i = 0; i < Notes.Count; i++)
+        {
+            Notes[i].BeatsPerMinute=bpm;
+        }
+        Notes.SortMelody();
+    }
 }
 

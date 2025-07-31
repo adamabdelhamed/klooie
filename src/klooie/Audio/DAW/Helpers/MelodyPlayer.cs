@@ -4,10 +4,10 @@ using System.Collections.Generic;
 
 public class MelodyPlayer
 {
-    private readonly INoteSource notes;
+    private readonly ListNoteSource notes;
     private readonly double bpm;
 
-    public MelodyPlayer(INoteSource notes, double bpm)
+    public MelodyPlayer(ListNoteSource notes, double bpm)
     {
         this.notes = notes;
         this.bpm = bpm;
@@ -30,11 +30,11 @@ public class MelodyPlayer
                 duration = endBeat - startBeat;
             }
 
-            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, n.Velocity, n.Instrument));
+            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, n.BeatsPerMinute, n.Velocity, n.Instrument));
         }
 
         if(subset.Count == 0) return;
 
-        ConsoleApp.Current.Sound.Play(new Song(new NoteCollection(subset), bpm), playLifetime);
+        ConsoleApp.Current.Sound.Play(new Song(new ListNoteSource(subset), bpm), playLifetime);
     }
 }
