@@ -14,7 +14,7 @@ public interface ICompositePatch : ISynthPatch
 public interface ISynthPatch
 {
     bool IsNotePlayable(int midiNote) => true;  // default: always playable
-    IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent);
+    IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, ScheduledNoteEvent noteEvent);
     ISynthPatch Clone();
 }
 
@@ -131,9 +131,9 @@ public class SynthPatch : Recyclable, ISynthPatch
         Effects = null!;
     }
 
-    public virtual IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent)
+    public virtual IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, ScheduledNoteEvent noteEvent)
     {
-        var innerVoice = SynthSignalSource.Create(frequencyHz, this, master, noteEvent);
+        var innerVoice = SynthSignalSource.Create(frequencyHz, this, noteEvent);
         yield return innerVoice;
     }
 }

@@ -50,10 +50,19 @@ public static VolumeEffect Create(in Settings settings)
 {
     var fx = _pool.Value.Rent();
     fx.gain = settings.Gain;
-    fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
+    fx.velocityCurve = settings.VelocityCurve ?? DefaultVelocityCurve;
     fx.velocityScale = settings.VelocityScale;
     return fx;
 }
+
+    private static float DefaultVelocityCurve(float normalized)
+    {    
+        float minVolume = 0.4f;
+        float maxVolume = 1.0f;
+        float curve = MathF.Pow(normalized, 1.5f);
+        float volume = minVolume + (maxVolume - minVolume) * curve;
+        return volume;
+    }
 
     public IEffect Clone()
     {

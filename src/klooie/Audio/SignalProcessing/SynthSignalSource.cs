@@ -90,11 +90,11 @@ public class SynthSignalSource : Recyclable
 
     protected SynthSignalSource() { }
 
-    public static SynthSignalSource Create(float frequencyHz, SynthPatch patch, VolumeKnob master, ScheduledNoteEvent noteEvent)
+    public static SynthSignalSource Create(float frequencyHz, SynthPatch patch, ScheduledNoteEvent noteEvent)
     {
         var ret = _pool.Value.Rent();
         ret.Id = Interlocked.Increment(ref _globalId);
-        ret.Construct(frequencyHz, patch, master, noteEvent);
+        ret.Construct(frequencyHz, patch, noteEvent);
         return ret;
     }
 
@@ -149,7 +149,7 @@ public class SynthSignalSource : Recyclable
     private double twoPiOverSampleRate;
     private float subOscMul;
 
-    protected void Construct(float frequencyHz, SynthPatch patch, VolumeKnob master, ScheduledNoteEvent noteEvent)
+    protected void Construct(float frequencyHz, SynthPatch patch, ScheduledNoteEvent noteEvent)
     {
         frequency = patch.FrequencyOverride.HasValue ? patch.FrequencyOverride.Value : frequencyHz;
         sampleRate = 44100;
@@ -187,7 +187,7 @@ public class SynthSignalSource : Recyclable
             lfos = null;
         }
 
-        InitVolume(master);
+        effectiveVolume = 1;
         this.envelope = patch.FindEnvelopeEffect().Envelope;
         envelope.Trigger(0, sampleRate);
 
@@ -457,19 +457,6 @@ public class SynthSignalSource : Recyclable
         return current;
     }
 
-    public void InitVolume(VolumeKnob master)
-    {
-        masterKnob = master ?? throw new ArgumentNullException(nameof(master));
-        master.VolumeChanged.Subscribe(this, static (me, v) => me.OnVolumeChanged(), this);
-        OnVolumeChanged();
-    }
-
-
-    protected void OnVolumeChanged()
-    {
-        float master = (float)Math.Pow(masterKnob.Volume, 1.2f);
-        effectiveVolume = Math.Clamp(master, 0f, 1f);
-    }
 
     protected override void OnReturn()
     {

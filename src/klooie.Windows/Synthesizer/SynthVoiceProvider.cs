@@ -33,10 +33,11 @@ public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
         base.OnReturn();
     }
 
-    public static SustainedNoteInfo? CreateSustainedNote(NoteExpression note, VolumeKnob masterVolume)
+    public static SustainedNoteInfo? CreateSustainedNote(NoteExpression note)
     {
         var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
-        patch.WithVolume(note.Velocity / 127f);
+
+
         if (!patch.IsNotePlayable(note.MidiNote))
         {
             ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNote}[D] is not playable by the current instrument"));
@@ -46,7 +47,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
 
         var ev = ScheduledNoteEvent.Create(note, patch, null);
         var result = RecyclableListPool<SynthVoiceProvider>.Instance.Rent(8);
-        foreach (var voice in patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), masterVolume, ev))
+        foreach (var voice in patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), ev))
         {
             result.Items.Add(Create(voice));
         }

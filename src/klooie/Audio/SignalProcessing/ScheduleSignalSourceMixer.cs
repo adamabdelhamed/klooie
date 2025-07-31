@@ -116,7 +116,6 @@ public class ScheduledSignalSourceMixer
                 }
 
                 var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
-                patch.WithVolume(MathF.Pow(note.Velocity / 127f, 3));
                 if (!patch.IsNotePlayable(note.MidiNote))
                 {
                     ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNote}[D] is not playable by the current instrument"));
@@ -165,7 +164,6 @@ public class ScheduledSignalSourceMixer
           
                 var voices =scheduledNoteEvent.Patch.SpawnVoices(
                     NoteExpression.MidiNoteToFrequency(scheduledNoteEvent.Note.MidiNote),
-                    SoundProvider.Current.MasterVolume,
                     scheduledNoteEvent).ToArray();
                 scheduledNoteEvent.RemainingVoices = voices.Length;
 

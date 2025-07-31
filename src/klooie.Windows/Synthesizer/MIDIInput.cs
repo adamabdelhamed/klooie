@@ -1,25 +1,48 @@
 ﻿using NAudio.Midi;
 
 namespace klooie;
-public class MIDIInput : Recyclable, IMidiInput
+
+public class MIDIInput : Recyclable, IMidiInput, IMidiProductDiscoverer
 {
     private MidiIn midiIn;
-
+    private ConsoleApp app;
     private Event<IMidiEvent>? midiFired;
     public Event<IMidiEvent> EventFired => midiFired ??= Event<IMidiEvent>.Create();
     private Queue<MidiInMessageEventArgs> eventsToBeProcessed = new();
-    protected MIDIInput() { }
+
     private Lock lck = new();
-
+    private MIDIInput() { }
     private static LazyPool<MIDIInput> pool = new(() => new MIDIInput());
+    public static MIDIInput Create() => pool.Value.Rent();
 
-    private ConsoleApp app;
-    public static bool TryCreate(string midiInProductName, out MIDIInput input)
+    public bool TryConnect(string midiInProductName, out IMidiInput input)
     {
-        input = pool.Value.Rent();
-        var success = input.TryOpen(midiInProductName);
-        if (success == false) input.Dispose();
-        return success;
+        app = ConsoleApp.Current;
+        if (app == null) throw new InvalidOperationException("MIDIInput requires a ConsoleApp to be running. Please start a ConsoleApp before using MIDIInput.");
+        midiIn?.Dispose();
+        midiIn = null;
+        for (var i = 0; i < MidiIn.NumberOfDevices; i++)
+        {
+            var deviceInfo = MidiIn.DeviceInfo(i);
+            if (deviceInfo.ProductName == midiInProductName)
+            {
+                try
+                {
+                    midiIn = new MidiIn(i);
+                    midiIn.MessageReceived += OnMidiMessageReceived;
+                    midiIn.Start();
+                    input = this;
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    input = null;
+                    return false;
+                }
+            }
+        }
+        input = null;
+        return false;
     }
 
     public static float MidiNoteToFrequency(int noteNumber)
@@ -31,32 +54,6 @@ public class MIDIInput : Recyclable, IMidiInput
     {
         return midiEvent.CommandCode == MidiCommandCode.NoteOff ||
                (midiEvent is NoteOnEvent noteOn && noteOn.Velocity == 0);
-    }
-
-    private bool TryOpen(string midiInProductName)
-    {
-        app = ConsoleApp.Current;
-        if(app == null) throw new InvalidOperationException("MIDIInput requires a ConsoleApp to be running. Please start a ConsoleApp before using MIDIInput.");
-        for (var i = 0; i < MidiIn.NumberOfDevices; i++)
-        {
-            var deviceInfo = MidiIn.DeviceInfo(i);
-            if (deviceInfo.ProductName == midiInProductName)
-            {
-                try
-                {
-                    midiIn = new MidiIn(i);
-                    midiIn.MessageReceived += OnMidiMessageReceived;
-                    midiIn.Start();
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    return false;
-                }
-            }
-        }
-
-        return false;
     }
 
     private void OnMidiMessageReceived(object sender, MidiInMessageEventArgs e)
@@ -88,6 +85,20 @@ public class MIDIInput : Recyclable, IMidiInput
     {
         base.OnReturn();
         midiIn?.Dispose();
+        midiIn = null;
+        midiFired?.Dispose();
+        midiFired = null;
+    }
+
+    public string[] GetProductNames()
+    {
+        var ret = new string[MidiIn.NumberOfDevices];
+        for (var i = 0; i < MidiIn.NumberOfDevices; i++)
+        {
+            var deviceInfo = MidiIn.DeviceInfo(i);
+            ret[i] = deviceInfo.ProductName;
+        }
+        return ret;
     }
 }
 

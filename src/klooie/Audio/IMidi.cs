@@ -11,7 +11,6 @@ public interface IMidiEvent
     int NoteNumber { get; }
     int Velocity { get; }
     MidiCommand Command { get; }
-    // Optionally: long Timestamp { get; }
 }
 
 public enum MidiCommand : byte
@@ -83,3 +82,89 @@ public interface IMidiInput : ILifetime
     Event<IMidiEvent> EventFired { get; }
 }
 
+public interface IMidiProductDiscoverer
+{
+    string[] GetProductNames();
+    bool TryConnect(string productName, out IMidiInput input);
+}
+
+public class MidiNoteOnOffDetector : Recyclable
+{
+    private HashSet<int> noteTrackers = new();
+    private IMidiInput input;
+
+    private Event<(int NoteNumber, int Velocity)> _noteOn;
+    private Event<int> _noteOff;
+
+    public Event<(int NoteNumber, int Velocity)> NoteOn => _noteOn ??= Event<(int NoteNumber, int Velocity)>.Create();
+    public Event<int> NoteOff => _noteOff ??= Event<int>.Create();
+
+    private MidiNoteOnOffDetector() { }
+    private static LazyPool<MidiNoteOnOffDetector> lt = new(() => new MidiNoteOnOffDetector());
+
+    public static MidiNoteOnOffDetector Create(IMidiInput input)
+    {
+        var detector = lt.Value.Rent();
+        detector.input = input ?? throw new ArgumentNullException(nameof(input), "MIDI input cannot be null.");
+        input.EventFired.Subscribe(detector.HandleMidiEvent, detector);
+        return detector;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        _noteOn?.Dispose();
+        _noteOn = null!;
+        _noteOff?.Dispose();
+        _noteOff = null!;
+        input = null!;
+        noteTrackers.Clear();
+    }
+
+    private void HandleMidiEvent(IMidiEvent ev)
+    {
+        if (IsNoteOn(ev) && noteTrackers.Contains(ev.NoteNumber) == false)
+        {
+            noteTrackers.Add(ev.NoteNumber);
+            NoteOn.Fire((ev.NoteNumber, ev.Velocity));
+        }
+        else if (IsNoteOff(ev) && noteTrackers.Contains(ev.NoteNumber))
+        {
+            noteTrackers.Remove(ev.NoteNumber);
+            NoteOff.Fire(ev.NoteNumber);
+        }
+    }
+
+    public static bool IsNoteOff(IMidiEvent midiEvent) => midiEvent.Command == MidiCommand.NoteOff || (midiEvent.Command == MidiCommand.NoteOn && midiEvent.Velocity == 0);
+    public static bool IsNoteOn(IMidiEvent midiEvent) => midiEvent.Command == MidiCommand.NoteOn && midiEvent.Velocity > 0;
+}
+
+public class SustainedNoteTracker : Recyclable
+{
+    private SustainedNoteTracker() { }
+    private static LazyPool<SustainedNoteTracker> _pool = new(() => new SustainedNoteTracker());
+
+
+    public NoteExpression Note { get; private set; }
+    public IReleasableNote Releasable { get; private set; }
+    NoteExpression NoteExpression { get; set; }
+    public static SustainedNoteTracker Create(NoteExpression note, IReleasableNote releasable)
+    {
+        var tracker = _pool.Value.Rent();
+        tracker.Note = note;
+        tracker.Releasable = releasable;
+        return tracker;
+    }
+    public void ReleaseNote()
+    {
+        Releasable.ReleaseNote();
+        Dispose();
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Note = null!;
+        Releasable = null!;
+    }
+}

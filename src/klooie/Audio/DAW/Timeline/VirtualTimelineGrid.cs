@@ -76,6 +76,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
         LoadNotes(notes);
         AudioPlayer = new MelodyPlayer(this.Notes, TimelinePlayer.BeatsPerMinute);
+        TimelinePlayer.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);  
         CurrentMode = this.userCyclableModes[0];
         Editor = new TimelineEditor(session.Commands) { Timeline = this };
         TimelinePlayer.Playing.Subscribe(this, static (me) =>

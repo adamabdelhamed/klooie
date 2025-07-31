@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace klooie;
 
-public abstract class AudioPlaybackEngine : ISoundProvider
+public class AudioPlaybackEngine : ISoundProvider
 {
     public const int SampleRate = SoundProvider.SampleRate;
     private const int ChannelCount = SoundProvider.ChannelCount;
@@ -55,7 +55,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
 
     public IReleasableNote? PlaySustainedNote(NoteExpression note)
     {
-        var ret = SynthVoiceProvider.CreateSustainedNote(note, MasterVolume);
+        var ret = SynthVoiceProvider.CreateSustainedNote(note);
         if (ret.Voices != null)
         {
             for (var i = 0; i < ret.Voices.Count; i++)
@@ -94,7 +94,7 @@ public abstract class AudioPlaybackEngine : ISoundProvider
     /// of the sound effects and the values are the bytes of WAV files.
     /// </summary>
     /// <returns></returns>
-    protected abstract Dictionary<string, Func<Stream>> LoadSounds();
+    protected virtual Dictionary<string, Func<Stream>> LoadSounds() => new Dictionary<string, Func<Stream>>();
 
     /// <summary>
     /// By defaults this class does not throw when sounds fail to load.

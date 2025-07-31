@@ -60,7 +60,6 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
 
     public IEnumerable<SynthSignalSource> SpawnVoices(
         float frequencyHz,
-        VolumeKnob master,
         ScheduledNoteEvent noteEvent)
     {
         var ret = new List<SynthSignalSource>();
@@ -75,7 +74,7 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
             {
                 if (leaf is SynthPatch synthLeaf)
                 {
-                    ret.Add(SynthSignalSource.Create(detunedFreq, synthLeaf, master, noteEvent));
+                    ret.Add(SynthSignalSource.Create(detunedFreq, synthLeaf, noteEvent));
                 }
             });  
         }

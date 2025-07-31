@@ -65,7 +65,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
             patches[i] = layerPatch; }
     }
 
-    public IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent)
+    public IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, ScheduledNoteEvent noteEvent)
     {
         int numLayers = intervals.Length;
         List<SynthSignalSource> ret = new List<SynthSignalSource>();
@@ -82,7 +82,7 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 
             patches[i].ForEachLeafPatch(leaf =>
             {
-                ret.Add(SynthSignalSource.Create(freq, (SynthPatch)leaf, master, noteEvent));
+                ret.Add(SynthSignalSource.Create(freq, (SynthPatch)leaf, noteEvent));
             });
         }
         return ret;

@@ -58,13 +58,13 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
         yield return wet;
     }
 
-    public IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, VolumeKnob master, ScheduledNoteEvent noteEvent)
+    public IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, ScheduledNoteEvent noteEvent)
     {
-        foreach(var voice in dry.SpawnVoices(frequencyHz, master, noteEvent))
+        foreach(var voice in dry.SpawnVoices(frequencyHz, noteEvent))
         {
             yield return voice;
         }
-        foreach(var voice in wet.SpawnVoices(frequencyHz, master, noteEvent))
+        foreach(var voice in wet.SpawnVoices(frequencyHz, noteEvent))
         {
             yield return voice;
         }

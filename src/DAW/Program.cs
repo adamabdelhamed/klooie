@@ -4,22 +4,13 @@ var app = new ConsoleApp();
 
 app.Invoke(async () =>
 {
-    app.Sound = new MyEngine();
+    app.Sound = new AudioPlaybackEngine();
     var workspace = await Workspace.Bootstrap();
     var session = new WorkspaceSession() { Workspace = workspace };
-    var dawPanel = ConsoleApp.Current.LayoutRoot.Add(new DAWPanel(session)).Fill();
+    var midi = MIDIInput.Create();
+    var dawPanel = ConsoleApp.Current.LayoutRoot.Add(new DAWPanel(session, midi)).Fill();
 });
 
 app.Run();
 
-class MyEngine : AudioPlaybackEngine
-{
-
-    protected override Dictionary<string, Func<Stream>> LoadSounds()
-    {
-        return new Dictionary<string, Func<Stream>>
-        {
-
-        };
-    }
-}
+ 
