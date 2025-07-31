@@ -73,7 +73,7 @@ public class SelectionMode : TimelineInputMode
     public override void Enter()
     {
         Timeline.StatusChanged.Fire(ConsoleString.Parse("[White]Selection mode active. Use [B=Cyan][Black] arrows or WASD [D][White] to select an anchor point."));
-        Timeline.ClearAddNotePreview();
+        Timeline.Editor.ClearAddNotePreview();
         selectionPhase = SelectionPhase.PickingAnchor;
         selectionAnchorBeatMidi = null;
         selectionCursorBeatMidi = null;
@@ -253,7 +253,7 @@ public class SelectionMode : TimelineInputMode
             var noteSingularOrPlural = Timeline.SelectedNotes.Count == 1 ? "note" : "notes";
             if (canAddNote)
             {
-                Timeline.BeginAddNotePreview(addStartBeat, addDuration, midi0);
+                Timeline.Editor.BeginAddNotePreview(addStartBeat, addDuration, midi0);
             }
             Timeline.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Timeline.SelectedNotes.Count}[White] {noteSingularOrPlural}."));
             Timeline.NextMode();

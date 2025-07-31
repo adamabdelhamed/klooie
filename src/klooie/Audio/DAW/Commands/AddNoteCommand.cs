@@ -30,7 +30,7 @@ public class AddNoteCommand : ICommand
         grid.SelectedNotes.Add(note);
         grid.RefreshVisibleSet();
         grid.StatusChanged.Fire($"Added note {note.MidiNote}".ToWhite());
-        grid.ClearAddNotePreview();
+        grid.Editor.ClearAddNotePreview();
     }
 
     public void Undo()

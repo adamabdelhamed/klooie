@@ -9,6 +9,10 @@ public class TimelineEditor
     public required VirtualTimelineGrid Timeline { get; init; }
     private readonly List<NoteExpression> clipboard = new();
 
+
+    private ConsoleControl? addNotePreview;
+    private (double Start, double Duration, int Midi)? pendingAddNote;
+
     private CommandStack CommandStack { get; init; }
 
     public TimelineEditor(CommandStack commandStack)
@@ -65,6 +69,15 @@ public class TimelineEditor
         {
             CommandStack.Redo();
             return true;
+        }
+        else if (k.Key == ConsoleKey.P && k.Modifiers == 0 && pendingAddNote != null)
+        {
+            CommitAddNote();
+        }
+        else if (k.Key == ConsoleKey.D && k.Modifiers.HasFlag(ConsoleModifiers.Alt) && pendingAddNote != null)
+        {
+            ClearAddNotePreview();
+            Timeline.RefreshVisibleSet();
         }
         return false;
     }
@@ -193,6 +206,47 @@ public class TimelineEditor
         {
             CommandStack.Execute(new MultiCommand(velCmds, "Change Velocity"));
         }
+    }
+
+    public void BeginAddNotePreview(double start, double duration, int midi)
+    {
+        ClearAddNotePreview();
+        pendingAddNote = (start, duration, midi);
+        addNotePreview = Timeline.AddPreviewControl();
+        addNotePreview.Background = RGB.DarkGreen;
+        addNotePreview.ZIndex = 0;
+        Timeline.Viewport.SubscribeToAnyPropertyChange(addNotePreview, _ => PositionAddNotePreview(), addNotePreview);
+        PositionAddNotePreview();
+        Timeline.StatusChanged.Fire(ConsoleString.Parse("[White]Press [Cyan]p[White] to add a note here or press ALT + D to deselect."));
+    }
+
+    public void PositionAddNotePreview()
+    {
+        if (pendingAddNote == null || addNotePreview == null) return;
+        var (start, duration, midi) = pendingAddNote.Value;
+        int x = ConsoleMath.Round((start - Timeline.Viewport.FirstVisibleBeat) / Timeline.BeatsPerColumn) * VirtualTimelineGrid.ColWidthChars;
+        int y = (Timeline.Viewport.FirstVisibleMidi + Timeline.Viewport.MidisOnScreen - 1 - midi) * VirtualTimelineGrid.RowHeightChars;
+        int w = Math.Max(1, ConsoleMath.Round(duration / Timeline.BeatsPerColumn) * VirtualTimelineGrid.ColWidthChars);
+        int h = VirtualTimelineGrid.RowHeightChars;
+        addNotePreview.MoveTo(x, y);
+        addNotePreview.ResizeTo(w, h);
+    }
+
+
+    public void ClearAddNotePreview()
+    {
+        addNotePreview?.Dispose();
+        addNotePreview = null;
+        pendingAddNote = null;
+    }
+
+    public void CommitAddNote()
+    {
+        if (pendingAddNote == null) return;
+        var (start, duration, midi) = pendingAddNote.Value;
+
+        var command = new AddNoteCommand(Timeline.NoteSource, Timeline, NoteExpression.Create(midi, start, duration, instrument: InstrumentExpression.Create("Keyboard", Timeline.InstrumentFactory)), Timeline.SelectedNotes, "Add Note");
+        Timeline.Session.Commands.Execute(command);
     }
 
     private static bool IsArrowKey(ConsoleKeyInfo k) =>

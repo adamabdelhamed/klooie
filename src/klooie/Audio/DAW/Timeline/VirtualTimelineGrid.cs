@@ -30,9 +30,6 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     
     public List<NoteExpression> SelectedNotes { get; private set; } = new();
 
-    private ConsoleControl? addNotePreview;
-    private (double Start, double Duration, int Midi)? pendingAddNote;
-
     public Func<ISynthPatch> InstrumentFactory { get; set; } = () => null;
 
     public double BeatsPerColumn
@@ -222,15 +219,6 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                     StartPlayback();
                 }
             }
-            else if (k.Key == ConsoleKey.P && k.Modifiers == 0 && pendingAddNote != null)
-            {
-                CommitAddNote();
-            }
-            else if (k.Key == ConsoleKey.D && k.Modifiers.HasFlag(ConsoleModifiers.Alt) && pendingAddNote != null)
-            {
-                ClearAddNotePreview();
-                RefreshVisibleSet();
-            }
             else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add)
             {
                 if (BeatsPerColumn / 2 >= MinBeatsPerColumn)
@@ -307,7 +295,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             }
         }
 
-        PositionAddNotePreview();
+        Editor.PositionAddNotePreview();
     }
 
     private void PositionCell(NoteCell cell)
@@ -334,45 +322,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     }
     internal ConsoleControl AddPreviewControl() => ProtectedPanel.Add(new ConsoleControl());
 
-    private void PositionAddNotePreview()
-    {
-        if (pendingAddNote == null || addNotePreview == null) return;
-        var (start, duration, midi) = pendingAddNote.Value;
-        int x = ConsoleMath.Round((start - Viewport.FirstVisibleBeat) / BeatsPerColumn) * ColWidthChars;
-        int y = (Viewport.FirstVisibleMidi + Viewport.MidisOnScreen - 1 - midi) * RowHeightChars;
-        int w = Math.Max(1, ConsoleMath.Round(duration / BeatsPerColumn) * ColWidthChars);
-        int h = RowHeightChars;
-        addNotePreview.MoveTo(x, y);
-        addNotePreview.ResizeTo(w, h);
-    }
 
-    internal void BeginAddNotePreview(double start, double duration, int midi)
-    {
-        ClearAddNotePreview();
-        pendingAddNote = (start, duration, midi);
-        addNotePreview = AddPreviewControl();
-        addNotePreview.Background = RGB.DarkGreen;
-        addNotePreview.ZIndex = 0;
-        Viewport.SubscribeToAnyPropertyChange(addNotePreview, _ => PositionAddNotePreview(), addNotePreview);
-        PositionAddNotePreview();
-        StatusChanged.Fire(ConsoleString.Parse("[White]Press [Cyan]p[White] to add a note here or press ALT + D to deselect."));
-    }
 
-    internal void ClearAddNotePreview()
-    {
-        addNotePreview?.Dispose();
-        addNotePreview = null;
-        pendingAddNote = null;
-    }
-
-    internal void CommitAddNote()
-    {
-        if (pendingAddNote == null || NoteSource is not ListNoteSource list) return;
-        var (start, duration, midi) = pendingAddNote.Value;
-
-        var command = new AddNoteCommand(list, this, NoteExpression.Create(midi, start, duration, instrument: InstrumentExpression.Create("Keyboard", InstrumentFactory)), SelectedNotes, "Add Note");
-        Session.Commands.Execute(command);
-    }
 
     protected override void OnReturn()
     {
