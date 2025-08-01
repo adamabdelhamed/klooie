@@ -23,8 +23,6 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     public const int RowHeightChars = 1;
     private Recyclable? focusLifetime;
     public TimelinePlayer TimelinePlayer { get; }
-    public Event<double> PlaybackStarting { get; } = Event<double>.Create();
-    public MelodyPlayer AudioPlayer { get; private set; }
     private double beatsPerColumn = 1/8.0;
 
     public TimelineEditor Editor { get; }
@@ -75,7 +73,6 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
         LoadNotes(notes);
-        AudioPlayer = new MelodyPlayer(this.Notes);
         TimelinePlayer.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);  
         CurrentMode = this.userCyclableModes[0];
         Editor = new TimelineEditor(session.Commands) { Timeline = this };
@@ -113,7 +110,6 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             instrumentColorMap[instruments[i]] = instrumentColors[i];
         }
-        AudioPlayer = new MelodyPlayer(this.Notes);
     }
 
     private static readonly RGB[] BaseInstrumentColors = new[]
@@ -146,19 +142,6 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         return color.ToOther(RGB.White, pale);
     }
 
-    private Recyclable? playLifetime;
-    public void StartPlayback()
-    {
-        if(TimelinePlayer.IsPlaying) return;
-        ConsoleApp.Current.Scheduler.Delay(60, () =>
-        {
-            TimelinePlayer.Start(CurrentBeat);
-            PlaybackStarting.Fire(CurrentBeat);
-        });
-        playLifetime?.TryDispose();
-        playLifetime = DefaultRecyclablePool.Instance.Rent();
-        AudioPlayer?.PlayFrom(CurrentBeat, playLifetime);
-    }
 
     public void StopPlayback() => TimelinePlayer.Stop();
 
@@ -187,13 +170,11 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             {
                 if (TimelinePlayer.IsPlaying)
                 {
-                    playLifetime?.Dispose();
-                    playLifetime = null;
                     TimelinePlayer.Pause();
                 }
                 else
                 {
-                    StartPlayback();
+                    TimelinePlayer.Play();
                 }
             }
             else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add)
@@ -297,11 +278,4 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         return Math.Max(0, sustainedBeats);
     }
     internal ConsoleControl AddPreviewControl() => ProtectedPanel.Add(new ConsoleControl());
-
-    protected override void OnReturn()
-    {
-        base.OnReturn();
-        playLifetime?.TryDispose();
-        playLifetime = null;
-    }
 }

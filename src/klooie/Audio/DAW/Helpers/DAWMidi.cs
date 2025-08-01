@@ -49,7 +49,7 @@ public class DAWMidi : Recyclable
         if (voices == null) return;
 
         pianoWithTimeline.Timeline.TimelinePlayer.StopAtEnd = false;
-        pianoWithTimeline.Timeline.TimelinePlayer.Start(pianoWithTimeline.Timeline.TimelinePlayer.CurrentBeat);
+        pianoWithTimeline.Timeline.TimelinePlayer.Play();
         pianoWithTimeline.Timeline.Notes.Add(noteExpression);
         pianoWithTimeline.Timeline.RefreshVisibleSet();
         noteTrackers[ev.NoteNumber] = SustainedNoteTracker.Create(noteExpression, voices);

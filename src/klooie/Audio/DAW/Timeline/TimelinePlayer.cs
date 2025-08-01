@@ -15,7 +15,6 @@ public class TimelinePlayer
     private readonly Func<double> maxBeatProvider;
     private double playheadStartBeat;
     private long? playbackStartTimestamp;
-
     public bool StopAtEnd { get; set; } = true;
     public bool IsPlaying { get; private set; }
 
@@ -42,16 +41,23 @@ public class TimelinePlayer
         this.Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
         this.maxBeatProvider = maxBeatProvider;
         this.BeatsPerMinute = bpm;
-
         BeatChanged.Subscribe(this, static (me, b) => me.Timeline.Viewport.OnBeatChanged(b), Timeline);
     }
-
-    public void Start(double? startBeat = null)
+    private Recyclable? playLifetime;
+    public void Play()
     {
         if (IsPlaying) return;
+
+        ConsoleApp.Current.Scheduler.Delay(60, StartDelayed);
+        playLifetime?.TryDispose();
+        playLifetime = DefaultRecyclablePool.Instance.Rent();
+        PlayAudio(CurrentBeat, playLifetime);
+    }
+
+    private void StartDelayed()
+    {
         Playing.Fire();
-        playheadStartBeat = startBeat ?? CurrentBeat;
-        CurrentBeat = playheadStartBeat;
+        playheadStartBeat = CurrentBeat;
         playbackStartTimestamp = Stopwatch.GetTimestamp();
         IsPlaying = true;
         ScheduleTick();
@@ -61,6 +67,8 @@ public class TimelinePlayer
     public void Pause()
     {
         if (!IsPlaying) return;
+        playLifetime?.TryDispose();
+        playLifetime = null;
         UpdateCurrentBeat();
         IsPlaying = false;
         beatChanged?.Fire(CurrentBeat);
@@ -125,5 +133,39 @@ public class TimelinePlayer
         {
             CurrentBeat = beat;
         }
+    }
+
+    private void PlayAudio(double startBeat, ILifetime? playLifetime = null)
+    {
+        var subset = new ListNoteSource() { BeatsPerMinute = Timeline.Notes.BeatsPerMinute };
+
+        // TODO: I should not have to set the BPM for each note, but this is a quick fix
+        for (int i = 0; i < Timeline.Notes.Count; i++)
+        {
+            Timeline.Notes[i].BeatsPerMinute = Timeline.Notes.BeatsPerMinute;
+        }
+
+        Timeline.Notes.SortMelody();
+        for (int i = 0; i < Timeline.Notes.Count; i++)
+        {
+            NoteExpression? n = Timeline.Notes[i];
+            double endBeat = n.DurationBeats >= 0 ? n.StartBeat + n.DurationBeats : double.PositiveInfinity;
+            if (endBeat <= startBeat) continue;
+
+            double relStart = n.StartBeat - startBeat;
+            if (relStart < 0) relStart = 0;
+
+            double duration = n.DurationBeats;
+            if (n.DurationBeats >= 0 && n.StartBeat < startBeat)
+            {
+                duration = endBeat - startBeat;
+            }
+
+            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, Timeline.Notes.BeatsPerMinute, n.Velocity, n.Instrument));
+        }
+
+        if (subset.Count == 0) return;
+
+        ConsoleApp.Current.Sound.Play(new Song(subset, Timeline.Notes.BeatsPerMinute), playLifetime);
     }
 }
