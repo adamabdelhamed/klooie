@@ -21,7 +21,7 @@ public class Workspace
     public WorkspaceSettings Settings { get; private set; } = new();
 
 
-    public static async Task<Workspace> Bootstrap()
+    public static async Task<Workspace> OpenMRUOrNew()
     {
         var rootDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "\\klooie.DAW";
         if (Directory.Exists(rootDirectory) == false) Directory.CreateDirectory(rootDirectory);
@@ -234,18 +234,8 @@ public class Workspace
 
     // --- Instrument Resolver ---
 
-    public InstrumentExpression? ResolveInstrument(InstrumentInfo info)
-    {
-        var factory = PatchFactories.FirstOrDefault(f => f.QualifiedName == info.PatchFactoryQualifiedName);
-        if (factory != null)
-        {
-            return InstrumentExpression.Create(info.Name, factory.Factory);
-        }
-        return null;
-    }
 
-    public List<(InstrumentInfo Info, InstrumentExpression? Expression)> GetResolvedInstruments()
-        => Instruments.Select(i => (i, ResolveInstrument(i))).ToList();
+
 
     private Recyclable? saveLifetime;
     private bool isSaving;
@@ -277,6 +267,16 @@ public class InstrumentInfo
     public string Name { get; set; } = "";
     public string PatchFactoryQualifiedName { get; set; } = ""; // "klooie.DrumKit.Kick"
     public string? PatchSourceFilename { get; set; }
+
+    public InstrumentExpression? ResolveInstrument(InstrumentInfo info)
+    {
+        var factory = WorkspaceSession.Current.Workspace.PatchFactories.FirstOrDefault(f => f.QualifiedName == info.PatchFactoryQualifiedName);
+        if (factory != null)
+        {
+            return InstrumentExpression.Create(info.Name, factory.Factory);
+        }
+        return null;
+    }
 }
 
 // --- SongInfo: persisted in songs/*.song.json ---

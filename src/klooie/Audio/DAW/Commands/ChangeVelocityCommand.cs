@@ -5,51 +5,36 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class ChangeVelocityCommand : ICommand
+public class ChangeVelocityCommand : TimelineCommand
 {
-    private readonly ListNoteSource notes;
-    private readonly VirtualTimelineGrid grid;
     private readonly NoteExpression oldNote;
     private readonly NoteExpression newNote;
-    private readonly List<NoteExpression> oldSelection;
-    private readonly List<NoteExpression> newSelection;
 
     public string Description { get; }
 
-    public ChangeVelocityCommand(ListNoteSource notes, VirtualTimelineGrid grid, NoteExpression oldNote, NoteExpression newNote, List<NoteExpression> oldSelection, List<NoteExpression> newSelection, string desc = "Change Velocity")
+    public ChangeVelocityCommand(VirtualTimelineGrid grid, NoteExpression oldNote, NoteExpression newNote) : base(grid, "Change Velocity")
     {
-        this.notes = notes;
-        this.grid = grid;
         this.oldNote = oldNote;
         this.newNote = newNote;
-        this.oldSelection = new List<NoteExpression>(oldSelection);
-        this.newSelection = new List<NoteExpression>(newSelection);
-        this.Description = desc;
     }
 
-    public void Do()
+    public override void Do()
     {
-        int idx = notes.IndexOf(oldNote);
-        if (idx >= 0)
-            notes[idx] = newNote;
+        int idx = Timeline.Notes.IndexOf(oldNote);
+        if (idx >= 0) Timeline.Notes[idx] = newNote;
 
-        grid.SelectedNotes.Clear();
-        grid.SelectedNotes.AddRange(newSelection);
-        grid.RefreshVisibleSet();
-        grid.StatusChanged.Fire($"Changed velocity of note {newNote.MidiNote} to {newNote.Velocity}".ToWhite());
+        Timeline.StatusChanged.Fire($"Changed velocity of note {newNote.MidiNote} to {newNote.Velocity}".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
+        base.Do();
     }
 
-    public void Undo()
+    public override void Undo()
     {
-        int idx = notes.IndexOf(newNote);
-        if (idx >= 0)
-            notes[idx] = oldNote;
+        int idx = Timeline.Notes.IndexOf(newNote);
+        if (idx >= 0) Timeline.Notes[idx] = oldNote;
 
-        grid.SelectedNotes.Clear();
-        grid.SelectedNotes.AddRange(oldSelection);
-        grid.RefreshVisibleSet();
-        grid.StatusChanged.Fire("Undo velocity change".ToWhite());
+        Timeline.StatusChanged.Fire("Undo velocity change".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
+        base.Undo();
     }
 }

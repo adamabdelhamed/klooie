@@ -27,14 +27,4 @@ public class PianoWithTimeline : ProtectedConsolePanel
         }
         Timeline.StatusChanged.Subscribe(message=> StatusBar.Message = message, this);
     }
-
-    public void StartPlayback()
-    {
-        Timeline.StartPlayback();
-    }
-
-    public void StopPlayback()
-    {
-        Timeline.StopPlayback();
-    }
 }

@@ -9,14 +9,14 @@ public class DAWMidi : Recyclable
 {
     private IMidiInput midiInput;
     private Dropdown midiDropdown;
-    private IMidiProductDiscoverer midiImpl;
+    private IMidiProvider midiImpl;
     private MidiNoteOnOffDetector noteDetector;
     private Dictionary<int, SustainedNoteTracker> noteTrackers = new Dictionary<int, SustainedNoteTracker>();
     private PianoWithTimeline pianoWithTimeline;
     private DAWMidi() { }
     private static LazyPool<DAWMidi> lazyPool = new(() => new DAWMidi());
 
-    public static DAWMidi Create(IMidiProductDiscoverer midiImpl, PianoWithTimeline pianoWithTimeline)
+    public static DAWMidi Create(IMidiProvider midiImpl, PianoWithTimeline pianoWithTimeline)
     {
         var instance = lazyPool.Value.Rent();
         instance.pianoWithTimeline = pianoWithTimeline ?? throw new ArgumentNullException(nameof(pianoWithTimeline));
@@ -44,7 +44,7 @@ public class DAWMidi : Recyclable
     {
         if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
 
-        var noteExpression = NoteExpression.Create(ev.NoteNumber, pianoWithTimeline.Timeline.TimelinePlayer.CurrentBeat, -1, ev.Velocity, InstrumentExpression.Create("Keyboard", pianoWithTimeline.Timeline.InstrumentFactory));
+        var noteExpression = NoteExpression.Create(ev.NoteNumber, pianoWithTimeline.Timeline.TimelinePlayer.CurrentBeat, -1, ev.Velocity, pianoWithTimeline.Timeline.Instrument);
         var voices = ConsoleApp.Current.Sound.PlaySustainedNote(noteExpression);
         if (voices == null) return;
 
@@ -73,11 +73,7 @@ public class DAWMidi : Recyclable
 
         pianoWithTimeline.Timeline.Notes.Remove(tracker.Note);
         WorkspaceSession.Current.Commands.Execute(
-            new AddNoteCommand(
-                pianoWithTimeline.Timeline.Notes,
-                pianoWithTimeline.Timeline,
-                NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument),
-                pianoWithTimeline.Timeline.SelectedNotes)
+            new AddNoteCommand(pianoWithTimeline.Timeline, NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument))
         );
         tracker.ReleaseNote();
         noteTrackers.Remove(noteNumber);

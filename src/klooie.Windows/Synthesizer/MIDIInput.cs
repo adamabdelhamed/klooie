@@ -2,7 +2,7 @@
 
 namespace klooie;
 
-public class MIDIInput : Recyclable, IMidiInput, IMidiProductDiscoverer
+public class MIDIInput : Recyclable, IMidiInput, IMidiProvider
 {
     private MidiIn midiIn;
     private ConsoleApp app;

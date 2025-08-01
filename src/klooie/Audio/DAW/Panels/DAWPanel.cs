@@ -11,8 +11,8 @@ public class DAWPanel : ProtectedConsolePanel
     public PianoWithTimeline PianoWithTimeline { get; private set; }
 
     private DAWMidi midi;
-    private IMidiProductDiscoverer midiProvider;
-    public DAWPanel(WorkspaceSession session, IMidiProductDiscoverer midiProvider)
+    private IMidiProvider midiProvider;
+    public DAWPanel(WorkspaceSession session, IMidiProvider midiProvider)
     {
         Session = session;
         this.midiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));

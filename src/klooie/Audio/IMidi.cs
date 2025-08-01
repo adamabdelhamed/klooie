@@ -82,7 +82,7 @@ public interface IMidiInput : ILifetime
     Event<IMidiEvent> EventFired { get; }
 }
 
-public interface IMidiProductDiscoverer
+public interface IMidiProvider
 {
     string[] GetProductNames();
     bool TryConnect(string productName, out IMidiInput input);

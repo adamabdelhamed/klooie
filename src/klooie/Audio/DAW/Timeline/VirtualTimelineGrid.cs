@@ -31,7 +31,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     
     public List<NoteExpression> SelectedNotes { get; private set; } = new();
 
-    public Func<ISynthPatch> InstrumentFactory { get; set; } = () => null;
+    public InstrumentExpression? Instrument { get; set; } = new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
 
     public double BeatsPerColumn
     {
@@ -75,7 +75,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
         LoadNotes(notes);
-        AudioPlayer = new MelodyPlayer(this.Notes, TimelinePlayer.BeatsPerMinute);
+        AudioPlayer = new MelodyPlayer(this.Notes);
         TimelinePlayer.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);  
         CurrentMode = this.userCyclableModes[0];
         Editor = new TimelineEditor(session.Commands) { Timeline = this };
@@ -102,16 +102,9 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         SetMode(userCyclableModes[(i + 1) % userCyclableModes.Length]);
     }
 
-    private void LoadNotes(ListNoteSource? notes)
+    private void LoadNotes(ListNoteSource notes)
     {
         this.Notes = notes;
-        if (notes == null)
-        {
-            maxBeat = 0;
-            instrumentColorMap = new Dictionary<string, RGB>();
-            AudioPlayer = new MelodyPlayer(new ListNoteSource(), TimelinePlayer.BeatsPerMinute);
-            return;
-        }
         Viewport.FirstVisibleMidi = notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min();
         maxBeat = notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
         var instruments = notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
@@ -120,7 +113,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             instrumentColorMap[instruments[i]] = instrumentColors[i];
         }
-        AudioPlayer = new MelodyPlayer(this.Notes, TimelinePlayer.BeatsPerMinute);
+        AudioPlayer = new MelodyPlayer(this.Notes);
     }
 
     private static readonly RGB[] BaseInstrumentColors = new[]
@@ -194,7 +187,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
             {
                 if (TimelinePlayer.IsPlaying)
                 {
-                    playLifetime?.TryDispose();
+                    playLifetime?.Dispose();
                     playLifetime = null;
                     TimelinePlayer.Pause();
                 }

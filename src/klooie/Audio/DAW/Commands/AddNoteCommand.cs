@@ -5,42 +5,26 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class AddNoteCommand : ICommand
+public class AddNoteCommand : TimelineCommand
 {
-    private readonly ListNoteSource notes;
-    private readonly VirtualTimelineGrid grid;
     private readonly NoteExpression note;
-    private readonly List<NoteExpression> oldSelection;
 
-    public string Description { get; }
-
-    public AddNoteCommand(ListNoteSource notes, VirtualTimelineGrid grid, NoteExpression note, List<NoteExpression> selection, string desc = "Add Note")
+    public AddNoteCommand(VirtualTimelineGrid timeline, NoteExpression note) : base(timeline, "Add Note") => this.note = note;
+    
+    public override void Do()
     {
-        this.notes = notes;
-        this.grid = grid;
-        this.note = note;
-        this.oldSelection = new List<NoteExpression>(selection);
-        this.Description = desc;
+        Timeline.Notes.Add(note);
+        Timeline.Editor.ClearAddNotePreview();
+        Timeline.StatusChanged.Fire($"Added note {note.MidiNote}".ToWhite());
+        WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
+        base.Do();
     }
 
-    public void Do()
+    public override void Undo()
     {
-        notes.Add(note);
-        grid.SelectedNotes.Clear();
-        grid.SelectedNotes.Add(note);
-        grid.RefreshVisibleSet();
-        grid.StatusChanged.Fire($"Added note {note.MidiNote}".ToWhite());
-        grid.Editor.ClearAddNotePreview();
+        Timeline.Notes.Remove(note);
+        Timeline.StatusChanged.Fire("Undo add note".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
-    }
-
-    public void Undo()
-    {
-        notes.Remove(note);
-        grid.SelectedNotes.Clear();
-        grid.SelectedNotes.AddRange(oldSelection);
-        grid.RefreshVisibleSet();
-        grid.StatusChanged.Fire("Undo add note".ToWhite());
-        WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
+        base.Undo();
     }
 }

@@ -124,7 +124,6 @@ public class TimelineEditor
         double offset = Timeline.CurrentBeat - clipboard.Min(n => n.StartBeat);
 
         var pasted = new List<NoteExpression>();
-        var oldSelection = Timeline.SelectedNotes.ToList();
         var addCmds = new List<ICommand>();
 
         foreach (var n in clipboard)
@@ -137,7 +136,7 @@ public class TimelineEditor
                 n.Velocity,
                 n.Instrument);
             pasted.Add(nn);
-            addCmds.Add(new AddNoteCommand(list, Timeline, nn, oldSelection));
+            addCmds.Add(new AddNoteCommand(Timeline, nn));
         }
 
         // After paste, only the new notes are selected
@@ -158,11 +157,10 @@ public class TimelineEditor
         else if (k.Key == ConsoleKey.UpArrow) midiDelta = 1;
         else if (k.Key == ConsoleKey.DownArrow) midiDelta = -1;
 
-        var oldSelection = Timeline.SelectedNotes.ToList();
         var updated = new List<NoteExpression>();
         var moveCmds = new List<ICommand>();
 
-        foreach (var n in oldSelection)
+        foreach (var n in Timeline.SelectedNotes)
         {
             int idx = list.IndexOf(n);
             if (idx < 0) continue;
@@ -170,9 +168,7 @@ public class TimelineEditor
             double newBeat = Math.Max(0, n.StartBeat + beatDelta);
             var nn = NoteExpression.Create(newMidi, newBeat, n.DurationBeats, Timeline.Notes.BeatsPerMinute, n.Velocity, n.Instrument);
             updated.Add(nn);
-            moveCmds.Add(
-                new MoveNoteCommand(list, Timeline, n, nn, oldSelection, updated)
-            );
+            moveCmds.Add(new MoveNoteCommand(Timeline, n, nn));
         }
 
         if (moveCmds.Count > 0)
@@ -186,21 +182,18 @@ public class TimelineEditor
         if (Timeline.Notes is not ListNoteSource list) return;
         if (Timeline.SelectedNotes.Count == 0) return;
 
-        var oldSelection = Timeline.SelectedNotes.ToList();
         var updated = new List<NoteExpression>();
         var velCmds = new List<ICommand>();
         var isSingleNote = Timeline.SelectedNotes.Count == 1;
 
-        foreach (var n in oldSelection)
+        foreach (var n in Timeline.SelectedNotes)
         {
             int idx = list.IndexOf(n);
             if (idx < 0) continue;
             int newVel = Math.Clamp(n.Velocity + delta, 1, 127);
             var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, Timeline.Notes.BeatsPerMinute, newVel, n.Instrument);
             updated.Add(nn);
-            velCmds.Add(
-                new ChangeVelocityCommand(list, Timeline, n, nn, oldSelection, updated)
-            );
+            velCmds.Add(new ChangeVelocityCommand(Timeline, n, nn));
         }
 
         if (velCmds.Count > 0)
@@ -246,7 +239,7 @@ public class TimelineEditor
         if (pendingAddNote == null) return;
         var (start, duration, midi) = pendingAddNote.Value;
 
-        var command = new AddNoteCommand(Timeline.Notes, Timeline, NoteExpression.Create(midi, start, duration, Timeline.Notes.BeatsPerMinute, instrument: InstrumentExpression.Create("Keyboard", Timeline.InstrumentFactory)), Timeline.SelectedNotes, "Add Note");
+        var command = new AddNoteCommand(Timeline, NoteExpression.Create(midi, start, duration, Timeline.Notes.BeatsPerMinute, instrument: Timeline.Instrument));
         Timeline.Session.Commands.Execute(command);
     }
 
