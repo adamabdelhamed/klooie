@@ -1,14 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace klooie;
 
 public abstract class TimelineInputMode : IComparable<TimelineInputMode>
 {
     public required VirtualTimelineGrid Timeline { get; init; }
+
+    // Pre-created foreground colors
+    private static readonly RGB MainBeatColor = new RGB(40, 40, 40);
+    private static readonly RGB SubdivColor = new RGB(150, 150, 150);
+    private static readonly RGB PlayHeadGreenColor = RGB.Green;
+    private static readonly RGB PlayHeadGrayColor = RGB.Gray;
+    private static readonly RGB PlayHeadDarkRedColor = RGB.DarkRed;
+    private static readonly RGB PlayHeadRedColor = RGB.Red;
+
+    // One cache per bar type: background color => ConsoleString
+    private static readonly Dictionary<RGB, ConsoleString> MainBeatBars = new();
+    private static readonly Dictionary<RGB, ConsoleString> SubdivBars = new();
+    private static readonly Dictionary<RGB, ConsoleString> PlayHeadGreenBars = new();
+    private static readonly Dictionary<RGB, ConsoleString> PlayHeadGrayBars = new();
+    private static readonly Dictionary<RGB, ConsoleString> PlayHeadDarkRedBars = new();
+    private static readonly Dictionary<RGB, ConsoleString> PlayHeadRedBars = new();
 
     public abstract void HandleKeyInput(ConsoleKeyInfo key);
     public virtual void Enter() { }
@@ -19,17 +32,50 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
         DrawPlayHead(context);
     }
 
+    // Helper for bar cache lookup/creation
+    private static ConsoleString GetBar(Dictionary<RGB, ConsoleString> cache, RGB fg, RGB bg)
+    {
+        if (!cache.TryGetValue(bg, out var cs))
+        {
+            cs = "|".ToConsoleString(fg, bg);
+            cache[bg] = cs;
+        }
+        return cs;
+    }
+
     private void DrawPlayHead(ConsoleBitmap context)
     {
-        var playHeadColor = Timeline.TimelinePlayer.IsPlaying ? RGB.Green :
-            Timeline.CurrentMode is SelectionMode ? RGB.Gray : Timeline.CurrentMode is NavigationMode ? RGB.DarkRed : RGB.Red;
+        // Decide which cache/fg to use
+        Dictionary<RGB, ConsoleString> barCache;
+        RGB fg;
+        if (Timeline.TimelinePlayer.IsPlaying)
+        {
+            barCache = PlayHeadGreenBars;
+            fg = PlayHeadGreenColor;
+        }
+        else if (Timeline.CurrentMode is SelectionMode)
+        {
+            barCache = PlayHeadGrayBars;
+            fg = PlayHeadGrayColor;
+        }
+        else if (Timeline.CurrentMode is NavigationMode)
+        {
+            barCache = PlayHeadDarkRedBars;
+            fg = PlayHeadDarkRedColor;
+        }
+        else
+        {
+            barCache = PlayHeadRedBars;
+            fg = PlayHeadRedColor;
+        }
+
         double relBeat = Timeline.CurrentBeat - Timeline.Viewport.FirstVisibleBeat;
         int x = ConsoleMath.Round(relBeat / Timeline.BeatsPerColumn) * VirtualTimelineGrid.ColWidthChars;
         if (x < 0 || x >= Timeline.Width) return;
         for (int y = 0; y < Timeline.Height; y++)
         {
             var existingPixel = context.GetPixel(x, y);
-            context.DrawString("|".ToConsoleString(playHeadColor, existingPixel.BackgroundColor), x, y);
+            context.DrawString(GetBar(barCache, fg, existingPixel.BackgroundColor), x, y);
         }
     }
 
@@ -39,10 +85,6 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
         double beatsPerCol = Timeline.BeatsPerColumn;
         int colWidth = VirtualTimelineGrid.ColWidthChars;
         int width = Timeline.Width;
-
-        // Colors
-        var mainColor = new RGB(40, 40, 40);
-        var subColor = new RGB(150, 150, 150);
 
         // Subdivision logic (finest with ≥4 cells apart)
         double[] subdivs = { 8, 4, 2 };
@@ -57,23 +99,20 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
             }
         }
 
-        // Loop over columns, compute beat at that column
         for (int x = 0; x < width; x++)
         {
             double beatAtX = firstBeat + (x / (double)colWidth) * beatsPerCol;
 
-            // Check if this is a main beat (within epsilon of an int)
             if (IsNearInteger(beatAtX, 1e-6))
             {
                 for (int y = 0; y < Timeline.Height; y++)
                 {
                     var existingPixel = context.GetPixel(x, y);
-                    context.DrawString("|".ToConsoleString(mainColor, existingPixel.BackgroundColor), x, y);
+                    context.DrawString(GetBar(MainBeatBars, MainBeatColor, existingPixel.BackgroundColor), x, y);
                 }
                 continue;
             }
 
-            // Otherwise, check for subdivision (if enabled)
             if (chosenSubdiv > 1)
             {
                 double beatInSubdivision = beatAtX * chosenSubdiv;
@@ -82,7 +121,7 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
                     for (int y = 0; y < Timeline.Height; y++)
                     {
                         var existingPixel = context.GetPixel(x, y);
-                        context.DrawString("|".ToConsoleString(subColor, existingPixel.BackgroundColor), x, y);
+                        context.DrawString(GetBar(SubdivBars, SubdivColor, existingPixel.BackgroundColor), x, y);
                     }
                 }
             }
