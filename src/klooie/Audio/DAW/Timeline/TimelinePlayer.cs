@@ -3,58 +3,45 @@ using System.Diagnostics;
 
 namespace klooie;
 
-/// <summary>
-/// Centralized controller that manages playback for a timeline.
-/// It exposes play, stop and seeking functionality while
-/// raising an event whenever the playhead position changes.
-/// </summary>
 public class TimelinePlayer
 {
     public Event Playing { get;private set; } = Event.Create();
     public Event Stopped { get; private set; } = Event.Create();
-    private readonly Func<double> maxBeatProvider;
-    private double playheadStartBeat;
-    private long? playbackStartTimestamp;
+
     public bool StopAtEnd { get; set; } = true;
     public bool IsPlaying { get; private set; }
-
-    /// <summary>
-    /// Beats per minute used to convert time to beats.
-    /// </summary>
-    public double BeatsPerMinute { get; set; }
-
-    /// <summary>
-    /// Current playhead position in beats.
-    /// </summary>
     public double CurrentBeat { get; private set; }
 
+    private const int AudioThreadLatency = 60;
     private Event<double> beatChanged;
-    /// <summary>
-    /// Event fired whenever <see cref="CurrentBeat"/> changes.
-    /// </summary>
     public Event<double> BeatChanged => beatChanged ??= Event<double>.Create();
 
     public VirtualTimelineGrid Timeline { get; }
 
-    public TimelinePlayer(VirtualTimelineGrid timeline, Func<double> maxBeatProvider, double bpm)
+    private Recyclable? playLifetime;
+    private double playheadStartBeat;
+    private long? playbackStartTimestamp;
+
+    public TimelinePlayer(VirtualTimelineGrid timeline)
     {
         this.Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
-        this.maxBeatProvider = maxBeatProvider;
-        this.BeatsPerMinute = bpm;
         BeatChanged.Subscribe(this, static (me, b) => me.Timeline.Viewport.OnBeatChanged(b), Timeline);
     }
-    private Recyclable? playLifetime;
+
     public void Play()
     {
         if (IsPlaying) return;
 
-        ConsoleApp.Current.Scheduler.Delay(60, StartDelayed);
+        var autoStopSuffix = StopAtEnd ? " (auto-stop)" : "";
+        Timeline.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
+
+        ConsoleApp.Current.Scheduler.Delay(AudioThreadLatency, StartMovingPlayHeadAfterAudioThreadLatency);
         playLifetime?.TryDispose();
         playLifetime = DefaultRecyclablePool.Instance.Rent();
         PlayAudio(CurrentBeat, playLifetime);
     }
 
-    private void StartDelayed()
+    private void StartMovingPlayHeadAfterAudioThreadLatency()
     {
         Playing.Fire();
         playheadStartBeat = CurrentBeat;
@@ -122,11 +109,10 @@ public class TimelinePlayer
     {
         if (playbackStartTimestamp == null) return;
         double elapsedSeconds = Stopwatch.GetElapsedTime(playbackStartTimestamp.Value).TotalSeconds;
-        var beat = playheadStartBeat + elapsedSeconds * BeatsPerMinute / 60.0;
-        var maxBeat = maxBeatProvider();
-        if (StopAtEnd && beat > maxBeat + 4)
+        var beat = playheadStartBeat + elapsedSeconds * Timeline.Notes.BeatsPerMinute / 60.0;
+        if (StopAtEnd && beat > Timeline.MaxBeat + 4)
         {
-            CurrentBeat = maxBeat;
+            CurrentBeat = Timeline.MaxBeat;
             Stop();
         }
         else

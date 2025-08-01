@@ -48,8 +48,8 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     }
 
     public double CurrentBeat => TimelinePlayer.CurrentBeat;
-    public double MaxBeat => maxBeat;
-    private double maxBeat;
+    public double MaxBeat { get; private set; } 
+
     private Dictionary<string, RGB> instrumentColorMap = new();
     private readonly TimelineInputMode[] userCyclableModes;
 
@@ -63,7 +63,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         notes = notes ?? new ListNoteSource();
         this.userCyclableModes =  [new NavigationMode() { Timeline = this }, new SelectionMode() { Timeline = this }];
         Viewport = new TimelineViewport(this);
-        TimelinePlayer = new TimelinePlayer(this, () => maxBeat, notes?.BeatsPerMinute ?? 60);
+        TimelinePlayer = new TimelinePlayer(this);
 
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
@@ -76,11 +76,6 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         TimelinePlayer.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);  
         CurrentMode = this.userCyclableModes[0];
         Editor = new TimelineEditor(session.Commands) { Timeline = this };
-        TimelinePlayer.Playing.Subscribe(this, static (me) =>
-        {
-            var autoStopSuffix = me.TimelinePlayer.StopAtEnd ? " (auto-stop)" : "";
-            me.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
-        }, this);
         TimelinePlayer.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
         RefreshVisibleSet();
     }
@@ -103,7 +98,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     {
         this.Notes = notes;
         Viewport.FirstVisibleMidi = notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min();
-        maxBeat = notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
+        MaxBeat = notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
         var instruments = notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
         var instrumentColors = instruments.Select((s, i) => GetInstrumentColor(i)).ToArray();
         for (int i = 0; i < instruments.Length; i++)
@@ -204,7 +199,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         {
             Viewport.FirstVisibleMidi = Math.Max(0, Notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min() - 12);
         }
-        maxBeat = Notes.Select(n => n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : GetSustainedNoteDurationBeats(n))).DefaultIfEmpty(0).Max();
+        MaxBeat = Notes.Select(n => n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : GetSustainedNoteDurationBeats(n))).DefaultIfEmpty(0).Max();
         double beatStart = Viewport.FirstVisibleBeat;
         double beatEnd = beatStart + Viewport.BeatsOnScreen;
         int midiTop = Viewport.FirstVisibleMidi;
