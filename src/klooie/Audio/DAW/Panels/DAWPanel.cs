@@ -26,7 +26,7 @@ public class DAWPanel : ProtectedConsolePanel
         var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Background = RGB.Green };
 
         PianoWithTimeline = ProtectedPanel.Add(new PianoWithTimeline(Session, Session.CurrentSong.Notes, commandBar)).Fill();
-        Ready.SubscribeOnce(PianoWithTimeline.Timeline.Focus);
+        PianoWithTimeline.Timeline.Focus();
 
         this.midi = DAWMidi.Create(midiProvider ?? throw new ArgumentNullException(nameof(midiProvider)), PianoWithTimeline);
         commandBar.Add(midi.CreateMidiProductDropdown());
