@@ -76,13 +76,14 @@ public class ScheduledNoteEvent : Recyclable
         Next = null;
         Previous = null;
         RemainingVoices = 0;
+        IsCancelled = false;
         base.OnReturn();
     }
 }
 
 public class ScheduledSignalSourceMixer
 {
-    private readonly Queue<ScheduledNoteEvent> scheduledNotes = new();
+    private readonly List<ScheduledNoteEvent> scheduledNotes = new();
     private readonly ConcurrentQueue<ScheduledSongEvent> scheduledSongs = new();
     private readonly List<ActiveVoice> activeVoices = new();
     private long samplesRendered = 0;
@@ -98,6 +99,30 @@ public class ScheduledSignalSourceMixer
     {
         scheduledSongs.Enqueue(ScheduledSongEvent.Create(s, cancellationToken));
     }
+
+
+
+    public int Read(float[] buffer, int offset, int count)
+    {
+        int samplesRequested = count / SoundProvider.ChannelCount;
+        long bufferStart = samplesRendered;
+        long bufferEnd = bufferStart + samplesRequested;
+
+        DrainScheduledSongs();
+        RemoveCancelledNotesInQueue();
+        DrainDueNotes(bufferEnd);
+
+        Array.Clear(buffer, offset, count);
+        var scratch = System.Buffers.ArrayPool<float>.Shared.Rent(count);
+
+        MixActiveVoices(buffer, offset, samplesRequested, bufferStart, bufferEnd, scratch);
+
+        System.Buffers.ArrayPool<float>.Shared.Return(scratch);
+        samplesRendered += samplesRequested;
+        return count;
+    }
+
+
 
     private void DrainScheduledSongs()
     {
@@ -118,7 +143,6 @@ public class ScheduledSignalSourceMixer
                 var patch = note.Instrument?.PatchFunc?.Invoke() ?? SynthLead.Create();
                 if (!patch.IsNotePlayable(note.MidiNote))
                 {
-                    ConsoleApp.Current?.WriteLine(ConsoleString.Parse($"Note [Red]{note.MidiNote}[D] is not playable by the current instrument"));
                     continue;
                 }
 
@@ -126,7 +150,7 @@ public class ScheduledSignalSourceMixer
                 track.Items.Add(scheduledNote);
             }
 
-            foreach(var track in tracks.Values)
+            foreach (var track in tracks.Values)
             {
                 for (int j = 0; j < track.Items.Count; j++)
                 {
@@ -136,50 +160,52 @@ public class ScheduledSignalSourceMixer
                     if (j > 0) noteEvent.Previous = track.Items[j - 1].Note;
                     if (j < track.Items.Count - 1) noteEvent.Next = track.Items[j + 1].Note;
 
-                    scheduledNotes.Enqueue(noteEvent);
+                    scheduledNotes.Add(noteEvent);
                 }
                 track.Dispose();
             }
         }
     }
 
-    public int Read(float[] buffer, int offset, int count)
+    private void RemoveCancelledNotesInQueue()
     {
-        int channels = SoundProvider.ChannelCount;
-        int samplesRequested = count / channels;
-        long bufferStart = samplesRendered;
-        long bufferEnd = bufferStart + samplesRequested;
+         for (int i = scheduledNotes.Count - 1; i >= 0; i--)
+         {
+             if (scheduledNotes[i].IsCancelled)
+             {
+                 scheduledNotes[i].Dispose();
+                 scheduledNotes.RemoveAt(i);
+             }
+        }
+    }
 
-        DrainScheduledSongs();
-       
-
-        while (scheduledNotes.TryPeek(out var scheduledNoteEvent) && scheduledNoteEvent.StartSample < bufferEnd)
+    private void DrainDueNotes(long bufferEnd)
+    {
+        while (scheduledNotes.Count > 0 && scheduledNotes[0].StartSample < bufferEnd)
         {
-            scheduledNotes.TryDequeue(out scheduledNoteEvent);
+            var scheduledNoteEvent = scheduledNotes[0];
+            scheduledNotes.RemoveAt(0);
             if (scheduledNoteEvent.IsCancelled)
             {
                 scheduledNoteEvent.Dispose();
                 continue;
             }
-          
-                var voices =scheduledNoteEvent.Patch.SpawnVoices(
-                    NoteExpression.MidiNoteToFrequency(scheduledNoteEvent.Note.MidiNote),
-                    scheduledNoteEvent).ToArray();
-                scheduledNoteEvent.RemainingVoices = voices.Length;
 
-                int durSamples = (int)(scheduledNoteEvent.DurationSeconds * SoundProvider.SampleRate);
-                long releaseSample = scheduledNoteEvent.StartSample + durSamples;
+            var voices = scheduledNoteEvent.Patch.SpawnVoices(NoteExpression.MidiNoteToFrequency(scheduledNoteEvent.Note.MidiNote), scheduledNoteEvent).ToArray();
+            scheduledNoteEvent.RemainingVoices = voices.Length;
 
-                for (int i = 0; i < voices.Length; i++)
-                {
-                    activeVoices.Add(new ActiveVoice(scheduledNoteEvent, voices[i], 0, releaseSample));
-                }    
+            int durSamples = (int)(scheduledNoteEvent.DurationSeconds * SoundProvider.SampleRate);
+            long releaseSample = scheduledNoteEvent.StartSample + durSamples;
+
+            for (int i = 0; i < voices.Length; i++)
+            {
+                activeVoices.Add(new ActiveVoice(scheduledNoteEvent, voices[i], 0, releaseSample));
+            }
         }
+    }
 
-        Array.Clear(buffer, offset, count);
-        var scratch = System.Buffers.ArrayPool<float>.Shared.Rent(count);
-
-        // 2. Mix active voices
+    private void MixActiveVoices(float[] buffer, int offset, int samplesRequested, long bufferStart, long bufferEnd, float[] scratch)
+    {
         for (int v = activeVoices.Count - 1; v >= 0; v--)
         {
             var av = activeVoices[v];
@@ -206,7 +232,7 @@ public class ScheduledSignalSourceMixer
                 continue;
 
             int bufferWriteOffset = (int)Math.Max(0, voiceAbsoluteSample - bufferStart);
-          
+
             int samplesAvailable = samplesRequested - bufferWriteOffset;
             if (samplesAvailable <= 0)
                 continue;
@@ -217,7 +243,7 @@ public class ScheduledSignalSourceMixer
                 av.Released = true;
             }
 
-            int floatsNeeded = samplesAvailable * channels;
+            int floatsNeeded = samplesAvailable * SoundProvider.ChannelCount;
             int read = voice.Render(scratch, 0, floatsNeeded);
 
             // === NOTEPLAYING LOGIC ===
@@ -229,13 +255,13 @@ public class ScheduledSignalSourceMixer
             }
             // =========================
 
-            int bufferMixIndex = offset + bufferWriteOffset * channels;
+            int bufferMixIndex = offset + bufferWriteOffset * SoundProvider.ChannelCount;
             for (int i = 0; i < read; i++)
             {
                 buffer[bufferMixIndex + i] += scratch[i];
             }
 
-            av.SamplesPlayed += read / channels;
+            av.SamplesPlayed += read / SoundProvider.ChannelCount;
 
             if (voice.IsDone)
             {
@@ -252,10 +278,6 @@ public class ScheduledSignalSourceMixer
                 activeVoices[v] = av;
             }
         }
-
-        System.Buffers.ArrayPool<float>.Shared.Return(scratch);
-        samplesRendered += samplesRequested;
-        return count;
     }
 }
 
