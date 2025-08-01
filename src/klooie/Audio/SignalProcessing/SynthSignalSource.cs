@@ -25,7 +25,6 @@ public class SynthSignalSource : Recyclable
     protected float effectiveVolume;
     protected float effectivePan;
     private List<IPitchModEffect>? pitchMods;
-    private List<SignalProcess> pipeline;
     private ADSREnvelope envelope;
     private float? noteReleaseTime = null; // in seconds
 
@@ -52,7 +51,6 @@ public class SynthSignalSource : Recyclable
     private float sAndHValue = 0;
     private int sAndHCounter = 0;
     private int sAndHSamplesPerHold = 100; // Change for faster/slower steps
-
 
     public bool IsDone => isDone;
 
@@ -149,6 +147,13 @@ public class SynthSignalSource : Recyclable
     private double twoPiOverSampleRate;
     private float subOscMul;
 
+    // ==== [OPTIMIZED] Pipeline flags/fields ====
+    private bool hasSubOsc, hasTransient; // [OPTIMIZED]
+    private const int MaxEffects = 100; // [OPTIMIZED] Tune as needed
+    private IEffect[] effects = new IEffect[MaxEffects]; // [OPTIMIZED]
+    private int effectsCount = 0; // [OPTIMIZED]
+    // ===========================================
+
     protected void Construct(float frequencyHz, SynthPatch patch, ScheduledNoteEvent noteEvent)
     {
         frequency = patch.FrequencyOverride.HasValue ? patch.FrequencyOverride.Value : frequencyHz;
@@ -205,37 +210,57 @@ public class SynthSignalSource : Recyclable
                 pluckBuffer[i] = (float)(Random.Shared.NextDouble() * 2.0 - 1.0);
         }
 
-        // Build DSP pipeline
-        pipeline = pipeline ?? new List<SignalProcess>(20);
-        pipeline.Clear();
-        pipeline.Add(OscillatorStage);
-        if (patch.EnableSubOsc)
-            pipeline.Add(SubOscillatorStage);
-        if (patch.EnableTransient)
-            pipeline.Add(TransientStage);
+        // ==== [OPTIMIZED] Pipeline flags/array ====
+        hasSubOsc = patch.EnableSubOsc;
+        hasTransient = patch.EnableTransient;
 
-        for(var i = 0; i < patch.Effects.Items.Count; i++)
-        {
-            if (patch.Effects.Items[i] is IPitchModEffect pme == false) continue;
-            pitchMods = pitchMods ?? new List<IPitchModEffect>(10);
-            pitchMods.Add(pme);
-        }
+        // Prepopulate effects array for this instance
+        var patchEffects = patch.Effects?.Items;
+        effectsCount = patchEffects?.Count ?? 0;
+        if (effectsCount > MaxEffects)
+            throw new Exception("Exceeded max effect count; increase MaxEffects!");
 
-        // After all core DSP, add effect stages
-        if (patch.Effects != null)
+        for (int i = 0; i < effectsCount; i++)
+            effects[i] = patchEffects[i];
+        // Zero any extra slots to avoid leaks
+        for (int i = effectsCount; i < MaxEffects; i++)
+            effects[i] = null!;
+        // ===========================================
+
+        // Pitch mods
+        pitchMods = null;
+        if (patchEffects != null)
         {
-            for (int i = 0; i < patch.Effects.Items.Count; i++)
+            for (var i = 0; i < patchEffects.Count; i++)
             {
-                IEffect? effect = patch.Effects.Items[i];
-                pipeline.Add(effect.Process);
+                if (patchEffects[i] is IPitchModEffect pme)
+                {
+                    pitchMods ??= new List<IPitchModEffect>(4);
+                    pitchMods.Add(pme);
+                }
             }
         }
     }
 
-    // ---- DSP Pipeline delegate signature ----
-    public delegate float SignalProcess(in EffectContext ctx);
+    // ---- [OPTIMIZED] Pipeline runner ----
+    private float RunPipeline(in EffectContext ctx)
+    {
+        float sample = Oscillate();
 
-    // ---- Pipeline stages: all instance methods, no capturing lambdas ----
+        if (hasSubOsc)
+            sample += OscillateSub() * patch.SubOscLevel;
+
+        if (hasTransient)
+            sample = ctx.Time < patch.TransientDurationSeconds
+                ? sample + (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f
+                : sample;
+
+        for (int i = 0; i < effectsCount; i++)
+            sample = effects[i].Process(ctx with { Input = sample });
+
+        return sample;
+    }
+    // ---------------------------------------
 
     // Main oscillator: uses the main phase accumulator
     private float Oscillate()
@@ -417,26 +442,6 @@ public class SynthSignalSource : Recyclable
         return sAndHValue;
     }
 
-
-    // Pipeline stage for main oscillator
-    private float OscillatorStage(in EffectContext ctx)
-    {
-        return Oscillate();
-    }
-
-    // Pipeline stage for sub oscillator (if enabled)
-    private float SubOscillatorStage(in EffectContext ctx)
-    {
-        return ctx.Input + OscillateSub() * patch.SubOscLevel;
-    }
-
-    private float TransientStage(in EffectContext ctx)
-    {
-        return ctx.Time < patch.TransientDurationSeconds
-            ? ctx.Input + (float)(Random.Shared.NextDouble() * 2 - 1) * 0.3f
-            : ctx.Input;
-    }
-
     private float pluckDamping = 0.98f; // Expose this as needed!
 
     private float GetPluckedSample()
@@ -464,7 +469,6 @@ public class SynthSignalSource : Recyclable
         return current;
     }
 
-
     protected override void OnReturn()
     {
         masterKnob = null;
@@ -472,7 +476,6 @@ public class SynthSignalSource : Recyclable
         effectivePan = 0f;
         envelope = null;
         noteReleaseTime = null;
-        pipeline?.Clear();
         noteEvent = null!;
         ctx = default;
         oscPhase = 0.0;
@@ -496,10 +499,15 @@ public class SynthSignalSource : Recyclable
         twoPiOverSampleRate = 0.0;
         subOscMul = 0f;
 
+        // [OPTIMIZED] Zero effect fields to break ref chains
+        for (int i = 0; i < MaxEffects; i++)
+            effects[i] = null!;
+
         base.OnReturn();
     }
 
-    public virtual int Render(float[] buffer, int offset, int count)
+    // ---- [OPTIMIZED] Render loop, pipeline unrolled ----
+    public int Render(float[] buffer, int offset, int count)
     {
         if (isDone || IsStillValid(Lease) == false)
         {
@@ -534,37 +542,23 @@ public class SynthSignalSource : Recyclable
                     if (st.Settings.VelocityAffectsDepth)
                         lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(noteEvent.Note.Velocity / 127f);
 
-                    switch (st.Settings.Target)
-                    {
-                        case LfoTarget.FilterCutoff:
-                            lfoCutoff += lfo * lfoDepth;
-                            break;
-                        case LfoTarget.Amp:
-                            lfoAmp += lfo * lfoDepth;
-                            break;
-                        case LfoTarget.Pan:
-                            lfoPan += lfo * lfoDepth;
-                            break;
-                    }
+                    if (st.Settings.Target == LfoTarget.FilterCutoff)
+                        lfoCutoff += lfo * lfoDepth;
+                    else if (st.Settings.Target == LfoTarget.Amp)
+                        lfoAmp += lfo * lfoDepth;
+                    else if (st.Settings.Target == LfoTarget.Pan)
+                        lfoPan += lfo * lfoDepth;
 
-                    // Advance phase for all targets
                     lfos[i].Phase += lfos[i].PhaseInc;
                     if (lfos[i].Phase >= 1f) lfos[i].Phase -= 1f;
                 }
             }
 
-            float sample = 0f;
-            for (int s = 0; s < pipeline.Count; s++)
-            {
-                ctx.Input = sample;
-                sample = pipeline[s](ctx);
-            }
+            // [OPTIMIZED] Direct, unrolled pipeline
+            float sample = RunPipeline(ctx);
 
             // === LFO: Apply non-pitch LFO modulations before output ===
-            float finalSample = sample;
-
-            // Apply LFO amplitude (tremolo)
-            finalSample *= (1f + lfoAmp);
+            float finalSample = sample * (1f + lfoAmp);
 
             // Apply pan (lfoPan)
             float pan = effectivePan + lfoPan;
@@ -595,4 +589,5 @@ public class SynthSignalSource : Recyclable
 
         return samplesWritten;
     }
+    // ---- END [OPTIMIZED] Render ----
 }
