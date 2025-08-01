@@ -5,33 +5,36 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class AssignInstrumentCommand : ICommand
+public class AssignInstrumentCommand : TimelineCommand
 {
-    private readonly ListNoteSource _notes;
     private readonly NoteExpression _original;
     private readonly NoteExpression _updated;
     private int? _index;
 
-    public AssignInstrumentCommand(ListNoteSource notes, NoteExpression original, NoteExpression updated, string description = "Assign Instrument")
+    public AssignInstrumentCommand(VirtualTimelineGrid timeline, NoteExpression original, NoteExpression updated) : base(timeline, "Assign Instrument")
     {
-        _notes = notes;
         _original = original;
         _updated = updated;
-        Description = description;
     }
 
     public void Do()
     {
-        _index = _notes.IndexOf(_original);
+        _index = Timeline.Notes.IndexOf(_original);
         if (_index >= 0)
-            _notes[_index.Value] = _updated;
+        {
+            Timeline.Notes[_index.Value] = _updated;
+            Timeline.SelectedNotes.Remove(_original);
+            Timeline.SelectedNotes.Add(_updated);
+        }
+        base.Do();
     }
 
     public void Undo()
     {
         if (_index.HasValue)
-            _notes[_index.Value] = _original;
+        {
+            Timeline.Notes[_index.Value] = _original;
+        }
+        base.Undo();
     }
-
-    public string Description { get; }
 }

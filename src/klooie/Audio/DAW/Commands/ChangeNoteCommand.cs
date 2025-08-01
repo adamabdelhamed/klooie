@@ -5,14 +5,14 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class ChangeVelocityCommand : TimelineCommand
+public class ChangeNoteCommand : TimelineCommand
 {
     private readonly NoteExpression oldNote;
     private readonly NoteExpression newNote;
 
     public string Description { get; }
 
-    public ChangeVelocityCommand(VirtualTimelineGrid grid, NoteExpression oldNote, NoteExpression newNote) : base(grid, "Change Velocity")
+    public ChangeNoteCommand(VirtualTimelineGrid grid, NoteExpression oldNote, NoteExpression newNote) : base(grid, "Change Note")
     {
         this.oldNote = oldNote;
         this.newNote = newNote;
@@ -21,9 +21,13 @@ public class ChangeVelocityCommand : TimelineCommand
     public override void Do()
     {
         int idx = Timeline.Notes.IndexOf(oldNote);
-        if (idx >= 0) Timeline.Notes[idx] = newNote;
+        if (idx >= 0)
+        {
+            Timeline.Notes[idx] = newNote;
+            Timeline.SelectedNotes.Remove(oldNote);
+            Timeline.SelectedNotes.Add(newNote);
+        }
 
-        Timeline.StatusChanged.Fire($"Changed velocity of note {newNote.MidiNote} to {newNote.Velocity}".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
         base.Do();
     }
@@ -31,9 +35,11 @@ public class ChangeVelocityCommand : TimelineCommand
     public override void Undo()
     {
         int idx = Timeline.Notes.IndexOf(newNote);
-        if (idx >= 0) Timeline.Notes[idx] = oldNote;
+        if (idx >= 0)
+        {
+            Timeline.Notes[idx] = oldNote;
+        }
 
-        Timeline.StatusChanged.Fire("Undo velocity change".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
         base.Undo();
     }

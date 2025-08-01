@@ -9,7 +9,6 @@ public class TimelineCommand : ICommand
 {
     protected readonly VirtualTimelineGrid Timeline;
     protected readonly IReadOnlyList<NoteExpression> OldSelection;
-    protected IReadOnlyList<NoteExpression> NewSelection;
 
     public string Description { get; }
 
@@ -22,7 +21,6 @@ public class TimelineCommand : ICommand
 
     public virtual void Do()
     {
-        NewSelection = new List<NoteExpression>(Timeline.SelectedNotes).AsReadOnly();
         Timeline.RefreshVisibleSet();
     }
 
