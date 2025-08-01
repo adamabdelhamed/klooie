@@ -30,7 +30,7 @@ public class PianoPanel : ProtectedConsolePanel
         for (int i = 0; i < vp.MidisOnScreen; i++)
         {
             int midi = midiTop + (vp.MidisOnScreen - 1 - i); // top to bottom
-            var (noteName, isWhite) = NoteName(midi);
+            var (noteName, isWhite) = MidiNoteHelper.NoteName(midi);
 
             if (isWhite)
             {
@@ -49,17 +49,5 @@ public class PianoPanel : ProtectedConsolePanel
                 ctx.DrawString(noteName, RGB.White, RGB.Black, 0, i);
             }
         }
-    }
-
-
-    public static (string DisplayString, bool IsWhite) NoteName(int midi)
-    {
-        // 0 = C, 1 = C#, 2 = D, ... 11 = B
-        var names = new[] { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-        int n = midi % 12;
-        bool isWhite = names[n].Length == 1;
-        // Example: "C4"
-        int octave = (midi / 12) - 1;
-        return ($"{midi}: {names[n]}{octave}", isWhite);
     }
 }

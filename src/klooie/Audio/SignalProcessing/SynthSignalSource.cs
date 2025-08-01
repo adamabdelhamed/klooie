@@ -214,12 +214,19 @@ public class SynthSignalSource : Recyclable
         if (patch.EnableTransient)
             pipeline.Add(TransientStage);
 
-        pitchMods = patch.Effects.Items.OfType<IPitchModEffect>().ToList();
+        for(var i = 0; i < patch.Effects.Items.Count; i++)
+        {
+            if (patch.Effects.Items[i] is IPitchModEffect pme == false) continue;
+            pitchMods = pitchMods ?? new List<IPitchModEffect>(10);
+            pitchMods.Add(pme);
+        }
+
         // After all core DSP, add effect stages
         if (patch.Effects != null)
         {
-            foreach (var effect in patch.Effects.Items)
+            for (int i = 0; i < patch.Effects.Items.Count; i++)
             {
+                IEffect? effect = patch.Effects.Items[i];
                 pipeline.Add(effect.Process);
             }
         }

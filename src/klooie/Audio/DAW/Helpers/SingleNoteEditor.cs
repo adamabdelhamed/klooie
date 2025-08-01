@@ -113,7 +113,7 @@ public class SingleNoteEditor : ProtectedConsolePanel
     private void DecrementVelocity() => Velocity = Math.Max(Velocity - 1, 0);
     private void IncrementDuration() => DurationSeconds += 0.05;
     private void DecrementDuration() => DurationSeconds -= 0.05;
-    private void UpdateNoteLabel() => noteLabel.Content = $"{PianoPanel.NoteName(MidiNote).DisplayString}".ToWhite() + GetKeyHintLabel("WS");
+    private void UpdateNoteLabel() => noteLabel.Content = $"{MidiNoteHelper.NoteName(MidiNote).DisplayString}".ToWhite() + GetKeyHintLabel("WS");
     private void UpdateVelocityLabel() => velocityLabel.Content = $"{Velocity}".ToWhite() + GetKeyHintLabel("ALT + WS");
     private void UpdateDurationLabel() => durationLabel.Content = $"{DurationSeconds:0.00}".ToWhite() + GetKeyHintLabel("AD");
 

@@ -88,8 +88,6 @@ public class ScheduledSignalSourceMixer
     private readonly List<ActiveVoice> activeVoices = new();
     private long samplesRendered = 0;
 
-    private Event<NoteExpression> notePlaying;
-    public Event<NoteExpression> NotePlaying => notePlaying ??= Event<NoteExpression>.Create();
 
     public long SamplesRendered => samplesRendered;
 
@@ -249,8 +247,6 @@ public class ScheduledSignalSourceMixer
             // === NOTEPLAYING LOGIC ===
             if (!av.Played && read > 0)
             {
-                if (notePlaying != null)
-                    SoundProvider.Current.EventLoop.Invoke(() => notePlaying?.Fire(noteEvent.Note));
                 av.Played = true;
             }
             // =========================
