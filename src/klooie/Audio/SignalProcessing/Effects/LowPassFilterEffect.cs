@@ -23,6 +23,10 @@ public class LowPassFilterEffect : Recyclable, IEffect
     private bool velocityAffectsMix;
     private Func<float, float> mixVelocityCurve = EffectContext.EaseLinear;
 
+    // --- Optimization cache ---
+    private float lastFrequencyHz = -1f;
+    private float lastMultiplier = -1f;
+
     private static readonly LazyPool<LowPassFilterEffect> _pool = new(() => new LowPassFilterEffect());
 
     private LowPassFilterEffect() { }
@@ -85,9 +89,12 @@ multiplier.
         velocityAffectsMix = settings.VelocityAffectsMix;
         mixVelocityCurve = settings.MixVelocityCurve ?? EffectContext.EaseLinear;
 
+        lastFrequencyHz = -1f;
+        lastMultiplier = -1f;
+
         if (fixedCutoffHz.HasValue)
         {
-            float dt = 1f / SoundProvider.SampleRate;
+            float dt = SoundProvider.InverseSampleRate;
             float rc = 1f / (2f * MathF.PI * fixedCutoffHz.Value);
             alpha = dt / (rc + dt);
         }
@@ -110,18 +117,37 @@ multiplier.
     {
         float input = ctx.Input;
         float a = alpha;
+
         if (!fixedCutoffHz.HasValue)
         {
-            float cutoff = ctx.Note.FrequencyHz * noteFrequencyMultiplier!.Value;
-            float dt = 1f / SoundProvider.SampleRate;
-            float rc = 1f / (2f * MathF.PI * cutoff);
-            a = dt / (rc + dt);
+            float freq = ctx.Note.FrequencyHz;
+            float mult = noteFrequencyMultiplier!.Value;
+
+            // Only recalc if freq or multiplier changed
+            if (freq != lastFrequencyHz || mult != lastMultiplier)
+            {
+                float cutoff = freq * mult;
+                float dt = SoundProvider.InverseSampleRate;
+                float rc = 1f / (2f * MathF.PI * cutoff);
+                a = dt / (rc + dt);
+                lastFrequencyHz = freq;
+                lastMultiplier = mult;
+                alpha = a;
+            }
+            else
+            {
+                a = alpha;
+            }
         }
+
+        // One-pole IIR LPF
         state += a * (input - state);
         float wet = state;
+
         float mixAmt = mix;
         if (velocityAffectsMix)
             mixAmt *= mixVelocityCurve(ctx.VelocityNorm);
+
         return input * (1 - mixAmt) + wet * mixAmt;
     }
 
@@ -134,6 +160,8 @@ multiplier.
         mix = 1f;
         velocityAffectsMix = false;
         mixVelocityCurve = EffectContext.EaseLinear;
+        lastFrequencyHz = -1f;
+        lastMultiplier = -1f;
         base.OnReturn();
     }
 }
