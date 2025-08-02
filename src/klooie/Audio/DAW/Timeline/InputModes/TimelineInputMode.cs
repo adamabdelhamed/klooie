@@ -87,7 +87,7 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
         int width = Timeline.Width;
 
         // Subdivision logic (finest with ≥4 cells apart)
-        double[] subdivs = { 8, 4, 2 };
+        Span<double> subdivs = stackalloc double[] { 8, 4, 2 };
         double chosenSubdiv = 1;
         foreach (var subdiv in subdivs)
         {
