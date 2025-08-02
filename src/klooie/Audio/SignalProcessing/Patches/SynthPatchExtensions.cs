@@ -97,7 +97,7 @@ public static class SynthPatchExtensions
         {
             CutoffHz = cutoffHz,
             Mix = 1f,
-            VelocityAffectsMix = true
+            VelocityAffectsMix = false
         };
         return patch.WithEffect(HighPassFilterEffect.Create(in settings));
     }
@@ -109,7 +109,7 @@ public static class SynthPatchExtensions
         {
             NoteFrequencyMultiplier = multiplier,
             Mix = 1f,
-            VelocityAffectsMix = true
+            VelocityAffectsMix = false
         };
         return patch.WithEffect(HighPassFilterEffect.Create(in settings));
     }
@@ -133,7 +133,7 @@ public static class SynthPatchExtensions
         {
             NoteFrequencyMultiplier = multiplier,
             Mix = 1f,
-            VelocityAffectsMix = true
+            VelocityAffectsMix = false
         };
         return patch.WithEffect(LowPassFilterEffect.Create(in settings));
     }
