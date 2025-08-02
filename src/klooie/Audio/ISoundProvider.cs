@@ -12,6 +12,8 @@ public static class SoundProvider
     public const int SampleRate = 44100;
     public const int ChannelCount = 2;
     public const int BitsPerSample = 16;
+    public static readonly float InverseSampleRate = 1f / SampleRate;
+
     public static ISoundProvider Current { get; set; }
 
     public static void Debug(ConsoleString str) => Current?.EventLoop?.Invoke(()=> ConsoleApp.Current?.WriteLine(str));

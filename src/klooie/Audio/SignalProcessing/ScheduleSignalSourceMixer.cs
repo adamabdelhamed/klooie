@@ -295,7 +295,7 @@ public class ScheduledSignalSourceMixer
         const int channels = SoundProvider.ChannelCount;
         const short bitsPerSample = 16;
         const short blockAlign = (short)(channels * (bitsPerSample / 8));
-        const int bufferSamples = 4096; // Can adjust if desired
+        const int bufferSamples = 5 * 4096;  
         const int bufferSize = bufferSamples * channels;
         float[] mixBuffer = new float[bufferSize];
         byte[] pcmBuffer = new byte[bufferSize * 2]; // 2 bytes per sample
@@ -470,26 +470,40 @@ public class RenderAnalysis
     public bool IsRealtimeSafe(double buffer = 1.1)
         => blocks.All(b => b.RealtimeRatio <= buffer);
 
-    public double RealtimeConfidence(double buffer = 1.1)
+    public double RealtimeConfidence(double buffer = 1.1, double comfortable = 0.55)
     {
-        if (blocks.Count == 0) return 1;
+        if (blocks.Count == 0) return 1;     // trivial case
 
-        // Normalize: <1.0 = good, ==1.0 = at limit, >1.0 = slow (not realtime safe)
-        var ratios = blocks.Select(b => b.RealtimeRatio / buffer).ToArray();
+        // Grab all ratios once. Sorting is O(n log n) but still trivial vs. audio work.
+        var ratios = blocks.Select(b => b.RealtimeRatio).ToArray();
+        Array.Sort(ratios);
 
-        // Confidence is high if almost all blocks are < 1, and only slightly reduced if a few are just above 1.
-        // We'll use a smoothstep: (average of clamped 1 - ratio, 0=min, 1=max)
-        double penaltySum = 0;
-        foreach (var r in ratios)
+        double worst = ratios[^1];
+        double p95 = ratios[(int)(ratios.Length * 0.95)];
+        int overruns = ratios.Count(r => r > buffer);
+        double overrunFrac = overruns / (double)ratios.Length;    // 0 – 1
+
+        // 1) Every block is well below the comfortable threshold → perfect score
+        if (worst <= comfortable)
+            return 1.0;
+
+        // 2) No block exceeds the buffer → 0.95 – 1.00 range
+        if (worst <= buffer)
         {
-            double v = 1 - Math.Clamp(r, 0, 2); // 1 (perfect) .. 0 (barely at limit) .. negative for bad
-                                                // For confidence, below 0 = hard fail, 0.5 = at threshold, 1 = fast.
-                                                // Optionally, amplify penalty for slow blocks:
-            if (v < 0) v *= 2; // Extra penalty if block was too slow
-            penaltySum += Math.Clamp(v, 0, 1);
+            // Linear interpolation: 0 at 'buffer', 1 at 'comfortable'
+            double headroom = (buffer - worst) / (buffer - comfortable);   // 0 – 1
+                                                                           // Feather it with the spike-free quality (how many near misses?)
+            double stability = 1.0 - overrunFrac;                          // 1 if none near limit
+            return 0.95 + 0.05 * headroom * stability;
         }
-        // Final score: mean of all, clamped 0–1
-        return Math.Clamp(penaltySum / blocks.Count, 0, 1);
+
+        // 3) We have overruns → < 0.95.  Combine how bad & how often.
+        double headroomFactor = buffer / worst;        // < 1.  e.g. worst=1.5 => 0.733
+        double stabilityFactor = 1.0 - overrunFrac;    // 0 – 1
+        double score = 0.95 * headroomFactor * stabilityFactor;
+
+        // Guard against pathological negatives if something crazy happens
+        return Math.Clamp(score, 0, 0.949);
     }
 
     public override string ToString()
