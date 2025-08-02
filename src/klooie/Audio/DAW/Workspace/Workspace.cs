@@ -304,6 +304,7 @@ public class WorkspaceSettings
 {
     public string? LastOpenedSong { get; set; }
     public string? LastMidiDevice { get; set; }
+    public string? LastExportedWavFilePath { get; set; }
 }
 
 public class MRUWorkspaceSettings
