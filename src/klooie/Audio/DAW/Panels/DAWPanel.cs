@@ -23,13 +23,15 @@ public class DAWPanel : ProtectedConsolePanel
     {
         await Session.Initialize();
 
-        var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Background = RGB.Green };
+        var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
 
         PianoWithTimeline = ProtectedPanel.Add(new PianoWithTimeline(Session, Session.CurrentSong.Notes, commandBar)).Fill();
         PianoWithTimeline.Timeline.Focus();
 
         this.midi = DAWMidi.Create(midiProvider ?? throw new ArgumentNullException(nameof(midiProvider)), PianoWithTimeline);
         commandBar.Add(midi.CreateMidiProductDropdown());
+        
+        ExportSongUXHelper.SetupExport(() => new Song(PianoWithTimeline.Timeline.Notes, PianoWithTimeline.Timeline.Notes.BeatsPerMinute), commandBar);
     }
 
     protected override void OnReturn()

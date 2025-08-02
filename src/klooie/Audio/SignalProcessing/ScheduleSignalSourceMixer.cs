@@ -1,5 +1,7 @@
 ﻿using klooie;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text;
 
 public class ScheduledSongEvent : Recyclable
 {
@@ -88,6 +90,7 @@ public class ScheduledSignalSourceMixer
     private readonly List<ActiveVoice> activeVoices = new();
     private long samplesRendered = 0;
 
+    public bool HasWork => scheduledSongs.Count > 0 || scheduledNotes.Count > 0 || activeVoices.Count > 0;
 
     public long SamplesRendered => samplesRendered;
 
@@ -275,6 +278,131 @@ public class ScheduledSignalSourceMixer
             }
         }
     }
+
+    public static async Task<RenderAnalysis> ToWav(Song song, string outputFileName, double endSilenceSeconds = 2)
+    {
+        var tempPath = Path.GetTempFileName();
+        using var outputStream = File.OpenWrite(tempPath);
+        var ret = await ToWav(song, outputStream, endSilenceSeconds, false);
+        File.Move(tempPath, outputFileName, overwrite: true);
+        return ret;
+    }
+
+    public static async Task<RenderAnalysis> ToWav(Song song, Stream outputStream, double endSilenceSeconds = 2, bool leaveOpen = false)
+    {
+        // Audio format constants
+        const int sampleRate = SoundProvider.SampleRate;
+        const int channels = SoundProvider.ChannelCount;
+        const short bitsPerSample = 16;
+        const short blockAlign = (short)(channels * (bitsPerSample / 8));
+        const int bufferSamples = 4096; // Can adjust if desired
+        const int bufferSize = bufferSamples * channels;
+        float[] mixBuffer = new float[bufferSize];
+        byte[] pcmBuffer = new byte[bufferSize * 2]; // 2 bytes per sample
+
+        // We'll need to fill in the WAV header at the end, after we know total data length.
+        long dataStartPos = outputStream.Position;
+        outputStream.Position += 44; // Skip space for header
+
+        // Main mixing loop
+        long totalSamples = 0;
+        bool isActive = true;
+        ScheduledSignalSourceMixer mixer = new ScheduledSignalSourceMixer();
+        mixer.ScheduleSong(song, null);
+        // The engine needs to be scheduled with at least one song before calling ToWav!
+        // Mix until all voices are finished
+
+        var analysis = new RenderAnalysis();
+        while (isActive)
+        {
+            int samplesRendered = mixer.Read(mixBuffer, 0, bufferSize);
+
+            // Check if all scheduled notes and voices are done (engine must expose this, or check emptiness)
+            isActive = mixer.HasWork;
+
+            // Convert to 16-bit PCM
+            for (int i = 0, o = 0; i < samplesRendered; i++)
+            {
+                float v = mixBuffer[i];
+                // Clamp and convert to int16
+                int sample = (int)MathF.Round(MathF.Max(-1f, MathF.Min(1f, v)) * 32767f);
+                pcmBuffer[o++] = (byte)(sample & 0xff);
+                pcmBuffer[o++] = (byte)((sample >> 8) & 0xff);
+            }
+
+            await outputStream.WriteAsync(pcmBuffer, 0, samplesRendered * 2);
+            totalSamples += samplesRendered / channels;
+
+            Array.Clear(mixBuffer, 0, samplesRendered);
+            analysis.IterationCompleted(bufferSize, samplesRendered, sampleRate, channels);
+        }
+
+        // Write trailing silence if requested
+        if (endSilenceSeconds > 0)
+        {
+            int silenceSamples = (int)(endSilenceSeconds * sampleRate) * channels;
+            Array.Clear(pcmBuffer, 0, pcmBuffer.Length);
+            while (silenceSamples > 0)
+            {
+                int chunk = Math.Min(pcmBuffer.Length / 2, silenceSamples);
+                await outputStream.WriteAsync(pcmBuffer, 0, chunk * 2);
+                totalSamples += chunk / channels;
+                silenceSamples -= chunk;
+            }
+        }
+
+        // Calculate final data size for header
+        long finalPos = outputStream.Position;
+        int byteRate = sampleRate * blockAlign;
+        int dataLength = (int)(finalPos - dataStartPos - 44);
+
+        // Write WAV header
+        outputStream.Position = dataStartPos;
+        Span<byte> header = stackalloc byte[44];
+
+        // "RIFF" chunk descriptor
+        WriteAscii(header, 0, "RIFF");
+        WriteInt32(header, 4, 36 + dataLength);
+        WriteAscii(header, 8, "WAVE");
+        // "fmt " subchunk
+        WriteAscii(header, 12, "fmt ");
+        WriteInt32(header, 16, 16); // Subchunk1Size
+        WriteInt16(header, 20, 1); // PCM
+        WriteInt16(header, 22, (short)channels);
+        WriteInt32(header, 24, sampleRate);
+        WriteInt32(header, 28, byteRate);
+        WriteInt16(header, 32, blockAlign);
+        WriteInt16(header, 34, bitsPerSample);
+        // "data" subchunk
+        WriteAscii(header, 36, "data");
+        WriteInt32(header, 40, dataLength);
+
+        outputStream.Write(header);
+        outputStream.Position = finalPos;
+        if (!leaveOpen) outputStream.Dispose();
+
+        // Helper methods for header
+        static void WriteAscii(Span<byte> span, int pos, string s)
+        {
+            for (int i = 0; i < s.Length; i++)
+                span[pos + i] = (byte)s[i];
+        }
+        static void WriteInt32(Span<byte> span, int pos, int value)
+        {
+            span[pos] = (byte)(value & 0xff);
+            span[pos + 1] = (byte)((value >> 8) & 0xff);
+            span[pos + 2] = (byte)((value >> 16) & 0xff);
+            span[pos + 3] = (byte)((value >> 24) & 0xff);
+        }
+        static void WriteInt16(Span<byte> span, int pos, short value)
+        {
+            span[pos] = (byte)(value & 0xff);
+            span[pos + 1] = (byte)((value >> 8) & 0xff);
+        }
+
+        return analysis;
+    }
+
 }
 
 public struct ActiveVoice
@@ -294,5 +422,117 @@ public struct ActiveVoice
         ReleaseSample = releaseSample;
         Released = false;
         Played = false;
+    }
+}
+
+
+public class RenderAnalysis
+{
+    private readonly List<BlockInfo> blocks = new();
+    private long lastIterationStart;
+    private readonly double ticksPerMs = Stopwatch.Frequency / 1000.0;
+
+    public RenderAnalysis() => lastIterationStart = Stopwatch.GetTimestamp();
+
+    // Call this at the end of each block render
+    public void IterationCompleted(int requestedSamples, int renderedSamples, int sampleRate, int channels)
+    {
+        long now = Stopwatch.GetTimestamp();
+        double ms = (now - lastIterationStart) / ticksPerMs;
+        lastIterationStart = now;
+
+        double blockDurationMs = (double)renderedSamples / channels / sampleRate * 1000.0;
+        double realtimeRatio = ms / blockDurationMs;
+
+        blocks.Add(new BlockInfo
+        {
+            RequestedSamples = requestedSamples,
+            RenderedSamples = renderedSamples,
+            DurationMs = ms,
+            BlockDurationMs = blockDurationMs,
+            RealtimeRatio = realtimeRatio
+        });
+    }
+
+    public int TotalIterations => blocks.Count;
+    public int TotalSamples => blocks.Sum(b => b.RenderedSamples);
+    public double TotalRenderMs => blocks.Sum(b => b.DurationMs);
+    public double TotalAudioMs => blocks.Sum(b => b.BlockDurationMs);
+
+    public double AverageBlockMs => blocks.Count == 0 ? 0 : blocks.Average(b => b.DurationMs);
+    public double SlowestBlockMs => blocks.Count == 0 ? 0 : blocks.Max(b => b.DurationMs);
+    public double FastestBlockMs => blocks.Count == 0 ? 0 : blocks.Min(b => b.DurationMs);
+    public double MaxRealtimeRatio => blocks.Count == 0 ? 0 : blocks.Max(b => b.RealtimeRatio);
+
+    public int BlocksSlowerThanRealtime(double buffer = 1.0)
+        => blocks.Count(b => b.RealtimeRatio > buffer);
+
+    public bool IsRealtimeSafe(double buffer = 1.1)
+        => blocks.All(b => b.RealtimeRatio <= buffer);
+
+    public double RealtimeConfidence(double buffer = 1.1)
+    {
+        if (blocks.Count == 0) return 1;
+
+        // Normalize: <1.0 = good, ==1.0 = at limit, >1.0 = slow (not realtime safe)
+        var ratios = blocks.Select(b => b.RealtimeRatio / buffer).ToArray();
+
+        // Confidence is high if almost all blocks are < 1, and only slightly reduced if a few are just above 1.
+        // We'll use a smoothstep: (average of clamped 1 - ratio, 0=min, 1=max)
+        double penaltySum = 0;
+        foreach (var r in ratios)
+        {
+            double v = 1 - Math.Clamp(r, 0, 2); // 1 (perfect) .. 0 (barely at limit) .. negative for bad
+                                                // For confidence, below 0 = hard fail, 0.5 = at threshold, 1 = fast.
+                                                // Optionally, amplify penalty for slow blocks:
+            if (v < 0) v *= 2; // Extra penalty if block was too slow
+            penaltySum += Math.Clamp(v, 0, 1);
+        }
+        // Final score: mean of all, clamped 0–1
+        return Math.Clamp(penaltySum / blocks.Count, 0, 1);
+    }
+
+    public override string ToString()
+    {
+        // Assume all blocks use the same channel count/sample rate as the first block.
+        var ret = new StringBuilder();
+        ret.AppendLine("RenderAnalysis Summary:");
+        ret.AppendLine($"  Blocks:              {TotalIterations}");
+        ret.AppendLine($"  Total audio frames:  {TotalFrames:N0}");
+        ret.AppendLine($"  Total floats:        {TotalSamples:N0} (floats, includes all channels)");
+        ret.AppendLine($"  Channels:            {SoundProvider.ChannelCount}");
+        ret.AppendLine($"  Total render ms:     {TotalRenderMs:N2}");
+        ret.AppendLine($"  Total audio ms:      {TotalAudioMs:N2}");
+        ret.AppendLine($"  Avg block ms:        {AverageBlockMs:N2}");
+        ret.AppendLine($"  Slowest block ms:    {SlowestBlockMs:N2}");
+        ret.AppendLine($"  Fastest block ms:    {FastestBlockMs:N2}");
+        ret.AppendLine($"  Max realtime ratio:  {MaxRealtimeRatio:N2}x");
+        ret.AppendLine($"  Blocks slower than real time: {BlocksSlowerThanRealtime(1.0)}");
+        ret.AppendLine($"  Is safe for realtime (10% headroom): {IsRealtimeSafe(1.1)}");
+        return ret.ToString();
+    }
+
+    public int TotalFrames => blocks.Sum(b => b.RenderedSamples / SoundProvider.ChannelCount);
+
+    private class BlockInfo
+    {
+        public int RequestedSamples; // floats
+        public int RenderedSamples;  // floats
+        public double DurationMs;
+        public double BlockDurationMs;
+        public double RealtimeRatio;
+
+        public int RequestedFrames => RequestedSamples / SoundProvider.ChannelCount;
+        public int RenderedFrames => RenderedSamples / SoundProvider.ChannelCount;
+
+        public override string ToString()
+        {
+            return $"BlockInfo: " +
+                   $"Requested={RequestedSamples} floats ({RequestedFrames} frames), " +
+                   $"Rendered={RenderedSamples} floats ({RenderedFrames} frames), " +
+                   $"DurationMs={DurationMs:N2}, " +
+                   $"BlockDurationMs={BlockDurationMs:N2}, " +
+                   $"RealtimeRatio={RealtimeRatio:N2}";
+        }
     }
 }
