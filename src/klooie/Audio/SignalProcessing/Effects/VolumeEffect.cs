@@ -56,10 +56,10 @@ public static VolumeEffect Create(in Settings settings)
 }
 
     private static float DefaultVelocityCurve(float normalized)
-    {    
+    {
         float minVolume = 0.4f;
         float maxVolume = 1.0f;
-        float curve = MathF.Pow(normalized, 1.5f);
+        float curve = normalized * normalized; // x^2
         float volume = minVolume + (maxVolume - minVolume) * curve;
         return volume;
     }
