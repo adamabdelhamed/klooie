@@ -295,7 +295,7 @@ public class ScheduledSignalSourceMixer
         const int channels = SoundProvider.ChannelCount;
         const short bitsPerSample = 16;
         const short blockAlign = (short)(channels * (bitsPerSample / 8));
-        const int bufferSamples = 5 * 4096;  
+        const int bufferSamples = 4096; // tweaking this can affect the sound itself. It probably should not be able to, but it can so don't tweak this.  
         const int bufferSize = bufferSamples * channels;
         float[] mixBuffer = new float[bufferSize];
         byte[] pcmBuffer = new byte[bufferSize * 2]; // 2 bytes per sample
