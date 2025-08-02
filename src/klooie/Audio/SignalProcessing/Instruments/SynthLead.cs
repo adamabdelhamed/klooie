@@ -35,6 +35,6 @@ public static class SynthLead
              .WithEnvelope(0.004, 0.11, 0.80, 0.20))
          .Build()
          .WithPortamento()
-         .WithVolume(1);
+         .WithVolume(.08f);
     }
 }
