@@ -274,10 +274,7 @@ public partial class Composer : ProtectedConsolePanel
     public void RefreshVisibleSet()
     {
         visibleNow.Clear();
-        live.Clear();
 
-        double beatStart = Viewport.FirstVisibleBeat;
-        double beatEnd = beatStart + Viewport.BeatsOnScreen;
         int trackTop = Viewport.FirstVisibleTrack;
         int trackBot = trackTop + Viewport.TracksOnScreen - 1;
 
@@ -291,7 +288,7 @@ public partial class Composer : ProtectedConsolePanel
                 double melodyStart = melody.StartBeat;
                 double melodyEnd = melody.StartBeat + melody.DurationBeats;
 
-                bool isVisible = (melodyEnd >= beatStart) && (melodyStart <= beatEnd);
+                bool isVisible = (melodyEnd >= Viewport.FirstVisibleBeat) && (melodyStart <= Viewport.LastVisibleBeat);
                 if (!isVisible) continue;
                 visibleNow.Add(melody);
 
@@ -347,14 +344,13 @@ public partial class Composer : ProtectedConsolePanel
 public class MelodyClip
 {
     public double StartBeat { get; set; }
-    public double DurationBeats { get; set; }
+    public double DurationBeats => Melody.Max(n => n.EndBeat);
     public ListNoteSource Melody { get; set; }
     public string Name { get; set; } = "Melody Clip";
 
-    public MelodyClip(double startBeat, double durationBeats, ListNoteSource melody)
+    public MelodyClip(double startBeat, ListNoteSource melody)
     {
         StartBeat = startBeat;
-        DurationBeats = durationBeats;
         Melody = melody;
     }
 }

@@ -89,7 +89,7 @@ public class ComposerEditor
         Composer.StatusChanged.Fire($"Copied {Composer.SelectedMelodies.Count} melody clips to clipboard".ToWhite());
         // Deep copy: Store all data needed to reconstruct the clips, except track assignment (handled in Paste)
         clipboard.AddRange(Composer.SelectedMelodies
-            .Select(m => new MelodyClip(m.StartBeat, m.DurationBeats, m.Melody) { Name = m.Name }));
+            .Select(m => new MelodyClip(m.StartBeat, new ListNoteSource(m.Melody)) { Name = m.Name }));
         return true;
     }
     private bool Paste()
@@ -106,7 +106,7 @@ public class ComposerEditor
         foreach (var clip in clipboard)
         {
             // Offset to the new paste location
-            var newClip = new MelodyClip(Math.Max(0, clip.StartBeat + offset), clip.DurationBeats, clip.Melody)
+            var newClip = new MelodyClip(Math.Max(0, clip.StartBeat + offset), clip.Melody)
             {
                 Name = clip.Name
             };
@@ -182,7 +182,7 @@ public class ComposerEditor
         var duplicates = new List<MelodyClip>();
         foreach (var clip in Composer.SelectedMelodies)
         {
-            var dup = new MelodyClip(clip.StartBeat + clip.DurationBeats, clip.DurationBeats, clip.Melody)
+            var dup = new MelodyClip(clip.StartBeat + clip.DurationBeats, new ListNoteSource(clip.Melody))
             {
                 Name = clip.Name + " Copy"
             };
@@ -244,7 +244,7 @@ public class ComposerEditor
         var (start, duration, trackIndex, melody) = pendingAddClip.Value;
         if (trackIndex < 0 || trackIndex >= Composer.Tracks.Count) return true;
 
-        var newClip = new MelodyClip(start, duration, melody);
+        var newClip = new MelodyClip(start, melody);
         Composer.Tracks[trackIndex].Melodies.Add(newClip);
         Composer.SelectedMelodies.Clear();
         Composer.SelectedMelodies.Add(newClip);

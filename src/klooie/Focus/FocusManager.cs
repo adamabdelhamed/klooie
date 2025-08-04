@@ -349,7 +349,10 @@ public partial class FocusManager : Recyclable,  IObservableObject
             var removed = context.Controls.Remove(c);
             removedCount += removed ? 1 : 0;
         }
-        if (focusStack.Last().Controls.None() && focusStack.Count > 1) Pop();
+        if (focusStack.Last().Controls.None() && focusStack.Count > 1)
+        {
+            Pop();
+        }
 
         if (cleared)
         {

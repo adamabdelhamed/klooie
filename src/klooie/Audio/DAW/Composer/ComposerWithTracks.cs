@@ -12,9 +12,11 @@ public class ComposerWithTracks : ProtectedConsolePanel
 
     // Expose player if desired
     public ComposerPlayer Player => Composer.Player;
+    public IMidiProvider MidiProvider { get; private set; }
 
-    public ComposerWithTracks(WorkspaceSession session, List<ComposerTrack>? tracks = null, ConsoleControl? commandBar = null)
+    public ComposerWithTracks(WorkspaceSession session, List<ComposerTrack> tracks, ConsoleControl commandBar, IMidiProvider midiProvider)
     {
+        this.MidiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
         var rowSpecPrefix = commandBar == null ? "1r" : "1p;1r";
         var rowOffset = commandBar == null ? 0 : 1;
         // 16p for track headers, rest for grid
@@ -77,14 +79,49 @@ public class TrackHeadersPanel : ConsoleControl
             SelectedTrackIndex = Math.Min(Tracks.Count - 1, SelectedTrackIndex + 1);
             TrackSelected.Fire(SelectedTrackIndex);
         }
-        else if(info.Key == ConsoleKey.Z && info.Modifiers.HasFlag(ConsoleModifiers.Control))
+        else if(info.Key == ConsoleKey.A)
+        {
+            AddMelodyToTrack();
+        }
+        else if (info.Key == ConsoleKey.Z && info.Modifiers.HasFlag(ConsoleModifiers.Control))
         {
             session.Commands.Undo();
         }
-        else if(info.Key == ConsoleKey.Y && info.Modifiers.HasFlag(ConsoleModifiers.Control))
+        else if (info.Key == ConsoleKey.Y && info.Modifiers.HasFlag(ConsoleModifiers.Control))
         {
             session.Commands.Redo();
         }
+    }
+
+    private void AddMelodyToTrack()
+    {
+        var notes = new ListNoteSource();
+        var startBeat = Tracks[SelectedTrackIndex].Melodies.Count > 0 ? Tracks[SelectedTrackIndex].Melodies.Max(m => m.StartBeat + m.DurationBeats) : 0;
+        var newMelody = new MelodyClip(startBeat, notes);
+        Tracks[SelectedTrackIndex].Melodies.Add(newMelody);
+
+        OpenMelody(newMelody);
+    }
+
+    private void OpenMelody(MelodyClip melody)
+    {
+        var maxFocusDepth = Math.Max(ConsoleApp.Current.LayoutRoot.FocusStackDepth, ConsoleApp.Current.LayoutRoot.Descendents.Select(d => d.FocusStackDepth).Max());
+        var newFocusDepth = maxFocusDepth + 1;
+        var panel = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel() { FocusStackDepth = newFocusDepth }).Fill();
+        var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
+        var pianoWithTimeline = panel.Add(new PianoWithTimeline(session, melody.Melody, commandBar)).Fill();
+        var midi = DAWMidi.Create(composer.MidiProvider, pianoWithTimeline);
+        commandBar.Add(midi.CreateMidiProductDropdown());
+
+        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => panel.Dispose(), panel);
+        panel.OnDisposed(() =>
+        {
+            if (melody.Melody.Count == 0)
+            {
+                Tracks[SelectedTrackIndex].Melodies.Remove(melody);
+            }
+            composer.Composer.RefreshVisibleSet();
+        });
     }
 
     protected override void OnPaint(ConsoleBitmap context)

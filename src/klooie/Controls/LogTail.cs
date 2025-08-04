@@ -29,6 +29,7 @@ public class LogTail : ProtectedConsolePanel
     public void WriteLine(ConsoleString s)
     {
         var lineRenderer = ConsoleStringRendererPool.Instance.Rent();
+        lineRenderer.CanFocus = false;
         lineRenderer.Content = s;
         lineRenderer.CompositionMode = CompositionMode.BlendBackground;
         logRendererStack.Controls.Add(lineRenderer);
