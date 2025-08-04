@@ -285,7 +285,7 @@ public class SongInfo
     public string? Title { get; set; }
     public string? Filename { get; set; }
     public double BeatsPerMinute { get; set; }
-    public ListNoteSource Notes { get; set; } = new();
+    public List<ComposerTrack> Tracks { get; set; } = new();
 }
 
 // --- PatchFactoryInfo: one per static ISynthPatch factory method ---

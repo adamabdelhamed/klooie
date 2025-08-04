@@ -27,7 +27,15 @@ public class WorkspaceSession
                 await Initialize();
                 return;
             }
-            CurrentSong = new SongInfo() { Title = songName, BeatsPerMinute = 60, Notes = new ListNoteSource() { BeatsPerMinute = 60 } };
+            CurrentSong = new SongInfo()
+            {
+                Title = songName,
+                BeatsPerMinute = 60,
+                Tracks = new List<ComposerTrack>()
+                {
+                    new ComposerTrack("Track 1", new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create })
+                }
+            };
             Workspace.Settings.LastOpenedSong = songName;
             Workspace.AddSong(CurrentSong);
         }
