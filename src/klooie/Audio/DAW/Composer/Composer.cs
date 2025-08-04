@@ -88,7 +88,7 @@ public partial class Composer : ProtectedConsolePanel
         ProtectedPanel.Background = new RGB(240, 240, 240);
         BoundsChanged.Sync(UpdateViewportBounds, this);
         Focused.Subscribe(EnableKeyboardInput, this);
-        backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220))).Fill();
+        backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
         Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
 
@@ -376,5 +376,14 @@ public class MelodyCell : ConsoleControl
     public MelodyCell(MelodyClip melody)
     {
         Melody = melody;
+    }
+
+    protected override void OnPaint(ConsoleBitmap context)
+    {
+        base.OnPaint(context);
+        if(HasFocus)
+        {
+            context.Fill(RGB.Cyan);
+        }
     }
 }
