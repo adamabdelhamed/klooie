@@ -16,7 +16,7 @@ public partial class Composer : ProtectedConsolePanel
     public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
     public ComposerViewport Viewport { get; private init; }
 
-    public List<ComposerTrack> Tracks { get; } = new();
+    public List<ComposerTrack> Tracks => Session.CurrentSong.Tracks;
 
     // Selection: selected melody clips (never notes)
     public List<MelodyClip> SelectedMelodies { get; } = new();
@@ -86,7 +86,7 @@ public partial class Composer : ProtectedConsolePanel
 
     public IMidiProvider MidiProvider { get; private set; }
 
-    public Composer(WorkspaceSession session, List<ComposerTrack> tracks, IMidiProvider midiProvider)
+    public Composer(WorkspaceSession session, IMidiProvider midiProvider)
     {
         this.Session = session;
         this.MidiProvider = midiProvider;
@@ -103,14 +103,11 @@ public partial class Composer : ProtectedConsolePanel
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
 
         // Load provided tracks or make a blank one if none given
-        if (tracks == null || tracks.Count == 0)
+        if (Tracks == null || Tracks.Count == 0)
         {
             Tracks.Add(new ComposerTrack("Track 1", Instrument!));
         }
-        else
-        {
-            Tracks.AddRange(tracks);
-        }
+
         BuildTrackColorMap();
         UpdateMaxBeat();
 

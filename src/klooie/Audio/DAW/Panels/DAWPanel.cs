@@ -24,7 +24,7 @@ public class DAWPanel : ProtectedConsolePanel
 
         var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
 
-        ComposerWithTracks = ProtectedPanel.Add(new ComposerWithTracks(Session, Session.CurrentSong.Tracks, commandBar, midiProvider)).Fill();
+        ComposerWithTracks = ProtectedPanel.Add(new ComposerWithTracks(Session, commandBar, midiProvider)).Fill();
         ComposerWithTracks.Composer.Focus();
 
  

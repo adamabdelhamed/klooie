@@ -14,7 +14,7 @@ public class ComposerWithTracks : ProtectedConsolePanel
     public ComposerPlayer Player => Composer.Player;
     public IMidiProvider MidiProvider { get; private set; }
 
-    public ComposerWithTracks(WorkspaceSession session, List<ComposerTrack> tracks, ConsoleControl commandBar, IMidiProvider midiProvider)
+    public ComposerWithTracks(WorkspaceSession session, ConsoleControl commandBar, IMidiProvider midiProvider)
     {
         this.MidiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
         var rowSpecPrefix = commandBar == null ? "1r" : "1p;1r";
@@ -23,8 +23,8 @@ public class ComposerWithTracks : ProtectedConsolePanel
         layout = ProtectedPanel.Add(new GridLayout($"{rowSpecPrefix};{StatusBar.Height}p", "16p;1r")).Fill();
 
         // Add the track headers (left, all rows except command/status)
-        TrackHeaders = layout.Add(new TrackHeadersPanel(this, session, tracks), 0, rowOffset);
-        Composer = layout.Add(new Composer(session, tracks, midiProvider), 1, rowOffset);
+        TrackHeaders = layout.Add(new TrackHeadersPanel(this, session), 0, rowOffset);
+        Composer = layout.Add(new Composer(session, midiProvider), 1, rowOffset);
 
         // Wire up selection highlighting
         TrackHeaders.TrackSelected.Subscribe(idx => Composer.SelectedTrackIndex = idx, this);
@@ -51,7 +51,7 @@ public class TrackHeadersPanel : ConsoleControl
     public Event<int> TrackSelected = Event<int>.Create();
     private ComposerWithTracks composer;
 
-    public TrackHeadersPanel(ComposerWithTracks composer, WorkspaceSession session, List<ComposerTrack>? tracks = null)
+    public TrackHeadersPanel(ComposerWithTracks composer, WorkspaceSession session)
     {
         this.composer = composer ?? throw new ArgumentNullException(nameof(composer));
         this.session = session;
