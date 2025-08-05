@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics;
+using System.Linq;
 
 namespace klooie;
 
@@ -49,7 +50,7 @@ public partial class Composer : ProtectedConsolePanel
 
     public Song Compose()
     {
-        var notes = new ListNoteSource() { BeatsPerMinute = Tracks.First().Melodies.First().Melody.BeatsPerMinute };
+        var notes = new ListNoteSource() { BeatsPerMinute = Tracks.First().Melodies.FirstOrDefault()?.Melody.BeatsPerMinute ?? 60 };
 
         for(var i = 0; i < Tracks.Count; i++)
         {
@@ -82,9 +83,12 @@ public partial class Composer : ProtectedConsolePanel
 
     public WorkspaceSession Session { get; private init; }
 
-    public Composer(WorkspaceSession session, List<ComposerTrack>? tracks = null)
+    public IMidiProvider MidiProvider { get; private set; }
+
+    public Composer(WorkspaceSession session, List<ComposerTrack> tracks, IMidiProvider midiProvider)
     {
         this.Session = session;
+        this.MidiProvider = midiProvider;
         this.userCyclableModes = [new ComposerNavigationMode() { Composer = this }, new ComposerSelectionMode() { Composer = this }];
         Viewport = new ComposerViewport(this);
         Player = new ComposerPlayer(this);
@@ -343,13 +347,36 @@ public partial class Composer : ProtectedConsolePanel
     }
 
     internal ConsoleControl AddPreviewControl() => ProtectedPanel.Add(new ConsoleControl());
+
+    public void OpenMelody(MelodyClip melody)
+    {
+        var maxFocusDepth = Math.Max(ConsoleApp.Current.LayoutRoot.FocusStackDepth, ConsoleApp.Current.LayoutRoot.Descendents.Select(d => d.FocusStackDepth).Max());
+        var newFocusDepth = maxFocusDepth + 1;
+        var panel = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel() { FocusStackDepth = newFocusDepth }).Fill();
+        var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
+        var pianoWithTimeline = panel.Add(new PianoWithTimeline(WorkspaceSession.Current, melody.Melody, commandBar)).Fill();
+        pianoWithTimeline.Timeline.Focus();
+        var midi = DAWMidi.Create(MidiProvider, pianoWithTimeline);
+        commandBar.Add(midi.CreateMidiProductDropdown());
+
+        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => panel.Dispose(), panel);
+        panel.OnDisposed(() =>
+        {
+            midi.Dispose();
+            if (melody.Melody.Count == 0)
+            {
+                Tracks[SelectedTrackIndex].Melodies.Remove(melody);
+            }
+            RefreshVisibleSet();
+        });
+    }
 }
 
 // Represents a melody "clip" in the composer, with a position and reference to the source melody
 public class MelodyClip
 {
     public double StartBeat { get; set; }
-    public double DurationBeats => Melody.Max(n => n.EndBeat);
+    public double DurationBeats => Melody.Select(n => n.EndBeat).MaxOrDefault(0);
     public ListNoteSource Melody { get; set; }
     public string Name { get; set; } = "Melody Clip";
 

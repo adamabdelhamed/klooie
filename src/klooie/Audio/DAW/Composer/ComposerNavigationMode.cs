@@ -70,6 +70,10 @@ public class ComposerNavigationMode : ComposerInputMode
             player.Seek(Composer.MaxBeat);
             EnsurePlayheadVisible();
         }
+        else if (k == ConsoleKey.Enter && Composer.SelectedMelodies.Count == 1)
+        {
+            Composer.OpenMelody(Composer.SelectedMelodies[0]);
+        }
         else
         {
             handled = false;

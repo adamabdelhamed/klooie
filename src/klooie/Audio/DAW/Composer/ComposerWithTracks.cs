@@ -24,7 +24,7 @@ public class ComposerWithTracks : ProtectedConsolePanel
 
         // Add the track headers (left, all rows except command/status)
         TrackHeaders = layout.Add(new TrackHeadersPanel(this, session, tracks), 0, rowOffset);
-        Composer = layout.Add(new Composer(session, tracks), 1, rowOffset);
+        Composer = layout.Add(new Composer(session, tracks, midiProvider), 1, rowOffset);
 
         // Wire up selection highlighting
         TrackHeaders.TrackSelected.Subscribe(idx => Composer.SelectedTrackIndex = idx, this);
@@ -100,31 +100,10 @@ public class TrackHeadersPanel : ConsoleControl
         var newMelody = new MelodyClip(startBeat, notes);
         Tracks[SelectedTrackIndex].Melodies.Add(newMelody);
 
-        OpenMelody(newMelody);
+        composer.Composer.OpenMelody(newMelody);
     }
 
-    private void OpenMelody(MelodyClip melody)
-    {
-        var maxFocusDepth = Math.Max(ConsoleApp.Current.LayoutRoot.FocusStackDepth, ConsoleApp.Current.LayoutRoot.Descendents.Select(d => d.FocusStackDepth).Max());
-        var newFocusDepth = maxFocusDepth + 1;
-        var panel = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel() { FocusStackDepth = newFocusDepth }).Fill();
-        var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
-        var pianoWithTimeline = panel.Add(new PianoWithTimeline(session, melody.Melody, commandBar)).Fill();
-        pianoWithTimeline.Timeline.Focus();
-        var midi = DAWMidi.Create(composer.MidiProvider, pianoWithTimeline);
-        commandBar.Add(midi.CreateMidiProductDropdown());
 
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => panel.Dispose(), panel);
-        panel.OnDisposed(() =>
-        {
-            midi.Dispose();
-            if (melody.Melody.Count == 0)
-            {
-                Tracks[SelectedTrackIndex].Melodies.Remove(melody);
-            }
-            composer.Composer.RefreshVisibleSet();
-        });
-    }
 
     protected override void OnPaint(ConsoleBitmap context)
     {
