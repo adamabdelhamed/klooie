@@ -110,12 +110,14 @@ public class TrackHeadersPanel : ConsoleControl
         var panel = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel() { FocusStackDepth = newFocusDepth }).Fill();
         var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
         var pianoWithTimeline = panel.Add(new PianoWithTimeline(session, melody.Melody, commandBar)).Fill();
+        pianoWithTimeline.Timeline.Focus();
         var midi = DAWMidi.Create(composer.MidiProvider, pianoWithTimeline);
         commandBar.Add(midi.CreateMidiProductDropdown());
 
         ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => panel.Dispose(), panel);
         panel.OnDisposed(() =>
         {
+            midi.Dispose();
             if (melody.Melody.Count == 0)
             {
                 Tracks[SelectedTrackIndex].Melodies.Remove(melody);

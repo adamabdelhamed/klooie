@@ -49,14 +49,19 @@ public partial class Composer : ProtectedConsolePanel
 
     public Song Compose()
     {
-     
         var notes = new ListNoteSource() { BeatsPerMinute = Tracks.First().Melodies.First().Melody.BeatsPerMinute };
 
         for(var i = 0; i < Tracks.Count; i++)
         {
-            foreach (var melody in Tracks[i].Melodies)
+            for (int j = 0; j < Tracks[i].Melodies.Count; j++)
             {
-                notes.AddRange(melody.Melody);
+                var melody = Tracks[i].Melodies[j];
+                for (int k = 0; k < melody.Melody.Count; k++)
+                {
+                    var originalNote = melody.Melody[k];
+                    var noteWithOffset = NoteExpression.Create(originalNote.MidiNote, melody.StartBeat + originalNote.StartBeat, originalNote.DurationBeats, originalNote.BeatsPerMinute, originalNote.Velocity, originalNote.Instrument);
+                    notes.Add(noteWithOffset);
+                }
             }
         }
         var song = new Song(notes, notes.BeatsPerMinute);
@@ -376,16 +381,13 @@ public class MelodyCell : ConsoleControl
  
     public MelodyCell(MelodyClip melody)
     {
+        CanFocus = false;
         Melody = melody;
     }
 
     protected override void OnPaint(ConsoleBitmap context)
     {
         base.OnPaint(context);
-        if(HasFocus)
-        {
-            context.Fill(RGB.Cyan);
-        }
 
         var referenceBackgroundColor = context.GetPixel(0, 0).BackgroundColor;
         var borderForeground = referenceBackgroundColor.ToOther(RGB.Black,.3f);
