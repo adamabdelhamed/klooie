@@ -135,52 +135,36 @@ public class ComposerPlayer
 
     private void PlayAudio(double startBeat, ILifetime? playLifetime = null)
     {
-        // "Flatten" all visible melody clips into a single note sequence, adjusting start times for each clip.
-        var subset = new ListNoteSource();
+        var song = Composer.Compose();
+        var subset = new ListNoteSource() { BeatsPerMinute = song.Notes.BeatsPerMinute };
 
-        // Find global BPM (first non-null Melody BPM, or 120)
-        double bpm = 120.0;
-        foreach (var track in Composer.Tracks)
+        // TODO: I should not have to set the BPM for each note, but this is a quick fix
+        for (int i = 0; i < song.Notes.Count; i++)
         {
-            var firstClip = track.Melodies.FirstOrDefault();
-            if (firstClip?.Melody != null)
-            {
-                bpm = firstClip.Melody.BeatsPerMinute;
-                break;
-            }
+            song.Notes[i].BeatsPerMinute = song.Notes.BeatsPerMinute;
         }
-        subset.BeatsPerMinute = bpm;
 
-        foreach (var track in Composer.Tracks)
+        song.Notes.SortMelody();
+        for (int i = 0; i < song.Notes.Count; i++)
         {
-            foreach (var clip in track.Melodies)
+            NoteExpression? n = song.Notes[i];
+            double endBeat = n.DurationBeats >= 0 ? n.StartBeat + n.DurationBeats : double.PositiveInfinity;
+            if (endBeat <= startBeat) continue;
+
+            double relStart = n.StartBeat - startBeat;
+            if (relStart < 0) relStart = 0;
+
+            double duration = n.DurationBeats;
+            if (n.DurationBeats >= 0 && n.StartBeat < startBeat)
             {
-                if (clip.Melody == null) continue;
-
-                // Only include notes in the clip that overlap with the current playback region
-                foreach (var note in clip.Melody)
-                {
-                    double globalStart = clip.StartBeat + note.StartBeat;
-                    double endBeat = globalStart + note.DurationBeats;
-                    if (endBeat <= startBeat) continue; // Skip notes that end before the playhead
-
-                    double relStart = globalStart - startBeat;
-                    if (relStart < 0) relStart = 0;
-
-                    double duration = note.DurationBeats;
-                    if (note.DurationBeats >= 0 && globalStart < startBeat)
-                        duration = endBeat - startBeat;
-
-                    // Set correct BPM on the note (quick fix)
-                    var nn = NoteExpression.Create(note.MidiNote, relStart, duration, bpm, note.Velocity, note.Instrument);
-                    subset.Add(nn);
-                }
+                duration = endBeat - startBeat;
             }
+
+            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, song.Notes.BeatsPerMinute, n.Velocity, n.Instrument));
         }
 
         if (subset.Count == 0) return;
 
-        // Play as a single song (mixing all notes together)
-        ConsoleApp.Current.Sound.Play(new Song(subset, bpm), playLifetime);
+        ConsoleApp.Current.Sound.Play(new Song(subset, song.Notes.BeatsPerMinute), playLifetime);
     }
 }

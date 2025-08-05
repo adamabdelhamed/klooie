@@ -359,6 +359,14 @@ public partial class Composer : ProtectedConsolePanel
         var midi = DAWMidi.Create(MidiProvider, pianoWithTimeline);
         commandBar.Add(midi.CreateMidiProductDropdown());
 
+        var instrumentPicker = InstrumentPicker.CreatePickerDropdown();
+        commandBar.Add(instrumentPicker);
+        instrumentPicker.ValueChanged.Subscribe(() =>
+        {
+            melody.Melody.ForEach(n => n.Instrument = instrumentPicker.Value.Value as InstrumentExpression);
+            pianoWithTimeline.Timeline.Instrument = instrumentPicker.Value.Value as InstrumentExpression;
+        }, instrumentPicker);
+
         ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => panel.Dispose(), panel);
         panel.OnDisposed(() =>
         {

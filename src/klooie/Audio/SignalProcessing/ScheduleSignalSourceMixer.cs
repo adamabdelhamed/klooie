@@ -127,8 +127,10 @@ public class ScheduledSignalSourceMixer
 
     private void DrainScheduledSongs()
     {
+        var didWork = false;
         while (scheduledSongs.TryDequeue(out var ev))
         {
+            didWork = true;
             var song = ev.Song;
             var tracks = new Dictionary<string, RecyclableList<ScheduledNoteEvent>>();
             for (int i = 0; i < song.Count; i++)
@@ -165,6 +167,11 @@ public class ScheduledSignalSourceMixer
                 }
                 track.Dispose();
             }
+        }
+
+        if(didWork)
+        {
+            scheduledNotes.Sort(new Comparison<ScheduledNoteEvent>((a,b) => a.StartSample.CompareTo(b.StartSample)));
         }
     }
 
