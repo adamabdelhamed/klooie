@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace klooie;
 
@@ -384,6 +385,8 @@ public partial class Composer : ProtectedConsolePanel
 public class MelodyClip
 {
     public double StartBeat { get; set; }
+
+    [JsonIgnore]
     public double DurationBeats => Melody.Select(n => n.EndBeat).MaxOrDefault(0);
     public ListNoteSource Melody { get; set; }
     public string Name { get; set; } = "Melody Clip";
@@ -393,6 +396,8 @@ public class MelodyClip
         StartBeat = startBeat;
         Melody = melody;
     }
+
+    public MelodyClip() { }
 }
 
 // A composer track holds a list of non-overlapping melody clips
@@ -400,7 +405,9 @@ public class ComposerTrack
 {
     public string Name { get; set; }
     public InstrumentExpression Instrument { get; set; }
-    public List<MelodyClip> Melodies { get; } = new();
+    public List<MelodyClip> Melodies { get; set; } = new();
+
+    public ComposerTrack() { }
 
     public ComposerTrack(string name, InstrumentExpression instrument)
     {
