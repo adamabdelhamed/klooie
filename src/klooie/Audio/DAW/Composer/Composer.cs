@@ -373,6 +373,7 @@ public class ComposerTrack
 public class MelodyCell : ConsoleControl
 {
     public MelodyClip Melody { get; }
+ 
     public MelodyCell(MelodyClip melody)
     {
         Melody = melody;
@@ -385,5 +386,9 @@ public class MelodyCell : ConsoleControl
         {
             context.Fill(RGB.Cyan);
         }
+
+        var referenceBackgroundColor = context.GetPixel(0, 0).BackgroundColor;
+        var borderForeground = referenceBackgroundColor.ToOther(RGB.Black,.3f);
+        context.DrawRect(new ConsoleCharacter('#', borderForeground, referenceBackgroundColor), 0, 0, Width, Height);
     }
 }
