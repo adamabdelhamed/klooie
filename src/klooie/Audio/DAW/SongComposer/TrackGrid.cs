@@ -4,18 +4,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json.Serialization;
+using static System.Collections.Specialized.BitVector32;
 
 namespace klooie;
 
 public partial class TrackGrid : BeatGrid<MelodyClip>
 {
     public List<ComposerTrack> Tracks => Session.CurrentSong.Tracks;
-
     public IMidiProvider MidiProvider { get; private set; }
 
     private TrackGridEditor editor;
 
-    public TrackGrid(WorkspaceSession session, TrackGridEditor editor, IMidiProvider midiProvider) : base(session, session.CurrentSong.Tracks.SelectMany(t => t.Melodies).ToList(), session.CurrentSong.BeatsPerMinute)
+    protected override IEnumerable<MelodyClip> EnumerateValues() => Session.CurrentSong.Tracks.SelectMany(t => t.Melodies);
+
+    public TrackGrid(WorkspaceSession session, TrackGridEditor editor, IMidiProvider midiProvider) : base(session, session.CurrentSong.BeatsPerMinute)
     {
         Viewport.RowHeightChars = 3;
         this.MidiProvider = midiProvider;

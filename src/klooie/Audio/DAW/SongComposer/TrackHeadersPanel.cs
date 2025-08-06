@@ -54,6 +54,31 @@ public class TrackHeadersPanel : ConsoleControl
         {
             session.Commands.Redo();
         }
+        else if(info.Key == ConsoleKey.F2)
+        {
+            ConsoleApp.Current.Invoke(async () =>
+            {
+                var selectedTrack = Tracks[SelectedTrackIndex];
+                var newTrackName = await TextInputDialog.Show(new ShowTextInputOptions("Enter new track name".ToYellow())
+                {
+                    DialogWidth = 60,
+                });
+                if(string.IsNullOrWhiteSpace(newTrackName?.StringValue))
+                    return; // Cancelled or empty input
+
+                var existingTrack = Tracks.FirstOrDefault(t => t.Name.Equals(newTrackName.StringValue, StringComparison.OrdinalIgnoreCase));
+                if (existingTrack != null && existingTrack != selectedTrack)
+                {
+                    MessageDialog.Show(new ShowMessageOptions("Track name already exists".ToRed())
+                    {
+                        DialogWidth = 40,
+                    });
+                    return; // Name already exists
+                }
+
+                session.Commands.Execute(new RenameTrackCommand(composer, selectedTrack, newTrackName.StringValue));
+            });
+        }
     }
 
     private void AddMelodyToTrack()

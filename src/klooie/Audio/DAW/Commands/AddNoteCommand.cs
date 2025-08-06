@@ -13,7 +13,7 @@ public class AddNoteCommand : MidiGridCommand
     
     public override void Do()
     {
-        Timeline.Values.Add(note);
+        Timeline.Notes.Add(note);
         Timeline.Editor.ClearAddPreview();
         Timeline.StatusChanged.Fire($"Added note {note.MidiNote}".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
@@ -22,7 +22,7 @@ public class AddNoteCommand : MidiGridCommand
 
     public override void Undo()
     {
-        Timeline.Values.Remove(note);
+        Timeline.Notes.Remove(note);
         Timeline.StatusChanged.Fire("Undo add note".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
         base.Undo();

@@ -28,6 +28,7 @@ public class ChangeMelodyClipCommand : ICommand
             melodies[idx] = newClip;
             WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
             grid.RefreshVisibleCells();
+            grid.Session.Workspace.UpdateSong(grid.Session.CurrentSong);
         }
     }
 
@@ -40,6 +41,7 @@ public class ChangeMelodyClipCommand : ICommand
             melodies[idx] = oldClip;
             WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
             grid.RefreshVisibleCells();
+            grid.Session.Workspace.UpdateSong(grid.Session.CurrentSong);
         }
     }
 }

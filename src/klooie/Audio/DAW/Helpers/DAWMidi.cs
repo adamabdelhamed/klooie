@@ -50,7 +50,7 @@ public class DAWMidi : Recyclable
 
         pianoWithTimeline.Grid.Player.StopAtEnd = false;
         pianoWithTimeline.Grid.Player.Play();
-        pianoWithTimeline.Grid.Values.Add(noteExpression);
+        pianoWithTimeline.Grid.Notes.Add(noteExpression);
         pianoWithTimeline.Grid.RefreshVisibleCells();
         noteTrackers[ev.NoteNumber] = SustainedNoteTracker.Create(noteExpression, voices);
     }
@@ -71,7 +71,7 @@ public class DAWMidi : Recyclable
 
         double duration = snappedEnd - snappedStart;
 
-        pianoWithTimeline.Grid.Values.Remove(tracker.Note);
+        pianoWithTimeline.Grid.Notes.Remove(tracker.Note);
         WorkspaceSession.Current.Commands.Execute(
             new AddNoteCommand(pianoWithTimeline.Grid, NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument))
         );

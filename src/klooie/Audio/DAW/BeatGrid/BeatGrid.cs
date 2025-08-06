@@ -23,7 +23,6 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
     private readonly HashSet<T> tempHashSet = new HashSet<T>();
 
     public WorkspaceSession Session { get; private init; }
-    public List<T> Values { get; private set; }
     public List<T> SelectedValues { get; } = new List<T>();
     public double MaxBeat { get; private set; }
     public Viewport Viewport { get; private set; }  
@@ -53,7 +52,7 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
     public BeatGridInputMode<T> CurrentMode { get; private set; }
     public Event<BeatGridInputMode<T>> ModeChanging { get; } = Event<BeatGridInputMode<T>>.Create();
 
-    public BeatGrid(WorkspaceSession session, List<T> values, double bpm)
+    public BeatGrid(WorkspaceSession session,  double bpm)
     {
         this.Session = session ?? throw new ArgumentNullException(nameof(session));
         Viewport = new Viewport();
@@ -61,11 +60,10 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
         SetMode(userCyclableModes[0]);
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
-        Values = values;
         BeatsPerMinute = bpm;
 
         backgroundGrid = ProtectedPanel.Add(new BeatGridBackground<T>(0, this, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
-        Viewport.SetFirstVisibleRow(Math.Max(0, Values.Where(n => GetCellPositionInfo(n).IsHidden == false).Select(m => GetCellPositionInfo(m).Row).DefaultIfEmpty(0).Min()));
+        
         BoundsChanged.Sync(UpdateViewportBounds, this);
         Player = new BeatGridPlayer<T>(this);
         Viewport.Changed.Subscribe(backgroundGrid, _ =>
@@ -76,7 +74,11 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
 
         Player.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleCells(), this);
         Player.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
-        ConsoleApp.Current.InvokeNextCycle(RefreshVisibleCells);
+        ConsoleApp.Current.InvokeNextCycle(()=>
+        {
+            RefreshVisibleCells();
+            Viewport.SetFirstVisibleRow(Math.Max(0, EnumerateValues().Where(n => GetCellPositionInfo(n).IsHidden == false).Select(m => GetCellPositionInfo(m).Row).DefaultIfEmpty(0).Min()));
+        });
         KeyInputReceived.Subscribe(EnableKeyboardInput, this);
     }
 
@@ -107,14 +109,15 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
         Viewport.SetRowsOnScreen(Math.Max(1, Height / Viewport.RowHeightChars));
     }
 
+    protected abstract IEnumerable<T> EnumerateValues();
+
     public void RefreshVisibleCells()
     {
         MaxBeat = CalculateMaxBeat();
         tempHashSet.Clear();
 
-        for (int i = 0; i < Values.Count; i++)
-        {
-            var value = Values[i];
+        foreach(var value in EnumerateValues())
+        { 
             var positionInfo = GetCellPositionInfo(value);
             if (positionInfo.IsHidden) continue;
 

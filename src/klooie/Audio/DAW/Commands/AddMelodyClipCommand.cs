@@ -22,6 +22,7 @@ public class AddMelodyClipCommand : ICommand
         grid.Tracks[trackIndex].Melodies.Add(clip);
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
         grid.RefreshVisibleCells();
+        grid.Session.Workspace.UpdateSong(grid.Session.CurrentSong);
     }
 
     public void Undo()
@@ -29,5 +30,6 @@ public class AddMelodyClipCommand : ICommand
         grid.Tracks[trackIndex].Melodies.Remove(clip);
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
         grid.RefreshVisibleCells();
+        grid.Session.Workspace.UpdateSong(grid.Session.CurrentSong);
     }
 }

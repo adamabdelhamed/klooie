@@ -16,13 +16,18 @@ public class AddTrackCommand : ComposerCommand
         this.name = name ?? throw new ArgumentNullException(nameof(name));
     }
 
-    public override void Do() => composer.Grid.AddTrack(name);
+    public override void Do()
+    {
+        composer.Grid.AddTrack(name);
+        composer.Grid.Session.Workspace.UpdateSong(composer.Grid.Session.CurrentSong);
+    }
     public override void Undo()
     {
         var index = composer.Grid.Tracks.FindIndex(t => t.Name == name);
         if (index != -1)
         {
             composer.Grid.RemoveTrack(index);
+            composer.Grid.Session.Workspace.UpdateSong(composer.Grid.Session.CurrentSong);
         }
     }
 }
@@ -45,6 +50,7 @@ public class DeleteTrackCommand : ComposerCommand
         {
             deleted = composer.Grid.Tracks[index];
             composer.Grid.RemoveTrack(index);
+            composer.Grid.Session.Workspace.UpdateSong(composer.Grid.Session.CurrentSong);
         }
     }
     public override void Undo()
@@ -52,6 +58,7 @@ public class DeleteTrackCommand : ComposerCommand
         if (deleted != null && index >= 0)
         {
             composer.Grid.InsertTrack(index, deleted);
+            composer.Grid.Session.Workspace.UpdateSong(composer.Grid.Session.CurrentSong);
         }
     }
 }

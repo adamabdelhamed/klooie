@@ -20,10 +20,10 @@ public class ChangeNoteCommand : MidiGridCommand
 
     public override void Do()
     {
-        int idx = Timeline.Values.IndexOf(oldNote);
+        int idx = Timeline.Notes.IndexOf(oldNote);
         if (idx >= 0)
         {
-            Timeline.Values[idx] = newNote;
+            Timeline.Notes[idx] = newNote;
             Timeline.SelectedValues.Remove(oldNote);
             Timeline.SelectedValues.Add(newNote);
         }
@@ -34,10 +34,10 @@ public class ChangeNoteCommand : MidiGridCommand
 
     public override void Undo()
     {
-        int idx = Timeline.Values.IndexOf(newNote);
+        int idx = Timeline.Notes.IndexOf(newNote);
         if (idx >= 0)
         {
-            Timeline.Values[idx] = oldNote;
+            Timeline.Notes[idx] = oldNote;
         }
 
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);

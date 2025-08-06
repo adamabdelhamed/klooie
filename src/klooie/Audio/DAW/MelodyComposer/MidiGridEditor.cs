@@ -39,7 +39,7 @@ public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
     }
 
     protected override List<NoteExpression> GetSelectedValues() => Grid.SelectedValues;
-    protected override List<NoteExpression> GetAllValues() => Grid.Values;
+    protected override List<NoteExpression> GetAllValues() => Grid.Notes;
     protected override void RefreshVisibleCells() => Grid.RefreshVisibleCells();
     protected override void FireStatusChanged(ConsoleString msg) => Grid.StatusChanged.Fire(msg);
 
@@ -48,7 +48,7 @@ public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
         var left = k.Key == ConsoleKey.LeftArrow;
         var sel = GetSelectedValues();
         sel.Clear();
-        sel.AddRange(Grid.Values.Where(n =>
+        sel.AddRange(Grid.Notes.Where(n =>
             (left && n.StartBeat <= Grid.Player.CurrentBeat) ||
             (!left && n.StartBeat >= Grid.Player.CurrentBeat)));
         RefreshVisibleCells();
@@ -61,7 +61,7 @@ public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
 
     protected override bool PasteClipboard()
     {
-        if (Grid.Values is not ListNoteSource) return true;
+        if (Grid.Notes is not ListNoteSource) return true;
         if (Clipboard.Count == 0) return true;
         double offset = Grid.Player.CurrentBeat - Clipboard.Min(n => n.StartBeat);
 
@@ -83,7 +83,6 @@ public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
 
     protected override bool DeleteSelected()
     {
-        if (Grid.Values is not ListNoteSource) return true;
         if (Grid.SelectedValues.Count == 0) return true;
 
         var deleteCmds = Grid.SelectedValues
@@ -96,7 +95,6 @@ public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
 
     protected override bool MoveSelection(ConsoleKeyInfo k)
     {
-        if (Grid.Values is not ListNoteSource list) return true;
         if (Grid.SelectedValues.Count == 0) return true;
 
         double beatDelta = 0;
@@ -228,7 +226,7 @@ public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
     {
         if (pendingAddNote == null) return true;
         var (start, duration, midi) = pendingAddNote.Value;
-        var bpm = (Grid.Values as ListNoteSource).BeatsPerMinute;
+        var bpm = Grid.Notes.BeatsPerMinute;
         var command = new AddNoteCommand(Grid, NoteExpression.Create(midi, start, duration, bpm, instrument: Grid.Instrument));
         Grid.Session.Commands.Execute(command);
         ClearAddPreview();

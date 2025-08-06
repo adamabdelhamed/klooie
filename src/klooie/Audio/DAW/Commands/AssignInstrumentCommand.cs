@@ -19,10 +19,10 @@ public class AssignInstrumentCommand : MidiGridCommand
 
     public void Do()
     {
-        _index = Timeline.Values.IndexOf(_original);
+        _index = Timeline.Notes.IndexOf(_original);
         if (_index >= 0)
         {
-            Timeline.Values[_index.Value] = _updated;
+            Timeline.Notes[_index.Value] = _updated;
             Timeline.SelectedValues.Remove(_original);
             Timeline.SelectedValues.Add(_updated);
         }
@@ -33,7 +33,7 @@ public class AssignInstrumentCommand : MidiGridCommand
     {
         if (_index.HasValue)
         {
-            Timeline.Values[_index.Value] = _original;
+            Timeline.Notes[_index.Value] = _original;
         }
         base.Undo();
     }

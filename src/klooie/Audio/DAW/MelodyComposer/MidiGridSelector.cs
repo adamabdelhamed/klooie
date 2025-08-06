@@ -231,7 +231,7 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
             if (midi0 > midi1) (midi0, midi1) = (midi1, midi0);
 
             // Select notes from the underlying note source, not the UI
-            Composer.SelectedValues.AddRange(Composer.Values
+            Composer.SelectedValues.AddRange(MelodyComposer.Notes
                 .Where(n => n.Velocity > 0
                     && n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : Composer.Player.CurrentBeat - n.StartBeat) >= beat0
                     && n.StartBeat <= beat1

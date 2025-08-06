@@ -18,7 +18,7 @@ public class DeleteNoteCommand : MidiGridCommand
 
     public override void Do()
     {
-        Timeline.Values.Remove(note);
+        Timeline.Notes.Remove(note);
         Timeline.SelectedValues.Remove(note);
         Timeline.StatusChanged.Fire($"Deleted note {note.MidiNote}".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
@@ -27,7 +27,7 @@ public class DeleteNoteCommand : MidiGridCommand
 
     public override void Undo()
     {
-        Timeline.Values.Add(note);
+        Timeline.Notes.Add(note);
         Timeline.RefreshVisibleCells();
         Timeline.StatusChanged.Fire("Undo delete note".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);

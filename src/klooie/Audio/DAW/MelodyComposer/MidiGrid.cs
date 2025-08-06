@@ -16,8 +16,13 @@ public class MidiGrid : BeatGrid<NoteExpression>
 
     public RGB Color { get; set; } = RGB.Magenta;
 
-    public MidiGrid(WorkspaceSession session, ListNoteSource notes) : base(session, notes, notes.BeatsPerMinute)
+    public ListNoteSource Notes { get; private set; }
+
+    protected override IEnumerable<NoteExpression> EnumerateValues() => Notes;
+
+    public MidiGrid(WorkspaceSession session, ListNoteSource notes) : base(session, notes.BeatsPerMinute)
     {
+        this.Notes = notes;
         Editor = new MidiGridEditor(this, session.Commands);
         Viewport.Changed.Subscribe(() => (CurrentMode as MidiGridSelector)?.SyncCursorToCurrentZoom(), this);
         Refreshed.Subscribe(Editor.PositionAddPreview, this);
@@ -49,9 +54,9 @@ public class MidiGrid : BeatGrid<NoteExpression>
         Row = (Viewport.FirstVisibleRow + Viewport.RowsOnScreen - 1) - value.MidiNote
     };
 
-    protected override double CalculateMaxBeat() => Values.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
+    protected override double CalculateMaxBeat() => Notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
 
 
     protected override RGB GetColor(NoteExpression note) => Color;
-    public override Song Compose() => new Song(Values as ListNoteSource, BeatsPerMinute);
+    public override Song Compose() => new Song(Notes, BeatsPerMinute);
 }
