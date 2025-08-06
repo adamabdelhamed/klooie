@@ -18,9 +18,9 @@ public class MidiGrid : BeatGrid<NoteExpression>
 
     public MidiGrid(WorkspaceSession session, ListNoteSource notes) : base(session, notes, notes.BeatsPerMinute)
     {
-        Editor = new MidiGridEditor(session.Commands) { Composer = this };
+        Editor = new MidiGridEditor(this, session.Commands);
         Viewport.Changed.Subscribe(() => (CurrentMode as MidiGridSelector)?.SyncCursorToCurrentZoom(), this);
-        Refreshed.Subscribe(Editor.PositionAddNotePreview, this);
+        Refreshed.Subscribe(Editor.PositionAddPreview, this);
     }
 
     public override void HandleKeyInput(ConsoleKeyInfo k)
@@ -46,7 +46,7 @@ public class MidiGrid : BeatGrid<NoteExpression>
         BeatStart = value.StartBeat,
         BeatEnd = value.StartBeat + (value.DurationBeats > 0 ? value.DurationBeats : GetSustainedNoteDurationBeats(value)),
         IsHidden = value.Velocity <= 0,
-        Row = value.MidiNote - Viewport.FirstVisibleRow,
+        Row = (Viewport.FirstVisibleRow + Viewport.RowsOnScreen - 1) - value.MidiNote
     };
 
     protected override double CalculateMaxBeat() => Values.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();

@@ -1,166 +1,121 @@
+using klooie;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace klooie;
-
-public class MidiGridEditor
+public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
 {
-    public required MidiGrid Composer { get; init; }
-    private readonly List<NoteExpression> clipboard = new();
 
-    private ConsoleControl? addNotePreview;
+    public MidiGrid grid;
+    protected override MidiGrid Grid => grid;
     private (double Start, double Duration, int Midi)? pendingAddNote;
+    private ConsoleControl? addNotePreview;
 
-    private CommandStack CommandStack { get; init; }
-
-    public MidiGridEditor(CommandStack commandStack)
+    public MidiGridEditor(MidiGrid grid, CommandStack commandStack) : base(commandStack) 
     {
-        this.CommandStack = commandStack;
+        this.grid = grid;
     }
 
-    public bool HandleKeyInput(ConsoleKeyInfo k)
+    public override bool HandleKeyInput(ConsoleKeyInfo k)
     {
-        bool Matches(ConsoleKey key, bool ctrl = false, bool shift = false, bool alt = false)
-        {
-            return k.Key == key
-                && (!ctrl || k.Modifiers.HasFlag(ConsoleModifiers.Control))
-                && (!shift || k.Modifiers.HasFlag(ConsoleModifiers.Shift))
-                && (!alt || k.Modifiers.HasFlag(ConsoleModifiers.Alt))
-                && (ctrl ? k.Modifiers.HasFlag(ConsoleModifiers.Control) : !k.Modifiers.HasFlag(ConsoleModifiers.Control))
-                && (shift ? k.Modifiers.HasFlag(ConsoleModifiers.Shift) : !k.Modifiers.HasFlag(ConsoleModifiers.Shift))
-                && (alt ? k.Modifiers.HasFlag(ConsoleModifiers.Alt) : !k.Modifiers.HasFlag(ConsoleModifiers.Alt));
-        }
+        // MIDI-specific keys
+        if (Matches(k, ConsoleKey.UpArrow, shift: true) || Matches(k, ConsoleKey.W, shift: true))
+            return AdjustVelocity(1);
+        if (Matches(k, ConsoleKey.DownArrow, shift: true) || Matches(k, ConsoleKey.S, shift: true))
+            return AdjustVelocity(-1);
+        if (Matches(k, ConsoleKey.LeftArrow, shift: true) || Matches(k, ConsoleKey.A, shift: true))
+            return AdjustDuration(-GetDurationStep());
+        if (Matches(k, ConsoleKey.RightArrow, shift: true) || Matches(k, ConsoleKey.D, shift: true))
+            return AdjustDuration(GetDurationStep());
+        if (Matches(k, ConsoleKey.D, shift: true))
+            return DuplicateSelected();
 
-        // SELECTION
-        if (Matches(ConsoleKey.A, ctrl: true)) return SelectAll();
-        if (Matches(ConsoleKey.D, ctrl: true)) return DeselectAll();
-        if (Matches(ConsoleKey.LeftArrow, ctrl: true) || Matches(ConsoleKey.RightArrow, ctrl: true)) return SelectAllLeftOrRight(k);
+        // Add-preview for MIDI
+        if (Matches(k, ConsoleKey.P) && pendingAddNote != null) return CommitAddPreview();
+        if (Matches(k, ConsoleKey.D, alt: true) && pendingAddNote != null) return DismissAddPreview();
 
-        // CLIPBOARD
-        if (Matches(ConsoleKey.C, shift: true)) return Copy();
-        if (Matches(ConsoleKey.V, shift: true)) return Paste();
-
-        // DELETE
-        if (Matches(ConsoleKey.Delete)) return DeleteSelected();
-
-        // MOVE
-        if (Matches(ConsoleKey.LeftArrow, alt: true) || Matches(ConsoleKey.RightArrow, alt: true) || Matches(ConsoleKey.UpArrow, alt: true) || Matches(ConsoleKey.DownArrow, alt: true)) return MoveSelection(k);
-
-        // VELOCITY
-        if (Matches(ConsoleKey.UpArrow, shift: true) || Matches(ConsoleKey.W, shift: true)) return AdjustVelocity(1);
-        if (Matches(ConsoleKey.DownArrow, shift: true) || Matches(ConsoleKey.S, shift: true)) return AdjustVelocity(-1);
-
-        // DURATION
-        if (Matches(ConsoleKey.LeftArrow, shift: true) || Matches(ConsoleKey.A, shift: true)) return AdjustDuration(-Composer.BeatsPerColumn);
-        if (Matches(ConsoleKey.RightArrow, shift: true) || Matches(ConsoleKey.D, shift: true)) return AdjustDuration(Composer.BeatsPerColumn);
-
-        // UNDO/REDO
-        if (Matches(ConsoleKey.Z, ctrl: true)) return Undo();
-        if (Matches(ConsoleKey.Y, ctrl: true)) return Redo();
-
-        // ADD NOTE PREVIEW
-        if (Matches(ConsoleKey.P) && pendingAddNote != null) return CommitAddNote();
-        if (Matches(ConsoleKey.D, alt: true) && pendingAddNote != null) return DismissAddNotePreview();
-
-        return false;
+        // Not handled? Pass to base.
+        return base.HandleKeyInput(k);
     }
 
-    // --- SELECTION ---
-    private bool SelectAll()
-    {
-        Composer.SelectedValues.Clear();
-        Composer.SelectedValues.AddRange(Composer.Values);
-        Composer.RefreshVisibleCells();
-        Composer.StatusChanged.Fire("All notes selected".ToWhite());
-        return true;
-    }
-    private bool DeselectAll()
-    {
-        Composer.SelectedValues.Clear();
-        Composer.RefreshVisibleCells();
-        Composer.StatusChanged.Fire("Deselected all notes".ToWhite());
-        return true;
-    }
-    private bool SelectAllLeftOrRight(ConsoleKeyInfo k)
+    protected override List<NoteExpression> GetSelectedValues() => Grid.SelectedValues;
+    protected override List<NoteExpression> GetAllValues() => Grid.Values;
+    protected override void RefreshVisibleCells() => Grid.RefreshVisibleCells();
+    protected override void FireStatusChanged(ConsoleString msg) => Grid.StatusChanged.Fire(msg);
+
+    protected override bool SelectAllLeftOrRight(ConsoleKeyInfo k)
     {
         var left = k.Key == ConsoleKey.LeftArrow;
-        Composer.SelectedValues.Clear();
-        Composer.SelectedValues.AddRange(Composer.Values.Where(n =>
-            (left && n.StartBeat <= Composer.Player.CurrentBeat) ||
-            (!left && n.StartBeat >= Composer.Player.CurrentBeat)));
-        Composer.RefreshVisibleCells();
-        Composer.StatusChanged.Fire("All notes selected".ToWhite());
+        var sel = GetSelectedValues();
+        sel.Clear();
+        sel.AddRange(Grid.Values.Where(n =>
+            (left && n.StartBeat <= Grid.Player.CurrentBeat) ||
+            (!left && n.StartBeat >= Grid.Player.CurrentBeat)));
+        RefreshVisibleCells();
+        FireStatusChanged("All notes selected".ToWhite());
         return true;
     }
 
-    // --- CLIPBOARD ---
-    private bool Copy()
+    protected override IEnumerable<NoteExpression> DeepCopyClipboard(IEnumerable<NoteExpression> src)
+        => src.Select(n => NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, n.BeatsPerMinute, n.Velocity, n.Instrument)).ToList();
+
+    protected override bool PasteClipboard()
     {
-        clipboard.Clear();
-        Composer.StatusChanged.Fire($"Copied {Composer.SelectedValues.Count} notes to clipboard".ToWhite());
-        clipboard.AddRange(Composer.SelectedValues);
-        return true;
-    }
-    private bool Paste()
-    {
-        if (Composer.Values is not ListNoteSource) return true;
-        if (clipboard.Count == 0) return true;
-        double offset = Composer.Player.CurrentBeat - clipboard.Min(n => n.StartBeat);
+        if (Grid.Values is not ListNoteSource) return true;
+        if (Clipboard.Count == 0) return true;
+        double offset = Grid.Player.CurrentBeat - Clipboard.Min(n => n.StartBeat);
 
         var pasted = new List<NoteExpression>();
         var addCmds = new List<ICommand>();
 
-        foreach (var n in clipboard)
+        foreach (var n in Clipboard)
         {
-            var nn = NoteExpression.Create(n.MidiNote,  Math.Max(0, n.StartBeat + offset), n.DurationBeats,  n.BeatsPerMinute,  n.Velocity,  n.Instrument);
+            var nn = NoteExpression.Create(n.MidiNote, Math.Max(0, n.StartBeat + offset), n.DurationBeats, n.BeatsPerMinute, n.Velocity, n.Instrument);
             pasted.Add(nn);
-            addCmds.Add(new AddNoteCommand(Composer, nn));
+            addCmds.Add(new AddNoteCommand(Grid, nn));
         }
 
         CommandStack.Execute(new MultiCommand(addCmds, "Paste Notes"));
-        Composer.SelectedValues.Clear();
-        Composer.SelectedValues.AddRange(pasted);
+        Grid.SelectedValues.Clear();
+        Grid.SelectedValues.AddRange(pasted);
         return true;
     }
 
-    // --- DELETE ---
-    private bool DeleteSelected()
+    protected override bool DeleteSelected()
     {
-        if (Composer.Values is not ListNoteSource) return true;
-        if (Composer.SelectedValues.Count == 0) return true;
+        if (Grid.Values is not ListNoteSource) return true;
+        if (Grid.SelectedValues.Count == 0) return true;
 
-        var deleteCmds = Composer.SelectedValues
-            .Select(note => new DeleteNoteCommand(Composer, note))
+        var deleteCmds = Grid.SelectedValues
+            .Select(note => new DeleteNoteCommand(Grid, note))
             .ToList<ICommand>();
 
         CommandStack.Execute(new MultiCommand(deleteCmds, "Delete Selected Notes"));
         return true;
     }
 
-    // --- MOVE ---
-    private bool MoveSelection(ConsoleKeyInfo k)
+    protected override bool MoveSelection(ConsoleKeyInfo k)
     {
-        if (Composer.Values is not ListNoteSource list) return true;
-        if (Composer.SelectedValues.Count == 0) return true;
+        if (Grid.Values is not ListNoteSource list) return true;
+        if (Grid.SelectedValues.Count == 0) return true;
 
         double beatDelta = 0;
         int midiDelta = 0;
-        if (k.Key == ConsoleKey.LeftArrow) beatDelta = -Composer.BeatsPerColumn;
-        else if (k.Key == ConsoleKey.RightArrow) beatDelta = Composer.BeatsPerColumn;
+        if (k.Key == ConsoleKey.LeftArrow) beatDelta = -Grid.BeatsPerColumn;
+        else if (k.Key == ConsoleKey.RightArrow) beatDelta = Grid.BeatsPerColumn;
         else if (k.Key == ConsoleKey.UpArrow) midiDelta = 1;
         else if (k.Key == ConsoleKey.DownArrow) midiDelta = -1;
 
         var updated = new List<NoteExpression>();
         var moveCmds = new List<ICommand>();
 
-        foreach (var n in Composer.SelectedValues)
+        foreach (var n in Grid.SelectedValues)
         {
             int newMidi = Math.Clamp(n.MidiNote + midiDelta, 0, 127);
             double newBeat = Math.Max(0, n.StartBeat + beatDelta);
             var nn = NoteExpression.Create(newMidi, newBeat, n.DurationBeats, n.BeatsPerMinute, n.Velocity, n.Instrument);
             updated.Add(nn);
-            moveCmds.Add(new ChangeNoteCommand(Composer, n, nn));
+            moveCmds.Add(new ChangeNoteCommand(Grid, n, nn));
         }
 
         if (moveCmds.Count > 0)
@@ -170,20 +125,19 @@ public class MidiGridEditor
         return true;
     }
 
-    // --- VELOCITY ---
-    private bool AdjustVelocity(int delta)
+    public bool AdjustVelocity(int delta)
     {
-        if (Composer.SelectedValues.Count == 0) return true;
+        if (Grid.SelectedValues.Count == 0) return true;
 
         var updated = new List<NoteExpression>();
         var velCmds = new List<ICommand>();
 
-        foreach (var n in Composer.SelectedValues)
+        foreach (var n in Grid.SelectedValues)
         {
             int newVel = Math.Clamp(n.Velocity + delta, 1, 127);
             var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, n.BeatsPerMinute, newVel, n.Instrument);
             updated.Add(nn);
-            velCmds.Add(new ChangeNoteCommand(Composer, n, nn));
+            velCmds.Add(new ChangeNoteCommand(Grid, n, nn));
         }
 
         if (velCmds.Count > 0)
@@ -193,20 +147,19 @@ public class MidiGridEditor
         return true;
     }
 
-    // --- DURATION ---
-    private bool AdjustDuration(double deltaBeats)
+    public bool AdjustDuration(double deltaBeats)
     {
-        if (Composer.SelectedValues.Count == 0) return true;
+        if (Grid.SelectedValues.Count == 0) return true;
 
         var updated = new List<NoteExpression>();
         var durCmds = new List<ICommand>();
 
-        foreach (var n in Composer.SelectedValues)
+        foreach (var n in Grid.SelectedValues)
         {
             double newDuration = Math.Max(0.1, n.DurationBeats + deltaBeats); // Don't allow zero or negative duration
             var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, newDuration, n.BeatsPerMinute, n.Velocity, n.Instrument);
             updated.Add(nn);
-            durCmds.Add(new ChangeNoteCommand(Composer, n, nn));
+            durCmds.Add(new ChangeNoteCommand(Grid, n, nn));
         }
 
         if (durCmds.Count > 0)
@@ -216,60 +169,76 @@ public class MidiGridEditor
         return true;
     }
 
-    // --- UNDO/REDO ---
-    private bool Undo()
+    public double GetDurationStep() => Grid.BeatsPerColumn;
+
+    public bool DuplicateSelected()
     {
-        CommandStack.Undo();
-        return true;
-    }
-    private bool Redo()
-    {
-        CommandStack.Redo();
+        if (Grid.SelectedValues.Count == 0) return true;
+
+        var duplicates = new List<NoteExpression>();
+        var addCmds = new List<ICommand>();
+
+        foreach (var n in Grid.SelectedValues)
+        {
+            var dup = NoteExpression.Create(n.MidiNote, n.StartBeat + n.DurationBeats, n.DurationBeats, n.BeatsPerMinute, n.Velocity, n.Instrument);
+            duplicates.Add(dup);
+            addCmds.Add(new AddNoteCommand(Grid, dup));
+        }
+        CommandStack.Execute(new MultiCommand(addCmds, "Duplicate Notes"));
+        Grid.SelectedValues.Clear();
+        Grid.SelectedValues.AddRange(duplicates);
+        RefreshVisibleCells();
+        FireStatusChanged($"Duplicated {duplicates.Count} notes".ToWhite());
         return true;
     }
 
-    // --- ADD NOTE PREVIEW ---
-    public void BeginAddNotePreview(double start, double duration, int midi)
+    // --- PREVIEW ADD (Midi only) ---
+    public void BeginAddPreview(double start, double duration, int midi)
     {
-        ClearAddNotePreview();
+        ClearAddPreview();
         pendingAddNote = (start, duration, midi);
-        addNotePreview = Composer.AddPreviewControl();
+        addNotePreview = Grid.AddPreviewControl();
         addNotePreview.Background = RGB.DarkGreen;
         addNotePreview.ZIndex = 0;
-        Composer.Viewport.Changed.Subscribe(addNotePreview, _ => PositionAddNotePreview(), addNotePreview);
-        PositionAddNotePreview();
-        Composer.StatusChanged.Fire(ConsoleString.Parse("[White]Press [Cyan]p[White] to add a note here or press ALT + D to deselect."));
+        Grid.Viewport.Changed.Subscribe(addNotePreview, _ => PositionAddPreview(), addNotePreview);
+        PositionAddPreview();
+        FireStatusChanged(ConsoleString.Parse("[White]Press [Cyan]p[White] to add a note here or press ALT + D to deselect."));
     }
-    public void PositionAddNotePreview()
+
+    public void PositionAddPreview()
     {
         if (pendingAddNote == null || addNotePreview == null) return;
         var (start, duration, midi) = pendingAddNote.Value;
-        int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * Composer.Viewport.ColWidthChars;
-        int y = (Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - midi) * Composer.Viewport.RowHeightChars;
-        int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * Composer.Viewport.ColWidthChars);
-        int h = Composer.Viewport.RowHeightChars;
+        int x = ConsoleMath.Round((start - Grid.Viewport.FirstVisibleBeat) / Grid.BeatsPerColumn) * Grid.Viewport.ColWidthChars;
+        int y = (Grid.Viewport.FirstVisibleRow + Grid.Viewport.RowsOnScreen - 1 - midi) * Grid.Viewport.RowHeightChars;
+        int w = Math.Max(1, ConsoleMath.Round(duration / Grid.BeatsPerColumn) * Grid.Viewport.ColWidthChars);
+        int h = Grid.Viewport.RowHeightChars;
         addNotePreview.MoveTo(x, y);
         addNotePreview.ResizeTo(w, h);
     }
-    public void ClearAddNotePreview()
+
+    public void ClearAddPreview()
     {
         addNotePreview?.Dispose();
         addNotePreview = null;
         pendingAddNote = null;
     }
-    private bool CommitAddNote()
+
+    private bool CommitAddPreview()
     {
         if (pendingAddNote == null) return true;
         var (start, duration, midi) = pendingAddNote.Value;
-        var bpm = (Composer.Values as ListNoteSource).BeatsPerMinute;
-        var command = new AddNoteCommand(Composer, NoteExpression.Create(midi, start, duration, bpm, instrument: Composer.Instrument));
-        Composer.Session.Commands.Execute(command);
+        var bpm = (Grid.Values as ListNoteSource).BeatsPerMinute;
+        var command = new AddNoteCommand(Grid, NoteExpression.Create(midi, start, duration, bpm, instrument: Grid.Instrument));
+        Grid.Session.Commands.Execute(command);
+        ClearAddPreview();
         return true;
     }
-    private bool DismissAddNotePreview()
+
+    private bool DismissAddPreview()
     {
-        ClearAddNotePreview();
-        Composer.RefreshVisibleCells();
+        ClearAddPreview();
+        RefreshVisibleCells();
         return true;
     }
 }

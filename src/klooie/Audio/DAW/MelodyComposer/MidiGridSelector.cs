@@ -74,7 +74,7 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
     public override void Enter()
     {
         Composer.StatusChanged.Fire(ConsoleString.Parse("[White]Selection mode active. Use [B=Cyan][Black] arrows or WASD [D][White] to select an anchor point."));
-        MelodyComposer.Editor.ClearAddNotePreview();
+        MelodyComposer.Editor.ClearAddPreview();
         selectionPhase = SelectionPhase.PickingAnchor;
         selectionAnchorBeatMidi = null;
         selectionCursorBeatMidi = null;
@@ -254,7 +254,7 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
             var noteSingularOrPlural = Composer.SelectedValues.Count == 1 ? "note" : "notes";
             if (canAddNote)
             {
-                MelodyComposer.Editor.BeginAddNotePreview(addStartBeat, addDuration, midi0);
+                MelodyComposer.Editor.BeginAddPreview(addStartBeat, addDuration, midi0);
             }
             Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedValues.Count}[White] {noteSingularOrPlural}."));
             MelodyComposer.NextMode();

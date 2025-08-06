@@ -15,7 +15,7 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
 
     private double beatsPerColumn  = 1 / 8.0;
 
-    private BeatGridBackground backgroundGrid;
+    private BeatGridBackground<T> backgroundGrid;
 
     public static readonly RGB SelectedCellColor = RGB.Cyan;
 
@@ -64,7 +64,7 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
         Values = values;
         BeatsPerMinute = bpm;
 
-        backgroundGrid = ProtectedPanel.Add(new BeatGridBackground(0, Viewport, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
+        backgroundGrid = ProtectedPanel.Add(new BeatGridBackground<T>(0, this, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
         Viewport.SetFirstVisibleRow(Math.Max(0, Values.Where(n => GetCellPositionInfo(n).IsHidden == false).Select(m => GetCellPositionInfo(m).Row).DefaultIfEmpty(0).Min()));
         BoundsChanged.Sync(UpdateViewportBounds, this);
         Player = new BeatGridPlayer<T>(this);

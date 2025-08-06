@@ -14,7 +14,7 @@ public class AddNoteCommand : TimelineCommand
     public override void Do()
     {
         Timeline.Values.Add(note);
-        Timeline.Editor.ClearAddNotePreview();
+        Timeline.Editor.ClearAddPreview();
         Timeline.StatusChanged.Fire($"Added note {note.MidiNote}".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
         base.Do();

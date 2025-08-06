@@ -20,7 +20,6 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
         Viewport.RowHeightChars = 3;
         this.MidiProvider = midiProvider;
         this.editor = editor;
-
         if (Tracks == null || Tracks.Count == 0)
         {
             Tracks.Add(new ComposerTrack("Track 1", null));

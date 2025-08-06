@@ -19,7 +19,7 @@ public class SongComposer : ProtectedConsolePanel
 
     public SongComposer(WorkspaceSession session, ConsoleControl commandBar, IMidiProvider midiProvider)
     {
-        Editor = new TrackGridEditor(session.Commands) { Composer2 = this };
+
         this.MidiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
         var rowSpecPrefix = commandBar == null ? "1r" : "1p;1r";
         var rowOffset = commandBar == null ? 0 : 1;
@@ -28,7 +28,9 @@ public class SongComposer : ProtectedConsolePanel
 
         // Add the track headers (left, all rows except command/status)
         TrackHeaders = layout.Add(new TrackHeadersPanel(this, session), 0, rowOffset);
+        Editor = new TrackGridEditor(this, session.Commands);
         Grid = layout.Add(new TrackGrid(session, Editor, midiProvider), 1, rowOffset);
+
         StatusBar = layout.Add(new StatusBar(), column: 0, row: rowOffset + 1, columnSpan: 2);
 
         if (commandBar != null)
