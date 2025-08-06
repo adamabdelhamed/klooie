@@ -12,7 +12,7 @@ public class PianoWithTimeline : ProtectedConsolePanel
     public MelodyComposer Timeline { get; private init; }
 
     public StatusBar StatusBar { get; private init; }
-    public MelodyComposerPlayer Player => Timeline.TimelinePlayer;
+    public ComposerPlayer<NoteExpression> Player => Timeline.Player;
     public PianoWithTimeline(WorkspaceSession session, ListNoteSource notes, ConsoleControl? commandBar = null)
     {
         var rowSpecPrefix = commandBar == null ? "1r" : "1p;1r";

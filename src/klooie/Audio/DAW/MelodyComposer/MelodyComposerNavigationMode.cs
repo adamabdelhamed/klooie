@@ -14,7 +14,7 @@ public class MelodyComposerNavigationMode : MelodyComposerInputMode
     {
         if (key.Modifiers != 0) return; // ignore any modifiers
 
-        var player = Composer.TimelinePlayer;
+        var player = Composer.Player;
         var view = Composer.Viewport;
         bool handled = true;
 
@@ -84,7 +84,7 @@ public class MelodyComposerNavigationMode : MelodyComposerInputMode
     private void EnsurePlayheadVisible()
     {
         var view = Composer.Viewport;
-        double beat = Composer.TimelinePlayer.CurrentBeat;
+        double beat = Composer.Player.CurrentBeat;
 
         if (beat < view.FirstVisibleBeat)
         {

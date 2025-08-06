@@ -44,12 +44,12 @@ public class DAWMidi : Recyclable
     {
         if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
 
-        var noteExpression = NoteExpression.Create(ev.NoteNumber, pianoWithTimeline.Timeline.TimelinePlayer.CurrentBeat, -1, ev.Velocity, pianoWithTimeline.Timeline.Instrument);
+        var noteExpression = NoteExpression.Create(ev.NoteNumber, pianoWithTimeline.Timeline.Player.CurrentBeat, -1, ev.Velocity, pianoWithTimeline.Timeline.Instrument);
         var voices = ConsoleApp.Current.Sound.PlaySustainedNote(noteExpression);
         if (voices == null) return;
 
-        pianoWithTimeline.Timeline.TimelinePlayer.StopAtEnd = false;
-        pianoWithTimeline.Timeline.TimelinePlayer.Play();
+        pianoWithTimeline.Timeline.Player.StopAtEnd = false;
+        pianoWithTimeline.Timeline.Player.Play();
         pianoWithTimeline.Timeline.Values.Add(noteExpression);
         pianoWithTimeline.Timeline.RefreshVisibleSet();
         noteTrackers[ev.NoteNumber] = SustainedNoteTracker.Create(noteExpression, voices);
@@ -59,7 +59,7 @@ public class DAWMidi : Recyclable
     {
         if (!noteTrackers.TryGetValue(noteNumber, out var tracker)) return;
 
-        double playheadBeat = pianoWithTimeline.Timeline.TimelinePlayer.CurrentBeat;
+        double playheadBeat = pianoWithTimeline.Timeline.Player.CurrentBeat;
 
         // Snap the start and end beats to the desired grid
         double snappedStart = SnapToGrid(tracker.Note.StartBeat);

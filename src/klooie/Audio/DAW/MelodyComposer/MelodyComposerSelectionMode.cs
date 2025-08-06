@@ -104,11 +104,11 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
             var closest = Composer.Descendents
                 .OfType<ComposerCell<NoteExpression>>()
                 .Where(c => c.Value.Velocity > 0)
-                .OrderBy(c => Math.Abs(c.Value.StartBeat - Composer.CurrentBeat))
+                .OrderBy(c => Math.Abs(c.Value.StartBeat - Composer.Player.CurrentBeat))
                 .FirstOrDefault();
 
             int initMidi = closest?.Value.MidiNote ?? midBase;
-            selectionPreviewCursorBeatMidi = (Composer.CurrentBeat, initMidi);
+            selectionPreviewCursorBeatMidi = (Composer.Player.CurrentBeat, initMidi);
             SyncCursorToCurrentZoom();
             UpdateAnchorPreview(selectionPreviewCursor.Value);
             return;
@@ -232,7 +232,7 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
             // Select notes from the underlying note source, not the UI
             Composer.SelectedValues.AddRange(Composer.Values
                 .Where(n => n.Velocity > 0
-                    && n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : Composer.TimelinePlayer.CurrentBeat - n.StartBeat) >= beat0
+                    && n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : Composer.Player.CurrentBeat - n.StartBeat) >= beat0
                     && n.StartBeat <= beat1
                     && n.MidiNote >= midi0
                     && n.MidiNote <= midi1));

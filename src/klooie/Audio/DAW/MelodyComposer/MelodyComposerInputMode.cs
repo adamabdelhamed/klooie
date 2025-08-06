@@ -48,7 +48,7 @@ public abstract class MelodyComposerInputMode : IComparable<MelodyComposerInputM
         // Decide which cache/fg to use
         Dictionary<RGB, ConsoleString> barCache;
         RGB fg;
-        if (Composer.TimelinePlayer.IsPlaying)
+        if (Composer.Player.IsPlaying)
         {
             barCache = PlayHeadGreenBars;
             fg = PlayHeadGreenColor;
@@ -69,7 +69,7 @@ public abstract class MelodyComposerInputMode : IComparable<MelodyComposerInputM
             fg = PlayHeadRedColor;
         }
 
-        double relBeat = Composer.CurrentBeat - Composer.Viewport.FirstVisibleBeat;
+        double relBeat = Composer.Player.CurrentBeat - Composer.Viewport.FirstVisibleBeat;
         int x = ConsoleMath.Round(relBeat / Composer.BeatsPerColumn) * MelodyComposer.ColWidthChars;
         if (x < 0 || x >= Composer.Width) return;
         for (int y = 0; y < Composer.Height; y++)

@@ -87,8 +87,8 @@ public class MelodyComposerEditor
         var left = k.Key == ConsoleKey.LeftArrow;
         Composer.SelectedValues.Clear();
         Composer.SelectedValues.AddRange(Composer.Values.Where(n =>
-            (left && n.StartBeat <= Composer.CurrentBeat) ||
-            (!left && n.StartBeat >= Composer.CurrentBeat)));
+            (left && n.StartBeat <= Composer.Player.CurrentBeat) ||
+            (!left && n.StartBeat >= Composer.Player.CurrentBeat)));
         Composer.RefreshVisibleSet();
         Composer.StatusChanged.Fire("All notes selected".ToWhite());
         return true;
@@ -106,7 +106,7 @@ public class MelodyComposerEditor
     {
         if (Composer.Values is not ListNoteSource) return true;
         if (clipboard.Count == 0) return true;
-        double offset = Composer.CurrentBeat - clipboard.Min(n => n.StartBeat);
+        double offset = Composer.Player.CurrentBeat - clipboard.Min(n => n.StartBeat);
 
         var pasted = new List<NoteExpression>();
         var addCmds = new List<ICommand>();

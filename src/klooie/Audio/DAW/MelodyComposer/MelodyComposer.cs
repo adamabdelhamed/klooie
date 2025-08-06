@@ -9,51 +9,29 @@ namespace klooie;
 
 public class MelodyComposer : Composer<NoteExpression>
 {
-    public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
-
     private MelodyComposerViewport vp = new MelodyComposerViewport();
     public override MelodyComposerViewport Viewport => vp;
 
-    private Recyclable? focusLifetime;
-    public MelodyComposerPlayer TimelinePlayer { get; }
-
-
     public MelodyComposerEditor Editor { get; }
     
-    public InstrumentExpression? Instrument { get; set; } = new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
-
-
-
-    public double CurrentBeat => TimelinePlayer.CurrentBeat;
+    public InstrumentExpression Instrument { get; set; } = new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
 
     private Dictionary<string, RGB> instrumentColorMap = new();
     private readonly MelodyComposerInputMode[] userCyclableModes;
 
     public WorkspaceSession Session { get; private init; }
-
     public MelodyComposerInputMode CurrentMode { get; private set; }
     public Event<MelodyComposerInputMode> ModeChanging { get; } = Event<MelodyComposerInputMode>.Create();
 
-    public MelodyComposer(WorkspaceSession session, ListNoteSource notes) : base(notes)
+    public MelodyComposer(WorkspaceSession session, ListNoteSource notes) : base(notes, notes.BeatsPerMinute)
     {
         this.Session = session;
-        notes = notes ?? new ListNoteSource();
         this.userCyclableModes =  [new MelodyComposerNavigationMode() { Composer = this }, new MelodyComposerSelectionMode() { Composer = this }];
-        TimelinePlayer = new MelodyComposerPlayer(this);
-
-        CanFocus = true;
-        ProtectedPanel.Background = new RGB(240, 240, 240);
-
-        Focused.Subscribe(EnableKeyboardInput, this);
-
- 
-        ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
-        InitInstrumentColors(notes);
-        TimelinePlayer.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);  
-        CurrentMode = this.userCyclableModes[0];
+        SetMode(userCyclableModes[0]);
+        InitInstrumentColors();
         Editor = new MelodyComposerEditor(session.Commands) { Composer = this };
-        TimelinePlayer.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
-        RefreshVisibleSet();
+        Viewport.Changed.Subscribe(() => (CurrentMode as MelodyComposerSelectionMode)?.SyncCursorToCurrentZoom(), this);
+        Refreshed.Subscribe(Editor.PositionAddNotePreview, this);
     }
 
     public void SetMode(MelodyComposerInputMode mode)
@@ -64,66 +42,29 @@ public class MelodyComposer : Composer<NoteExpression>
         CurrentMode.Enter();
     }
 
-    public void NextMode()
-    {
-        int i = Array.IndexOf(userCyclableModes, CurrentMode);
-        SetMode(userCyclableModes[(i + 1) % userCyclableModes.Length]);
-    }
-
-  
-
-
-    public void StopPlayback() => TimelinePlayer.Stop();
-
+    public void NextMode() => SetMode(userCyclableModes[(Array.IndexOf(userCyclableModes, CurrentMode) + 1) % userCyclableModes.Length]);
+    
     protected override void OnPaint(ConsoleBitmap context)
     {
         base.OnPaint(context);
         CurrentMode?.Paint(context);
     }
- 
-    public void EnableKeyboardInput()
+
+    public override void HandleKeyInput(ConsoleKeyInfo k)
     {
-        focusLifetime?.TryDispose();
-        focusLifetime = DefaultRecyclablePool.Instance.Rent();
-        Unfocused.SubscribeOnce(() => focusLifetime.TryDispose());
-        ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
+        if (k.Key == ConsoleKey.M)
         {
-            if (k.Key == ConsoleKey.Spacebar)
-            {
-                if (TimelinePlayer.IsPlaying)
-                {
-                    TimelinePlayer.Pause();
-                }
-                else
-                {
-                    TimelinePlayer.Play();
-                }
-            }
-            else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add)
-            {
-                if (BeatsPerColumn / 2 >= MinBeatsPerColumn)
-                    BeatsPerColumn /= 2; // zoom in
-            }
-            else if (k.Key == ConsoleKey.OemMinus || k.Key == ConsoleKey.Subtract)
-            {
-                if (BeatsPerColumn * 2 <= MaxBeatsPerColumn)
-                    BeatsPerColumn *= 2; // zoom out
-            }
-            else if (k.Key == ConsoleKey.M)
-            {
-                NextMode();  
-            }
-            else if (!Editor.HandleKeyInput(k))
-            {
-                CurrentMode.HandleKeyInput(k);
-            }
-        }, focusLifetime);
+            NextMode();
+        }
+        else if (!Editor.HandleKeyInput(k))
+        {
+            CurrentMode.HandleKeyInput(k);
+        }
     }
 
     private double GetSustainedNoteDurationBeats(NoteExpression n)
     {
-        // Show duration from note's start to current playhead position
-        double sustainedBeats = TimelinePlayer.CurrentBeat - n.StartBeat;
+        double sustainedBeats = Player.CurrentBeat - n.StartBeat;
         return Math.Max(0, sustainedBeats);
     }
 
@@ -137,15 +78,11 @@ public class MelodyComposer : Composer<NoteExpression>
 
     protected override double CalculateMaxBeat() => Values.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
 
-    private void InitInstrumentColors(ListNoteSource notes)
+    private void InitInstrumentColors()
     {
-
-        var instruments = notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
+        var instruments = Values.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
         var instrumentColors = instruments.Select((s, i) => GetInstrumentColor(i)).ToArray();
-        for (int i = 0; i < instruments.Length; i++)
-        {
-            instrumentColorMap[instruments[i]] = instrumentColors[i];
-        }
+        for (int i = 0; i < instruments.Length; i++) instrumentColorMap[instruments[i]] = instrumentColors[i];
     }
 
     private static readonly RGB[] BaseInstrumentColors = new[]
@@ -178,4 +115,5 @@ public class MelodyComposer : Composer<NoteExpression>
         return color.ToOther(RGB.White, pale);
     }
     protected override RGB GetColor(NoteExpression note) => note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color : RGB.Orange;
+    public override Song Compose() => new Song(Values as ListNoteSource, BeatsPerMinute);
 }

@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 
 namespace klooie;
 
-public class MelodyComposerPlayer
+public class ComposerPlayer<T>
 {
-    public Event Playing { get;private set; } = Event.Create();
+    public Event Playing { get; private set; } = Event.Create();
     public Event Stopped { get; private set; } = Event.Create();
 
     public bool StopAtEnd { get; set; } = true;
@@ -16,15 +16,15 @@ public class MelodyComposerPlayer
     private Event<double> beatChanged;
     public Event<double> BeatChanged => beatChanged ??= Event<double>.Create();
 
-    public MelodyComposer Composer { get; }
+    public Composer<T> Composer { get; }
 
     private Recyclable? playLifetime;
     private double playheadStartBeat;
     private long? playbackStartTimestamp;
 
-    public MelodyComposerPlayer(MelodyComposer timeline)
+    public ComposerPlayer(Composer<T> composer)
     {
-        this.Composer = timeline ?? throw new ArgumentNullException(nameof(timeline));
+        this.Composer = composer ?? throw new ArgumentNullException(nameof(composer));
         BeatChanged.Subscribe(this, static (me, b) => me.Composer.Viewport.OnBeatChanged(b), Composer);
     }
 
@@ -50,7 +50,6 @@ public class MelodyComposerPlayer
         ScheduleTick();
     }
 
-
     public void Pause()
     {
         if (!IsPlaying) return;
@@ -74,7 +73,7 @@ public class MelodyComposerPlayer
 
     public void Stop()
     {
-        if(IsPlaying == false) return;
+        if (!IsPlaying) return;
         Stopped.Fire();
         playbackStartTimestamp = null;
         IsPlaying = false;
@@ -109,7 +108,8 @@ public class MelodyComposerPlayer
     {
         if (playbackStartTimestamp == null) return;
         double elapsedSeconds = Stopwatch.GetElapsedTime(playbackStartTimestamp.Value).TotalSeconds;
-        var beat = playheadStartBeat + elapsedSeconds * (Composer.Values as ListNoteSource).BeatsPerMinute / 60.0;
+        var beat = playheadStartBeat + elapsedSeconds * Composer.BeatsPerMinute / 60.0;
+
         if (StopAtEnd && beat > Composer.MaxBeat + 4)
         {
             CurrentBeat = Composer.MaxBeat;
@@ -123,18 +123,19 @@ public class MelodyComposerPlayer
 
     private void PlayAudio(double startBeat, ILifetime? playLifetime = null)
     {
-        var subset = new ListNoteSource() { BeatsPerMinute = (Composer.Values as ListNoteSource).BeatsPerMinute };
+        var song = Composer.Compose();
+        var subset = new ListNoteSource() { BeatsPerMinute = song.Notes.BeatsPerMinute };
 
         // TODO: I should not have to set the BPM for each note, but this is a quick fix
-        for (int i = 0; i < Composer.Values.Count; i++)
+        for (int i = 0; i < song.Notes.Count; i++)
         {
-            Composer.Values[i].BeatsPerMinute = subset.BeatsPerMinute;
+            song.Notes[i].BeatsPerMinute = song.Notes.BeatsPerMinute;
         }
 
-       (Composer.Values as ListNoteSource).SortMelody();
-        for (int i = 0; i < Composer.Values.Count; i++)
+        song.Notes.SortMelody();
+        for (int i = 0; i < song.Notes.Count; i++)
         {
-            NoteExpression? n = Composer.Values[i];
+            NoteExpression? n = song.Notes[i];
             double endBeat = n.DurationBeats >= 0 ? n.StartBeat + n.DurationBeats : double.PositiveInfinity;
             if (endBeat <= startBeat) continue;
 
@@ -147,11 +148,11 @@ public class MelodyComposerPlayer
                 duration = endBeat - startBeat;
             }
 
-            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, subset.BeatsPerMinute, n.Velocity, n.Instrument));
+            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, song.Notes.BeatsPerMinute, n.Velocity, n.Instrument));
         }
 
         if (subset.Count == 0) return;
 
-        ConsoleApp.Current.Sound.Play(new Song(subset, subset.BeatsPerMinute), playLifetime);
+        ConsoleApp.Current.Sound.Play(new Song(subset, song.Notes.BeatsPerMinute), playLifetime);
     }
 }

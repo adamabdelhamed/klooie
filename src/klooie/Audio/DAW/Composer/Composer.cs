@@ -13,6 +13,9 @@ public abstract class Composer<T> : ProtectedConsolePanel
     public const double MaxBeatsPerColumn = 1.0;     // each cell is 1 beat (max zoomed out)
     public const double MinBeatsPerColumn = 1.0 / 128; // each cell is 1/8 beat (max zoomed in)
 
+    public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
+    public Event Refreshed { get; } = Event.Create();
+
     private double beatsPerColumn  = 1 / 8.0;
 
     private AlternatingBackgroundGrid backgroundGrid;
@@ -27,6 +30,8 @@ public abstract class Composer<T> : ProtectedConsolePanel
     public double MaxBeat { get; private set; }
     public abstract Viewport Viewport { get; }
 
+    public ComposerPlayer<T> Player { get; }
+
     public double BeatsPerColumn
     {
         get => beatsPerColumn;
@@ -38,23 +43,32 @@ public abstract class Composer<T> : ProtectedConsolePanel
                 beatsPerColumn = value;
                 UpdateViewportBounds();
                 RefreshVisibleSet();
-                // TODO: if (CurrentMode is MelodyComposerSelectionMode sm) sm.SyncCursorToCurrentZoom();
             }
         }
     }
 
-    public Composer(List<T> values)
+    public double BeatsPerMinute { get; private set; }
+
+    public Composer(List<T> values, double bpm)
     {
+        CanFocus = true;
+        ProtectedPanel.Background = new RGB(240, 240, 240);
         Values = values;
+        BeatsPerMinute = bpm;
         backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
         Viewport.SetFirstVisibleRow(Math.Max(0, Values.Where(n => GetCellPositionInfo(n).IsHidden == false).Select(m => GetCellPositionInfo(m).Row).DefaultIfEmpty(0).Min()));
         BoundsChanged.Sync(UpdateViewportBounds, this);
+        Player = new ComposerPlayer<T>(this);
         Viewport.Changed.Subscribe(backgroundGrid, _ =>
         {
             UpdateAlternatingBackgroundOffset();
             RefreshVisibleSet();
         }, backgroundGrid);
 
+        Player.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);
+        Player.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
+        ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
+        KeyInputReceived.Subscribe(EnableKeyboardInput, this);
     }
 
     private void UpdateAlternatingBackgroundOffset() => backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.FirstVisibleRow / (double)RowHeightChars);
@@ -67,10 +81,6 @@ public abstract class Composer<T> : ProtectedConsolePanel
 
     public void RefreshVisibleSet()
     {
-        if (visibleCells.Count == 0 && Values.Count > 0)
-        {
-            Viewport.SetFirstVisibleRow(Math.Max(0, Values.Where(n => GetCellPositionInfo(n).IsHidden == false).Select(m => GetCellPositionInfo(m).Row).DefaultIfEmpty(0).Min()));
-        }
         MaxBeat = CalculateMaxBeat();
         tempHashSet.Clear();
 
@@ -109,11 +119,40 @@ public abstract class Composer<T> : ProtectedConsolePanel
             }
         }
 
-        //TODO: Editor.PositionAddNotePreview();
+        Refreshed.Fire();
+    }
+
+    public void EnableKeyboardInput(ConsoleKeyInfo k)
+    {
+   
+        if (k.Key == ConsoleKey.Spacebar)
+        {
+            if (Player.IsPlaying)
+            {
+                Player.Pause();
+            }
+            else
+            {
+                Player.Play();
+            }
+        }
+        else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add)
+        {
+            if (BeatsPerColumn / 2 >= MinBeatsPerColumn)
+                BeatsPerColumn /= 2; // zoom in
+        }
+        else if (k.Key == ConsoleKey.OemMinus || k.Key == ConsoleKey.Subtract)
+        {
+            if (BeatsPerColumn * 2 <= MaxBeatsPerColumn)
+                BeatsPerColumn *= 2; // zoom out
+        }
+        else HandleKeyInput(k);
     }
 
     internal ConsoleControl AddPreviewControl() => ProtectedPanel.Add(new ConsoleControl());
 
+    public abstract Song Compose();
+    public abstract void HandleKeyInput(ConsoleKeyInfo key);
     protected abstract CellPositionInfo GetCellPositionInfo(T value);
     protected abstract double CalculateMaxBeat();
     private void PositionCell(ComposerCell<T> cell)
