@@ -71,14 +71,14 @@ public class MelodyComposerEditor
     {
         Composer.SelectedValues.Clear();
         Composer.SelectedValues.AddRange(Composer.Values);
-        Composer.RefreshVisibleSet();
+        Composer.RefreshVisibleCells();
         Composer.StatusChanged.Fire("All notes selected".ToWhite());
         return true;
     }
     private bool DeselectAll()
     {
         Composer.SelectedValues.Clear();
-        Composer.RefreshVisibleSet();
+        Composer.RefreshVisibleCells();
         Composer.StatusChanged.Fire("Deselected all notes".ToWhite());
         return true;
     }
@@ -89,7 +89,7 @@ public class MelodyComposerEditor
         Composer.SelectedValues.AddRange(Composer.Values.Where(n =>
             (left && n.StartBeat <= Composer.Player.CurrentBeat) ||
             (!left && n.StartBeat >= Composer.Player.CurrentBeat)));
-        Composer.RefreshVisibleSet();
+        Composer.RefreshVisibleCells();
         Composer.StatusChanged.Fire("All notes selected".ToWhite());
         return true;
     }
@@ -269,7 +269,7 @@ public class MelodyComposerEditor
     private bool DismissAddNotePreview()
     {
         ClearAddNotePreview();
-        Composer.RefreshVisibleSet();
+        Composer.RefreshVisibleCells();
         return true;
     }
 }

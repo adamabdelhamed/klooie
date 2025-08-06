@@ -9,23 +9,18 @@ namespace klooie;
 
 public class MelodyComposer : Composer<NoteExpression>
 {
-    private MelodyComposerViewport vp = new MelodyComposerViewport();
-    public override MelodyComposerViewport Viewport => vp;
-
     public MelodyComposerEditor Editor { get; }
-    
+
     public InstrumentExpression Instrument { get; set; } = new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
 
     private Dictionary<string, RGB> instrumentColorMap = new();
     private readonly MelodyComposerInputMode[] userCyclableModes;
 
-    public WorkspaceSession Session { get; private init; }
     public MelodyComposerInputMode CurrentMode { get; private set; }
     public Event<MelodyComposerInputMode> ModeChanging { get; } = Event<MelodyComposerInputMode>.Create();
 
-    public MelodyComposer(WorkspaceSession session, ListNoteSource notes) : base(notes, notes.BeatsPerMinute)
+    public MelodyComposer(WorkspaceSession session, ListNoteSource notes) : base(session, notes, notes.BeatsPerMinute)
     {
-        this.Session = session;
         this.userCyclableModes =  [new MelodyComposerNavigationMode() { Composer = this }, new MelodyComposerSelectionMode() { Composer = this }];
         SetMode(userCyclableModes[0]);
         InitInstrumentColors();
@@ -116,4 +111,5 @@ public class MelodyComposer : Composer<NoteExpression>
     }
     protected override RGB GetColor(NoteExpression note) => note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color : RGB.Orange;
     public override Song Compose() => new Song(Values as ListNoteSource, BeatsPerMinute);
+    protected override Viewport CreateViewport() => new MelodyComposerViewport();
 }

@@ -21,13 +21,13 @@ public class TimelineCommand : ICommand
 
     public virtual void Do()
     {
-        Timeline.RefreshVisibleSet();
+        Timeline.RefreshVisibleCells();
     }
 
     public virtual void Undo()
     {
         Timeline.SelectedValues.Clear();
         Timeline.SelectedValues.AddRange(OldSelection);
-        Timeline.RefreshVisibleSet();
+        Timeline.RefreshVisibleCells();
     }
 }

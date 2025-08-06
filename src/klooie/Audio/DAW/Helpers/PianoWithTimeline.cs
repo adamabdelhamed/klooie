@@ -19,7 +19,7 @@ public class PianoWithTimeline : ProtectedConsolePanel
         var rowOffset = commandBar == null ? 0 : 1;
         layout = ProtectedPanel.Add(new GridLayout($"{rowSpecPrefix};{StatusBar.Height}p", $"{PianoPanel.KeyWidth}p;1r")).Fill();
         Timeline = layout.Add(new MelodyComposer(session, notes), 1, rowOffset); // col then row here - I know its strange
-        Piano = layout.Add(new PianoPanel(Timeline.Viewport), 0, rowOffset);
+        Piano = layout.Add(new PianoPanel(Timeline.Viewport as MelodyComposerViewport), 0, rowOffset);
         StatusBar = layout.Add(new StatusBar(), column: 0, row: rowOffset+1, columnSpan: 2);
         if(commandBar != null)
         {

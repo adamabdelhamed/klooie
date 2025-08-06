@@ -28,7 +28,7 @@ public class DeleteNoteCommand : TimelineCommand
     public override void Undo()
     {
         Timeline.Values.Add(note);
-        Timeline.RefreshVisibleSet();
+        Timeline.RefreshVisibleCells();
         Timeline.StatusChanged.Fire("Undo delete note".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
         base.Undo();

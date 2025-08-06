@@ -51,7 +51,7 @@ public class DAWMidi : Recyclable
         pianoWithTimeline.Timeline.Player.StopAtEnd = false;
         pianoWithTimeline.Timeline.Player.Play();
         pianoWithTimeline.Timeline.Values.Add(noteExpression);
-        pianoWithTimeline.Timeline.RefreshVisibleSet();
+        pianoWithTimeline.Timeline.RefreshVisibleCells();
         noteTrackers[ev.NoteNumber] = SustainedNoteTracker.Create(noteExpression, voices);
     }
 

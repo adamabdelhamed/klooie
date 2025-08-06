@@ -25,10 +25,12 @@ public abstract class Composer<T> : ProtectedConsolePanel
     private readonly Dictionary<T, ComposerCell<T>> visibleCells = new();
     private readonly HashSet<T> tempHashSet = new HashSet<T>();
 
+    public WorkspaceSession Session { get; private init; }
     public List<T> Values { get; private set; }
     public List<T> SelectedValues { get; } = new List<T>();
     public double MaxBeat { get; private set; }
-    public abstract Viewport Viewport { get; }
+    public Viewport Viewport { get; private set; }  
+    protected abstract Viewport CreateViewport();
 
     public ComposerPlayer<T> Player { get; }
 
@@ -42,19 +44,21 @@ public abstract class Composer<T> : ProtectedConsolePanel
             {
                 beatsPerColumn = value;
                 UpdateViewportBounds();
-                RefreshVisibleSet();
+                RefreshVisibleCells();
             }
         }
     }
 
     public double BeatsPerMinute { get; private set; }
 
-    public Composer(List<T> values, double bpm)
+    public Composer(WorkspaceSession session, List<T> values, double bpm)
     {
+        this.Session = session ?? throw new ArgumentNullException(nameof(session));
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
         Values = values;
         BeatsPerMinute = bpm;
+        Viewport = CreateViewport();
         backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
         Viewport.SetFirstVisibleRow(Math.Max(0, Values.Where(n => GetCellPositionInfo(n).IsHidden == false).Select(m => GetCellPositionInfo(m).Row).DefaultIfEmpty(0).Min()));
         BoundsChanged.Sync(UpdateViewportBounds, this);
@@ -62,12 +66,12 @@ public abstract class Composer<T> : ProtectedConsolePanel
         Viewport.Changed.Subscribe(backgroundGrid, _ =>
         {
             UpdateAlternatingBackgroundOffset();
-            RefreshVisibleSet();
+            RefreshVisibleCells();
         }, backgroundGrid);
 
-        Player.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);
+        Player.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleCells(), this);
         Player.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
-        ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
+        ConsoleApp.Current.InvokeNextCycle(RefreshVisibleCells);
         KeyInputReceived.Subscribe(EnableKeyboardInput, this);
     }
 
@@ -79,7 +83,7 @@ public abstract class Composer<T> : ProtectedConsolePanel
         Viewport.SetRowsOnScreen(Math.Max(1, Height / Viewport.RowHeightChars));
     }
 
-    public void RefreshVisibleSet()
+    public void RefreshVisibleCells()
     {
         MaxBeat = CalculateMaxBeat();
         tempHashSet.Clear();

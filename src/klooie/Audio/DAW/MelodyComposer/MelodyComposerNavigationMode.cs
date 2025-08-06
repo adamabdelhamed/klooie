@@ -77,7 +77,7 @@ public class MelodyComposerNavigationMode : MelodyComposerInputMode
 
         if (handled)
         {
-            Composer.RefreshVisibleSet();
+            Composer.RefreshVisibleCells();
         }
     }
 
