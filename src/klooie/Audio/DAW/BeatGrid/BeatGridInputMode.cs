@@ -57,10 +57,6 @@ public abstract class BeatGridInputMode<T> : IComparable<BeatGridInputMode<T>>
         }
     }
 
-
-
-
-
     public int CompareTo(BeatGridInputMode<T>? other)
     {
         return this.GetType().FullName == other?.GetType().FullName ? 0 : -1;

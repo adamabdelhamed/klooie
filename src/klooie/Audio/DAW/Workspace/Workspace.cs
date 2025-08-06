@@ -91,6 +91,7 @@ public class Workspace
                 {
                     var json = await File.ReadAllTextAsync(file);
                     var song = JsonSerializer.Deserialize<SongInfo>(json);
+                    InstrumentPicker.Hydrate(song);
                     if (song != null)
                     {
                         song.Filename = file;
@@ -267,16 +268,6 @@ public class InstrumentInfo
     public string Name { get; set; } = "";
     public string PatchFactoryQualifiedName { get; set; } = ""; // "klooie.DrumKit.Kick"
     public string? PatchSourceFilename { get; set; }
-
-    public InstrumentExpression? ResolveInstrument(InstrumentInfo info)
-    {
-        var factory = WorkspaceSession.Current.Workspace.PatchFactories.FirstOrDefault(f => f.QualifiedName == info.PatchFactoryQualifiedName);
-        if (factory != null)
-        {
-            return InstrumentExpression.Create(info.Name, factory.Factory);
-        }
-        return null;
-    }
 }
 
 // --- SongInfo: persisted in songs/*.song.json ---

@@ -1,6 +1,5 @@
 ﻿using klooie;
 
-// The *only* common stuff goes here.
 public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem> where TItem : class
 {
     protected abstract TGrid Grid { get; }
@@ -12,7 +11,6 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
         CommandStack = commandStack;
     }
 
-    // Handle only universal/common keyboard commands.
     public virtual bool HandleKeyInput(ConsoleKeyInfo k)
     {
         if (Matches(k, ConsoleKey.A, ctrl: true)) return SelectAll();
@@ -21,9 +19,7 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
         if (Matches(k, ConsoleKey.C, shift: true)) return Copy();
         if (Matches(k, ConsoleKey.V, shift: true)) return Paste();
         if (Matches(k, ConsoleKey.Delete)) return DeleteSelected();
-        if (Matches(k, ConsoleKey.LeftArrow, alt: true) || Matches(k, ConsoleKey.RightArrow, alt: true) ||
-            Matches(k, ConsoleKey.UpArrow, alt: true) || Matches(k, ConsoleKey.DownArrow, alt: true))
-            return MoveSelection(k);
+        if (Matches(k, ConsoleKey.LeftArrow, alt: true) || Matches(k, ConsoleKey.RightArrow, alt: true) || Matches(k, ConsoleKey.UpArrow, alt: true) || Matches(k, ConsoleKey.DownArrow, alt: true))  return MoveSelection(k);
         if (Matches(k, ConsoleKey.Z, ctrl: true)) return Undo();
         if (Matches(k, ConsoleKey.Y, ctrl: true)) return Redo();
 
@@ -31,15 +27,13 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
     }
 
     protected bool Matches(ConsoleKeyInfo k, ConsoleKey key, bool ctrl = false, bool shift = false, bool alt = false)
-    {
-        return k.Key == key
-            && (!ctrl || k.Modifiers.HasFlag(ConsoleModifiers.Control))
-            && (!shift || k.Modifiers.HasFlag(ConsoleModifiers.Shift))
-            && (!alt || k.Modifiers.HasFlag(ConsoleModifiers.Alt))
-            && (ctrl ? k.Modifiers.HasFlag(ConsoleModifiers.Control) : !k.Modifiers.HasFlag(ConsoleModifiers.Control))
-            && (shift ? k.Modifiers.HasFlag(ConsoleModifiers.Shift) : !k.Modifiers.HasFlag(ConsoleModifiers.Shift))
-            && (alt ? k.Modifiers.HasFlag(ConsoleModifiers.Alt) : !k.Modifiers.HasFlag(ConsoleModifiers.Alt));
-    }
+         => k.Key == key && (!ctrl || k.Modifiers.HasFlag(ConsoleModifiers.Control))
+                         && (!shift || k.Modifiers.HasFlag(ConsoleModifiers.Shift))
+                         && (!alt || k.Modifiers.HasFlag(ConsoleModifiers.Alt))
+                         && (ctrl ? k.Modifiers.HasFlag(ConsoleModifiers.Control) : !k.Modifiers.HasFlag(ConsoleModifiers.Control))
+                         && (shift ? k.Modifiers.HasFlag(ConsoleModifiers.Shift) : !k.Modifiers.HasFlag(ConsoleModifiers.Shift))
+                         && (alt ? k.Modifiers.HasFlag(ConsoleModifiers.Alt) : !k.Modifiers.HasFlag(ConsoleModifiers.Alt));
+    
 
     // --- ABSTRACT/OVERRIDABLES ---
     protected abstract List<TItem> GetSelectedValues();
@@ -48,7 +42,7 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
     protected abstract void FireStatusChanged(ConsoleString message);
 
     // --- SELECTION ---
-    protected virtual bool SelectAll()
+    private bool SelectAll()
     {
         var sel = GetSelectedValues();
         sel.Clear();
@@ -57,7 +51,7 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
         FireStatusChanged("All items selected".ToWhite());
         return true;
     }
-    protected virtual bool DeselectAll()
+    private bool DeselectAll()
     {
         GetSelectedValues().Clear();
         RefreshVisibleCells();
@@ -67,7 +61,7 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
     protected virtual bool SelectAllLeftOrRight(ConsoleKeyInfo k) => false;
 
     // --- CLIPBOARD ---
-    protected virtual bool Copy()
+    private bool Copy()
     {
         Clipboard.Clear();
         var sel = GetSelectedValues();
@@ -75,7 +69,7 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
         FireStatusChanged($"Copied {sel.Count} items to clipboard".ToWhite());
         return true;
     }
-    protected virtual bool Paste()
+    private bool Paste()
     {
         if (Clipboard.Count == 0) return true;
         return PasteClipboard();
