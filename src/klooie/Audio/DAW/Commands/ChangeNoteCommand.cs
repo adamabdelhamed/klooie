@@ -12,7 +12,7 @@ public class ChangeNoteCommand : TimelineCommand
 
     public string Description { get; }
 
-    public ChangeNoteCommand(MelodyComposer grid, NoteExpression oldNote, NoteExpression newNote) : base(grid, "Change Note")
+    public ChangeNoteCommand(MidiGrid grid, NoteExpression oldNote, NoteExpression newNote) : base(grid, "Change Note")
     {
         this.oldNote = oldNote;
         this.newNote = newNote;

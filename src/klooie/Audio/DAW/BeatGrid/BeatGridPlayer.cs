@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace klooie;
 
-public class ComposerPlayer<T>
+public class BeatGridPlayer<T>
 {
     public Event Playing { get; private set; } = Event.Create();
     public Event Stopped { get; private set; } = Event.Create();
@@ -16,16 +16,16 @@ public class ComposerPlayer<T>
     private Event<double> beatChanged;
     public Event<double> BeatChanged => beatChanged ??= Event<double>.Create();
 
-    public Composer<T> Composer { get; }
+    public BeatGrid<T> Grid { get; }
 
     private Recyclable? playLifetime;
     private double playheadStartBeat;
     private long? playbackStartTimestamp;
 
-    public ComposerPlayer(Composer<T> composer)
+    public BeatGridPlayer(BeatGrid<T> grid)
     {
-        this.Composer = composer ?? throw new ArgumentNullException(nameof(composer));
-        BeatChanged.Subscribe(this, static (me, b) => me.Composer.Viewport.OnBeatChanged(b), Composer);
+        this.Grid = grid ?? throw new ArgumentNullException(nameof(grid));
+        BeatChanged.Subscribe(this, static (me, b) => me.Grid.Viewport.OnBeatChanged(b), Grid);
     }
 
     public void Play()
@@ -33,7 +33,7 @@ public class ComposerPlayer<T>
         if (IsPlaying) return;
 
         var autoStopSuffix = StopAtEnd ? " (auto-stop)" : "";
-        Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
+        Grid.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
 
         ConsoleApp.Current.Scheduler.Delay(AudioThreadLatency, StartMovingPlayHeadAfterAudioThreadLatency);
         playLifetime?.TryDispose();
@@ -108,11 +108,11 @@ public class ComposerPlayer<T>
     {
         if (playbackStartTimestamp == null) return;
         double elapsedSeconds = Stopwatch.GetElapsedTime(playbackStartTimestamp.Value).TotalSeconds;
-        var beat = playheadStartBeat + elapsedSeconds * Composer.BeatsPerMinute / 60.0;
+        var beat = playheadStartBeat + elapsedSeconds * Grid.BeatsPerMinute / 60.0;
 
-        if (StopAtEnd && beat > Composer.MaxBeat + 4)
+        if (StopAtEnd && beat > Grid.MaxBeat + 4)
         {
-            CurrentBeat = Composer.MaxBeat;
+            CurrentBeat = Grid.MaxBeat;
             Stop();
         }
         else
@@ -123,7 +123,7 @@ public class ComposerPlayer<T>
 
     private void PlayAudio(double startBeat, ILifetime? playLifetime = null)
     {
-        var song = Composer.Compose();
+        var song = Grid.Compose();
         var subset = new ListNoteSource() { BeatsPerMinute = song.Notes.BeatsPerMinute };
 
         // TODO: I should not have to set the BPM for each note, but this is a quick fix

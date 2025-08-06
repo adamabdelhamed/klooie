@@ -1,58 +1,20 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace klooie;
-
-public class SongComposerWithTrackHeaders : ProtectedConsolePanel
-{
-    private GridLayout layout;
-    public TrackHeadersPanel TrackHeaders { get; private init; }
-    public SongComposer Composer { get; private init; }
-    public StatusBar StatusBar { get; private init; }
-
-    // Expose player if desired
-    public ComposerPlayer<MelodyClip> Player => Composer.Player;
-    public IMidiProvider MidiProvider { get; private set; }
-
-    public SongComposerWithTrackHeaders(WorkspaceSession session, ConsoleControl commandBar, IMidiProvider midiProvider)
-    {
-        this.MidiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
-        var rowSpecPrefix = commandBar == null ? "1r" : "1p;1r";
-        var rowOffset = commandBar == null ? 0 : 1;
-        // 16p for track headers, rest for grid
-        layout = ProtectedPanel.Add(new GridLayout($"{rowSpecPrefix};{StatusBar.Height}p", "16p;1r")).Fill();
-
-        // Add the track headers (left, all rows except command/status)
-        TrackHeaders = layout.Add(new TrackHeadersPanel(this, session), 0, rowOffset);
-        Composer = layout.Add(new SongComposer(session, midiProvider), 1, rowOffset);
-
-        // Wire up selection highlighting
-        TrackHeaders.TrackSelected.Subscribe(idx => Composer.SelectedTrackIndex = idx, this);
-
-        StatusBar = layout.Add(new StatusBar(), column: 0, row: rowOffset + 1, columnSpan: 2);
-
-        if (commandBar != null)
-        {
-            layout.Add(commandBar, 0, 0, columnSpan: 2);
-        }
-
-        Composer.StatusChanged.Subscribe(message => StatusBar.Message = message, this);
-        // For bidirectional feedback: When track index changes, update highlight
-        Composer.ModeChanging.Subscribe(_ => TrackHeaders.SelectedTrackIndex = Composer.SelectedTrackIndex, this);
-    }
-}
-
 // Panel that renders all track names/colors and "add" button
 public class TrackHeadersPanel : ConsoleControl
 {
     private WorkspaceSession session;
-    public List<ComposerTrack> Tracks => composer.Composer.Tracks;
+    public List<ComposerTrack> Tracks => composer.Grid.Tracks;
     public int SelectedTrackIndex { get; set; }
     public Event<int> TrackSelected = Event<int>.Create();
-    private SongComposerWithTrackHeaders composer;
+    private SongComposer composer;
 
-    public TrackHeadersPanel(SongComposerWithTrackHeaders composer, WorkspaceSession session)
+    public TrackHeadersPanel(SongComposer composer, WorkspaceSession session)
     {
         this.composer = composer ?? throw new ArgumentNullException(nameof(composer));
         this.session = session;
@@ -62,25 +24,25 @@ public class TrackHeadersPanel : ConsoleControl
 
     private void OnKey(ConsoleKeyInfo info)
     {
-        if(info.Key == ConsoleKey.T)
+        if (info.Key == ConsoleKey.T)
         {
             AddTrack();
         }
-        else if(info.Key == ConsoleKey.Delete && Tracks.Count > 1)
+        else if (info.Key == ConsoleKey.Delete && Tracks.Count > 1)
         {
             DeleteSelectedTrack();
         }
-        else if(info.Key == ConsoleKey.UpArrow || info.Key == ConsoleKey.W)
+        else if (info.Key == ConsoleKey.UpArrow || info.Key == ConsoleKey.W)
         {
             SelectedTrackIndex = Math.Max(0, SelectedTrackIndex - 1);
             TrackSelected.Fire(SelectedTrackIndex);
         }
-        else if(info.Key == ConsoleKey.DownArrow || info.Key == ConsoleKey.S)
+        else if (info.Key == ConsoleKey.DownArrow || info.Key == ConsoleKey.S)
         {
             SelectedTrackIndex = Math.Min(Tracks.Count - 1, SelectedTrackIndex + 1);
             TrackSelected.Fire(SelectedTrackIndex);
         }
-        else if(info.Key == ConsoleKey.A)
+        else if (info.Key == ConsoleKey.A)
         {
             AddMelodyToTrack();
         }
@@ -101,7 +63,7 @@ public class TrackHeadersPanel : ConsoleControl
         var newMelody = new MelodyClip(startBeat, notes);
         Tracks[SelectedTrackIndex].Melodies.Add(newMelody);
 
-        composer.Composer.OpenMelody(newMelody);
+        composer.Grid.OpenMelody(newMelody);
     }
 
 
@@ -115,7 +77,7 @@ public class TrackHeadersPanel : ConsoleControl
             var color = selected ? RGB.Black : GetTrackColor(i);
             var label = selected ? $"> {Tracks[i].Name}" : $"  {Tracks[i].Name}";
             context.DrawString(label, color, selected ? HasFocus ? RGB.Cyan : RGB.DarkGray : RGB.Black, 1, y);
-            y += composer.Composer.Viewport.RowHeightChars; // keep in sync with composer track height
+            y += composer.Grid.Viewport.RowHeightChars; // keep in sync with composer track height
         }
 
         // Draw "+" add button at the bottom

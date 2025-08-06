@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace klooie;
 
-public abstract class ComposerInputMode<T> : IComparable<ComposerInputMode<T>>
+public abstract class BeatGridInputMode<T> : IComparable<BeatGridInputMode<T>>
 {
-    public required Composer<T> Composer { get; init; }
+    public required BeatGrid<T> Composer { get; init; }
 
     // Pre-created foreground colors
     private static readonly RGB MainBeatColor = new RGB(40, 40, 40);
@@ -127,7 +127,7 @@ public abstract class ComposerInputMode<T> : IComparable<ComposerInputMode<T>>
         return Math.Abs(val - Math.Round(val)) < epsilon;
     }
 
-    public int CompareTo(ComposerInputMode<T>? other)
+    public int CompareTo(BeatGridInputMode<T>? other)
     {
         return this.GetType().FullName == other?.GetType().FullName ? 0 : -1;
     }

@@ -1,70 +1,40 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using klooie;
 
-namespace klooie;
-
-public class MelodyComposer : Composer<NoteExpression>
+public class MelodyComposer : ProtectedConsolePanel
 {
-    public MelodyComposerEditor Editor { get; }
+    private GridLayout layout;
+    public PianoPanel Piano { get; private init; }
+    public MidiGrid Grid { get; private init; }
 
-    public InstrumentExpression Instrument { get; set; } = new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
+    public StatusBar StatusBar { get; private init; }
+    public BeatGridPlayer<NoteExpression> Player => Grid.Player;
 
-
-    public override bool IsNavigating => CurrentMode is MelodyComposerNavigationMode;
-
-    protected override ComposerInputMode<NoteExpression>[] GetAvailableModes() => [new MelodyComposerNavigationMode() { Composer = this }, new MelodyComposerSelectionMode() { Composer = this }];
-
-    public RGB Color { get; set; } = RGB.Magenta;
-
-    public MelodyComposer(WorkspaceSession session, ListNoteSource notes) : base(session, notes, notes.BeatsPerMinute)
+    public MelodyComposer(WorkspaceSession session, ListNoteSource notes, IMidiProvider midiProvider)
     {
-        Editor = new MelodyComposerEditor(session.Commands) { Composer = this };
-        Viewport.Changed.Subscribe(() => (CurrentMode as MelodyComposerSelectionMode)?.SyncCursorToCurrentZoom(), this);
-        Refreshed.Subscribe(Editor.PositionAddNotePreview, this);
-    }
+        var rowSpecPrefix =  "1p;1r";
+        var rowOffset =  1;
+        layout = ProtectedPanel.Add(new GridLayout($"{rowSpecPrefix};{StatusBar.Height}p", $"{PianoPanel.KeyWidth}p;1r")).Fill();
+        Grid = layout.Add(new MidiGrid(session, notes), 1, rowOffset); // col then row here - I know its strange
+        Piano = layout.Add(new PianoPanel(Grid.Viewport), 0, rowOffset);
+        StatusBar = layout.Add(new StatusBar(), column: 0, row: rowOffset + 1, columnSpan: 2);
 
+        var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
+        layout.Add(commandBar, 0, 0, columnSpan: 2);
 
-    
-    protected override void OnPaint(ConsoleBitmap context)
-    {
-        base.OnPaint(context);
-        CurrentMode?.Paint(context);
-    }
+        var midi = DAWMidi.Create(midiProvider, this);
+        commandBar.Add(midi.CreateMidiProductDropdown());
+        this.OnDisposed(() => midi.Dispose());
+        
+        // Add instrument picker
+        var instrumentPicker = InstrumentPicker.CreatePickerDropdown();
+        commandBar.Add(instrumentPicker);
 
-    public override void HandleKeyInput(ConsoleKeyInfo k)
-    {
-        if (k.Key == ConsoleKey.M)
+        instrumentPicker.ValueChanged.Subscribe(() =>
         {
-            NextMode();
-        }
-        else if (!Editor.HandleKeyInput(k))
-        {
-            CurrentMode.HandleKeyInput(k);
-        }
+            Grid.Instrument = instrumentPicker.Value.Value as InstrumentExpression;
+            notes.ForEach(n => n.Instrument = Grid.Instrument);
+        }, instrumentPicker);
+
+        Grid.StatusChanged.Subscribe(message => StatusBar.Message = message, this);
     }
-
-    private double GetSustainedNoteDurationBeats(NoteExpression n)
-    {
-        double sustainedBeats = Player.CurrentBeat - n.StartBeat;
-        return Math.Max(0, sustainedBeats);
-    }
-
-    protected override CellPositionInfo GetCellPositionInfo(NoteExpression value) => new CellPositionInfo()
-    {
-        BeatStart = value.StartBeat,
-        BeatEnd = value.StartBeat + (value.DurationBeats > 0 ? value.DurationBeats : GetSustainedNoteDurationBeats(value)),
-        IsHidden = value.Velocity <= 0,
-        Row = value.MidiNote - Viewport.FirstVisibleRow,
-    };
-
-    protected override double CalculateMaxBeat() => Values.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
-
-
-    protected override RGB GetColor(NoteExpression note) => Color;
-    public override Song Compose() => new Song(Values as ListNoteSource, BeatsPerMinute);
-    protected override Viewport CreateViewport() => new MelodyComposerViewport();
 }

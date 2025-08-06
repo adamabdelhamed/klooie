@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 namespace klooie;
 public class ComposerCommand : ICommand
 {
-    protected readonly SongComposerWithTrackHeaders Composer;
+    protected readonly SongComposer Composer;
 
     public string Description { get; }
 
-    public ComposerCommand(SongComposerWithTrackHeaders composer, string desc)
+    public ComposerCommand(SongComposer composer, string desc)
     {
         this.Composer = composer;
         this.Description = desc;
@@ -19,11 +19,11 @@ public class ComposerCommand : ICommand
 
     public virtual void Do()
     {
-        Composer.Composer.RefreshVisibleCells();
+        Composer.Grid.RefreshVisibleCells();
     }
 
     public virtual void Undo()
     {
-        Composer.Composer.RefreshVisibleCells();
+        Composer.Grid.RefreshVisibleCells();
     }
 }

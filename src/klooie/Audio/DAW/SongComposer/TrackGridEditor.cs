@@ -4,10 +4,10 @@ using System.Linq;
 
 namespace klooie;
 
-public class SongComposerEditor
+public class TrackGridEditor
 {
-    public required SongComposer Composer { get; init; }
-
+    public required SongComposer Composer2 { get; init; }
+    public TrackGrid Composer => Composer2.Grid;
     // The clipboard stores MelodyClip references (deep copy logic below)
     private readonly List<MelodyClip> clipboard = new();
 
@@ -16,7 +16,7 @@ public class SongComposerEditor
 
     private CommandStack CommandStack { get; init; }
 
-    public SongComposerEditor(CommandStack commandStack)
+    public TrackGridEditor(CommandStack commandStack)
     {
         this.CommandStack = commandStack;
     }
@@ -96,7 +96,7 @@ public class SongComposerEditor
     {
         if (clipboard.Count == 0) return true;
         // Paste into current track at current playhead, offset by the first pasted clip's start
-        int targetTrack = Composer.SelectedTrackIndex;
+        int targetTrack = Composer2.TrackHeaders.SelectedTrackIndex;
         if (targetTrack < 0 || targetTrack >= Composer.Tracks.Count) targetTrack = 0;
 
         double pasteBeat = Composer.Player.CurrentBeat;
@@ -176,7 +176,7 @@ public class SongComposerEditor
     {
         if (Composer.SelectedValues.Count == 0) return true;
 
-        int targetTrack = Composer.SelectedTrackIndex;
+        int targetTrack = Composer2.TrackHeaders.SelectedTrackIndex;
         if (targetTrack < 0 || targetTrack >= Composer.Tracks.Count) targetTrack = 0;
 
         var duplicates = new List<MelodyClip>();

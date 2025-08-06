@@ -4,9 +4,9 @@ using System.Linq;
 
 namespace klooie;
 
-public class MelodyComposerEditor
+public class MidiGridEditor
 {
-    public required MelodyComposer Composer { get; init; }
+    public required MidiGrid Composer { get; init; }
     private readonly List<NoteExpression> clipboard = new();
 
     private ConsoleControl? addNotePreview;
@@ -14,7 +14,7 @@ public class MelodyComposerEditor
 
     private CommandStack CommandStack { get; init; }
 
-    public MelodyComposerEditor(CommandStack commandStack)
+    public MidiGridEditor(CommandStack commandStack)
     {
         this.CommandStack = commandStack;
     }

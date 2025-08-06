@@ -11,7 +11,7 @@ public class DeleteNoteCommand : TimelineCommand
     private readonly NoteExpression note;
     public string Description { get; }
 
-    public DeleteNoteCommand(MelodyComposer grid, NoteExpression note) : base(grid, "Delete Note")
+    public DeleteNoteCommand(MidiGrid grid, NoteExpression note) : base(grid, "Delete Note")
     {
         this.note = note;
     }

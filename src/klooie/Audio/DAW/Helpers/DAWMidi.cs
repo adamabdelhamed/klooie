@@ -12,11 +12,11 @@ public class DAWMidi : Recyclable
     private IMidiProvider midiImpl;
     private MidiNoteOnOffDetector noteDetector;
     private Dictionary<int, SustainedNoteTracker> noteTrackers = new Dictionary<int, SustainedNoteTracker>();
-    private PianoWithTimeline pianoWithTimeline;
+    private MelodyComposer pianoWithTimeline;
     private DAWMidi() { }
     private static LazyPool<DAWMidi> lazyPool = new(() => new DAWMidi());
 
-    public static DAWMidi Create(IMidiProvider midiImpl, PianoWithTimeline pianoWithTimeline)
+    public static DAWMidi Create(IMidiProvider midiImpl, MelodyComposer pianoWithTimeline)
     {
         var instance = lazyPool.Value.Rent();
         instance.pianoWithTimeline = pianoWithTimeline ?? throw new ArgumentNullException(nameof(pianoWithTimeline));
@@ -44,14 +44,14 @@ public class DAWMidi : Recyclable
     {
         if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
 
-        var noteExpression = NoteExpression.Create(ev.NoteNumber, pianoWithTimeline.Timeline.Player.CurrentBeat, -1, ev.Velocity, pianoWithTimeline.Timeline.Instrument);
+        var noteExpression = NoteExpression.Create(ev.NoteNumber, pianoWithTimeline.Grid.Player.CurrentBeat, -1, ev.Velocity, pianoWithTimeline.Grid.Instrument);
         var voices = ConsoleApp.Current.Sound.PlaySustainedNote(noteExpression);
         if (voices == null) return;
 
-        pianoWithTimeline.Timeline.Player.StopAtEnd = false;
-        pianoWithTimeline.Timeline.Player.Play();
-        pianoWithTimeline.Timeline.Values.Add(noteExpression);
-        pianoWithTimeline.Timeline.RefreshVisibleCells();
+        pianoWithTimeline.Grid.Player.StopAtEnd = false;
+        pianoWithTimeline.Grid.Player.Play();
+        pianoWithTimeline.Grid.Values.Add(noteExpression);
+        pianoWithTimeline.Grid.RefreshVisibleCells();
         noteTrackers[ev.NoteNumber] = SustainedNoteTracker.Create(noteExpression, voices);
     }
 
@@ -59,7 +59,7 @@ public class DAWMidi : Recyclable
     {
         if (!noteTrackers.TryGetValue(noteNumber, out var tracker)) return;
 
-        double playheadBeat = pianoWithTimeline.Timeline.Player.CurrentBeat;
+        double playheadBeat = pianoWithTimeline.Grid.Player.CurrentBeat;
 
         // Snap the start and end beats to the desired grid
         double snappedStart = SnapToGrid(tracker.Note.StartBeat);
@@ -67,13 +67,13 @@ public class DAWMidi : Recyclable
 
         // If snappedEnd is accidentally less than snappedStart (possible with fast playing), set minimum length
         if (snappedEnd <= snappedStart)
-            snappedEnd = snappedStart + pianoWithTimeline.Timeline.BeatsPerColumn;
+            snappedEnd = snappedStart + pianoWithTimeline.Grid.BeatsPerColumn;
 
         double duration = snappedEnd - snappedStart;
 
-        pianoWithTimeline.Timeline.Values.Remove(tracker.Note);
+        pianoWithTimeline.Grid.Values.Remove(tracker.Note);
         WorkspaceSession.Current.Commands.Execute(
-            new AddNoteCommand(pianoWithTimeline.Timeline, NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument))
+            new AddNoteCommand(pianoWithTimeline.Grid, NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument))
         );
         tracker.ReleaseNote();
         noteTrackers.Remove(noteNumber);

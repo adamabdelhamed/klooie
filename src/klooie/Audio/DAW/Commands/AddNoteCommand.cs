@@ -9,7 +9,7 @@ public class AddNoteCommand : TimelineCommand
 {
     private readonly NoteExpression note;
 
-    public AddNoteCommand(MelodyComposer timeline, NoteExpression note) : base(timeline, "Add Note") => this.note = note;
+    public AddNoteCommand(MidiGrid timeline, NoteExpression note) : base(timeline, "Add Note") => this.note = note;
     
     public override void Do()
     {

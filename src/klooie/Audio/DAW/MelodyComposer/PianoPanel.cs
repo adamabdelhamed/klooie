@@ -8,10 +8,10 @@ namespace klooie;
 public class PianoPanel : ProtectedConsolePanel
 {
     public const int KeyWidth = 11;
-    private readonly MelodyComposerViewport vp;
+    private readonly Viewport vp;
 
     // Optionally: let user customize width
-    public PianoPanel(MelodyComposerViewport viewport)
+    public PianoPanel(Viewport viewport)
     {
         vp = viewport;
         CanFocus = false;

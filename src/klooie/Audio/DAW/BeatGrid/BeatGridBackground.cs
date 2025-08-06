@@ -5,17 +5,17 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public partial class AlternatingBackgroundGrid : ProtectedConsolePanel, IObservableObject
+public class BeatGridBackground : ProtectedConsolePanel, IObservableObject
 {
-    private readonly int rowHeight;
+    private readonly Viewport viewport;
     private readonly RGB lightColor;
     private readonly RGB darkColor;
     private readonly RGB darkFocusColor;
     private Func<bool> hasFocus;
-    public partial int CurrentOffset { get; set; }
-    public AlternatingBackgroundGrid(int currentOffset, int rowHeight, RGB lightColor, RGB darkColor, RGB darkFocusColor, Func<bool> hasFocus)
+    public int CurrentOffset { get; set; }
+    public BeatGridBackground(int currentOffset, Viewport viewport, RGB lightColor, RGB darkColor, RGB darkFocusColor, Func<bool> hasFocus)
     {
-        this.rowHeight = rowHeight;
+        this.viewport = viewport;
         this.lightColor = lightColor;
         this.darkColor = darkColor;
         this.CurrentOffset = currentOffset;
@@ -27,11 +27,11 @@ public partial class AlternatingBackgroundGrid : ProtectedConsolePanel, IObserva
 
     protected override void OnPaint(ConsoleBitmap context)
     {
-        int rows = Height / rowHeight;
+        int rows = Height / viewport.RowHeightChars;
         for (int i = 0; i < rows; i++)
         {
             var bgColor = (i + CurrentOffset) % 2 == 0 ? lightColor : hasFocus() ? darkFocusColor : darkColor;
-            context.FillRect(bgColor, 0, i * rowHeight, Width, rowHeight);
+            context.FillRect(bgColor, 0, i * viewport.RowHeightChars, Width, viewport.RowHeightChars);
         }
     }
 }

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public abstract class Composer<T> : ProtectedConsolePanel
+public abstract class BeatGrid<T> : ProtectedConsolePanel
 {
     public const double MaxBeatsPerColumn = 1.0;     // each cell is 1 beat (max zoomed out)
     public const double MinBeatsPerColumn = 1.0 / 128; // each cell is 1/8 beat (max zoomed in)
@@ -15,7 +15,7 @@ public abstract class Composer<T> : ProtectedConsolePanel
 
     private double beatsPerColumn  = 1 / 8.0;
 
-    private AlternatingBackgroundGrid backgroundGrid;
+    private BeatGridBackground backgroundGrid;
 
     public static readonly RGB SelectedCellColor = RGB.Cyan;
 
@@ -27,9 +27,8 @@ public abstract class Composer<T> : ProtectedConsolePanel
     public List<T> SelectedValues { get; } = new List<T>();
     public double MaxBeat { get; private set; }
     public Viewport Viewport { get; private set; }  
-    protected abstract Viewport CreateViewport();
 
-    public ComposerPlayer<T> Player { get; }
+    public BeatGridPlayer<T> Player { get; }
 
     public double BeatsPerColumn
     {
@@ -50,24 +49,25 @@ public abstract class Composer<T> : ProtectedConsolePanel
 
     public virtual bool IsNavigating => true;
 
-    private readonly ComposerInputMode<T>[] userCyclableModes;
-    public ComposerInputMode<T> CurrentMode { get; private set; }
-    public Event<ComposerInputMode<T>> ModeChanging { get; } = Event<ComposerInputMode<T>>.Create();
+    private readonly BeatGridInputMode<T>[] userCyclableModes;
+    public BeatGridInputMode<T> CurrentMode { get; private set; }
+    public Event<BeatGridInputMode<T>> ModeChanging { get; } = Event<BeatGridInputMode<T>>.Create();
 
-    public Composer(WorkspaceSession session, List<T> values, double bpm)
+    public BeatGrid(WorkspaceSession session, List<T> values, double bpm)
     {
         this.Session = session ?? throw new ArgumentNullException(nameof(session));
+        Viewport = new Viewport();
         userCyclableModes = GetAvailableModes();
         SetMode(userCyclableModes[0]);
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
         Values = values;
         BeatsPerMinute = bpm;
-        Viewport = CreateViewport();
-        backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, Viewport.RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
+
+        backgroundGrid = ProtectedPanel.Add(new BeatGridBackground(0, Viewport, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
         Viewport.SetFirstVisibleRow(Math.Max(0, Values.Where(n => GetCellPositionInfo(n).IsHidden == false).Select(m => GetCellPositionInfo(m).Row).DefaultIfEmpty(0).Min()));
         BoundsChanged.Sync(UpdateViewportBounds, this);
-        Player = new ComposerPlayer<T>(this);
+        Player = new BeatGridPlayer<T>(this);
         Viewport.Changed.Subscribe(backgroundGrid, _ =>
         {
             UpdateAlternatingBackgroundOffset();
@@ -80,10 +80,16 @@ public abstract class Composer<T> : ProtectedConsolePanel
         KeyInputReceived.Subscribe(EnableKeyboardInput, this);
     }
 
+    protected override void OnPaint(ConsoleBitmap context)
+    {
+        base.OnPaint(context);
+        CurrentMode?.Paint(context);
+    }
+
     public void NextMode() => SetMode(userCyclableModes[(Array.IndexOf(userCyclableModes, CurrentMode) + 1) % userCyclableModes.Length]);
 
 
-    public void SetMode(ComposerInputMode<T> mode)
+    public void SetMode(BeatGridInputMode<T> mode)
     {
         if (CurrentMode == mode) return;
         CurrentMode = mode;
@@ -91,7 +97,7 @@ public abstract class Composer<T> : ProtectedConsolePanel
         CurrentMode.Enter();
     }
 
-    protected abstract ComposerInputMode<T>[] GetAvailableModes();
+    protected abstract BeatGridInputMode<T>[] GetAvailableModes();
 
     private void UpdateAlternatingBackgroundOffset() => backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.FirstVisibleRow / (double)Viewport.RowHeightChars);
 

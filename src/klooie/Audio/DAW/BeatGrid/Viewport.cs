@@ -5,10 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public abstract class Viewport
+public class Viewport
 {
-    public abstract int ColWidthChars { get; }
-    public abstract int RowHeightChars { get; }
+    public int ColWidthChars { get; set; } = 1;
+    public int RowHeightChars { get; set; } = 1;
 
     public double FirstVisibleBeat { get; private set; }
     public double BeatsOnScreen { get; private set; }
@@ -18,8 +18,6 @@ public abstract class Viewport
     public int LastVisibleRow => FirstVisibleRow + RowsOnScreen;
     public int RowsOnScreen { get; private set; }
     public Event Changed { get; private set; } = Event.Create();
-
-    protected Viewport() { }
 
     public void SetBeatsOnScreen(double beats)
     {
