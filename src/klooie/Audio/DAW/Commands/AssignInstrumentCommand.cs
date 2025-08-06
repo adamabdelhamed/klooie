@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class AssignInstrumentCommand : TimelineCommand
+public class AssignInstrumentCommand : MidiGridCommand
 {
     private readonly NoteExpression _original;
     private readonly NoteExpression _updated;

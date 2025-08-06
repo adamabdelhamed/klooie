@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class ChangeNoteCommand : TimelineCommand
+public class ChangeNoteCommand : MidiGridCommand
 {
     private readonly NoteExpression oldNote;
     private readonly NoteExpression newNote;

@@ -5,14 +5,14 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class TimelineCommand : ICommand
+public class MidiGridCommand : ICommand
 {
     protected readonly MidiGrid Timeline;
     protected readonly IReadOnlyList<NoteExpression> OldSelection;
 
     public string Description { get; }
 
-    public TimelineCommand(MidiGrid timeline, string desc)
+    public MidiGridCommand(MidiGrid timeline, string desc)
     {
         this.Timeline = timeline;
         this.OldSelection = new List<NoteExpression>(timeline.SelectedValues).AsReadOnly();

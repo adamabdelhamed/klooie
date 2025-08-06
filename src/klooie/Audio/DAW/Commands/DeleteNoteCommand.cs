@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class DeleteNoteCommand : TimelineCommand
+public class DeleteNoteCommand : MidiGridCommand
 {
 
     private readonly NoteExpression note;
