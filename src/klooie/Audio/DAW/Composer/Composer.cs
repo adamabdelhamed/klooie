@@ -51,6 +51,8 @@ public abstract class Composer<T> : ProtectedConsolePanel
 
     public double BeatsPerMinute { get; private set; }
 
+    public virtual bool IsNavigating => true;
+
     public Composer(WorkspaceSession session, List<T> values, double bpm)
     {
         this.Session = session ?? throw new ArgumentNullException(nameof(session));

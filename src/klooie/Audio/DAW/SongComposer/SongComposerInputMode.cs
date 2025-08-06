@@ -68,7 +68,7 @@ public abstract class SongComposerInputMode : IComparable<SongComposerInputMode>
             fg = PlayHeadRedColor;
         }
 
-        double relBeat = Composer.CurrentBeat - Composer.Viewport.FirstVisibleBeat;
+        double relBeat = Composer.Player.CurrentBeat - Composer.Viewport.FirstVisibleBeat;
         int x = ConsoleMath.Round(relBeat / Composer.BeatsPerColumn) * Composer<object>.ColWidthChars;
         if (x < 0 || x >= Composer.Width) return;
         for (int y = 0; y < Composer.Height; y++)

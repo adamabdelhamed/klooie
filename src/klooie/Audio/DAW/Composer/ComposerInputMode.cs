@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace klooie;
 
-public abstract class MelodyComposerInputMode : IComparable<MelodyComposerInputMode>
+public abstract class ComposerInputMode<T> : IComparable<ComposerInputMode<T>>
 {
-    public required MelodyComposer Composer { get; init; }
+    public required Composer<T> Composer { get; init; }
 
     // Pre-created foreground colors
     private static readonly RGB MainBeatColor = new RGB(40, 40, 40);
@@ -18,7 +18,7 @@ public abstract class MelodyComposerInputMode : IComparable<MelodyComposerInputM
     // One cache per bar type: background color => ConsoleString
     private static readonly Dictionary<RGB, ConsoleString> MainBeatBars = new();
     private static readonly Dictionary<RGB, ConsoleString> SubdivBars = new();
-    private static readonly Dictionary<RGB, ConsoleString> PlayHeadGreenBars = new();
+    private static readonly Dictionary<RGB, ConsoleString> PlayingBars = new();
     private static readonly Dictionary<RGB, ConsoleString> PlayHeadGrayBars = new();
     private static readonly Dictionary<RGB, ConsoleString> PlayHeadDarkRedBars = new();
     private static readonly Dictionary<RGB, ConsoleString> PlayHeadRedBars = new();
@@ -45,32 +45,26 @@ public abstract class MelodyComposerInputMode : IComparable<MelodyComposerInputM
 
     private void DrawPlayHead(ConsoleBitmap context)
     {
-        // Decide which cache/fg to use
         Dictionary<RGB, ConsoleString> barCache;
         RGB fg;
         if (Composer.Player.IsPlaying)
         {
-            barCache = PlayHeadGreenBars;
+            barCache = PlayingBars;
             fg = PlayHeadGreenColor;
         }
-        else if (Composer.CurrentMode is MelodyComposerSelectionMode)
-        {
-            barCache = PlayHeadGrayBars;
-            fg = PlayHeadGrayColor;
-        }
-        else if (Composer.CurrentMode is MelodyComposerNavigationMode)
+        else if (Composer.IsNavigating)
         {
             barCache = PlayHeadDarkRedBars;
             fg = PlayHeadDarkRedColor;
         }
-        else
+        else 
         {
-            barCache = PlayHeadRedBars;
-            fg = PlayHeadRedColor;
+            barCache = PlayHeadGrayBars;
+            fg = PlayHeadGrayColor;
         }
 
         double relBeat = Composer.Player.CurrentBeat - Composer.Viewport.FirstVisibleBeat;
-        int x = ConsoleMath.Round(relBeat / Composer.BeatsPerColumn) * MelodyComposer.ColWidthChars;
+        int x = ConsoleMath.Round(relBeat / Composer.BeatsPerColumn) * Composer<object>.ColWidthChars;
         if (x < 0 || x >= Composer.Width) return;
         for (int y = 0; y < Composer.Height; y++)
         {
@@ -83,7 +77,7 @@ public abstract class MelodyComposerInputMode : IComparable<MelodyComposerInputM
     {
         double firstBeat = Composer.Viewport.FirstVisibleBeat;
         double beatsPerCol = Composer.BeatsPerColumn;
-        int colWidth = MelodyComposer.ColWidthChars;
+        int colWidth = Composer<object>.ColWidthChars;
         int width = Composer.Width;
 
         // Subdivision logic (finest with ≥4 cells apart)
@@ -128,13 +122,12 @@ public abstract class MelodyComposerInputMode : IComparable<MelodyComposerInputM
         }
     }
 
-    // Helper to check if double is near an integer
     private static bool IsNearInteger(double val, double epsilon)
     {
         return Math.Abs(val - Math.Round(val)) < epsilon;
     }
 
-    public int CompareTo(MelodyComposerInputMode? other)
+    public int CompareTo(ComposerInputMode<T>? other)
     {
         return this.GetType().FullName == other?.GetType().FullName ? 0 : -1;
     }

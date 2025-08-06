@@ -99,7 +99,7 @@ public class SongComposerEditor
         int targetTrack = Composer.SelectedTrackIndex;
         if (targetTrack < 0 || targetTrack >= Composer.Tracks.Count) targetTrack = 0;
 
-        double pasteBeat = Composer.CurrentBeat;
+        double pasteBeat = Composer.Player.CurrentBeat;
         double offset = pasteBeat - clipboard.Min(c => c.StartBeat);
 
         var pasted = new List<MelodyClip>();

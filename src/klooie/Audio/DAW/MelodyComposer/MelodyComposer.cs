@@ -14,10 +14,12 @@ public class MelodyComposer : Composer<NoteExpression>
     public InstrumentExpression Instrument { get; set; } = new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
 
     private Dictionary<string, RGB> instrumentColorMap = new();
-    private readonly MelodyComposerInputMode[] userCyclableModes;
+    private readonly ComposerInputMode<NoteExpression>[] userCyclableModes;
 
-    public MelodyComposerInputMode CurrentMode { get; private set; }
-    public Event<MelodyComposerInputMode> ModeChanging { get; } = Event<MelodyComposerInputMode>.Create();
+    public ComposerInputMode<NoteExpression> CurrentMode { get; private set; }
+    public Event<ComposerInputMode<NoteExpression>> ModeChanging { get; } = Event<ComposerInputMode<NoteExpression>>.Create();
+
+    public override bool IsNavigating => CurrentMode is MelodyComposerNavigationMode;
 
     public MelodyComposer(WorkspaceSession session, ListNoteSource notes) : base(session, notes, notes.BeatsPerMinute)
     {
@@ -29,7 +31,7 @@ public class MelodyComposer : Composer<NoteExpression>
         Refreshed.Subscribe(Editor.PositionAddNotePreview, this);
     }
 
-    public void SetMode(MelodyComposerInputMode mode)
+    public void SetMode(ComposerInputMode<NoteExpression> mode)
     {
         if (CurrentMode == mode) return;
         CurrentMode = mode;

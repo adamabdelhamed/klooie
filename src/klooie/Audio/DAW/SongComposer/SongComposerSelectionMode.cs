@@ -105,11 +105,11 @@ public class SongComposerSelectionMode : SongComposerInputMode
             // Pick the first visible melody clip, if any, otherwise default to middle track
             var closest = Composer.Tracks
                 .SelectMany((t, ti) => t.Melodies.Select(m => (melody: m, trackIdx: ti)))
-                .OrderBy(pair => Math.Abs(pair.melody.StartBeat - Composer.CurrentBeat))
+                .OrderBy(pair => Math.Abs(pair.melody.StartBeat - Composer.Player.CurrentBeat))
                 .FirstOrDefault();
 
             int initTrack = closest.melody != null ? closest.trackIdx : trackBase;
-            selectionPreviewCursorBeatTrack = (Composer.CurrentBeat, initTrack);
+            selectionPreviewCursorBeatTrack = (Composer.Player.CurrentBeat, initTrack);
             SyncCursorToCurrentZoom();
             UpdateAnchorPreview(selectionPreviewCursor.Value);
             return;

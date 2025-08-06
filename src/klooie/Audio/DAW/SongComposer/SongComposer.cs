@@ -69,7 +69,6 @@ public partial class SongComposer : ProtectedConsolePanel
         return song;
     }
 
-    public double CurrentBeat => Player.CurrentBeat;
     public double MaxBeat { get; private set; }
 
     private Dictionary<string, RGB> trackColorMap = new();

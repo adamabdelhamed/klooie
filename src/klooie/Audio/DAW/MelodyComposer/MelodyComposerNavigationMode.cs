@@ -8,7 +8,7 @@ namespace klooie;
 /// Vertical navigation always pans without moving the playhead.
 /// Home/End jump to start or end and ensure visibility.
 /// </summary>
-public class MelodyComposerNavigationMode : MelodyComposerInputMode
+public class MelodyComposerNavigationMode : ComposerInputMode<NoteExpression>
 {
     public override void HandleKeyInput(ConsoleKeyInfo key)
     {

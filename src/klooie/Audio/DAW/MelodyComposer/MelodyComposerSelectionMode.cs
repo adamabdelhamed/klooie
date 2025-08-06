@@ -8,8 +8,9 @@ namespace klooie;
 /// TODOS: 
 /// - Selection mode should work when part of the selection is off-screen, so that notes out of theviewport can be selected. We want the user to be able to zoom in and out during selection.
 /// </summary>
-public class MelodyComposerSelectionMode : MelodyComposerInputMode
+public class MelodyComposerSelectionMode : ComposerInputMode<NoteExpression>
 {
+    public MelodyComposer MelodyComposer => this.Composer as MelodyComposer;
     public RGB SelectionModeColor { get; set; } = RGB.Blue;
     public static readonly RGB SelectedNoteColor = RGB.Cyan;
     private enum SelectionPhase { PickingAnchor, ExpandingSelection }
@@ -73,7 +74,7 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
     public override void Enter()
     {
         Composer.StatusChanged.Fire(ConsoleString.Parse("[White]Selection mode active. Use [B=Cyan][Black] arrows or WASD [D][White] to select an anchor point."));
-        Composer.Editor.ClearAddNotePreview();
+        MelodyComposer.Editor.ClearAddNotePreview();
         selectionPhase = SelectionPhase.PickingAnchor;
         selectionAnchorBeatMidi = null;
         selectionCursorBeatMidi = null;
@@ -82,7 +83,7 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
         selectionPreviewCursor = null;
         selectionPreviewCursorBeatMidi = null;
         HandleKeyInput(ConsoleKey.F5.KeyInfo());
-        Composer.ModeChanging.SubscribeOnce((m) =>
+        MelodyComposer.ModeChanging.SubscribeOnce((m) =>
         {
             selectionAnchor = null;
 
@@ -150,7 +151,7 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
         }
         else if (k.Key == ConsoleKey.Escape)
         {
-            Composer.NextMode();
+            MelodyComposer.NextMode();
             RemoveAnchorPreview();
             return;
         }
@@ -253,10 +254,10 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
             var noteSingularOrPlural = Composer.SelectedValues.Count == 1 ? "note" : "notes";
             if (canAddNote)
             {
-                Composer.Editor.BeginAddNotePreview(addStartBeat, addDuration, midi0);
+                MelodyComposer.Editor.BeginAddNotePreview(addStartBeat, addDuration, midi0);
             }
             Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedValues.Count}[White] {noteSingularOrPlural}."));
-            Composer.NextMode();
+            MelodyComposer.NextMode();
             selectionRectangle?.Dispose();
             selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;
@@ -268,7 +269,7 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
         }
         else if (k.Key == ConsoleKey.Escape)
         {
-            Composer.NextMode();
+            MelodyComposer.NextMode();
             selectionRectangle?.Dispose();
             selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;
