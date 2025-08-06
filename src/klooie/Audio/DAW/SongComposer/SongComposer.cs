@@ -7,52 +7,72 @@ using System.Text.Json.Serialization;
 
 namespace klooie;
 
-// Represents a song with multiple tracks. Each track holds melody clips.
-public partial class SongComposer : ProtectedConsolePanel
+public partial class SongComposer : Composer<MelodyClip>
 {
-    public const double MaxBeatsPerColumn = 1.0;
-    public const double MinBeatsPerColumn = 1.0 / 128;
-
-    public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
-    public SongComposerViewport Viewport { get; private init; }
-
     public List<ComposerTrack> Tracks => Session.CurrentSong.Tracks;
-
-    // Selection: selected melody clips (never notes)
-    public List<MelodyClip> SelectedMelodies { get; } = new();
-
-    // For UI management: track live MelodyCells
-    private readonly Dictionary<MelodyClip, MelodyCell> live = new();
-    private HashSet<MelodyClip> visibleNow = new HashSet<MelodyClip>();
-    private AlternatingBackgroundGrid backgroundGrid;
-
-    private Recyclable? focusLifetime;
-    public SongComposerPlayer Player { get; }
-    private double beatsPerColumn = 1 / 8.0;
-
     public SongComposerEditor Editor { get; }
-    public InstrumentExpression? Instrument { get; set; } = new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
+    public int SelectedTrackIndex { get; set; }
+    public IMidiProvider MidiProvider { get; private set; }
 
-    public double BeatsPerColumn
+    public SongComposer(WorkspaceSession session, IMidiProvider midiProvider) : base(session, session.CurrentSong.Tracks.SelectMany(t => t.Melodies).ToList(), session.CurrentSong.BeatsPerMinute)
     {
-        get => beatsPerColumn;
-        set
+        this.MidiProvider = midiProvider;
+
+        if (Tracks == null || Tracks.Count == 0)
         {
-            if (value <= 0) throw new ArgumentOutOfRangeException(nameof(BeatsPerColumn));
-            if (Math.Abs(beatsPerColumn - value) > 0.0001)
-            {
-                beatsPerColumn = value;
-                UpdateViewportBounds();
-                RefreshVisibleSet();
-            }
+            Tracks.Add(new ComposerTrack("Track 1", null));
+        }
+        Editor = new SongComposerEditor(session.Commands) { Composer = this };
+    
+    }
+
+    // Add a new track with default instrument
+    public void AddTrack(string name, InstrumentExpression? instrument = null)
+    {
+        instrument ??= new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
+        AddTrack(new ComposerTrack(name, instrument));
+    }
+
+    public void AddTrack(ComposerTrack track)
+    {
+        if (track == null) throw new ArgumentNullException(nameof(track));
+        Tracks.Add(track);
+        RefreshVisibleCells();
+    }
+
+    public void InsertTrack(int trackIndex, ComposerTrack track)
+    {
+        if (track == null) throw new ArgumentNullException(nameof(track));
+        if (trackIndex < 0 || trackIndex > Tracks.Count)
+            throw new ArgumentOutOfRangeException(nameof(trackIndex));
+        Tracks.Insert(trackIndex, track);
+        RefreshVisibleCells();
+    }
+
+    // Remove a track by index
+    public void RemoveTrack(int trackIndex)
+    {
+        if (trackIndex >= 0 && trackIndex < Tracks.Count)
+        {
+            Tracks.RemoveAt(trackIndex);
+            RefreshVisibleCells();
         }
     }
 
-    public Song Compose()
-    {
-        var notes = new ListNoteSource() { BeatsPerMinute = Tracks.First().Melodies.FirstOrDefault()?.Melody.BeatsPerMinute ?? 60 };
+    protected override ComposerInputMode<MelodyClip>[] GetAvailableModes() => [new SongComposerNavigationMode() { Composer = this }, new SongComposerSelectionMode() { Composer = this }];
 
-        for(var i = 0; i < Tracks.Count; i++)
+    protected override RGB GetColor(MelodyClip value)
+    {
+        var track = Tracks.FirstOrDefault(t => t.Melodies.Contains(value));
+        var index = track != null ? Tracks.IndexOf(track) : 0;
+        return ComposerCell<object>.GetColor(index);
+    }
+
+    public override Song Compose()
+    {
+        var notes = new ListNoteSource() { BeatsPerMinute = this.BeatsPerMinute };
+
+        for (var i = 0; i < Tracks.Count; i++)
         {
             for (int j = 0; j < Tracks[i].Melodies.Count; j++)
             {
@@ -69,284 +89,6 @@ public partial class SongComposer : ProtectedConsolePanel
         return song;
     }
 
-    public double MaxBeat { get; private set; }
-
-    private Dictionary<string, RGB> trackColorMap = new();
-
-    private readonly SongComposerInputMode[] userCyclableModes;
-    public SongComposerInputMode CurrentMode { get; private set; }
-    public Event<SongComposerInputMode> ModeChanging { get; } = Event<SongComposerInputMode>.Create();
-
-    // Which track (by index) is currently selected for editing
-    public int SelectedTrackIndex { get; set; }
-
-    public WorkspaceSession Session { get; private init; }
-
-    public IMidiProvider MidiProvider { get; private set; }
-
-    public SongComposer(WorkspaceSession session, IMidiProvider midiProvider)
-    {
-        this.Session = session;
-        this.MidiProvider = midiProvider;
-        this.userCyclableModes = [new SongComposerNavigationMode() { Composer = this }, new SongComposerSelectionMode() { Composer = this }];
-        Viewport = new SongComposerViewport();
-        Player = new SongComposerPlayer(this);
-
-        CanFocus = true;
-        ProtectedPanel.Background = new RGB(240, 240, 240);
-        BoundsChanged.Sync(UpdateViewportBounds, this);
-        Focused.Subscribe(EnableKeyboardInput, this);
-        backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, Viewport.RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
-        Viewport.Changed.Subscribe(backgroundGrid, _ =>
-        {
-            UpdateAlternatingBackgroundOffset();
-            RefreshVisibleSet();
-        }, backgroundGrid);
-        ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
-
-        // Load provided tracks or make a blank one if none given
-        if (Tracks == null || Tracks.Count == 0)
-        {
-            Tracks.Add(new ComposerTrack("Track 1", Instrument!));
-        }
-
-        BuildTrackColorMap();
-        UpdateMaxBeat();
-
-        Player.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);
-        CurrentMode = this.userCyclableModes[0];
-        Editor = new SongComposerEditor(session.Commands) { Composer = this };
-        Player.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
-
-        RefreshVisibleSet();
-    }
-
-    // Add a new track with default instrument
-    public void AddTrack(string name, InstrumentExpression? instrument = null)
-    {
-        instrument ??= new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
-        AddTrack(new ComposerTrack(name, instrument));
-    }
-
-    public void AddTrack(ComposerTrack track)
-    {
-        if (track == null) throw new ArgumentNullException(nameof(track));
-        Tracks.Add(track);
-        BuildTrackColorMap();
-        UpdateMaxBeat();
-        RefreshVisibleSet();
-    }
-
-    public void InsertTrack(int trackIndex, ComposerTrack track)
-    {
-        if (track == null) throw new ArgumentNullException(nameof(track));
-        if (trackIndex < 0 || trackIndex > Tracks.Count)
-            throw new ArgumentOutOfRangeException(nameof(trackIndex));
-        Tracks.Insert(trackIndex, track);
-        BuildTrackColorMap();
-        UpdateMaxBeat();
-        RefreshVisibleSet();
-    }
-
-    // Remove a track by index
-    public void RemoveTrack(int trackIndex)
-    {
-        if (trackIndex >= 0 && trackIndex < Tracks.Count)
-        {
-            Tracks.RemoveAt(trackIndex);
-            BuildTrackColorMap();
-            UpdateMaxBeat();
-            RefreshVisibleSet();
-        }
-    }
-
-    private void BuildTrackColorMap()
-    {
-        for (int i = 0; i < Tracks.Count; i++)
-        {
-            trackColorMap[Tracks[i].Name] = GetTrackColor(i);
-        }
-    }
-
-    private static readonly RGB[] BaseTrackColors = new[]
-    {
-        new RGB(220, 60, 60),
-        new RGB(60, 180, 90),
-        new RGB(65, 105, 225),
-        new RGB(240, 200, 60),
-        new RGB(200, 60, 200),
-        new RGB(50, 220, 210),
-        new RGB(245, 140, 30),
-    };
-
-    private static readonly float[] PaleFractions = new[]
-    {
-        0.0f,
-        0.35f,
-        0.7f,
-    };
-
-    private RGB GetTrackColor(int index)
-    {
-        int baseCount = BaseTrackColors.Length;
-        int shade = index / baseCount;
-        int colorIdx = index % baseCount;
-        float pale = PaleFractions[Math.Min(shade, PaleFractions.Length - 1)];
-        RGB color = BaseTrackColors[colorIdx];
-        return color.ToOther(RGB.White, pale);
-    }
-
-    private void UpdateMaxBeat()
-    {
-        MaxBeat = Tracks
-            .SelectMany(t => t.Melodies.Select(m => m.StartBeat + m.DurationBeats))
-            .DefaultIfEmpty(0)
-            .Max();
-    }
-
-    public void SetMode(SongComposerInputMode mode)
-    {
-        if (CurrentMode == mode) return;
-        CurrentMode = mode;
-        ModeChanging.Fire(mode);
-        CurrentMode.Enter();
-    }
-
-    public void NextMode()
-    {
-        int i = Array.IndexOf(userCyclableModes, CurrentMode);
-        SetMode(userCyclableModes[(i + 1) % userCyclableModes.Length]);
-    }
-
-    public void StopPlayback() => Player.Stop();
-
-    protected override void OnPaint(ConsoleBitmap context)
-    {
-        base.OnPaint(context);
-        CurrentMode?.Paint(context);
-    }
-
-
-    private void UpdateAlternatingBackgroundOffset()
-    {
-        backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.RowsOnScreen / (double)Viewport.RowHeightChars);
-    }
-
-    private void UpdateViewportBounds()
-    {
-        Viewport.SetBeatsOnScreen(Math.Max(1, Width * BeatsPerColumn / Viewport.ColWidthChars));
-        Viewport.SetRowsOnScreen(Math.Max(1, Height / Viewport.RowHeightChars));
-    }
-
-    public void EnableKeyboardInput()
-    {
-        focusLifetime?.TryDispose();
-        focusLifetime = DefaultRecyclablePool.Instance.Rent();
-        Unfocused.SubscribeOnce(() => focusLifetime.TryDispose());
-        ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
-        {
-            if (k.Key == ConsoleKey.Spacebar)
-            {
-                if (Player.IsPlaying) Player.Pause();
-                else Player.Play();
-            }
-            else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add)
-            {
-                if (BeatsPerColumn / 2 >= MinBeatsPerColumn)
-                    BeatsPerColumn /= 2;
-            }
-            else if (k.Key == ConsoleKey.OemMinus || k.Key == ConsoleKey.Subtract)
-            {
-                if (BeatsPerColumn * 2 <= MaxBeatsPerColumn)
-                    BeatsPerColumn *= 2;
-            }
-            else if (k.Key == ConsoleKey.M)
-            {
-                NextMode();
-            }
-            else if (k.Key == ConsoleKey.UpArrow)
-            {
-                SelectedTrackIndex = Math.Max(0, SelectedTrackIndex - 1);
-            }
-            else if (k.Key == ConsoleKey.DownArrow)
-            {
-                SelectedTrackIndex = Math.Min(Tracks.Count - 1, SelectedTrackIndex + 1);
-            }
-            else if (!Editor.HandleKeyInput(k))
-            {
-                CurrentMode.HandleKeyInput(k);
-            }
-        }, focusLifetime);
-    }
-
-    // Shows only melody clips in visible range, for all tracks.
-    public void RefreshVisibleSet()
-    {
-        visibleNow.Clear();
-
-        int trackTop = Viewport.FirstVisibleRow;
-        int trackBot = trackTop + Viewport.RowsOnScreen - 1;
-
-        for (int t = 0; t < Tracks.Count; t++)
-        {
-            if (t < trackTop || t > trackBot) continue;
-            var track = Tracks[t];
-
-            foreach (var melody in track.Melodies)
-            {
-                double melodyStart = melody.StartBeat;
-                double melodyEnd = melody.StartBeat + melody.DurationBeats;
-
-                bool isVisible = (melodyEnd >= Viewport.FirstVisibleBeat) && (melodyStart <= Viewport.LastVisibleBeat);
-                if (!isVisible) continue;
-                visibleNow.Add(melody);
-
-                if (!live.TryGetValue(melody, out MelodyCell cell))
-                {
-                    cell = ProtectedPanel.Add(new MelodyCell(melody) { ZIndex = 1 });
-                    live[melody] = cell;
-                }
-
-                // Determine color (by track, by selection, etc)
-                cell.Background = SelectedMelodies.Contains(melody)
-                    ? SongComposerSelectionMode.SelectedMelodyColor
-                    : trackColorMap.TryGetValue(track.Name, out var color) ? color
-                    : RGB.Orange;
-
-                // Position & size cell
-                PositionCell(cell, t);
-            }
-        }
-
-        // Remove cells that are no longer visible
-        foreach (var kvp in live.ToArray())
-        {
-            if (!visibleNow.Contains(kvp.Key))
-            {
-                kvp.Value.Dispose();
-                live.Remove(kvp.Key);
-            }
-        }
-
-        Editor.PositionAddClipPreview();
-    }
-
-    private void PositionCell(MelodyCell cell, int trackIndex)
-    {
-        double beatsFromLeft = cell.Melody.StartBeat - Viewport.FirstVisibleBeat;
-
-        int x = ConsoleMath.Round((cell.Melody.StartBeat - Viewport.FirstVisibleBeat) / BeatsPerColumn) * Viewport.ColWidthChars;
-        int y = (trackIndex - Viewport.FirstVisibleRow) * Viewport.RowHeightChars;
-
-        double durBeats = cell.Melody.DurationBeats;
-        int w = (int)Math.Max(1, ConsoleMath.Round(durBeats / BeatsPerColumn) * Viewport.ColWidthChars);
-        int h = Viewport.RowHeightChars;
-
-        cell.MoveTo(x, y);
-        cell.ResizeTo(w, h);
-    }
-
-    internal ConsoleControl AddPreviewControl() => ProtectedPanel.Add(new ConsoleControl());
 
     public void OpenMelody(MelodyClip melody)
     {
@@ -355,6 +97,7 @@ public partial class SongComposer : ProtectedConsolePanel
         var panel = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel() { FocusStackDepth = newFocusDepth }).Fill();
         var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
         var pianoWithTimeline = panel.Add(new PianoWithTimeline(WorkspaceSession.Current, melody.Melody, commandBar)).Fill();
+        pianoWithTimeline.Timeline.Color = GetColor(melody);
         pianoWithTimeline.Timeline.Focus();
         var midi = DAWMidi.Create(MidiProvider, pianoWithTimeline);
         commandBar.Add(midi.CreateMidiProductDropdown());
@@ -375,8 +118,38 @@ public partial class SongComposer : ProtectedConsolePanel
             {
                 Tracks[SelectedTrackIndex].Melodies.Remove(melody);
             }
-            RefreshVisibleSet();
+            RefreshVisibleCells();
         });
+    }
+
+    protected override Viewport CreateViewport() => new SongComposerViewport();
+    protected override CellPositionInfo GetCellPositionInfo(MelodyClip value) => new CellPositionInfo() {  BeatStart = value.StartBeat, BeatEnd = value.StartBeat + value.DurationBeats, IsHidden = false, Row = Tracks.IndexOf(Tracks.FirstOrDefault(t => t.Melodies.Contains(value))), };
+    protected override double CalculateMaxBeat() => Tracks.SelectMany(t => t.Melodies.Select(m => m.StartBeat + m.DurationBeats)).DefaultIfEmpty(0).Max();
+
+    protected override void OnPaint(ConsoleBitmap context)
+    {
+        base.OnPaint(context);
+        CurrentMode?.Paint(context);
+    }
+
+    public override void HandleKeyInput(ConsoleKeyInfo k)
+    { 
+        if (k.Key == ConsoleKey.M)
+        {
+            NextMode();
+        }
+        else if (k.Key == ConsoleKey.UpArrow)
+        {
+            SelectedTrackIndex = Math.Max(0, SelectedTrackIndex - 1);
+        }
+        else if (k.Key == ConsoleKey.DownArrow)
+        {
+            SelectedTrackIndex = Math.Min(Tracks.Count - 1, SelectedTrackIndex + 1);
+        }
+        else if (!Editor.HandleKeyInput(k))
+        {
+            CurrentMode.HandleKeyInput(k);
+        }
     }
 }
 
@@ -415,23 +188,3 @@ public class ComposerTrack
     }
 }
 
-// For UI: Represents a cell for a melody clip (implement as needed)
-public class MelodyCell : ConsoleControl
-{
-    public MelodyClip Melody { get; }
- 
-    public MelodyCell(MelodyClip melody)
-    {
-        CanFocus = false;
-        Melody = melody;
-    }
-
-    protected override void OnPaint(ConsoleBitmap context)
-    {
-        base.OnPaint(context);
-
-        var referenceBackgroundColor = context.GetPixel(0, 0).BackgroundColor;
-        var borderForeground = referenceBackgroundColor.ToOther(RGB.Black,.3f);
-        context.DrawRect(new ConsoleCharacter('#', borderForeground, referenceBackgroundColor), 0, 0, Width, Height);
-    }
-}

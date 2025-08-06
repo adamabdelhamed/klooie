@@ -35,7 +35,7 @@ public class MelodyComposerSelectionMode : ComposerInputMode<NoteExpression>
         base.Paint(context);
         (int X, int Y)? cursor = selectionPhase == SelectionPhase.PickingAnchor ? selectionPreviewCursor : selectionCursor;
 
-        int x = cursor.Value.X * MelodyComposer.ColWidthChars;
+        int x = cursor.Value.X * Composer.Viewport.ColWidthChars;
         if (cursor.HasValue && (x >= 0 && x < Composer.Width))
         {
             for (int y = 0; y < Composer.Height; y++)
@@ -164,8 +164,8 @@ public class MelodyComposerSelectionMode : ComposerInputMode<NoteExpression>
 
     private void UpdateAnchorPreview((int X, int Y) anchor)
     {
-        int left = anchor.X * MelodyComposer.ColWidthChars;
-        int top = anchor.Y * MelodyComposer.RowHeightChars;
+        int left = anchor.X * Composer.Viewport.ColWidthChars;
+        int top = anchor.Y * Composer.Viewport.RowHeightChars;
         if (anchorPreviewControl == null)
         {
             anchorPreviewControl = Composer.AddPreviewControl();
@@ -174,7 +174,7 @@ public class MelodyComposerSelectionMode : ComposerInputMode<NoteExpression>
             anchorPreviewControl.ZIndex = 1; // Above selection rectangle
         }
         anchorPreviewControl.MoveTo(left, top);
-        anchorPreviewControl.ResizeTo(MelodyComposer.ColWidthChars, MelodyComposer.RowHeightChars);
+        anchorPreviewControl.ResizeTo(Composer.Viewport.ColWidthChars, Composer.Viewport.RowHeightChars);
     }
 
     private void RemoveAnchorPreview()
@@ -293,10 +293,10 @@ public class MelodyComposerSelectionMode : ComposerInputMode<NoteExpression>
         var (ax, ay) = selectionAnchor.Value;
         var (cx, cy) = selectionCursor.Value;
 
-        int left = Math.Min(ax, cx) * MelodyComposer.ColWidthChars;
-        int top = Math.Min(ay, cy) * MelodyComposer.RowHeightChars;
-        int width = (Math.Abs(ax - cx) + 1) * MelodyComposer.ColWidthChars;
-        int height = (Math.Abs(ay - cy) + 1) * MelodyComposer.RowHeightChars;
+        int left = Math.Min(ax, cx) * Composer.Viewport.ColWidthChars;
+        int top = Math.Min(ay, cy) * Composer.Viewport.RowHeightChars;
+        int width = (Math.Abs(ax - cx) + 1) * Composer.Viewport.ColWidthChars;
+        int height = (Math.Abs(ay - cy) + 1) * Composer.Viewport.RowHeightChars;
 
         if (selectionRectangle == null)
         {
@@ -337,8 +337,8 @@ public class MelodyComposerSelectionMode : ComposerInputMode<NoteExpression>
     {
         int x = (int)Math.Round((beat - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn);
         int y = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - midi;
-        x = Math.Max(0, Math.Min(Composer.Width / MelodyComposer.ColWidthChars - 1, x));
-        y = Math.Max(0, Math.Min(Composer.Height / MelodyComposer.RowHeightChars - 1, y));
+        x = Math.Max(0, Math.Min(Composer.Width / Composer.Viewport.ColWidthChars - 1, x));
+        y = Math.Max(0, Math.Min(Composer.Height / Composer.Viewport.RowHeightChars - 1, y));
         return (x, y);
     }
 

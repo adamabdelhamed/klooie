@@ -19,11 +19,11 @@ public class ComposerCommand : ICommand
 
     public virtual void Do()
     {
-        Composer.Composer.RefreshVisibleSet();
+        Composer.Composer.RefreshVisibleCells();
     }
 
     public virtual void Undo()
     {
-        Composer.Composer.RefreshVisibleSet();
+        Composer.Composer.RefreshVisibleCells();
     }
 }

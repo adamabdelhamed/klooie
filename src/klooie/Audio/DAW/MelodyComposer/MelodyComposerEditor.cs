@@ -244,10 +244,10 @@ public class MelodyComposerEditor
     {
         if (pendingAddNote == null || addNotePreview == null) return;
         var (start, duration, midi) = pendingAddNote.Value;
-        int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * MelodyComposer.ColWidthChars;
-        int y = (Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - midi) * MelodyComposer.RowHeightChars;
-        int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * MelodyComposer.ColWidthChars);
-        int h = MelodyComposer.RowHeightChars;
+        int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * Composer.Viewport.ColWidthChars;
+        int y = (Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - midi) * Composer.Viewport.RowHeightChars;
+        int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * Composer.Viewport.ColWidthChars);
+        int h = Composer.Viewport.RowHeightChars;
         addNotePreview.MoveTo(x, y);
         addNotePreview.ResizeTo(w, h);
     }

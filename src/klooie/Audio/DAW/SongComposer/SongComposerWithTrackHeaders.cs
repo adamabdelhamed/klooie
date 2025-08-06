@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace klooie;
@@ -11,7 +12,7 @@ public class SongComposerWithTrackHeaders : ProtectedConsolePanel
     public StatusBar StatusBar { get; private init; }
 
     // Expose player if desired
-    public SongComposerPlayer Player => Composer.Player;
+    public ComposerPlayer<MelodyClip> Player => Composer.Player;
     public IMidiProvider MidiProvider { get; private set; }
 
     public SongComposerWithTrackHeaders(WorkspaceSession session, ConsoleControl commandBar, IMidiProvider midiProvider)
@@ -114,7 +115,7 @@ public class TrackHeadersPanel : ConsoleControl
             var color = selected ? RGB.Black : GetTrackColor(i);
             var label = selected ? $"> {Tracks[i].Name}" : $"  {Tracks[i].Name}";
             context.DrawString(label, color, selected ? HasFocus ? RGB.Cyan : RGB.DarkGray : RGB.Black, 1, y);
-            y += Composer<object>.RowHeightChars; // keep in sync with composer track height
+            y += composer.Composer.Viewport.RowHeightChars; // keep in sync with composer track height
         }
 
         // Draw "+" add button at the bottom

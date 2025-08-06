@@ -4,8 +4,10 @@ using System.Linq;
 
 namespace klooie;
 
-public class SongComposerSelectionMode : SongComposerInputMode
+public class SongComposerSelectionMode : ComposerInputMode<MelodyClip>
 {
+    public SongComposer SongComposer => Composer as SongComposer
+    ?? throw new InvalidOperationException("This mode can only be used with a SongComposer instance.");
     public RGB SelectionModeColor { get; set; } = RGB.Blue;
     public static readonly RGB SelectedMelodyColor = RGB.Cyan;
 
@@ -32,7 +34,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
 
         if (cursor.HasValue)
         {
-            int x = cursor.Value.X * Composer<object>.ColWidthChars;
+            int x = cursor.Value.X * Composer.Viewport.ColWidthChars;
             int y = cursor.Value.Y * Composer.Viewport.RowHeightChars;
             if (x >= 0 && x < Composer.Width)
             {
@@ -85,7 +87,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
         selectionPreviewCursor = null;
         selectionPreviewCursorBeatTrack = null;
         HandleKeyInput(ConsoleKey.F5.KeyInfo());
-        Composer.ModeChanging.SubscribeOnce((m) =>
+        SongComposer.ModeChanging.SubscribeOnce((m) =>
         {
             selectionAnchor = null;
             selectionRectangle?.TryDispose();
@@ -103,7 +105,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
             int trackBase = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen / 2;
 
             // Pick the first visible melody clip, if any, otherwise default to middle track
-            var closest = Composer.Tracks
+            var closest = SongComposer.Tracks
                 .SelectMany((t, ti) => t.Melodies.Select(m => (melody: m, trackIdx: ti)))
                 .OrderBy(pair => Math.Abs(pair.melody.StartBeat - Composer.Player.CurrentBeat))
                 .FirstOrDefault();
@@ -135,7 +137,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
         }
         else if (IsDown(k))
         {
-            selectionPreviewCursorBeatTrack = (beat, Math.Min(Composer.Tracks.Count - 1, track + 1));
+            selectionPreviewCursorBeatTrack = (beat, Math.Min(SongComposer.Tracks.Count - 1, track + 1));
             handled = true;
         }
         else if (k.Key == ConsoleKey.Enter)
@@ -151,7 +153,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
         }
         else if (k.Key == ConsoleKey.Escape)
         {
-            Composer.NextMode();
+            SongComposer.NextMode();
             RemoveAnchorPreview();
             return;
         }
@@ -164,7 +166,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
 
     private void UpdateAnchorPreview((int X, int Y) anchor)
     {
-        int left = anchor.X * Composer<object>.ColWidthChars;
+        int left = anchor.X * Composer.Viewport.ColWidthChars;
         int top = anchor.Y * Composer.Viewport.RowHeightChars;
         if (anchorPreviewControl == null)
         {
@@ -209,13 +211,13 @@ public class SongComposerSelectionMode : SongComposerInputMode
         }
         else if (IsDown(k))
         {
-            selectionCursorBeatTrack = (beat, Math.Min(Composer.Tracks.Count - 1, track + 1));
+            selectionCursorBeatTrack = (beat, Math.Min(SongComposer.Tracks.Count - 1, track + 1));
             handled = true;
         }
         else if (k.Key == ConsoleKey.Enter)
         {
             if (selectionAnchor == null || selectionCursor == null) return;
-            Composer.SelectedMelodies.Clear();
+            Composer.SelectedValues.Clear();
 
             var (ax, ay) = selectionAnchor.Value;
             var (cx, cy) = selectionCursor.Value;
@@ -231,29 +233,28 @@ public class SongComposerSelectionMode : SongComposerInputMode
             if (track0 > track1) (track0, track1) = (track1, track0);
 
             // Select melodies that overlap with the selection region
-            for (int t = track0; t <= track1 && t < Composer.Tracks.Count; t++)
+            for (int t = track0; t <= track1 && t < SongComposer.Tracks.Count; t++)
             {
-                foreach (var melody in Composer.Tracks[t].Melodies)
+                foreach (var melody in SongComposer.Tracks[t].Melodies)
                 {
                     double melodyStart = melody.StartBeat;
                     double melodyEnd = melody.StartBeat + melody.DurationBeats;
                     bool overlaps = (melodyEnd >= beat0) && (melodyStart <= beat1);
                     if (overlaps)
-                        Composer.SelectedMelodies.Add(melody);
+                        Composer.SelectedValues.Add(melody);
                 }
             }
 
             // Optionally, colorize MelodyCells for feedback
-            var selectedSet = new HashSet<MelodyClip>(Composer.SelectedMelodies);
-            foreach (var cell in Composer.Descendents.OfType<MelodyCell>())
+            var selectedSet = new HashSet<MelodyClip>(Composer.SelectedValues);
+            foreach (var cell in Composer.Descendents.OfType<ComposerCell<MelodyClip>>())
             {
-                if (selectedSet.Contains(cell.Melody))
-                    cell.Background = SelectedMelodyColor;
+                if (selectedSet.Contains(cell.Value)) cell.Background = SelectedMelodyColor;
             }
 
-            var plural = Composer.SelectedMelodies.Count == 1 ? "melody" : "melodies";
-            Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedMelodies.Count}[White] {plural}."));
-            Composer.NextMode();
+            var plural = Composer.SelectedValues.Count == 1 ? "melody" : "melodies";
+            Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedValues.Count}[White] {plural}."));
+            SongComposer.NextMode();
             selectionRectangle?.Dispose();
             selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;
@@ -265,7 +266,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
         }
         else if (k.Key == ConsoleKey.Escape)
         {
-            Composer.NextMode();
+            SongComposer.NextMode();
             selectionRectangle?.Dispose();
             selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;

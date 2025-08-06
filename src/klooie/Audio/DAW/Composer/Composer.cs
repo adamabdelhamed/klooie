@@ -7,9 +7,6 @@ using System.Threading.Tasks;
 namespace klooie;
 public abstract class Composer<T> : ProtectedConsolePanel
 {
-    public const int ColWidthChars = 1;
-    public const int RowHeightChars = 1;
-
     public const double MaxBeatsPerColumn = 1.0;     // each cell is 1 beat (max zoomed out)
     public const double MinBeatsPerColumn = 1.0 / 128; // each cell is 1/8 beat (max zoomed in)
 
@@ -53,15 +50,21 @@ public abstract class Composer<T> : ProtectedConsolePanel
 
     public virtual bool IsNavigating => true;
 
+    private readonly ComposerInputMode<T>[] userCyclableModes;
+    public ComposerInputMode<T> CurrentMode { get; private set; }
+    public Event<ComposerInputMode<T>> ModeChanging { get; } = Event<ComposerInputMode<T>>.Create();
+
     public Composer(WorkspaceSession session, List<T> values, double bpm)
     {
         this.Session = session ?? throw new ArgumentNullException(nameof(session));
+        userCyclableModes = GetAvailableModes();
+        SetMode(userCyclableModes[0]);
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
         Values = values;
         BeatsPerMinute = bpm;
         Viewport = CreateViewport();
-        backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
+        backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, Viewport.RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
         Viewport.SetFirstVisibleRow(Math.Max(0, Values.Where(n => GetCellPositionInfo(n).IsHidden == false).Select(m => GetCellPositionInfo(m).Row).DefaultIfEmpty(0).Min()));
         BoundsChanged.Sync(UpdateViewportBounds, this);
         Player = new ComposerPlayer<T>(this);
@@ -77,7 +80,20 @@ public abstract class Composer<T> : ProtectedConsolePanel
         KeyInputReceived.Subscribe(EnableKeyboardInput, this);
     }
 
-    private void UpdateAlternatingBackgroundOffset() => backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.FirstVisibleRow / (double)RowHeightChars);
+    public void NextMode() => SetMode(userCyclableModes[(Array.IndexOf(userCyclableModes, CurrentMode) + 1) % userCyclableModes.Length]);
+
+
+    public void SetMode(ComposerInputMode<T> mode)
+    {
+        if (CurrentMode == mode) return;
+        CurrentMode = mode;
+        ModeChanging.Fire(mode);
+        CurrentMode.Enter();
+    }
+
+    protected abstract ComposerInputMode<T>[] GetAvailableModes();
+
+    private void UpdateAlternatingBackgroundOffset() => backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.FirstVisibleRow / (double)Viewport.RowHeightChars);
 
     private void UpdateViewportBounds()
     {
@@ -167,7 +183,7 @@ public abstract class Composer<T> : ProtectedConsolePanel
         double beatsFromLeft = positionInfo.BeatStart - Viewport.FirstVisibleBeat;
 
         int x = ConsoleMath.Round((positionInfo.BeatStart - Viewport.FirstVisibleBeat) / BeatsPerColumn) * Viewport.ColWidthChars;
-        int y = (Viewport.FirstVisibleRow + Viewport.RowsOnScreen - 1 - positionInfo.Row) * Viewport.RowHeightChars;
+        int y = (positionInfo.Row - Viewport.FirstVisibleRow) * Viewport.RowHeightChars;
 
         var duration = positionInfo.BeatEnd - positionInfo.BeatStart;
         int w = (int)Math.Max(1, ConsoleMath.Round(duration / BeatsPerColumn) * Viewport.ColWidthChars);
@@ -196,5 +212,43 @@ public class ComposerCell<T> : ConsoleControl
         Foreground = RGB.Black;
     }
 
-    protected override void OnPaint(ConsoleBitmap ctx) => ctx.FillRect(Background, 0, 0, Width, Height);
+    protected override void OnPaint(ConsoleBitmap ctx)
+    {
+        base.OnPaint(ctx);
+
+        if (typeof(T) == typeof(MelodyClip))
+        {
+            ctx.DrawRect(new ConsoleCharacter('#', Background.Darker, Background),0,0, Width, Height);
+        }
+
+    }
+
+
+    private static readonly RGB[] BaseTrackColors = new[]
+    {
+        new RGB(220, 60, 60),
+        new RGB(60, 180, 90),
+        new RGB(65, 105, 225),
+        new RGB(240, 200, 60),
+        new RGB(200, 60, 200),
+        new RGB(50, 220, 210),
+        new RGB(245, 140, 30),
+    };
+
+    private static readonly float[] PaleFractions = new[]
+    {
+        0.0f,
+        0.35f,
+        0.7f,
+    };
+
+    public static RGB GetColor(int index)
+    {
+        int baseCount = BaseTrackColors.Length;
+        int shade = index / baseCount;
+        int colorIdx = index % baseCount;
+        float pale = PaleFractions[Math.Min(shade, PaleFractions.Length - 1)];
+        RGB color = BaseTrackColors[colorIdx];
+        return color.ToOther(RGB.White, pale);
+    }
 }

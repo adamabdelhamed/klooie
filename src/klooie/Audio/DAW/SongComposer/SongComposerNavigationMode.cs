@@ -6,8 +6,11 @@ namespace klooie;
 /// Navigation for the Composer grid. Arrow keys move the playhead (when stopped) or pan the viewport (when playing).
 /// Vertical navigation pans tracks. Home/End jump to song start/end.
 /// </summary>
-public class SongComposerNavigationMode : SongComposerInputMode
+public class SongComposerNavigationMode : ComposerInputMode<MelodyClip>
 {
+    public SongComposer SongComposer => Composer as SongComposer
+        ?? throw new InvalidOperationException("This mode can only be used with a SongComposer instance.");
+
     public override void HandleKeyInput(ConsoleKeyInfo key)
     {
         if (key.Modifiers != 0) return; // ignore any modifiers
@@ -44,21 +47,21 @@ public class SongComposerNavigationMode : SongComposerInputMode
         }
         else if (k == ConsoleKey.UpArrow || k == ConsoleKey.W)
         {
-            view.ScrollRows(-1, Composer.Tracks.Count);
+            view.ScrollRows(-1, SongComposer.Tracks.Count);
         }
         else if (k == ConsoleKey.DownArrow || k == ConsoleKey.S)
         {
-            view.ScrollRows(1, Composer.Tracks.Count);
+            view.ScrollRows(1, SongComposer.Tracks.Count);
         }
         else if (k == ConsoleKey.PageUp)
         {
             int delta = view.RowsOnScreen >= 8 ? -4 : -1;
-            view.ScrollRows(delta, Composer.Tracks.Count);
+            view.ScrollRows(delta, SongComposer.Tracks.Count);
         }
         else if (k == ConsoleKey.PageDown)
         {
             int delta = view.RowsOnScreen >= 8 ? 4 : 1;
-            view.ScrollRows(delta, Composer.Tracks.Count);
+            view.ScrollRows(delta, SongComposer.Tracks.Count);
         }
         else if (k == ConsoleKey.Home)
         {
@@ -70,9 +73,9 @@ public class SongComposerNavigationMode : SongComposerInputMode
             player.Seek(Composer.MaxBeat);
             EnsurePlayheadVisible();
         }
-        else if (k == ConsoleKey.Enter && Composer.SelectedMelodies.Count == 1)
+        else if (k == ConsoleKey.Enter && Composer.SelectedValues.Count == 1)
         {
-            Composer.OpenMelody(Composer.SelectedMelodies[0]);
+            SongComposer.OpenMelody(Composer.SelectedValues[0]);
         }
         else
         {
@@ -81,7 +84,7 @@ public class SongComposerNavigationMode : SongComposerInputMode
 
         if (handled)
         {
-            Composer.RefreshVisibleSet();
+            Composer.RefreshVisibleCells();
         }
     }
 

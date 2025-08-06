@@ -67,17 +67,17 @@ public class SongComposerEditor
     // --- SELECTION ---
     private bool SelectAll()
     {
-        Composer.SelectedMelodies.Clear();
+        Composer.SelectedValues.Clear();
         foreach (var track in Composer.Tracks)
-            Composer.SelectedMelodies.AddRange(track.Melodies);
-        Composer.RefreshVisibleSet();
+            Composer.SelectedValues.AddRange(track.Melodies);
+        Composer.RefreshVisibleCells();
         Composer.StatusChanged.Fire("All melodies selected".ToWhite());
         return true;
     }
     private bool DeselectAll()
     {
-        Composer.SelectedMelodies.Clear();
-        Composer.RefreshVisibleSet();
+        Composer.SelectedValues.Clear();
+        Composer.RefreshVisibleCells();
         Composer.StatusChanged.Fire("Deselected all melodies".ToWhite());
         return true;
     }
@@ -86,9 +86,9 @@ public class SongComposerEditor
     private bool Copy()
     {
         clipboard.Clear();
-        Composer.StatusChanged.Fire($"Copied {Composer.SelectedMelodies.Count} melody clips to clipboard".ToWhite());
+        Composer.StatusChanged.Fire($"Copied {Composer.SelectedValues.Count} melody clips to clipboard".ToWhite());
         // Deep copy: Store all data needed to reconstruct the clips, except track assignment (handled in Paste)
-        clipboard.AddRange(Composer.SelectedMelodies
+        clipboard.AddRange(Composer.SelectedValues
             .Select(m => new MelodyClip(m.StartBeat, new ListNoteSource(m.Melody)) { Name = m.Name }));
         return true;
     }
@@ -114,9 +114,9 @@ public class SongComposerEditor
             pasted.Add(newClip);
         }
 
-        Composer.SelectedMelodies.Clear();
-        Composer.SelectedMelodies.AddRange(pasted);
-        Composer.RefreshVisibleSet();
+        Composer.SelectedValues.Clear();
+        Composer.SelectedValues.AddRange(pasted);
+        Composer.RefreshVisibleCells();
         Composer.StatusChanged.Fire($"Pasted {pasted.Count} melody clips".ToWhite());
         return true;
     }
@@ -124,15 +124,15 @@ public class SongComposerEditor
     // --- DELETE ---
     private bool DeleteSelected()
     {
-        if (Composer.SelectedMelodies.Count == 0) return true;
+        if (Composer.SelectedValues.Count == 0) return true;
 
-        foreach (var melody in Composer.SelectedMelodies)
+        foreach (var melody in Composer.SelectedValues)
         {
             foreach (var track in Composer.Tracks)
                 track.Melodies.Remove(melody);
         }
-        Composer.SelectedMelodies.Clear();
-        Composer.RefreshVisibleSet();
+        Composer.SelectedValues.Clear();
+        Composer.RefreshVisibleCells();
         Composer.StatusChanged.Fire("Deleted selected melodies".ToWhite());
         return true;
     }
@@ -140,7 +140,7 @@ public class SongComposerEditor
     // --- MOVE ---
     private bool MoveSelection(ConsoleKeyInfo k)
     {
-        if (Composer.SelectedMelodies.Count == 0) return true;
+        if (Composer.SelectedValues.Count == 0) return true;
 
         double beatDelta = 0;
         int trackDelta = 0;
@@ -150,7 +150,7 @@ public class SongComposerEditor
         else if (k.Key == ConsoleKey.DownArrow) trackDelta = 1;
 
         var moved = new List<MelodyClip>();
-        foreach (var clip in Composer.SelectedMelodies.ToList())
+        foreach (var clip in Composer.SelectedValues.ToList())
         {
             // Remove from old track if moving vertically
             int trackIdx = Composer.Tracks.FindIndex(t => t.Melodies.Contains(clip));
@@ -166,7 +166,7 @@ public class SongComposerEditor
             moved.Add(clip);
         }
 
-        Composer.RefreshVisibleSet();
+        Composer.RefreshVisibleCells();
         Composer.StatusChanged.Fire($"Moved {moved.Count} melody clips".ToWhite());
         return true;
     }
@@ -174,13 +174,13 @@ public class SongComposerEditor
     // --- DUPLICATE ---
     private bool DuplicateSelected()
     {
-        if (Composer.SelectedMelodies.Count == 0) return true;
+        if (Composer.SelectedValues.Count == 0) return true;
 
         int targetTrack = Composer.SelectedTrackIndex;
         if (targetTrack < 0 || targetTrack >= Composer.Tracks.Count) targetTrack = 0;
 
         var duplicates = new List<MelodyClip>();
-        foreach (var clip in Composer.SelectedMelodies)
+        foreach (var clip in Composer.SelectedValues)
         {
             var dup = new MelodyClip(clip.StartBeat + clip.DurationBeats, new ListNoteSource(clip.Melody))
             {
@@ -189,9 +189,9 @@ public class SongComposerEditor
             Composer.Tracks[targetTrack].Melodies.Add(dup);
             duplicates.Add(dup);
         }
-        Composer.SelectedMelodies.Clear();
-        Composer.SelectedMelodies.AddRange(duplicates);
-        Composer.RefreshVisibleSet();
+        Composer.SelectedValues.Clear();
+        Composer.SelectedValues.AddRange(duplicates);
+        Composer.RefreshVisibleCells();
         Composer.StatusChanged.Fire($"Duplicated {duplicates.Count} melody clips".ToWhite());
         return true;
     }
@@ -246,9 +246,9 @@ public class SongComposerEditor
 
         var newClip = new MelodyClip(start, melody);
         Composer.Tracks[trackIndex].Melodies.Add(newClip);
-        Composer.SelectedMelodies.Clear();
-        Composer.SelectedMelodies.Add(newClip);
-        Composer.RefreshVisibleSet();
+        Composer.SelectedValues.Clear();
+        Composer.SelectedValues.Add(newClip);
+        Composer.RefreshVisibleCells();
         ClearAddClipPreview();
         Composer.StatusChanged.Fire($"Added melody clip \"{newClip.Name}\"".ToWhite());
         return true;
@@ -256,7 +256,7 @@ public class SongComposerEditor
     private bool DismissAddClipPreview()
     {
         ClearAddClipPreview();
-        Composer.RefreshVisibleSet();
+        Composer.RefreshVisibleCells();
         return true;
     }
 }
