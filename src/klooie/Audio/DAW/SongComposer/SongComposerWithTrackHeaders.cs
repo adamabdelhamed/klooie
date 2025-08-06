@@ -114,7 +114,7 @@ public class TrackHeadersPanel : ConsoleControl
             var color = selected ? RGB.Black : GetTrackColor(i);
             var label = selected ? $"> {Tracks[i].Name}" : $"  {Tracks[i].Name}";
             context.DrawString(label, color, selected ? HasFocus ? RGB.Cyan : RGB.DarkGray : RGB.Black, 1, y);
-            y += SongComposer.RowHeightChars; // keep in sync with composer track height
+            y += Composer<object>.RowHeightChars; // keep in sync with composer track height
         }
 
         // Draw "+" add button at the bottom

@@ -102,12 +102,12 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
             int midBase = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen / 2;
 
             var closest = Composer.Descendents
-                .OfType<NoteCell>()
-                .Where(c => c.Note.Velocity > 0)
-                .OrderBy(c => Math.Abs(c.Note.StartBeat - Composer.CurrentBeat))
+                .OfType<ComposerCell<NoteExpression>>()
+                .Where(c => c.Value.Velocity > 0)
+                .OrderBy(c => Math.Abs(c.Value.StartBeat - Composer.CurrentBeat))
                 .FirstOrDefault();
 
-            int initMidi = closest?.Note.MidiNote ?? midBase;
+            int initMidi = closest?.Value.MidiNote ?? midBase;
             selectionPreviewCursorBeatMidi = (Composer.CurrentBeat, initMidi);
             SyncCursorToCurrentZoom();
             UpdateAnchorPreview(selectionPreviewCursor.Value);
@@ -214,7 +214,7 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
         else if (k.Key == ConsoleKey.Enter)
         {
             if (selectionAnchor == null || selectionCursor == null) return;
-            Composer.SelectedNotes.Clear();
+            Composer.SelectedValues.Clear();
             var (ax, ay) = selectionAnchor.Value;
             var (cx, cy) = selectionCursor.Value;
             int colMin = Math.Min(ax, cx), colMax = Math.Max(ax, cx);
@@ -230,32 +230,32 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
             if (midi0 > midi1) (midi0, midi1) = (midi1, midi0);
 
             // Select notes from the underlying note source, not the UI
-            Composer.SelectedNotes.AddRange(Composer.Notes
+            Composer.SelectedValues.AddRange(Composer.Values
                 .Where(n => n.Velocity > 0
                     && n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : Composer.TimelinePlayer.CurrentBeat - n.StartBeat) >= beat0
                     && n.StartBeat <= beat1
                     && n.MidiNote >= midi0
                     && n.MidiNote <= midi1));
 
-            bool canAddNote = Composer.SelectedNotes.Count == 0 && midi0 == midi1;
+            bool canAddNote = Composer.SelectedValues.Count == 0 && midi0 == midi1;
             int colStart = Math.Min(ax, cx);
             int colEnd = Math.Max(ax, cx);
             double addStartBeat = Composer.Viewport.FirstVisibleBeat + colStart * Composer.BeatsPerColumn;
             double addDuration = (colEnd - colStart + 1) * Composer.BeatsPerColumn;
 
             // Colorize any NoteCells that are currently visible and selected (optional, for user feedback)
-            var selectedSet = new HashSet<NoteExpression>(Composer.SelectedNotes);
-            foreach (var cell in Composer.Descendents.OfType<NoteCell>())
+            var selectedSet = new HashSet<NoteExpression>(Composer.SelectedValues);
+            foreach (var cell in Composer.Descendents.OfType<ComposerCell<NoteExpression>>())
             {
-                if (selectedSet.Contains(cell.Note))
+                if (selectedSet.Contains(cell.Value))
                     cell.Background = SelectedNoteColor;
             }
-            var noteSingularOrPlural = Composer.SelectedNotes.Count == 1 ? "note" : "notes";
+            var noteSingularOrPlural = Composer.SelectedValues.Count == 1 ? "note" : "notes";
             if (canAddNote)
             {
                 Composer.Editor.BeginAddNotePreview(addStartBeat, addDuration, midi0);
             }
-            Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedNotes.Count}[White] {noteSingularOrPlural}."));
+            Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedValues.Count}[White] {noteSingularOrPlural}."));
             Composer.NextMode();
             selectionRectangle?.Dispose();
             selectionRectangle = null;

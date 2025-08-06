@@ -8,7 +8,7 @@ namespace klooie;
 public class SongComposerViewport : Viewport
 {
     public const int DefaultFirstVisibleTrack = 0;
-    public const int TrackRowHeight = 3;
-
+    public override int ColWidthChars => 1;
+    public override int RowHeightChars => 3;
     public SongComposerViewport() : base() { }
 }

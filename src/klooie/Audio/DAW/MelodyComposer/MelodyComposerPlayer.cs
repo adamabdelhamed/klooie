@@ -109,7 +109,7 @@ public class MelodyComposerPlayer
     {
         if (playbackStartTimestamp == null) return;
         double elapsedSeconds = Stopwatch.GetElapsedTime(playbackStartTimestamp.Value).TotalSeconds;
-        var beat = playheadStartBeat + elapsedSeconds * Composer.Notes.BeatsPerMinute / 60.0;
+        var beat = playheadStartBeat + elapsedSeconds * (Composer.Values as ListNoteSource).BeatsPerMinute / 60.0;
         if (StopAtEnd && beat > Composer.MaxBeat + 4)
         {
             CurrentBeat = Composer.MaxBeat;
@@ -123,18 +123,18 @@ public class MelodyComposerPlayer
 
     private void PlayAudio(double startBeat, ILifetime? playLifetime = null)
     {
-        var subset = new ListNoteSource() { BeatsPerMinute = Composer.Notes.BeatsPerMinute };
+        var subset = new ListNoteSource() { BeatsPerMinute = (Composer.Values as ListNoteSource).BeatsPerMinute };
 
         // TODO: I should not have to set the BPM for each note, but this is a quick fix
-        for (int i = 0; i < Composer.Notes.Count; i++)
+        for (int i = 0; i < Composer.Values.Count; i++)
         {
-            Composer.Notes[i].BeatsPerMinute = Composer.Notes.BeatsPerMinute;
+            Composer.Values[i].BeatsPerMinute = subset.BeatsPerMinute;
         }
 
-        Composer.Notes.SortMelody();
-        for (int i = 0; i < Composer.Notes.Count; i++)
+       (Composer.Values as ListNoteSource).SortMelody();
+        for (int i = 0; i < Composer.Values.Count; i++)
         {
-            NoteExpression? n = Composer.Notes[i];
+            NoteExpression? n = Composer.Values[i];
             double endBeat = n.DurationBeats >= 0 ? n.StartBeat + n.DurationBeats : double.PositiveInfinity;
             if (endBeat <= startBeat) continue;
 
@@ -147,11 +147,11 @@ public class MelodyComposerPlayer
                 duration = endBeat - startBeat;
             }
 
-            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, Composer.Notes.BeatsPerMinute, n.Velocity, n.Instrument));
+            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, subset.BeatsPerMinute, n.Velocity, n.Instrument));
         }
 
         if (subset.Count == 0) return;
 
-        ConsoleApp.Current.Sound.Play(new Song(subset, Composer.Notes.BeatsPerMinute), playLifetime);
+        ConsoleApp.Current.Sound.Play(new Song(subset, subset.BeatsPerMinute), playLifetime);
     }
 }

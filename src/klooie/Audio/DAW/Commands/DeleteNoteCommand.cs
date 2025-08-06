@@ -18,8 +18,8 @@ public class DeleteNoteCommand : TimelineCommand
 
     public override void Do()
     {
-        Timeline.Notes.Remove(note);
-        Timeline.SelectedNotes.Remove(note);
+        Timeline.Values.Remove(note);
+        Timeline.SelectedValues.Remove(note);
         Timeline.StatusChanged.Fire($"Deleted note {note.MidiNote}".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
         base.Do();
@@ -27,7 +27,7 @@ public class DeleteNoteCommand : TimelineCommand
 
     public override void Undo()
     {
-        Timeline.Notes.Add(note);
+        Timeline.Values.Add(note);
         Timeline.RefreshVisibleSet();
         Timeline.StatusChanged.Fire("Undo delete note".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);

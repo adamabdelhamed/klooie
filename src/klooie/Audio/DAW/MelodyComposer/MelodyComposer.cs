@@ -7,48 +7,24 @@ using System.Threading.Tasks;
 
 namespace klooie;
 
-public class MelodyComposer : ProtectedConsolePanel
+public class MelodyComposer : Composer<NoteExpression>
 {
-    public const double MaxBeatsPerColumn = 1.0;     // each cell is 1 beat (max zoomed out)
-    public const double MinBeatsPerColumn = 1.0 / 128; // each cell is 1/8 beat (max zoomed in)
-
     public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
-    public MelodyComposerViewport Viewport { get; private init; }
-    
-    public ListNoteSource Notes { get; private set; }
-    private readonly Dictionary<NoteExpression, NoteCell> live = new();
-    private HashSet<NoteExpression> visibleNow = new HashSet<NoteExpression>();
-    private AlternatingBackgroundGrid backgroundGrid;
-    public const int ColWidthChars = 1;
-    public const int RowHeightChars = 1;
+
+    private MelodyComposerViewport vp = new MelodyComposerViewport();
+    public override MelodyComposerViewport Viewport => vp;
+
     private Recyclable? focusLifetime;
     public MelodyComposerPlayer TimelinePlayer { get; }
-    private double beatsPerColumn = 1/8.0;
+
 
     public MelodyComposerEditor Editor { get; }
     
-    public List<NoteExpression> SelectedNotes { get; private set; } = new();
-
     public InstrumentExpression? Instrument { get; set; } = new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
 
-    public double BeatsPerColumn
-    {
-        get => beatsPerColumn;
-        set
-        {
-            if (value <= 0) throw new ArgumentOutOfRangeException(nameof(BeatsPerColumn));
-            if (Math.Abs(beatsPerColumn - value) > 0.0001)
-            {
-                beatsPerColumn = value;
-                UpdateViewportBounds(); 
-                RefreshVisibleSet();
-                if (CurrentMode is MelodyComposerSelectionMode sm)  sm.SyncCursorToCurrentZoom();
-            }
-        }
-    }
+
 
     public double CurrentBeat => TimelinePlayer.CurrentBeat;
-    public double MaxBeat { get; private set; } 
 
     private Dictionary<string, RGB> instrumentColorMap = new();
     private readonly MelodyComposerInputMode[] userCyclableModes;
@@ -57,26 +33,22 @@ public class MelodyComposer : ProtectedConsolePanel
 
     public MelodyComposerInputMode CurrentMode { get; private set; }
     public Event<MelodyComposerInputMode> ModeChanging { get; } = Event<MelodyComposerInputMode>.Create();
-    public MelodyComposer(WorkspaceSession session, ListNoteSource? notes = null)
+
+    public MelodyComposer(WorkspaceSession session, ListNoteSource notes) : base(notes)
     {
         this.Session = session;
         notes = notes ?? new ListNoteSource();
         this.userCyclableModes =  [new MelodyComposerNavigationMode() { Composer = this }, new MelodyComposerSelectionMode() { Composer = this }];
-        Viewport = new MelodyComposerViewport();
         TimelinePlayer = new MelodyComposerPlayer(this);
 
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
-        BoundsChanged.Sync(UpdateViewportBounds, this);
+
         Focused.Subscribe(EnableKeyboardInput, this);
-        backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
-        Viewport.Changed.Subscribe(backgroundGrid, _ =>
-        {
-            UpdateAlternatingBackgroundOffset();
-            RefreshVisibleSet();
-        }, backgroundGrid);
+
+ 
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
-        LoadNotes(notes);
+        InitInstrumentColors(notes);
         TimelinePlayer.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);  
         CurrentMode = this.userCyclableModes[0];
         Editor = new MelodyComposerEditor(session.Commands) { Composer = this };
@@ -98,48 +70,7 @@ public class MelodyComposer : ProtectedConsolePanel
         SetMode(userCyclableModes[(i + 1) % userCyclableModes.Length]);
     }
 
-    private void LoadNotes(ListNoteSource notes)
-    {
-        this.Notes = notes;
-        Viewport.SetFirstVisibleRow(notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(MelodyComposerViewport.DefaultFirstVisibleMidi).Min());
-        MaxBeat = notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
-        var instruments = notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
-        var instrumentColors = instruments.Select((s, i) => GetInstrumentColor(i)).ToArray();
-        for (int i = 0; i < instruments.Length; i++)
-        {
-            instrumentColorMap[instruments[i]] = instrumentColors[i];
-        }
-    }
-
-    private static readonly RGB[] BaseInstrumentColors = new[]
-    {
-        new RGB(220, 60, 60),    // Red
-        new RGB(60, 180, 90),    // Green
-        new RGB(65, 105, 225),   // Blue
-        new RGB(240, 200, 60),   // Yellow/Gold
-        new RGB(200, 60, 200),   // Magenta
-        new RGB(50, 220, 210),   // Cyan
-        new RGB(245, 140, 30),   // Orange
-    };
-
-    private static readonly float[] PaleFractions = new[]
-    {
-        0.0f, // Full color (original)
-        0.35f,
-        0.7f,
-    };
-
-    private RGB GetInstrumentColor(int index)
-    {
-        int baseCount = BaseInstrumentColors.Length;
-        int shade = index / baseCount;
-        int colorIdx = index % baseCount;
-        float pale = PaleFractions[Math.Min(shade, PaleFractions.Length - 1)];
-
-        // Lerp: (1-pale)*BaseColor + pale*White
-        RGB color = BaseInstrumentColors[colorIdx];
-        return color.ToOther(RGB.White, pale);
-    }
+  
 
 
     public void StopPlayback() => TimelinePlayer.Stop();
@@ -149,15 +80,7 @@ public class MelodyComposer : ProtectedConsolePanel
         base.OnPaint(context);
         CurrentMode?.Paint(context);
     }
-
-    private void UpdateAlternatingBackgroundOffset() => backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.FirstVisibleRow / (double)RowHeightChars);
-
-    private void UpdateViewportBounds()
-    {
-        Viewport.SetBeatsOnScreen(Math.Max(1, Width * BeatsPerColumn / ColWidthChars));
-        Viewport.SetRowsOnScreen(Math.Max(1, Height / RowHeightChars));
-    }
-
+ 
     public void EnableKeyboardInput()
     {
         focusLifetime?.TryDispose();
@@ -197,84 +120,62 @@ public class MelodyComposer : ProtectedConsolePanel
         }, focusLifetime);
     }
 
-    public void RefreshVisibleSet()
-    {
-        if(live.Count == 0 && Notes.Count > 0)
-        {
-            Viewport.SetFirstVisibleRow(Math.Max(0, Notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(MelodyComposerViewport.DefaultFirstVisibleMidi).Min() - 12));
-        }
-        MaxBeat = Notes.Select(n => n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : GetSustainedNoteDurationBeats(n))).DefaultIfEmpty(0).Max();
-        double beatStart = Viewport.FirstVisibleBeat;
-        double beatEnd = beatStart + Viewport.BeatsOnScreen;
-        int midiTop = Viewport.FirstVisibleRow;
-        int midiBot = midiTop + Viewport.RowsOnScreen;
-
-        // Track visible notes this frame
-        visibleNow.Clear();
-
-        for (int i = 0; i < Notes.Count; i++)
-        {
-            var note = Notes[i];
-            if (note.Velocity == 0) continue;
-
-            double durBeats = note.DurationBeats >= 0 ? note.DurationBeats : GetSustainedNoteDurationBeats(note);
-            bool isVisible =
-                (note.StartBeat + durBeats >= beatStart) &&
-                (note.StartBeat <= beatEnd) &&
-                (note.MidiNote >= midiTop) &&
-                (note.MidiNote <= midiBot);
-
-            if (!isVisible) continue;
-            visibleNow.Add(note);
-
-            if (!live.TryGetValue(note, out NoteCell cell))
-            {
-                cell = ProtectedPanel.Add(new NoteCell(note) { ZIndex = 1 });
-                live[note] = cell;
-            }
-
-            cell.Background = SelectedNotes.Contains(note) ? MelodyComposerSelectionMode.SelectedNoteColor : 
-                note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color 
-                : RGB.Orange;
-
-            // Always re-position/re-size every visible note
-            PositionCell(cell);
-        }
-
-        // Remove cells that are no longer visible
-        foreach (var kvp in live.ToArray())
-        {
-            if (!visibleNow.Contains(kvp.Key))
-            {
-                kvp.Value.Dispose();
-                live.Remove(kvp.Key);
-            }
-        }
-
-        Editor.PositionAddNotePreview();
-    }
-
-    private void PositionCell(NoteCell cell)
-    {
-        // convert beat/midi → chars
-        double beatsFromLeft = cell.Note.StartBeat - Viewport.FirstVisibleBeat;
-
-        int x = ConsoleMath.Round((cell.Note.StartBeat - Viewport.FirstVisibleBeat) / BeatsPerColumn) * ColWidthChars;
-        int y = (Viewport.FirstVisibleRow + Viewport.RowsOnScreen - 1 - cell.Note.MidiNote) * RowHeightChars;
-
-        double durBeats = cell.Note.DurationBeats >= 0 ? cell.Note.DurationBeats : GetSustainedNoteDurationBeats(cell.Note);
-        int w = (int)Math.Max(1, ConsoleMath.Round(durBeats / BeatsPerColumn) * ColWidthChars);
-        int h = RowHeightChars;
-
-        cell.MoveTo(x, y);
-        cell.ResizeTo(w, h);
-    }
-
     private double GetSustainedNoteDurationBeats(NoteExpression n)
     {
         // Show duration from note's start to current playhead position
         double sustainedBeats = TimelinePlayer.CurrentBeat - n.StartBeat;
         return Math.Max(0, sustainedBeats);
     }
-    internal ConsoleControl AddPreviewControl() => ProtectedPanel.Add(new ConsoleControl());
+
+    protected override CellPositionInfo GetCellPositionInfo(NoteExpression value) => new CellPositionInfo()
+    {
+        BeatStart = value.StartBeat,
+        BeatEnd = value.StartBeat + (value.DurationBeats > 0 ? value.DurationBeats : GetSustainedNoteDurationBeats(value)),
+        IsHidden = value.Velocity <= 0,
+        Row = value.MidiNote - Viewport.FirstVisibleRow,
+    };
+
+    protected override double CalculateMaxBeat() => Values.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
+
+    private void InitInstrumentColors(ListNoteSource notes)
+    {
+
+        var instruments = notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
+        var instrumentColors = instruments.Select((s, i) => GetInstrumentColor(i)).ToArray();
+        for (int i = 0; i < instruments.Length; i++)
+        {
+            instrumentColorMap[instruments[i]] = instrumentColors[i];
+        }
+    }
+
+    private static readonly RGB[] BaseInstrumentColors = new[]
+    {
+        new RGB(220, 60, 60),    // Red
+        new RGB(60, 180, 90),    // Green
+        new RGB(65, 105, 225),   // Blue
+        new RGB(240, 200, 60),   // Yellow/Gold
+        new RGB(200, 60, 200),   // Magenta
+        new RGB(50, 220, 210),   // Cyan
+        new RGB(245, 140, 30),   // Orange
+    };
+
+    private static readonly float[] PaleFractions = new[]
+    {
+        0.0f, // Full color (original)
+        0.35f,
+        0.7f,
+    };
+
+    private RGB GetInstrumentColor(int index)
+    {
+        int baseCount = BaseInstrumentColors.Length;
+        int shade = index / baseCount;
+        int colorIdx = index % baseCount;
+        float pale = PaleFractions[Math.Min(shade, PaleFractions.Length - 1)];
+
+        // Lerp: (1-pale)*BaseColor + pale*White
+        RGB color = BaseInstrumentColors[colorIdx];
+        return color.ToOther(RGB.White, pale);
+    }
+    protected override RGB GetColor(NoteExpression note) => note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color : RGB.Orange;
 }

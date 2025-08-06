@@ -20,12 +20,12 @@ public class ChangeNoteCommand : TimelineCommand
 
     public override void Do()
     {
-        int idx = Timeline.Notes.IndexOf(oldNote);
+        int idx = Timeline.Values.IndexOf(oldNote);
         if (idx >= 0)
         {
-            Timeline.Notes[idx] = newNote;
-            Timeline.SelectedNotes.Remove(oldNote);
-            Timeline.SelectedNotes.Add(newNote);
+            Timeline.Values[idx] = newNote;
+            Timeline.SelectedValues.Remove(oldNote);
+            Timeline.SelectedValues.Add(newNote);
         }
 
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
@@ -34,10 +34,10 @@ public class ChangeNoteCommand : TimelineCommand
 
     public override void Undo()
     {
-        int idx = Timeline.Notes.IndexOf(newNote);
+        int idx = Timeline.Values.IndexOf(newNote);
         if (idx >= 0)
         {
-            Timeline.Notes[idx] = oldNote;
+            Timeline.Values[idx] = oldNote;
         }
 
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);

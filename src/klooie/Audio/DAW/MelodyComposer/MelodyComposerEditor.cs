@@ -69,15 +69,15 @@ public class MelodyComposerEditor
     // --- SELECTION ---
     private bool SelectAll()
     {
-        Composer.SelectedNotes.Clear();
-        Composer.SelectedNotes.AddRange(Composer.Notes);
+        Composer.SelectedValues.Clear();
+        Composer.SelectedValues.AddRange(Composer.Values);
         Composer.RefreshVisibleSet();
         Composer.StatusChanged.Fire("All notes selected".ToWhite());
         return true;
     }
     private bool DeselectAll()
     {
-        Composer.SelectedNotes.Clear();
+        Composer.SelectedValues.Clear();
         Composer.RefreshVisibleSet();
         Composer.StatusChanged.Fire("Deselected all notes".ToWhite());
         return true;
@@ -85,8 +85,8 @@ public class MelodyComposerEditor
     private bool SelectAllLeftOrRight(ConsoleKeyInfo k)
     {
         var left = k.Key == ConsoleKey.LeftArrow;
-        Composer.SelectedNotes.Clear();
-        Composer.SelectedNotes.AddRange(Composer.Notes.Where(n =>
+        Composer.SelectedValues.Clear();
+        Composer.SelectedValues.AddRange(Composer.Values.Where(n =>
             (left && n.StartBeat <= Composer.CurrentBeat) ||
             (!left && n.StartBeat >= Composer.CurrentBeat)));
         Composer.RefreshVisibleSet();
@@ -98,13 +98,13 @@ public class MelodyComposerEditor
     private bool Copy()
     {
         clipboard.Clear();
-        Composer.StatusChanged.Fire($"Copied {Composer.SelectedNotes.Count} notes to clipboard".ToWhite());
-        clipboard.AddRange(Composer.SelectedNotes);
+        Composer.StatusChanged.Fire($"Copied {Composer.SelectedValues.Count} notes to clipboard".ToWhite());
+        clipboard.AddRange(Composer.SelectedValues);
         return true;
     }
     private bool Paste()
     {
-        if (Composer.Notes is not ListNoteSource) return true;
+        if (Composer.Values is not ListNoteSource) return true;
         if (clipboard.Count == 0) return true;
         double offset = Composer.CurrentBeat - clipboard.Min(n => n.StartBeat);
 
@@ -113,24 +113,24 @@ public class MelodyComposerEditor
 
         foreach (var n in clipboard)
         {
-            var nn = NoteExpression.Create(n.MidiNote,  Math.Max(0, n.StartBeat + offset), n.DurationBeats,  Composer.Notes.BeatsPerMinute,  n.Velocity,  n.Instrument);
+            var nn = NoteExpression.Create(n.MidiNote,  Math.Max(0, n.StartBeat + offset), n.DurationBeats,  n.BeatsPerMinute,  n.Velocity,  n.Instrument);
             pasted.Add(nn);
             addCmds.Add(new AddNoteCommand(Composer, nn));
         }
 
         CommandStack.Execute(new MultiCommand(addCmds, "Paste Notes"));
-        Composer.SelectedNotes.Clear();
-        Composer.SelectedNotes.AddRange(pasted);
+        Composer.SelectedValues.Clear();
+        Composer.SelectedValues.AddRange(pasted);
         return true;
     }
 
     // --- DELETE ---
     private bool DeleteSelected()
     {
-        if (Composer.Notes is not ListNoteSource) return true;
-        if (Composer.SelectedNotes.Count == 0) return true;
+        if (Composer.Values is not ListNoteSource) return true;
+        if (Composer.SelectedValues.Count == 0) return true;
 
-        var deleteCmds = Composer.SelectedNotes
+        var deleteCmds = Composer.SelectedValues
             .Select(note => new DeleteNoteCommand(Composer, note))
             .ToList<ICommand>();
 
@@ -141,8 +141,8 @@ public class MelodyComposerEditor
     // --- MOVE ---
     private bool MoveSelection(ConsoleKeyInfo k)
     {
-        if (Composer.Notes is not ListNoteSource list) return true;
-        if (Composer.SelectedNotes.Count == 0) return true;
+        if (Composer.Values is not ListNoteSource list) return true;
+        if (Composer.SelectedValues.Count == 0) return true;
 
         double beatDelta = 0;
         int midiDelta = 0;
@@ -154,11 +154,11 @@ public class MelodyComposerEditor
         var updated = new List<NoteExpression>();
         var moveCmds = new List<ICommand>();
 
-        foreach (var n in Composer.SelectedNotes)
+        foreach (var n in Composer.SelectedValues)
         {
             int newMidi = Math.Clamp(n.MidiNote + midiDelta, 0, 127);
             double newBeat = Math.Max(0, n.StartBeat + beatDelta);
-            var nn = NoteExpression.Create(newMidi, newBeat, n.DurationBeats, Composer.Notes.BeatsPerMinute, n.Velocity, n.Instrument);
+            var nn = NoteExpression.Create(newMidi, newBeat, n.DurationBeats, n.BeatsPerMinute, n.Velocity, n.Instrument);
             updated.Add(nn);
             moveCmds.Add(new ChangeNoteCommand(Composer, n, nn));
         }
@@ -173,15 +173,15 @@ public class MelodyComposerEditor
     // --- VELOCITY ---
     private bool AdjustVelocity(int delta)
     {
-        if (Composer.SelectedNotes.Count == 0) return true;
+        if (Composer.SelectedValues.Count == 0) return true;
 
         var updated = new List<NoteExpression>();
         var velCmds = new List<ICommand>();
 
-        foreach (var n in Composer.SelectedNotes)
+        foreach (var n in Composer.SelectedValues)
         {
             int newVel = Math.Clamp(n.Velocity + delta, 1, 127);
-            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, Composer.Notes.BeatsPerMinute, newVel, n.Instrument);
+            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, n.BeatsPerMinute, newVel, n.Instrument);
             updated.Add(nn);
             velCmds.Add(new ChangeNoteCommand(Composer, n, nn));
         }
@@ -196,15 +196,15 @@ public class MelodyComposerEditor
     // --- DURATION ---
     private bool AdjustDuration(double deltaBeats)
     {
-        if (Composer.SelectedNotes.Count == 0) return true;
+        if (Composer.SelectedValues.Count == 0) return true;
 
         var updated = new List<NoteExpression>();
         var durCmds = new List<ICommand>();
 
-        foreach (var n in Composer.SelectedNotes)
+        foreach (var n in Composer.SelectedValues)
         {
             double newDuration = Math.Max(0.1, n.DurationBeats + deltaBeats); // Don't allow zero or negative duration
-            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, newDuration, Composer.Notes.BeatsPerMinute, n.Velocity, n.Instrument);
+            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, newDuration, n.BeatsPerMinute, n.Velocity, n.Instrument);
             updated.Add(nn);
             durCmds.Add(new ChangeNoteCommand(Composer, n, nn));
         }
@@ -261,7 +261,8 @@ public class MelodyComposerEditor
     {
         if (pendingAddNote == null) return true;
         var (start, duration, midi) = pendingAddNote.Value;
-        var command = new AddNoteCommand(Composer, NoteExpression.Create(midi, start, duration, Composer.Notes.BeatsPerMinute, instrument: Composer.Instrument));
+        var bpm = (Composer.Values as ListNoteSource).BeatsPerMinute;
+        var command = new AddNoteCommand(Composer, NoteExpression.Create(midi, start, duration, bpm, instrument: Composer.Instrument));
         Composer.Session.Commands.Execute(command);
         return true;
     }

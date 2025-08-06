@@ -225,10 +225,10 @@ public class SongComposerEditor
     {
         if (pendingAddClip == null || addClipPreview == null) return;
         var (start, duration, trackIndex, melody) = pendingAddClip.Value;
-        int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * SongComposer.ColWidthChars;
-        int y = (trackIndex - Composer.Viewport.FirstVisibleRow) * SongComposer.RowHeightChars;
-        int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * SongComposer.ColWidthChars);
-        int h = SongComposer.RowHeightChars;
+        int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * Composer.Viewport.ColWidthChars;
+        int y = (trackIndex - Composer.Viewport.FirstVisibleRow) * Composer.Viewport.RowHeightChars;
+        int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * Composer.Viewport.ColWidthChars);
+        int h = Composer.Viewport.RowHeightChars;
         addClipPreview.MoveTo(x, y);
         addClipPreview.ResizeTo(w, h);
     }

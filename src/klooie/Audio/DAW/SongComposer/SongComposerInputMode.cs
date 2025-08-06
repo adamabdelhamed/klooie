@@ -69,7 +69,7 @@ public abstract class SongComposerInputMode : IComparable<SongComposerInputMode>
         }
 
         double relBeat = Composer.CurrentBeat - Composer.Viewport.FirstVisibleBeat;
-        int x = ConsoleMath.Round(relBeat / Composer.BeatsPerColumn) * SongComposer.ColWidthChars;
+        int x = ConsoleMath.Round(relBeat / Composer.BeatsPerColumn) * Composer<object>.ColWidthChars;
         if (x < 0 || x >= Composer.Width) return;
         for (int y = 0; y < Composer.Height; y++)
         {
@@ -82,7 +82,7 @@ public abstract class SongComposerInputMode : IComparable<SongComposerInputMode>
     {
         double firstBeat = Composer.Viewport.FirstVisibleBeat;
         double beatsPerCol = Composer.BeatsPerColumn;
-        int colWidth = SongComposer.ColWidthChars;
+        int colWidth = Composer<object>.ColWidthChars;
         int width = Composer.Width;
 
         // Subdivision logic (finest with ≥4 cells apart)

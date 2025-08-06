@@ -19,12 +19,12 @@ public class AssignInstrumentCommand : TimelineCommand
 
     public void Do()
     {
-        _index = Timeline.Notes.IndexOf(_original);
+        _index = Timeline.Values.IndexOf(_original);
         if (_index >= 0)
         {
-            Timeline.Notes[_index.Value] = _updated;
-            Timeline.SelectedNotes.Remove(_original);
-            Timeline.SelectedNotes.Add(_updated);
+            Timeline.Values[_index.Value] = _updated;
+            Timeline.SelectedValues.Remove(_original);
+            Timeline.SelectedValues.Add(_updated);
         }
         base.Do();
     }
@@ -33,7 +33,7 @@ public class AssignInstrumentCommand : TimelineCommand
     {
         if (_index.HasValue)
         {
-            Timeline.Notes[_index.Value] = _original;
+            Timeline.Values[_index.Value] = _original;
         }
         base.Undo();
     }

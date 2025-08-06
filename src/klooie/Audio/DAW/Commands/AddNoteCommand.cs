@@ -13,7 +13,7 @@ public class AddNoteCommand : TimelineCommand
     
     public override void Do()
     {
-        Timeline.Notes.Add(note);
+        Timeline.Values.Add(note);
         Timeline.Editor.ClearAddNotePreview();
         Timeline.StatusChanged.Fire($"Added note {note.MidiNote}".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
@@ -22,7 +22,7 @@ public class AddNoteCommand : TimelineCommand
 
     public override void Undo()
     {
-        Timeline.Notes.Remove(note);
+        Timeline.Values.Remove(note);
         Timeline.StatusChanged.Fire("Undo add note".ToWhite());
         WorkspaceSession.Current.Workspace.UpdateSong(WorkspaceSession.Current.CurrentSong);
         base.Undo();

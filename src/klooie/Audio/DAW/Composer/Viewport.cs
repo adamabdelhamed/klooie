@@ -7,11 +7,15 @@ using System.Threading.Tasks;
 namespace klooie;
 public abstract class Viewport
 {
+    public abstract int ColWidthChars { get; }
+    public abstract int RowHeightChars { get; }
+
     public double FirstVisibleBeat { get; private set; }
     public double BeatsOnScreen { get; private set; }
     public double LastVisibleBeat => FirstVisibleBeat + BeatsOnScreen;
 
     public int FirstVisibleRow { get; private set; }
+    public int LastVisibleRow => FirstVisibleRow + RowsOnScreen;
     public int RowsOnScreen { get; private set; }
     public Event Changed { get; private set; } = Event.Create();
 

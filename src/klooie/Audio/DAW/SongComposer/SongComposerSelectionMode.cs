@@ -32,11 +32,11 @@ public class SongComposerSelectionMode : SongComposerInputMode
 
         if (cursor.HasValue)
         {
-            int x = cursor.Value.X * SongComposer.ColWidthChars;
-            int y = cursor.Value.Y * SongComposerViewport.TrackRowHeight;
+            int x = cursor.Value.X * Composer<object>.ColWidthChars;
+            int y = cursor.Value.Y * Composer.Viewport.RowHeightChars;
             if (x >= 0 && x < Composer.Width)
             {
-                for (int dy = 0; dy < SongComposerViewport.TrackRowHeight; dy++)
+                for (int dy = 0; dy < Composer.Viewport.RowHeightChars; dy++)
                 {
                     int rowY = y + dy;
                     if (rowY < Composer.Height)
@@ -164,8 +164,8 @@ public class SongComposerSelectionMode : SongComposerInputMode
 
     private void UpdateAnchorPreview((int X, int Y) anchor)
     {
-        int left = anchor.X * SongComposer.ColWidthChars;
-        int top = anchor.Y * SongComposerViewport.TrackRowHeight;
+        int left = anchor.X * Composer<object>.ColWidthChars;
+        int top = anchor.Y * Composer.Viewport.RowHeightChars;
         if (anchorPreviewControl == null)
         {
             anchorPreviewControl = Composer.AddPreviewControl();
@@ -174,7 +174,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
             anchorPreviewControl.ZIndex = 1; // Above selection rectangle
         }
         anchorPreviewControl.MoveTo(left, top);
-        anchorPreviewControl.ResizeTo(SongComposer.ColWidthChars, SongComposerViewport.TrackRowHeight);
+        anchorPreviewControl.ResizeTo(Composer.Viewport.ColWidthChars, Composer.Viewport.RowHeightChars);
     }
 
     private void RemoveAnchorPreview()
@@ -289,10 +289,10 @@ public class SongComposerSelectionMode : SongComposerInputMode
         var (ax, ay) = selectionAnchor.Value;
         var (cx, cy) = selectionCursor.Value;
 
-        int left = Math.Min(ax, cx) * SongComposer.ColWidthChars;
-        int top = Math.Min(ay, cy) * SongComposerViewport.TrackRowHeight;
-        int width = (Math.Abs(ax - cx) + 1) * SongComposer.ColWidthChars;
-        int height = (Math.Abs(ay - cy) + 1) * SongComposerViewport.TrackRowHeight;
+        int left = Math.Min(ax, cx) * Composer.Viewport.ColWidthChars;
+        int top = Math.Min(ay, cy) * Composer.Viewport.RowHeightChars;
+        int width = (Math.Abs(ax - cx) + 1) * Composer.Viewport.ColWidthChars;
+        int height = (Math.Abs(ay - cy) + 1) * Composer.Viewport.RowHeightChars;
 
         if (selectionRectangle == null)
         {
@@ -333,7 +333,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
     {
         int x = (int)Math.Round((beat - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn);
         int y = track - Composer.Viewport.FirstVisibleRow;
-        x = Math.Max(0, Math.Min(Composer.Width / SongComposer.ColWidthChars - 1, x));
+        x = Math.Max(0, Math.Min(Composer.Width / Composer.Viewport.ColWidthChars - 1, x));
         y = Math.Max(0, Math.Min(Composer.Viewport.RowsOnScreen - 1, y));
         return (x, y);
     }

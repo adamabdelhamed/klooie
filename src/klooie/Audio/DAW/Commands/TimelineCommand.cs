@@ -15,7 +15,7 @@ public class TimelineCommand : ICommand
     public TimelineCommand(MelodyComposer timeline, string desc)
     {
         this.Timeline = timeline;
-        this.OldSelection = new List<NoteExpression>(timeline.SelectedNotes).AsReadOnly();
+        this.OldSelection = new List<NoteExpression>(timeline.SelectedValues).AsReadOnly();
         this.Description = desc;
     }
 
@@ -26,8 +26,8 @@ public class TimelineCommand : ICommand
 
     public virtual void Undo()
     {
-        Timeline.SelectedNotes.Clear();
-        Timeline.SelectedNotes.AddRange(OldSelection);
+        Timeline.SelectedValues.Clear();
+        Timeline.SelectedValues.AddRange(OldSelection);
         Timeline.RefreshVisibleSet();
     }
 }
