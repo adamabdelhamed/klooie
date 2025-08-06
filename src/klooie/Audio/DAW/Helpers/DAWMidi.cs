@@ -82,7 +82,7 @@ public class DAWMidi : Recyclable
 
     private double SnapToGrid(double beat)
     {
-        double grid = 0.25; // for 1/16th in 4/4 time (4 beats per measure, 16 subdivisions)
+        double grid = 0.125; 
         return Math.Round(beat / grid) * grid;
     }
 
