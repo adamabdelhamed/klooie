@@ -3,18 +3,18 @@ using System.Collections.Generic;
 
 namespace klooie;
 
-public class ComposerWithTracks : ProtectedConsolePanel
+public class SongComposerWithTrackHeaders : ProtectedConsolePanel
 {
     private GridLayout layout;
     public TrackHeadersPanel TrackHeaders { get; private init; }
-    public Composer Composer { get; private init; }
+    public SongComposer Composer { get; private init; }
     public StatusBar StatusBar { get; private init; }
 
     // Expose player if desired
-    public ComposerPlayer Player => Composer.Player;
+    public SongComposerPlayer Player => Composer.Player;
     public IMidiProvider MidiProvider { get; private set; }
 
-    public ComposerWithTracks(WorkspaceSession session, ConsoleControl commandBar, IMidiProvider midiProvider)
+    public SongComposerWithTrackHeaders(WorkspaceSession session, ConsoleControl commandBar, IMidiProvider midiProvider)
     {
         this.MidiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
         var rowSpecPrefix = commandBar == null ? "1r" : "1p;1r";
@@ -24,7 +24,7 @@ public class ComposerWithTracks : ProtectedConsolePanel
 
         // Add the track headers (left, all rows except command/status)
         TrackHeaders = layout.Add(new TrackHeadersPanel(this, session), 0, rowOffset);
-        Composer = layout.Add(new Composer(session, midiProvider), 1, rowOffset);
+        Composer = layout.Add(new SongComposer(session, midiProvider), 1, rowOffset);
 
         // Wire up selection highlighting
         TrackHeaders.TrackSelected.Subscribe(idx => Composer.SelectedTrackIndex = idx, this);
@@ -49,9 +49,9 @@ public class TrackHeadersPanel : ConsoleControl
     public List<ComposerTrack> Tracks => composer.Composer.Tracks;
     public int SelectedTrackIndex { get; set; }
     public Event<int> TrackSelected = Event<int>.Create();
-    private ComposerWithTracks composer;
+    private SongComposerWithTrackHeaders composer;
 
-    public TrackHeadersPanel(ComposerWithTracks composer, WorkspaceSession session)
+    public TrackHeadersPanel(SongComposerWithTrackHeaders composer, WorkspaceSession session)
     {
         this.composer = composer ?? throw new ArgumentNullException(nameof(composer));
         this.session = session;
@@ -114,7 +114,7 @@ public class TrackHeadersPanel : ConsoleControl
             var color = selected ? RGB.Black : GetTrackColor(i);
             var label = selected ? $"> {Tracks[i].Name}" : $"  {Tracks[i].Name}";
             context.DrawString(label, color, selected ? HasFocus ? RGB.Cyan : RGB.DarkGray : RGB.Black, 1, y);
-            y += Composer.RowHeightChars; // keep in sync with composer track height
+            y += SongComposer.RowHeightChars; // keep in sync with composer track height
         }
 
         // Draw "+" add button at the bottom

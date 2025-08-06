@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 namespace klooie;
 public class ComposerCommand : ICommand
 {
-    protected readonly ComposerWithTracks Composer;
+    protected readonly SongComposerWithTrackHeaders Composer;
 
     public string Description { get; }
 
-    public ComposerCommand(ComposerWithTracks composer, string desc)
+    public ComposerCommand(SongComposerWithTrackHeaders composer, string desc)
     {
         this.Composer = composer;
         this.Description = desc;

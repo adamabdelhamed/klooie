@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 
 namespace klooie;
 
-public class ComposerPlayer
+public class MelodyComposerPlayer
 {
-    public Event Playing { get; private set; } = Event.Create();
+    public Event Playing { get;private set; } = Event.Create();
     public Event Stopped { get; private set; } = Event.Create();
 
     public bool StopAtEnd { get; set; } = true;
@@ -16,15 +16,15 @@ public class ComposerPlayer
     private Event<double> beatChanged;
     public Event<double> BeatChanged => beatChanged ??= Event<double>.Create();
 
-    public Composer Composer { get; }
+    public MelodyComposer Composer { get; }
 
     private Recyclable? playLifetime;
     private double playheadStartBeat;
     private long? playbackStartTimestamp;
 
-    public ComposerPlayer(Composer composer)
+    public MelodyComposerPlayer(MelodyComposer timeline)
     {
-        this.Composer = composer ?? throw new ArgumentNullException(nameof(composer));
+        this.Composer = timeline ?? throw new ArgumentNullException(nameof(timeline));
         BeatChanged.Subscribe(this, static (me, b) => me.Composer.Viewport.OnBeatChanged(b), Composer);
     }
 
@@ -50,6 +50,7 @@ public class ComposerPlayer
         ScheduleTick();
     }
 
+
     public void Pause()
     {
         if (!IsPlaying) return;
@@ -73,7 +74,7 @@ public class ComposerPlayer
 
     public void Stop()
     {
-        if (!IsPlaying) return;
+        if(IsPlaying == false) return;
         Stopped.Fire();
         playbackStartTimestamp = null;
         IsPlaying = false;
@@ -108,20 +109,7 @@ public class ComposerPlayer
     {
         if (playbackStartTimestamp == null) return;
         double elapsedSeconds = Stopwatch.GetElapsedTime(playbackStartTimestamp.Value).TotalSeconds;
-
-        // Use BPM of the first clip with any notes, or default to 120
-        double bpm = 120.0;
-        foreach (var track in Composer.Tracks)
-        {
-            if (track.Melodies.Count > 0 && track.Melodies[0].Melody != null)
-            {
-                bpm = track.Melodies[0].Melody.BeatsPerMinute;
-                break;
-            }
-        }
-
-        var beat = playheadStartBeat + elapsedSeconds * bpm / 60.0;
-
+        var beat = playheadStartBeat + elapsedSeconds * Composer.Notes.BeatsPerMinute / 60.0;
         if (StopAtEnd && beat > Composer.MaxBeat + 4)
         {
             CurrentBeat = Composer.MaxBeat;
@@ -135,19 +123,18 @@ public class ComposerPlayer
 
     private void PlayAudio(double startBeat, ILifetime? playLifetime = null)
     {
-        var song = Composer.Compose();
-        var subset = new ListNoteSource() { BeatsPerMinute = song.Notes.BeatsPerMinute };
+        var subset = new ListNoteSource() { BeatsPerMinute = Composer.Notes.BeatsPerMinute };
 
         // TODO: I should not have to set the BPM for each note, but this is a quick fix
-        for (int i = 0; i < song.Notes.Count; i++)
+        for (int i = 0; i < Composer.Notes.Count; i++)
         {
-            song.Notes[i].BeatsPerMinute = song.Notes.BeatsPerMinute;
+            Composer.Notes[i].BeatsPerMinute = Composer.Notes.BeatsPerMinute;
         }
 
-        song.Notes.SortMelody();
-        for (int i = 0; i < song.Notes.Count; i++)
+        Composer.Notes.SortMelody();
+        for (int i = 0; i < Composer.Notes.Count; i++)
         {
-            NoteExpression? n = song.Notes[i];
+            NoteExpression? n = Composer.Notes[i];
             double endBeat = n.DurationBeats >= 0 ? n.StartBeat + n.DurationBeats : double.PositiveInfinity;
             if (endBeat <= startBeat) continue;
 
@@ -160,11 +147,11 @@ public class ComposerPlayer
                 duration = endBeat - startBeat;
             }
 
-            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, song.Notes.BeatsPerMinute, n.Velocity, n.Instrument));
+            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, Composer.Notes.BeatsPerMinute, n.Velocity, n.Instrument));
         }
 
         if (subset.Count == 0) return;
 
-        ConsoleApp.Current.Sound.Play(new Song(subset, song.Notes.BeatsPerMinute), playLifetime);
+        ConsoleApp.Current.Sound.Play(new Song(subset, Composer.Notes.BeatsPerMinute), playLifetime);
     }
 }

@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 namespace klooie;
 public class TimelineCommand : ICommand
 {
-    protected readonly VirtualTimelineGrid Timeline;
+    protected readonly MelodyComposer Timeline;
     protected readonly IReadOnlyList<NoteExpression> OldSelection;
 
     public string Description { get; }
 
-    public TimelineCommand(VirtualTimelineGrid timeline, string desc)
+    public TimelineCommand(MelodyComposer timeline, string desc)
     {
         this.Timeline = timeline;
         this.OldSelection = new List<NoteExpression>(timeline.SelectedNotes).AsReadOnly();

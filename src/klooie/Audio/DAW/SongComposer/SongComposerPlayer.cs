@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 
 namespace klooie;
 
-public class TimelinePlayer
+public class SongComposerPlayer
 {
-    public Event Playing { get;private set; } = Event.Create();
+    public Event Playing { get; private set; } = Event.Create();
     public Event Stopped { get; private set; } = Event.Create();
 
     public bool StopAtEnd { get; set; } = true;
@@ -16,16 +16,16 @@ public class TimelinePlayer
     private Event<double> beatChanged;
     public Event<double> BeatChanged => beatChanged ??= Event<double>.Create();
 
-    public VirtualTimelineGrid Timeline { get; }
+    public SongComposer Composer { get; }
 
     private Recyclable? playLifetime;
     private double playheadStartBeat;
     private long? playbackStartTimestamp;
 
-    public TimelinePlayer(VirtualTimelineGrid timeline)
+    public SongComposerPlayer(SongComposer composer)
     {
-        this.Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
-        BeatChanged.Subscribe(this, static (me, b) => me.Timeline.Viewport.OnBeatChanged(b), Timeline);
+        this.Composer = composer ?? throw new ArgumentNullException(nameof(composer));
+        BeatChanged.Subscribe(this, static (me, b) => me.Composer.Viewport.OnBeatChanged(b), Composer);
     }
 
     public void Play()
@@ -33,7 +33,7 @@ public class TimelinePlayer
         if (IsPlaying) return;
 
         var autoStopSuffix = StopAtEnd ? " (auto-stop)" : "";
-        Timeline.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
+        Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
 
         ConsoleApp.Current.Scheduler.Delay(AudioThreadLatency, StartMovingPlayHeadAfterAudioThreadLatency);
         playLifetime?.TryDispose();
@@ -49,7 +49,6 @@ public class TimelinePlayer
         IsPlaying = true;
         ScheduleTick();
     }
-
 
     public void Pause()
     {
@@ -74,7 +73,7 @@ public class TimelinePlayer
 
     public void Stop()
     {
-        if(IsPlaying == false) return;
+        if (!IsPlaying) return;
         Stopped.Fire();
         playbackStartTimestamp = null;
         IsPlaying = false;
@@ -109,10 +108,23 @@ public class TimelinePlayer
     {
         if (playbackStartTimestamp == null) return;
         double elapsedSeconds = Stopwatch.GetElapsedTime(playbackStartTimestamp.Value).TotalSeconds;
-        var beat = playheadStartBeat + elapsedSeconds * Timeline.Notes.BeatsPerMinute / 60.0;
-        if (StopAtEnd && beat > Timeline.MaxBeat + 4)
+
+        // Use BPM of the first clip with any notes, or default to 120
+        double bpm = 120.0;
+        foreach (var track in Composer.Tracks)
         {
-            CurrentBeat = Timeline.MaxBeat;
+            if (track.Melodies.Count > 0 && track.Melodies[0].Melody != null)
+            {
+                bpm = track.Melodies[0].Melody.BeatsPerMinute;
+                break;
+            }
+        }
+
+        var beat = playheadStartBeat + elapsedSeconds * bpm / 60.0;
+
+        if (StopAtEnd && beat > Composer.MaxBeat + 4)
+        {
+            CurrentBeat = Composer.MaxBeat;
             Stop();
         }
         else
@@ -123,18 +135,19 @@ public class TimelinePlayer
 
     private void PlayAudio(double startBeat, ILifetime? playLifetime = null)
     {
-        var subset = new ListNoteSource() { BeatsPerMinute = Timeline.Notes.BeatsPerMinute };
+        var song = Composer.Compose();
+        var subset = new ListNoteSource() { BeatsPerMinute = song.Notes.BeatsPerMinute };
 
         // TODO: I should not have to set the BPM for each note, but this is a quick fix
-        for (int i = 0; i < Timeline.Notes.Count; i++)
+        for (int i = 0; i < song.Notes.Count; i++)
         {
-            Timeline.Notes[i].BeatsPerMinute = Timeline.Notes.BeatsPerMinute;
+            song.Notes[i].BeatsPerMinute = song.Notes.BeatsPerMinute;
         }
 
-        Timeline.Notes.SortMelody();
-        for (int i = 0; i < Timeline.Notes.Count; i++)
+        song.Notes.SortMelody();
+        for (int i = 0; i < song.Notes.Count; i++)
         {
-            NoteExpression? n = Timeline.Notes[i];
+            NoteExpression? n = song.Notes[i];
             double endBeat = n.DurationBeats >= 0 ? n.StartBeat + n.DurationBeats : double.PositiveInfinity;
             if (endBeat <= startBeat) continue;
 
@@ -147,11 +160,11 @@ public class TimelinePlayer
                 duration = endBeat - startBeat;
             }
 
-            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, Timeline.Notes.BeatsPerMinute, n.Velocity, n.Instrument));
+            subset.Add(NoteExpression.Create(n.MidiNote, relStart, duration, song.Notes.BeatsPerMinute, n.Velocity, n.Instrument));
         }
 
         if (subset.Count == 0) return;
 
-        ConsoleApp.Current.Sound.Play(new Song(subset, Timeline.Notes.BeatsPerMinute), playLifetime);
+        ConsoleApp.Current.Sound.Play(new Song(subset, song.Notes.BeatsPerMinute), playLifetime);
     }
 }

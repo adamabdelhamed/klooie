@@ -8,7 +8,7 @@ namespace klooie;
 public class DAWPanel : ProtectedConsolePanel
 {
     public WorkspaceSession Session { get; private set; }
-    public ComposerWithTracks ComposerWithTracks { get; private set; }
+    public SongComposerWithTrackHeaders ComposerWithTracks { get; private set; }
      
     private IMidiProvider midiProvider;
     public DAWPanel(WorkspaceSession session, IMidiProvider midiProvider)
@@ -24,7 +24,7 @@ public class DAWPanel : ProtectedConsolePanel
 
         var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
 
-        ComposerWithTracks = ProtectedPanel.Add(new ComposerWithTracks(Session, commandBar, midiProvider)).Fill();
+        ComposerWithTracks = ProtectedPanel.Add(new SongComposerWithTrackHeaders(Session, commandBar, midiProvider)).Fill();
         ComposerWithTracks.Composer.Focus();
 
  

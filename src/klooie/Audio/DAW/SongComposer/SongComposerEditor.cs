@@ -4,9 +4,9 @@ using System.Linq;
 
 namespace klooie;
 
-public class ComposerEditor
+public class SongComposerEditor
 {
-    public required Composer Composer { get; init; }
+    public required SongComposer Composer { get; init; }
 
     // The clipboard stores MelodyClip references (deep copy logic below)
     private readonly List<MelodyClip> clipboard = new();
@@ -16,7 +16,7 @@ public class ComposerEditor
 
     private CommandStack CommandStack { get; init; }
 
-    public ComposerEditor(CommandStack commandStack)
+    public SongComposerEditor(CommandStack commandStack)
     {
         this.CommandStack = commandStack;
     }
@@ -225,10 +225,10 @@ public class ComposerEditor
     {
         if (pendingAddClip == null || addClipPreview == null) return;
         var (start, duration, trackIndex, melody) = pendingAddClip.Value;
-        int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * Composer.ColWidthChars;
-        int y = (trackIndex - Composer.Viewport.FirstVisibleTrack) * Composer.RowHeightChars;
-        int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * Composer.ColWidthChars);
-        int h = Composer.RowHeightChars;
+        int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * SongComposer.ColWidthChars;
+        int y = (trackIndex - Composer.Viewport.FirstVisibleTrack) * SongComposer.RowHeightChars;
+        int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * SongComposer.ColWidthChars);
+        int h = SongComposer.RowHeightChars;
         addClipPreview.MoveTo(x, y);
         addClipPreview.ResizeTo(w, h);
     }

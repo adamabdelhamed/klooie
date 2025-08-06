@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public partial class TimelineViewport : IObservableObject
+public partial class MelodyComposerViewport : IObservableObject
 {
     public const int DefaultFirstVisibleMidi = 50;
     public partial int FirstVisibleMidi { get; set; }
@@ -17,11 +17,11 @@ public partial class TimelineViewport : IObservableObject
     public void ScrollRows(int delta) => FirstVisibleMidi = Math.Clamp(FirstVisibleMidi + delta, 0, 127);
     public void ScrollBeats(double dx) => FirstVisibleBeat = Math.Max(0, FirstVisibleBeat + dx);
 
-    public VirtualTimelineGrid Timeline { get; }
+    public MelodyComposer Composer { get; }
 
-    public TimelineViewport(VirtualTimelineGrid timeline)
+    public MelodyComposerViewport(MelodyComposer composer)
     {
-        this.Timeline = timeline;
+        this.Composer = composer;
         // middle c
         FirstVisibleMidi = DefaultFirstVisibleMidi;
     }
@@ -31,12 +31,12 @@ public partial class TimelineViewport : IObservableObject
         if (beat > FirstVisibleBeat + BeatsOnScreen * 0.8)
         {
             FirstVisibleBeat = ConsoleMath.Round(beat - BeatsOnScreen * 0.2);
-            Timeline.RefreshVisibleSet();
+            Composer.RefreshVisibleSet();
         }
         else if (beat < FirstVisibleBeat)
         {
             FirstVisibleBeat = Math.Max(0, ConsoleMath.Round(beat - BeatsOnScreen * 0.8));
-            Timeline.RefreshVisibleSet();
+            Composer.RefreshVisibleSet();
         }
     }
 }

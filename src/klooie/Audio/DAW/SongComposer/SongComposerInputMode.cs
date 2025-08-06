@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace klooie;
 
-public abstract class ComposerInputMode : IComparable<ComposerInputMode>
+public abstract class SongComposerInputMode : IComparable<SongComposerInputMode>
 {
-    public required Composer Composer { get; init; }
+    public required SongComposer Composer { get; init; }
 
     // Pre-created foreground colors
     private static readonly RGB MainBeatColor = new RGB(40, 40, 40);
@@ -52,12 +52,12 @@ public abstract class ComposerInputMode : IComparable<ComposerInputMode>
             barCache = PlayHeadGreenBars;
             fg = PlayHeadGreenColor;
         }
-        else if (Composer.CurrentMode is ComposerSelectionMode)
+        else if (Composer.CurrentMode is SongComposerSelectionMode)
         {
             barCache = PlayHeadGrayBars;
             fg = PlayHeadGrayColor;
         }
-        else if (Composer.CurrentMode is ComposerNavigationMode)
+        else if (Composer.CurrentMode is SongComposerNavigationMode)
         {
             barCache = PlayHeadDarkRedBars;
             fg = PlayHeadDarkRedColor;
@@ -69,7 +69,7 @@ public abstract class ComposerInputMode : IComparable<ComposerInputMode>
         }
 
         double relBeat = Composer.CurrentBeat - Composer.Viewport.FirstVisibleBeat;
-        int x = ConsoleMath.Round(relBeat / Composer.BeatsPerColumn) * Composer.ColWidthChars;
+        int x = ConsoleMath.Round(relBeat / Composer.BeatsPerColumn) * SongComposer.ColWidthChars;
         if (x < 0 || x >= Composer.Width) return;
         for (int y = 0; y < Composer.Height; y++)
         {
@@ -82,7 +82,7 @@ public abstract class ComposerInputMode : IComparable<ComposerInputMode>
     {
         double firstBeat = Composer.Viewport.FirstVisibleBeat;
         double beatsPerCol = Composer.BeatsPerColumn;
-        int colWidth = Composer.ColWidthChars;
+        int colWidth = SongComposer.ColWidthChars;
         int width = Composer.Width;
 
         // Subdivision logic (finest with ≥4 cells apart)
@@ -132,7 +132,7 @@ public abstract class ComposerInputMode : IComparable<ComposerInputMode>
         return Math.Abs(val - Math.Round(val)) < epsilon;
     }
 
-    public int CompareTo(ComposerInputMode? other)
+    public int CompareTo(SongComposerInputMode? other)
     {
         return this.GetType().FullName == other?.GetType().FullName ? 0 : -1;
     }

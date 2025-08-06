@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace klooie;
 
-public class VirtualTimelineGrid : ProtectedConsolePanel
+public class MelodyComposer : ProtectedConsolePanel
 {
     public const double MaxBeatsPerColumn = 1.0;     // each cell is 1 beat (max zoomed out)
     public const double MinBeatsPerColumn = 1.0 / 128; // each cell is 1/8 beat (max zoomed in)
 
     public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
-    public TimelineViewport Viewport { get; private init; }
+    public MelodyComposerViewport Viewport { get; private init; }
     
     public ListNoteSource Notes { get; private set; }
     private readonly Dictionary<NoteExpression, NoteCell> live = new();
@@ -22,10 +22,10 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     public const int ColWidthChars = 1;
     public const int RowHeightChars = 1;
     private Recyclable? focusLifetime;
-    public TimelinePlayer TimelinePlayer { get; }
+    public MelodyComposerPlayer TimelinePlayer { get; }
     private double beatsPerColumn = 1/8.0;
 
-    public TimelineEditor Editor { get; }
+    public MelodyComposerEditor Editor { get; }
     
     public List<NoteExpression> SelectedNotes { get; private set; } = new();
 
@@ -42,7 +42,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                 beatsPerColumn = value;
                 UpdateViewportBounds(); 
                 RefreshVisibleSet();
-                if (CurrentMode is SelectionMode sm)  sm.SyncCursorToCurrentZoom();
+                if (CurrentMode is MelodyComposerSelectionMode sm)  sm.SyncCursorToCurrentZoom();
             }
         }
     }
@@ -51,19 +51,19 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     public double MaxBeat { get; private set; } 
 
     private Dictionary<string, RGB> instrumentColorMap = new();
-    private readonly TimelineInputMode[] userCyclableModes;
+    private readonly MelodyComposerInputMode[] userCyclableModes;
 
     public WorkspaceSession Session { get; private init; }
 
-    public TimelineInputMode CurrentMode { get; private set; }
-    public Event<TimelineInputMode> ModeChanging { get; } = Event<TimelineInputMode>.Create();
-    public VirtualTimelineGrid(WorkspaceSession session, ListNoteSource? notes = null)
+    public MelodyComposerInputMode CurrentMode { get; private set; }
+    public Event<MelodyComposerInputMode> ModeChanging { get; } = Event<MelodyComposerInputMode>.Create();
+    public MelodyComposer(WorkspaceSession session, ListNoteSource? notes = null)
     {
         this.Session = session;
         notes = notes ?? new ListNoteSource();
-        this.userCyclableModes =  [new NavigationMode() { Timeline = this }, new SelectionMode() { Timeline = this }];
-        Viewport = new TimelineViewport(this);
-        TimelinePlayer = new TimelinePlayer(this);
+        this.userCyclableModes =  [new MelodyComposerNavigationMode() { Composer = this }, new MelodyComposerSelectionMode() { Composer = this }];
+        Viewport = new MelodyComposerViewport(this);
+        TimelinePlayer = new MelodyComposerPlayer(this);
 
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
@@ -75,12 +75,12 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
         LoadNotes(notes);
         TimelinePlayer.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);  
         CurrentMode = this.userCyclableModes[0];
-        Editor = new TimelineEditor(session.Commands) { Timeline = this };
+        Editor = new MelodyComposerEditor(session.Commands) { Composer = this };
         TimelinePlayer.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
         RefreshVisibleSet();
     }
 
-    public void SetMode(TimelineInputMode mode)
+    public void SetMode(MelodyComposerInputMode mode)
     {
         if (CurrentMode == mode) return;
         CurrentMode = mode;
@@ -97,7 +97,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     private void LoadNotes(ListNoteSource notes)
     {
         this.Notes = notes;
-        Viewport.FirstVisibleMidi = notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min();
+        Viewport.FirstVisibleMidi = notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(MelodyComposerViewport.DefaultFirstVisibleMidi).Min();
         MaxBeat = notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
         var instruments = notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
         var instrumentColors = instruments.Select((s, i) => GetInstrumentColor(i)).ToArray();
@@ -197,7 +197,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
     {
         if(live.Count == 0 && Notes.Count > 0)
         {
-            Viewport.FirstVisibleMidi = Math.Max(0, Notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(TimelineViewport.DefaultFirstVisibleMidi).Min() - 12);
+            Viewport.FirstVisibleMidi = Math.Max(0, Notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(MelodyComposerViewport.DefaultFirstVisibleMidi).Min() - 12);
         }
         MaxBeat = Notes.Select(n => n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : GetSustainedNoteDurationBeats(n))).DefaultIfEmpty(0).Max();
         double beatStart = Viewport.FirstVisibleBeat;
@@ -229,7 +229,7 @@ public class VirtualTimelineGrid : ProtectedConsolePanel
                 live[note] = cell;
             }
 
-            cell.Background = SelectedNotes.Contains(note) ? SelectionMode.SelectedNoteColor : 
+            cell.Background = SelectedNotes.Contains(note) ? MelodyComposerSelectionMode.SelectedNoteColor : 
                 note.Instrument == null ? RGB.Orange : instrumentColorMap.TryGetValue(note.Instrument.Name, out var color) ? color 
                 : RGB.Orange;
 

@@ -4,9 +4,9 @@ using System.Linq;
 
 namespace klooie;
 
-public class TimelineEditor
+public class MelodyComposerEditor
 {
-    public required VirtualTimelineGrid Timeline { get; init; }
+    public required MelodyComposer Composer { get; init; }
     private readonly List<NoteExpression> clipboard = new();
 
     private ConsoleControl? addNotePreview;
@@ -14,7 +14,7 @@ public class TimelineEditor
 
     private CommandStack CommandStack { get; init; }
 
-    public TimelineEditor(CommandStack commandStack)
+    public MelodyComposerEditor(CommandStack commandStack)
     {
         this.CommandStack = commandStack;
     }
@@ -52,8 +52,8 @@ public class TimelineEditor
         if (Matches(ConsoleKey.DownArrow, shift: true) || Matches(ConsoleKey.S, shift: true)) return AdjustVelocity(-1);
 
         // DURATION
-        if (Matches(ConsoleKey.LeftArrow, shift: true) || Matches(ConsoleKey.A, shift: true)) return AdjustDuration(-Timeline.BeatsPerColumn);
-        if (Matches(ConsoleKey.RightArrow, shift: true) || Matches(ConsoleKey.D, shift: true)) return AdjustDuration(Timeline.BeatsPerColumn);
+        if (Matches(ConsoleKey.LeftArrow, shift: true) || Matches(ConsoleKey.A, shift: true)) return AdjustDuration(-Composer.BeatsPerColumn);
+        if (Matches(ConsoleKey.RightArrow, shift: true) || Matches(ConsoleKey.D, shift: true)) return AdjustDuration(Composer.BeatsPerColumn);
 
         // UNDO/REDO
         if (Matches(ConsoleKey.Z, ctrl: true)) return Undo();
@@ -69,28 +69,28 @@ public class TimelineEditor
     // --- SELECTION ---
     private bool SelectAll()
     {
-        Timeline.SelectedNotes.Clear();
-        Timeline.SelectedNotes.AddRange(Timeline.Notes);
-        Timeline.RefreshVisibleSet();
-        Timeline.StatusChanged.Fire("All notes selected".ToWhite());
+        Composer.SelectedNotes.Clear();
+        Composer.SelectedNotes.AddRange(Composer.Notes);
+        Composer.RefreshVisibleSet();
+        Composer.StatusChanged.Fire("All notes selected".ToWhite());
         return true;
     }
     private bool DeselectAll()
     {
-        Timeline.SelectedNotes.Clear();
-        Timeline.RefreshVisibleSet();
-        Timeline.StatusChanged.Fire("Deselected all notes".ToWhite());
+        Composer.SelectedNotes.Clear();
+        Composer.RefreshVisibleSet();
+        Composer.StatusChanged.Fire("Deselected all notes".ToWhite());
         return true;
     }
     private bool SelectAllLeftOrRight(ConsoleKeyInfo k)
     {
         var left = k.Key == ConsoleKey.LeftArrow;
-        Timeline.SelectedNotes.Clear();
-        Timeline.SelectedNotes.AddRange(Timeline.Notes.Where(n =>
-            (left && n.StartBeat <= Timeline.CurrentBeat) ||
-            (!left && n.StartBeat >= Timeline.CurrentBeat)));
-        Timeline.RefreshVisibleSet();
-        Timeline.StatusChanged.Fire("All notes selected".ToWhite());
+        Composer.SelectedNotes.Clear();
+        Composer.SelectedNotes.AddRange(Composer.Notes.Where(n =>
+            (left && n.StartBeat <= Composer.CurrentBeat) ||
+            (!left && n.StartBeat >= Composer.CurrentBeat)));
+        Composer.RefreshVisibleSet();
+        Composer.StatusChanged.Fire("All notes selected".ToWhite());
         return true;
     }
 
@@ -98,40 +98,40 @@ public class TimelineEditor
     private bool Copy()
     {
         clipboard.Clear();
-        Timeline.StatusChanged.Fire($"Copied {Timeline.SelectedNotes.Count} notes to clipboard".ToWhite());
-        clipboard.AddRange(Timeline.SelectedNotes);
+        Composer.StatusChanged.Fire($"Copied {Composer.SelectedNotes.Count} notes to clipboard".ToWhite());
+        clipboard.AddRange(Composer.SelectedNotes);
         return true;
     }
     private bool Paste()
     {
-        if (Timeline.Notes is not ListNoteSource) return true;
+        if (Composer.Notes is not ListNoteSource) return true;
         if (clipboard.Count == 0) return true;
-        double offset = Timeline.CurrentBeat - clipboard.Min(n => n.StartBeat);
+        double offset = Composer.CurrentBeat - clipboard.Min(n => n.StartBeat);
 
         var pasted = new List<NoteExpression>();
         var addCmds = new List<ICommand>();
 
         foreach (var n in clipboard)
         {
-            var nn = NoteExpression.Create(n.MidiNote,  Math.Max(0, n.StartBeat + offset), n.DurationBeats,  Timeline.Notes.BeatsPerMinute,  n.Velocity,  n.Instrument);
+            var nn = NoteExpression.Create(n.MidiNote,  Math.Max(0, n.StartBeat + offset), n.DurationBeats,  Composer.Notes.BeatsPerMinute,  n.Velocity,  n.Instrument);
             pasted.Add(nn);
-            addCmds.Add(new AddNoteCommand(Timeline, nn));
+            addCmds.Add(new AddNoteCommand(Composer, nn));
         }
 
         CommandStack.Execute(new MultiCommand(addCmds, "Paste Notes"));
-        Timeline.SelectedNotes.Clear();
-        Timeline.SelectedNotes.AddRange(pasted);
+        Composer.SelectedNotes.Clear();
+        Composer.SelectedNotes.AddRange(pasted);
         return true;
     }
 
     // --- DELETE ---
     private bool DeleteSelected()
     {
-        if (Timeline.Notes is not ListNoteSource) return true;
-        if (Timeline.SelectedNotes.Count == 0) return true;
+        if (Composer.Notes is not ListNoteSource) return true;
+        if (Composer.SelectedNotes.Count == 0) return true;
 
-        var deleteCmds = Timeline.SelectedNotes
-            .Select(note => new DeleteNoteCommand(Timeline, note))
+        var deleteCmds = Composer.SelectedNotes
+            .Select(note => new DeleteNoteCommand(Composer, note))
             .ToList<ICommand>();
 
         CommandStack.Execute(new MultiCommand(deleteCmds, "Delete Selected Notes"));
@@ -141,26 +141,26 @@ public class TimelineEditor
     // --- MOVE ---
     private bool MoveSelection(ConsoleKeyInfo k)
     {
-        if (Timeline.Notes is not ListNoteSource list) return true;
-        if (Timeline.SelectedNotes.Count == 0) return true;
+        if (Composer.Notes is not ListNoteSource list) return true;
+        if (Composer.SelectedNotes.Count == 0) return true;
 
         double beatDelta = 0;
         int midiDelta = 0;
-        if (k.Key == ConsoleKey.LeftArrow) beatDelta = -Timeline.BeatsPerColumn;
-        else if (k.Key == ConsoleKey.RightArrow) beatDelta = Timeline.BeatsPerColumn;
+        if (k.Key == ConsoleKey.LeftArrow) beatDelta = -Composer.BeatsPerColumn;
+        else if (k.Key == ConsoleKey.RightArrow) beatDelta = Composer.BeatsPerColumn;
         else if (k.Key == ConsoleKey.UpArrow) midiDelta = 1;
         else if (k.Key == ConsoleKey.DownArrow) midiDelta = -1;
 
         var updated = new List<NoteExpression>();
         var moveCmds = new List<ICommand>();
 
-        foreach (var n in Timeline.SelectedNotes)
+        foreach (var n in Composer.SelectedNotes)
         {
             int newMidi = Math.Clamp(n.MidiNote + midiDelta, 0, 127);
             double newBeat = Math.Max(0, n.StartBeat + beatDelta);
-            var nn = NoteExpression.Create(newMidi, newBeat, n.DurationBeats, Timeline.Notes.BeatsPerMinute, n.Velocity, n.Instrument);
+            var nn = NoteExpression.Create(newMidi, newBeat, n.DurationBeats, Composer.Notes.BeatsPerMinute, n.Velocity, n.Instrument);
             updated.Add(nn);
-            moveCmds.Add(new ChangeNoteCommand(Timeline, n, nn));
+            moveCmds.Add(new ChangeNoteCommand(Composer, n, nn));
         }
 
         if (moveCmds.Count > 0)
@@ -173,17 +173,17 @@ public class TimelineEditor
     // --- VELOCITY ---
     private bool AdjustVelocity(int delta)
     {
-        if (Timeline.SelectedNotes.Count == 0) return true;
+        if (Composer.SelectedNotes.Count == 0) return true;
 
         var updated = new List<NoteExpression>();
         var velCmds = new List<ICommand>();
 
-        foreach (var n in Timeline.SelectedNotes)
+        foreach (var n in Composer.SelectedNotes)
         {
             int newVel = Math.Clamp(n.Velocity + delta, 1, 127);
-            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, Timeline.Notes.BeatsPerMinute, newVel, n.Instrument);
+            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, n.DurationBeats, Composer.Notes.BeatsPerMinute, newVel, n.Instrument);
             updated.Add(nn);
-            velCmds.Add(new ChangeNoteCommand(Timeline, n, nn));
+            velCmds.Add(new ChangeNoteCommand(Composer, n, nn));
         }
 
         if (velCmds.Count > 0)
@@ -196,17 +196,17 @@ public class TimelineEditor
     // --- DURATION ---
     private bool AdjustDuration(double deltaBeats)
     {
-        if (Timeline.SelectedNotes.Count == 0) return true;
+        if (Composer.SelectedNotes.Count == 0) return true;
 
         var updated = new List<NoteExpression>();
         var durCmds = new List<ICommand>();
 
-        foreach (var n in Timeline.SelectedNotes)
+        foreach (var n in Composer.SelectedNotes)
         {
             double newDuration = Math.Max(0.1, n.DurationBeats + deltaBeats); // Don't allow zero or negative duration
-            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, newDuration, Timeline.Notes.BeatsPerMinute, n.Velocity, n.Instrument);
+            var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, newDuration, Composer.Notes.BeatsPerMinute, n.Velocity, n.Instrument);
             updated.Add(nn);
-            durCmds.Add(new ChangeNoteCommand(Timeline, n, nn));
+            durCmds.Add(new ChangeNoteCommand(Composer, n, nn));
         }
 
         if (durCmds.Count > 0)
@@ -233,21 +233,21 @@ public class TimelineEditor
     {
         ClearAddNotePreview();
         pendingAddNote = (start, duration, midi);
-        addNotePreview = Timeline.AddPreviewControl();
+        addNotePreview = Composer.AddPreviewControl();
         addNotePreview.Background = RGB.DarkGreen;
         addNotePreview.ZIndex = 0;
-        Timeline.Viewport.SubscribeToAnyPropertyChange(addNotePreview, _ => PositionAddNotePreview(), addNotePreview);
+        Composer.Viewport.SubscribeToAnyPropertyChange(addNotePreview, _ => PositionAddNotePreview(), addNotePreview);
         PositionAddNotePreview();
-        Timeline.StatusChanged.Fire(ConsoleString.Parse("[White]Press [Cyan]p[White] to add a note here or press ALT + D to deselect."));
+        Composer.StatusChanged.Fire(ConsoleString.Parse("[White]Press [Cyan]p[White] to add a note here or press ALT + D to deselect."));
     }
     public void PositionAddNotePreview()
     {
         if (pendingAddNote == null || addNotePreview == null) return;
         var (start, duration, midi) = pendingAddNote.Value;
-        int x = ConsoleMath.Round((start - Timeline.Viewport.FirstVisibleBeat) / Timeline.BeatsPerColumn) * VirtualTimelineGrid.ColWidthChars;
-        int y = (Timeline.Viewport.FirstVisibleMidi + Timeline.Viewport.MidisOnScreen - 1 - midi) * VirtualTimelineGrid.RowHeightChars;
-        int w = Math.Max(1, ConsoleMath.Round(duration / Timeline.BeatsPerColumn) * VirtualTimelineGrid.ColWidthChars);
-        int h = VirtualTimelineGrid.RowHeightChars;
+        int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * MelodyComposer.ColWidthChars;
+        int y = (Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen - 1 - midi) * MelodyComposer.RowHeightChars;
+        int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * MelodyComposer.ColWidthChars);
+        int h = MelodyComposer.RowHeightChars;
         addNotePreview.MoveTo(x, y);
         addNotePreview.ResizeTo(w, h);
     }
@@ -261,14 +261,14 @@ public class TimelineEditor
     {
         if (pendingAddNote == null) return true;
         var (start, duration, midi) = pendingAddNote.Value;
-        var command = new AddNoteCommand(Timeline, NoteExpression.Create(midi, start, duration, Timeline.Notes.BeatsPerMinute, instrument: Timeline.Instrument));
-        Timeline.Session.Commands.Execute(command);
+        var command = new AddNoteCommand(Composer, NoteExpression.Create(midi, start, duration, Composer.Notes.BeatsPerMinute, instrument: Composer.Instrument));
+        Composer.Session.Commands.Execute(command);
         return true;
     }
     private bool DismissAddNotePreview()
     {
         ClearAddNotePreview();
-        Timeline.RefreshVisibleSet();
+        Composer.RefreshVisibleSet();
         return true;
     }
 }

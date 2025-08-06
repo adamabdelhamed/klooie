@@ -1,21 +1,19 @@
-using System;
+﻿using System;
 
 namespace klooie;
 
 /// <summary>
-/// Combines seeking and panning logic into a single navigation mode.
-/// Arrow keys move the playhead when stopped or pan the viewport when playing.
-/// Vertical navigation always pans without moving the playhead.
-/// Home/End jump to start or end and ensure visibility.
+/// Navigation for the Composer grid. Arrow keys move the playhead (when stopped) or pan the viewport (when playing).
+/// Vertical navigation pans tracks. Home/End jump to song start/end.
 /// </summary>
-public class NavigationMode : TimelineInputMode
+public class SongComposerNavigationMode : SongComposerInputMode
 {
     public override void HandleKeyInput(ConsoleKeyInfo key)
     {
         if (key.Modifiers != 0) return; // ignore any modifiers
 
-        var player = Timeline.TimelinePlayer;
-        var view = Timeline.Viewport;
+        var player = Composer.Player;
+        var view = Composer.Viewport;
         bool handled = true;
 
         var k = key.Key;
@@ -24,11 +22,11 @@ public class NavigationMode : TimelineInputMode
         {
             if (player.IsPlaying)
             {
-                view.ScrollBeats(-Timeline.BeatsPerColumn);
+                view.ScrollBeats(-Composer.BeatsPerColumn);
             }
             else
             {
-                player.SeekBy(-Timeline.BeatsPerColumn);
+                player.SeekBy(-Composer.BeatsPerColumn);
                 EnsurePlayheadVisible();
             }
         }
@@ -36,29 +34,31 @@ public class NavigationMode : TimelineInputMode
         {
             if (player.IsPlaying)
             {
-                view.ScrollBeats(Timeline.BeatsPerColumn);
+                view.ScrollBeats(Composer.BeatsPerColumn);
             }
             else
             {
-                player.SeekBy(Timeline.BeatsPerColumn);
+                player.SeekBy(Composer.BeatsPerColumn);
                 EnsurePlayheadVisible();
             }
         }
         else if (k == ConsoleKey.UpArrow || k == ConsoleKey.W)
         {
-            view.ScrollRows(1);
+            view.ScrollTracks(-1, Composer.Tracks.Count);
         }
         else if (k == ConsoleKey.DownArrow || k == ConsoleKey.S)
         {
-            view.ScrollRows(-1);
+            view.ScrollTracks(1, Composer.Tracks.Count);
         }
         else if (k == ConsoleKey.PageUp)
         {
-            view.ScrollRows(view.MidisOnScreen >= 24 ? 12 : 1);
+            int delta = view.TracksOnScreen >= 8 ? -4 : -1;
+            view.ScrollTracks(delta, Composer.Tracks.Count);
         }
         else if (k == ConsoleKey.PageDown)
         {
-            view.ScrollRows(view.MidisOnScreen >= 24 ? -12 : -1);
+            int delta = view.TracksOnScreen >= 8 ? 4 : 1;
+            view.ScrollTracks(delta, Composer.Tracks.Count);
         }
         else if (k == ConsoleKey.Home)
         {
@@ -67,8 +67,12 @@ public class NavigationMode : TimelineInputMode
         }
         else if (k == ConsoleKey.End)
         {
-            player.Seek(Timeline.MaxBeat);
+            player.Seek(Composer.MaxBeat);
             EnsurePlayheadVisible();
+        }
+        else if (k == ConsoleKey.Enter && Composer.SelectedMelodies.Count == 1)
+        {
+            Composer.OpenMelody(Composer.SelectedMelodies[0]);
         }
         else
         {
@@ -77,14 +81,14 @@ public class NavigationMode : TimelineInputMode
 
         if (handled)
         {
-            Timeline.RefreshVisibleSet();
+            Composer.RefreshVisibleSet();
         }
     }
 
     private void EnsurePlayheadVisible()
     {
-        var view = Timeline.Viewport;
-        double beat = Timeline.TimelinePlayer.CurrentBeat;
+        var view = Composer.Viewport;
+        double beat = Composer.Player.CurrentBeat;
 
         if (beat < view.FirstVisibleBeat)
         {

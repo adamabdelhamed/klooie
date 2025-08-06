@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace klooie;
 
-public abstract class TimelineInputMode : IComparable<TimelineInputMode>
+public abstract class MelodyComposerInputMode : IComparable<MelodyComposerInputMode>
 {
-    public required VirtualTimelineGrid Timeline { get; init; }
+    public required MelodyComposer Composer { get; init; }
 
     // Pre-created foreground colors
     private static readonly RGB MainBeatColor = new RGB(40, 40, 40);
@@ -48,17 +48,17 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
         // Decide which cache/fg to use
         Dictionary<RGB, ConsoleString> barCache;
         RGB fg;
-        if (Timeline.TimelinePlayer.IsPlaying)
+        if (Composer.TimelinePlayer.IsPlaying)
         {
             barCache = PlayHeadGreenBars;
             fg = PlayHeadGreenColor;
         }
-        else if (Timeline.CurrentMode is SelectionMode)
+        else if (Composer.CurrentMode is MelodyComposerSelectionMode)
         {
             barCache = PlayHeadGrayBars;
             fg = PlayHeadGrayColor;
         }
-        else if (Timeline.CurrentMode is NavigationMode)
+        else if (Composer.CurrentMode is MelodyComposerNavigationMode)
         {
             barCache = PlayHeadDarkRedBars;
             fg = PlayHeadDarkRedColor;
@@ -69,10 +69,10 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
             fg = PlayHeadRedColor;
         }
 
-        double relBeat = Timeline.CurrentBeat - Timeline.Viewport.FirstVisibleBeat;
-        int x = ConsoleMath.Round(relBeat / Timeline.BeatsPerColumn) * VirtualTimelineGrid.ColWidthChars;
-        if (x < 0 || x >= Timeline.Width) return;
-        for (int y = 0; y < Timeline.Height; y++)
+        double relBeat = Composer.CurrentBeat - Composer.Viewport.FirstVisibleBeat;
+        int x = ConsoleMath.Round(relBeat / Composer.BeatsPerColumn) * MelodyComposer.ColWidthChars;
+        if (x < 0 || x >= Composer.Width) return;
+        for (int y = 0; y < Composer.Height; y++)
         {
             var existingPixel = context.GetPixel(x, y);
             context.DrawString(GetBar(barCache, fg, existingPixel.BackgroundColor), x, y);
@@ -81,10 +81,10 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
 
     private void DrawBeatGrid(ConsoleBitmap context)
     {
-        double firstBeat = Timeline.Viewport.FirstVisibleBeat;
-        double beatsPerCol = Timeline.BeatsPerColumn;
-        int colWidth = VirtualTimelineGrid.ColWidthChars;
-        int width = Timeline.Width;
+        double firstBeat = Composer.Viewport.FirstVisibleBeat;
+        double beatsPerCol = Composer.BeatsPerColumn;
+        int colWidth = MelodyComposer.ColWidthChars;
+        int width = Composer.Width;
 
         // Subdivision logic (finest with ≥4 cells apart)
         Span<double> subdivs = stackalloc double[] { 8, 4, 2 };
@@ -105,7 +105,7 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
 
             if (IsNearInteger(beatAtX, 1e-6))
             {
-                for (int y = 0; y < Timeline.Height; y++)
+                for (int y = 0; y < Composer.Height; y++)
                 {
                     var existingPixel = context.GetPixel(x, y);
                     context.DrawString(GetBar(MainBeatBars, MainBeatColor, existingPixel.BackgroundColor), x, y);
@@ -118,7 +118,7 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
                 double beatInSubdivision = beatAtX * chosenSubdiv;
                 if (IsNearInteger(beatInSubdivision, 1e-6))
                 {
-                    for (int y = 0; y < Timeline.Height; y++)
+                    for (int y = 0; y < Composer.Height; y++)
                     {
                         var existingPixel = context.GetPixel(x, y);
                         context.DrawString(GetBar(SubdivBars, SubdivColor, existingPixel.BackgroundColor), x, y);
@@ -134,7 +134,7 @@ public abstract class TimelineInputMode : IComparable<TimelineInputMode>
         return Math.Abs(val - Math.Round(val)) < epsilon;
     }
 
-    public int CompareTo(TimelineInputMode? other)
+    public int CompareTo(MelodyComposerInputMode? other)
     {
         return this.GetType().FullName == other?.GetType().FullName ? 0 : -1;
     }

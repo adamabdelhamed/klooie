@@ -11,7 +11,7 @@ public class AssignInstrumentCommand : TimelineCommand
     private readonly NoteExpression _updated;
     private int? _index;
 
-    public AssignInstrumentCommand(VirtualTimelineGrid timeline, NoteExpression original, NoteExpression updated) : base(timeline, "Assign Instrument")
+    public AssignInstrumentCommand(MelodyComposer timeline, NoteExpression original, NoteExpression updated) : base(timeline, "Assign Instrument")
     {
         _original = original;
         _updated = updated;

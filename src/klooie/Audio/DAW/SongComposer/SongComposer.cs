@@ -8,13 +8,13 @@ using System.Text.Json.Serialization;
 namespace klooie;
 
 // Represents a song with multiple tracks. Each track holds melody clips.
-public partial class Composer : ProtectedConsolePanel
+public partial class SongComposer : ProtectedConsolePanel
 {
     public const double MaxBeatsPerColumn = 1.0;
     public const double MinBeatsPerColumn = 1.0 / 128;
 
     public Event<ConsoleString> StatusChanged { get; } = Event<ConsoleString>.Create();
-    public ComposerViewport Viewport { get; private init; }
+    public SongComposerViewport Viewport { get; private init; }
 
     public List<ComposerTrack> Tracks => Session.CurrentSong.Tracks;
 
@@ -28,10 +28,10 @@ public partial class Composer : ProtectedConsolePanel
     public const int ColWidthChars = 1;
     public const int RowHeightChars = 3;
     private Recyclable? focusLifetime;
-    public ComposerPlayer Player { get; }
+    public SongComposerPlayer Player { get; }
     private double beatsPerColumn = 1 / 8.0;
 
-    public ComposerEditor Editor { get; }
+    public SongComposerEditor Editor { get; }
     public InstrumentExpression? Instrument { get; set; } = new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
 
     public double BeatsPerColumn
@@ -75,9 +75,9 @@ public partial class Composer : ProtectedConsolePanel
 
     private Dictionary<string, RGB> trackColorMap = new();
 
-    private readonly ComposerInputMode[] userCyclableModes;
-    public ComposerInputMode CurrentMode { get; private set; }
-    public Event<ComposerInputMode> ModeChanging { get; } = Event<ComposerInputMode>.Create();
+    private readonly SongComposerInputMode[] userCyclableModes;
+    public SongComposerInputMode CurrentMode { get; private set; }
+    public Event<SongComposerInputMode> ModeChanging { get; } = Event<SongComposerInputMode>.Create();
 
     // Which track (by index) is currently selected for editing
     public int SelectedTrackIndex { get; set; }
@@ -86,13 +86,13 @@ public partial class Composer : ProtectedConsolePanel
 
     public IMidiProvider MidiProvider { get; private set; }
 
-    public Composer(WorkspaceSession session, IMidiProvider midiProvider)
+    public SongComposer(WorkspaceSession session, IMidiProvider midiProvider)
     {
         this.Session = session;
         this.MidiProvider = midiProvider;
-        this.userCyclableModes = [new ComposerNavigationMode() { Composer = this }, new ComposerSelectionMode() { Composer = this }];
-        Viewport = new ComposerViewport(this);
-        Player = new ComposerPlayer(this);
+        this.userCyclableModes = [new SongComposerNavigationMode() { Composer = this }, new SongComposerSelectionMode() { Composer = this }];
+        Viewport = new SongComposerViewport(this);
+        Player = new SongComposerPlayer(this);
 
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
@@ -113,7 +113,7 @@ public partial class Composer : ProtectedConsolePanel
 
         Player.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);
         CurrentMode = this.userCyclableModes[0];
-        Editor = new ComposerEditor(session.Commands) { Composer = this };
+        Editor = new SongComposerEditor(session.Commands) { Composer = this };
         Player.Stopped.Subscribe(this, static (me) => me.StatusChanged.Fire(ConsoleString.Parse("[White]Stopped.")), this);
 
         RefreshVisibleSet();
@@ -202,7 +202,7 @@ public partial class Composer : ProtectedConsolePanel
             .Max();
     }
 
-    public void SetMode(ComposerInputMode mode)
+    public void SetMode(SongComposerInputMode mode)
     {
         if (CurrentMode == mode) return;
         CurrentMode = mode;
@@ -307,7 +307,7 @@ public partial class Composer : ProtectedConsolePanel
 
                 // Determine color (by track, by selection, etc)
                 cell.Background = SelectedMelodies.Contains(melody)
-                    ? ComposerSelectionMode.SelectedMelodyColor
+                    ? SongComposerSelectionMode.SelectedMelodyColor
                     : trackColorMap.TryGetValue(track.Name, out var color) ? color
                     : RGB.Orange;
 

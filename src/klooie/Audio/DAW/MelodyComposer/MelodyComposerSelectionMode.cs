@@ -4,18 +4,21 @@ using System.Linq;
 
 namespace klooie;
 
-public class ComposerSelectionMode : ComposerInputMode
+/// <summary>
+/// TODOS: 
+/// - Selection mode should work when part of the selection is off-screen, so that notes out of theviewport can be selected. We want the user to be able to zoom in and out during selection.
+/// </summary>
+public class MelodyComposerSelectionMode : MelodyComposerInputMode
 {
     public RGB SelectionModeColor { get; set; } = RGB.Blue;
-    public static readonly RGB SelectedMelodyColor = RGB.Cyan;
-
+    public static readonly RGB SelectedNoteColor = RGB.Cyan;
     private enum SelectionPhase { PickingAnchor, ExpandingSelection }
     private SelectionPhase selectionPhase = SelectionPhase.PickingAnchor;
 
-    // Store logical selection position in (beat, trackIndex)
-    private (double Beat, int Track)? selectionAnchorBeatTrack = null;
-    private (double Beat, int Track)? selectionCursorBeatTrack = null;
-    private (double Beat, int Track)? selectionPreviewCursorBeatTrack = null;
+    // Store logical selection position in (beat, midi)
+    private (double Beat, int Midi)? selectionAnchorBeatMidi = null;
+    private (double Beat, int Midi)? selectionCursorBeatMidi = null;
+    private (double Beat, int Midi)? selectionPreviewCursorBeatMidi = null;
 
     // Store visual cursor/anchor for drawing
     private (int X, int Y)? selectionAnchor = null;
@@ -25,29 +28,22 @@ public class ComposerSelectionMode : ComposerInputMode
     private ConsoleControl? selectionRectangle = null;
     private ConsoleControl? anchorPreviewControl = null;
 
+
     public override void Paint(ConsoleBitmap context)
     {
         base.Paint(context);
         (int X, int Y)? cursor = selectionPhase == SelectionPhase.PickingAnchor ? selectionPreviewCursor : selectionCursor;
 
-        if (cursor.HasValue)
+        int x = cursor.Value.X * MelodyComposer.ColWidthChars;
+        if (cursor.HasValue && (x >= 0 && x < Composer.Width))
         {
-            int x = cursor.Value.X * Composer.ColWidthChars;
-            int y = cursor.Value.Y * ComposerViewport.TrackRowHeight;
-            if (x >= 0 && x < Composer.Width)
+            for (int y = 0; y < Composer.Height; y++)
             {
-                for (int dy = 0; dy < ComposerViewport.TrackRowHeight; dy++)
-                {
-                    int rowY = y + dy;
-                    if (rowY < Composer.Height)
-                    {
-                        var existingPixel = context.GetPixel(x, rowY);
-                        context.DrawString(
-                            "|".ToConsoleString(SelectionModeColor, existingPixel.BackgroundColor),
-                            x, rowY
-                        );
-                    }
-                }
+                var existingPixel = context.GetPixel(x, y);
+                context.DrawString(
+                    "|".ToConsoleString(SelectionModeColor, existingPixel.BackgroundColor),
+                    x, y
+                );
             }
         }
     }
@@ -77,19 +73,22 @@ public class ComposerSelectionMode : ComposerInputMode
     public override void Enter()
     {
         Composer.StatusChanged.Fire(ConsoleString.Parse("[White]Selection mode active. Use [B=Cyan][Black] arrows or WASD [D][White] to select an anchor point."));
+        Composer.Editor.ClearAddNotePreview();
         selectionPhase = SelectionPhase.PickingAnchor;
-        selectionAnchorBeatTrack = null;
-        selectionCursorBeatTrack = null;
+        selectionAnchorBeatMidi = null;
+        selectionCursorBeatMidi = null;
         selectionAnchor = null;
         selectionCursor = null;
         selectionPreviewCursor = null;
-        selectionPreviewCursorBeatTrack = null;
+        selectionPreviewCursorBeatMidi = null;
         HandleKeyInput(ConsoleKey.F5.KeyInfo());
         Composer.ModeChanging.SubscribeOnce((m) =>
         {
             selectionAnchor = null;
+
             selectionRectangle?.TryDispose();
             selectionRectangle = null;
+
             anchorPreviewControl?.TryDispose();
             anchorPreviewControl = null;
         });
@@ -98,50 +97,50 @@ public class ComposerSelectionMode : ComposerInputMode
     // -- Picking Anchor Phase --
     private void HandlePickAnchorPhase(ConsoleKeyInfo k)
     {
-        if (selectionPreviewCursorBeatTrack == null)
+        if (selectionPreviewCursorBeatMidi == null)
         {
-            int trackBase = Composer.Viewport.FirstVisibleTrack + Composer.Viewport.TracksOnScreen / 2;
+            int midBase = Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen / 2;
 
-            // Pick the first visible melody clip, if any, otherwise default to middle track
-            var closest = Composer.Tracks
-                .SelectMany((t, ti) => t.Melodies.Select(m => (melody: m, trackIdx: ti)))
-                .OrderBy(pair => Math.Abs(pair.melody.StartBeat - Composer.CurrentBeat))
+            var closest = Composer.Descendents
+                .OfType<NoteCell>()
+                .Where(c => c.Note.Velocity > 0)
+                .OrderBy(c => Math.Abs(c.Note.StartBeat - Composer.CurrentBeat))
                 .FirstOrDefault();
 
-            int initTrack = closest.melody != null ? closest.trackIdx : trackBase;
-            selectionPreviewCursorBeatTrack = (Composer.CurrentBeat, initTrack);
+            int initMidi = closest?.Note.MidiNote ?? midBase;
+            selectionPreviewCursorBeatMidi = (Composer.CurrentBeat, initMidi);
             SyncCursorToCurrentZoom();
             UpdateAnchorPreview(selectionPreviewCursor.Value);
             return;
         }
 
-        var (beat, track) = selectionPreviewCursorBeatTrack.Value;
+        var (beat, midi) = selectionPreviewCursorBeatMidi.Value;
         bool handled = false;
 
         if (IsLeft(k))
         {
-            selectionPreviewCursorBeatTrack = (beat - Composer.BeatsPerColumn, track);
+            selectionPreviewCursorBeatMidi = (beat - Composer.BeatsPerColumn, midi);
             handled = true;
         }
         else if (IsRight(k))
         {
-            selectionPreviewCursorBeatTrack = (beat + Composer.BeatsPerColumn, track);
+            selectionPreviewCursorBeatMidi = (beat + Composer.BeatsPerColumn, midi);
             handled = true;
         }
         else if (IsUp(k))
         {
-            selectionPreviewCursorBeatTrack = (beat, Math.Max(0, track - 1));
+            selectionPreviewCursorBeatMidi = (beat, midi + 1);
             handled = true;
         }
         else if (IsDown(k))
         {
-            selectionPreviewCursorBeatTrack = (beat, Math.Min(Composer.Tracks.Count - 1, track + 1));
+            selectionPreviewCursorBeatMidi = (beat, midi - 1);
             handled = true;
         }
         else if (k.Key == ConsoleKey.Enter)
         {
-            selectionAnchorBeatTrack = selectionPreviewCursorBeatTrack;
-            selectionCursorBeatTrack = selectionPreviewCursorBeatTrack;
+            selectionAnchorBeatMidi = selectionPreviewCursorBeatMidi;
+            selectionCursorBeatMidi = selectionPreviewCursorBeatMidi;
             selectionPhase = SelectionPhase.ExpandingSelection;
             RemoveAnchorPreview();
             SyncCursorToCurrentZoom();
@@ -164,8 +163,8 @@ public class ComposerSelectionMode : ComposerInputMode
 
     private void UpdateAnchorPreview((int X, int Y) anchor)
     {
-        int left = anchor.X * Composer.ColWidthChars;
-        int top = anchor.Y * ComposerViewport.TrackRowHeight;
+        int left = anchor.X * MelodyComposer.ColWidthChars;
+        int top = anchor.Y * MelodyComposer.RowHeightChars;
         if (anchorPreviewControl == null)
         {
             anchorPreviewControl = Composer.AddPreviewControl();
@@ -174,7 +173,7 @@ public class ComposerSelectionMode : ComposerInputMode
             anchorPreviewControl.ZIndex = 1; // Above selection rectangle
         }
         anchorPreviewControl.MoveTo(left, top);
-        anchorPreviewControl.ResizeTo(Composer.ColWidthChars, ComposerViewport.TrackRowHeight);
+        anchorPreviewControl.ResizeTo(MelodyComposer.ColWidthChars, MelodyComposer.RowHeightChars);
     }
 
     private void RemoveAnchorPreview()
@@ -182,85 +181,89 @@ public class ComposerSelectionMode : ComposerInputMode
         anchorPreviewControl?.Dispose();
         anchorPreviewControl = null;
         selectionPreviewCursor = null;
-        selectionPreviewCursorBeatTrack = null;
+        selectionPreviewCursorBeatMidi = null;
     }
 
     // -- Expand Selection Phase --
     private void HandleExpandSelectionPhase(ConsoleKeyInfo k)
     {
-        if (selectionCursorBeatTrack == null) return;
-        var (beat, track) = selectionCursorBeatTrack.Value;
+        if (selectionCursorBeatMidi == null) return;
+        var (beat, midi) = selectionCursorBeatMidi.Value;
         bool handled = false;
 
         if (IsLeft(k))
         {
-            selectionCursorBeatTrack = (beat - Composer.BeatsPerColumn, track);
+            selectionCursorBeatMidi = (beat - Composer.BeatsPerColumn, midi);
             handled = true;
         }
         else if (IsRight(k))
         {
-            selectionCursorBeatTrack = (beat + Composer.BeatsPerColumn, track);
+            selectionCursorBeatMidi = (beat + Composer.BeatsPerColumn, midi);
             handled = true;
         }
         else if (IsUp(k))
         {
-            selectionCursorBeatTrack = (beat, Math.Max(0, track - 1));
+            selectionCursorBeatMidi = (beat, midi + 1);
             handled = true;
         }
         else if (IsDown(k))
         {
-            selectionCursorBeatTrack = (beat, Math.Min(Composer.Tracks.Count - 1, track + 1));
+            selectionCursorBeatMidi = (beat, midi - 1);
             handled = true;
         }
         else if (k.Key == ConsoleKey.Enter)
         {
             if (selectionAnchor == null || selectionCursor == null) return;
-            Composer.SelectedMelodies.Clear();
-
+            Composer.SelectedNotes.Clear();
             var (ax, ay) = selectionAnchor.Value;
             var (cx, cy) = selectionCursor.Value;
             int colMin = Math.Min(ax, cx), colMax = Math.Max(ax, cx);
             int rowMin = Math.Min(ay, cy), rowMax = Math.Max(ay, cy);
 
-            double beat0 = Composer.Viewport.FirstVisibleBeat + colMin * Composer.BeatsPerColumn;
-            double beat1 = Composer.Viewport.FirstVisibleBeat + colMax * Composer.BeatsPerColumn;
-            int track0 = Composer.Viewport.FirstVisibleTrack + Math.Min(ay, cy);
-            int track1 = Composer.Viewport.FirstVisibleTrack + Math.Max(ay, cy);
+            double beat0 = Composer.Viewport.FirstVisibleBeat + Math.Min(ax, cx) * Composer.BeatsPerColumn;
+            double beat1 = Composer.Viewport.FirstVisibleBeat + Math.Max(ax, cx) * Composer.BeatsPerColumn;
+            int midi0 = Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen - 1 - Math.Max(ay, cy);
+            int midi1 = Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen - 1 - Math.Min(ay, cy);
 
+            // Swap if needed to ensure low <= high
             if (beat0 > beat1) (beat0, beat1) = (beat1, beat0);
-            if (track0 > track1) (track0, track1) = (track1, track0);
+            if (midi0 > midi1) (midi0, midi1) = (midi1, midi0);
 
-            // Select melodies that overlap with the selection region
-            for (int t = track0; t <= track1 && t < Composer.Tracks.Count; t++)
+            // Select notes from the underlying note source, not the UI
+            Composer.SelectedNotes.AddRange(Composer.Notes
+                .Where(n => n.Velocity > 0
+                    && n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : Composer.TimelinePlayer.CurrentBeat - n.StartBeat) >= beat0
+                    && n.StartBeat <= beat1
+                    && n.MidiNote >= midi0
+                    && n.MidiNote <= midi1));
+
+            bool canAddNote = Composer.SelectedNotes.Count == 0 && midi0 == midi1;
+            int colStart = Math.Min(ax, cx);
+            int colEnd = Math.Max(ax, cx);
+            double addStartBeat = Composer.Viewport.FirstVisibleBeat + colStart * Composer.BeatsPerColumn;
+            double addDuration = (colEnd - colStart + 1) * Composer.BeatsPerColumn;
+
+            // Colorize any NoteCells that are currently visible and selected (optional, for user feedback)
+            var selectedSet = new HashSet<NoteExpression>(Composer.SelectedNotes);
+            foreach (var cell in Composer.Descendents.OfType<NoteCell>())
             {
-                foreach (var melody in Composer.Tracks[t].Melodies)
-                {
-                    double melodyStart = melody.StartBeat;
-                    double melodyEnd = melody.StartBeat + melody.DurationBeats;
-                    bool overlaps = (melodyEnd >= beat0) && (melodyStart <= beat1);
-                    if (overlaps)
-                        Composer.SelectedMelodies.Add(melody);
-                }
+                if (selectedSet.Contains(cell.Note))
+                    cell.Background = SelectedNoteColor;
             }
-
-            // Optionally, colorize MelodyCells for feedback
-            var selectedSet = new HashSet<MelodyClip>(Composer.SelectedMelodies);
-            foreach (var cell in Composer.Descendents.OfType<MelodyCell>())
+            var noteSingularOrPlural = Composer.SelectedNotes.Count == 1 ? "note" : "notes";
+            if (canAddNote)
             {
-                if (selectedSet.Contains(cell.Melody))
-                    cell.Background = SelectedMelodyColor;
+                Composer.Editor.BeginAddNotePreview(addStartBeat, addDuration, midi0);
             }
-
-            var plural = Composer.SelectedMelodies.Count == 1 ? "melody" : "melodies";
-            Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedMelodies.Count}[White] {plural}."));
+            Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedNotes.Count}[White] {noteSingularOrPlural}."));
             Composer.NextMode();
             selectionRectangle?.Dispose();
             selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;
             selectionAnchor = null;
             selectionCursor = null;
-            selectionAnchorBeatTrack = null;
-            selectionCursorBeatTrack = null;
+            selectionAnchorBeatMidi = null;
+            selectionCursorBeatMidi = null;
             return;
         }
         else if (k.Key == ConsoleKey.Escape)
@@ -271,8 +274,8 @@ public class ComposerSelectionMode : ComposerInputMode
             selectionPhase = SelectionPhase.PickingAnchor;
             selectionAnchor = null;
             selectionCursor = null;
-            selectionAnchorBeatTrack = null;
-            selectionCursorBeatTrack = null;
+            selectionAnchorBeatMidi = null;
+            selectionCursorBeatMidi = null;
             return;
         }
 
@@ -289,10 +292,10 @@ public class ComposerSelectionMode : ComposerInputMode
         var (ax, ay) = selectionAnchor.Value;
         var (cx, cy) = selectionCursor.Value;
 
-        int left = Math.Min(ax, cx) * Composer.ColWidthChars;
-        int top = Math.Min(ay, cy) * ComposerViewport.TrackRowHeight;
-        int width = (Math.Abs(ax - cx) + 1) * Composer.ColWidthChars;
-        int height = (Math.Abs(ay - cy) + 1) * ComposerViewport.TrackRowHeight;
+        int left = Math.Min(ax, cx) * MelodyComposer.ColWidthChars;
+        int top = Math.Min(ay, cy) * MelodyComposer.RowHeightChars;
+        int width = (Math.Abs(ax - cx) + 1) * MelodyComposer.ColWidthChars;
+        int height = (Math.Abs(ay - cy) + 1) * MelodyComposer.RowHeightChars;
 
         if (selectionRectangle == null)
         {
@@ -304,23 +307,23 @@ public class ComposerSelectionMode : ComposerInputMode
         selectionRectangle.ResizeTo(width, height);
     }
 
-    // -- Beat/Track to X/Y cell mapping and sync --
+    // -- Beat/Midi to X/Y cell mapping and sync --
     public void SyncCursorToCurrentZoom()
     {
-        if (selectionAnchorBeatTrack != null)
+        if (selectionAnchorBeatMidi != null)
         {
-            var (beat, track) = selectionAnchorBeatTrack.Value;
-            selectionAnchor = BeatTrackToXY(beat, track);
+            var (beat, midi) = selectionAnchorBeatMidi.Value;
+            selectionAnchor = BeatMidiToXY(beat, midi);
         }
-        if (selectionCursorBeatTrack != null)
+        if (selectionCursorBeatMidi != null)
         {
-            var (beat, track) = selectionCursorBeatTrack.Value;
-            selectionCursor = BeatTrackToXY(beat, track);
+            var (beat, midi) = selectionCursorBeatMidi.Value;
+            selectionCursor = BeatMidiToXY(beat, midi);
         }
-        if (selectionPreviewCursorBeatTrack != null)
+        if (selectionPreviewCursorBeatMidi != null)
         {
-            var (beat, track) = selectionPreviewCursorBeatTrack.Value;
-            selectionPreviewCursor = BeatTrackToXY(beat, track);
+            var (beat, midi) = selectionPreviewCursorBeatMidi.Value;
+            selectionPreviewCursor = BeatMidiToXY(beat, midi);
         }
         UpdateSelectionRectangle();
         if (anchorPreviewControl?.IsStillValid(anchorPreviewControl.Lease) == true && selectionPreviewCursor.HasValue)
@@ -329,12 +332,12 @@ public class ComposerSelectionMode : ComposerInputMode
         }
     }
 
-    private (int X, int Y) BeatTrackToXY(double beat, int track)
+    private (int X, int Y) BeatMidiToXY(double beat, int midi)
     {
         int x = (int)Math.Round((beat - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn);
-        int y = track - Composer.Viewport.FirstVisibleTrack;
-        x = Math.Max(0, Math.Min(Composer.Width / Composer.ColWidthChars - 1, x));
-        y = Math.Max(0, Math.Min(Composer.Viewport.TracksOnScreen - 1, y));
+        int y = Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen - 1 - midi;
+        x = Math.Max(0, Math.Min(Composer.Width / MelodyComposer.ColWidthChars - 1, x));
+        y = Math.Max(0, Math.Min(Composer.Height / MelodyComposer.RowHeightChars - 1, y));
         return (x, y);
     }
 
@@ -347,4 +350,7 @@ public class ComposerSelectionMode : ComposerInputMode
         => k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W;
     private bool IsDown(ConsoleKeyInfo k)
         => k.Key == ConsoleKey.DownArrow || k.Key == ConsoleKey.S;
+
+
 }
+

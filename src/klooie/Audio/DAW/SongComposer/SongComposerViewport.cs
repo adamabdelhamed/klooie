@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace klooie;
 
 // Viewport for the multi-track Composer editor; each row = 1 track (not midi note)
-public partial class ComposerViewport : IObservableObject
+public partial class SongComposerViewport : IObservableObject
 {
     public const int DefaultFirstVisibleTrack = 0;         // Top row is track 0
     public const int TrackRowHeight = 3;                   // Each track row is 3 chars high (configurable)
@@ -29,9 +29,9 @@ public partial class ComposerViewport : IObservableObject
         FirstVisibleBeat = Math.Max(0, FirstVisibleBeat + dx);
     }
 
-    public Composer Composer { get; }
+    public SongComposer Composer { get; }
 
-    public ComposerViewport(Composer composer)
+    public SongComposerViewport(SongComposer composer)
     {
         this.Composer = composer;
         FirstVisibleTrack = DefaultFirstVisibleTrack;

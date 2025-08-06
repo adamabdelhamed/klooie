@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 namespace klooie;
 public class AddTrackCommand : ComposerCommand
 {
-    private readonly ComposerWithTracks composer;
+    private readonly SongComposerWithTrackHeaders composer;
     private readonly string name;
 
-    public AddTrackCommand(ComposerWithTracks composer, string name) : base(composer, "Add Track")
+    public AddTrackCommand(SongComposerWithTrackHeaders composer, string name) : base(composer, "Add Track")
     {
         this.composer = composer ?? throw new ArgumentNullException(nameof(composer));
         this.name = name ?? throw new ArgumentNullException(nameof(name));
@@ -29,10 +29,10 @@ public class AddTrackCommand : ComposerCommand
 
 public class DeleteTrackCommand : ComposerCommand
 {
-    private readonly ComposerWithTracks composer;
+    private readonly SongComposerWithTrackHeaders composer;
     private ComposerTrack deleted;
     private int index;
-    public DeleteTrackCommand(ComposerWithTracks composer, ComposerTrack deleted) : base(composer, "Add Track")
+    public DeleteTrackCommand(SongComposerWithTrackHeaders composer, ComposerTrack deleted) : base(composer, "Add Track")
     {
         this.composer = composer ?? throw new ArgumentNullException(nameof(composer));
         this.deleted = deleted ?? throw new ArgumentNullException(nameof(deleted));

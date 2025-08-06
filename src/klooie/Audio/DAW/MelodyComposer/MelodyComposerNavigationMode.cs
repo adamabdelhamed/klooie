@@ -1,18 +1,20 @@
-﻿using System;
+using System;
 
 namespace klooie;
 
 /// <summary>
-/// Navigation for the Composer grid. Arrow keys move the playhead (when stopped) or pan the viewport (when playing).
-/// Vertical navigation pans tracks. Home/End jump to song start/end.
+/// Combines seeking and panning logic into a single navigation mode.
+/// Arrow keys move the playhead when stopped or pan the viewport when playing.
+/// Vertical navigation always pans without moving the playhead.
+/// Home/End jump to start or end and ensure visibility.
 /// </summary>
-public class ComposerNavigationMode : ComposerInputMode
+public class MelodyComposerNavigationMode : MelodyComposerInputMode
 {
     public override void HandleKeyInput(ConsoleKeyInfo key)
     {
         if (key.Modifiers != 0) return; // ignore any modifiers
 
-        var player = Composer.Player;
+        var player = Composer.TimelinePlayer;
         var view = Composer.Viewport;
         bool handled = true;
 
@@ -44,21 +46,19 @@ public class ComposerNavigationMode : ComposerInputMode
         }
         else if (k == ConsoleKey.UpArrow || k == ConsoleKey.W)
         {
-            view.ScrollTracks(-1, Composer.Tracks.Count);
+            view.ScrollRows(1);
         }
         else if (k == ConsoleKey.DownArrow || k == ConsoleKey.S)
         {
-            view.ScrollTracks(1, Composer.Tracks.Count);
+            view.ScrollRows(-1);
         }
         else if (k == ConsoleKey.PageUp)
         {
-            int delta = view.TracksOnScreen >= 8 ? -4 : -1;
-            view.ScrollTracks(delta, Composer.Tracks.Count);
+            view.ScrollRows(view.MidisOnScreen >= 24 ? 12 : 1);
         }
         else if (k == ConsoleKey.PageDown)
         {
-            int delta = view.TracksOnScreen >= 8 ? 4 : 1;
-            view.ScrollTracks(delta, Composer.Tracks.Count);
+            view.ScrollRows(view.MidisOnScreen >= 24 ? -12 : -1);
         }
         else if (k == ConsoleKey.Home)
         {
@@ -69,10 +69,6 @@ public class ComposerNavigationMode : ComposerInputMode
         {
             player.Seek(Composer.MaxBeat);
             EnsurePlayheadVisible();
-        }
-        else if (k == ConsoleKey.Enter && Composer.SelectedMelodies.Count == 1)
-        {
-            Composer.OpenMelody(Composer.SelectedMelodies[0]);
         }
         else
         {
@@ -88,7 +84,7 @@ public class ComposerNavigationMode : ComposerInputMode
     private void EnsurePlayheadVisible()
     {
         var view = Composer.Viewport;
-        double beat = Composer.Player.CurrentBeat;
+        double beat = Composer.TimelinePlayer.CurrentBeat;
 
         if (beat < view.FirstVisibleBeat)
         {
