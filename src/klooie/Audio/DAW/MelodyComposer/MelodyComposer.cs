@@ -62,7 +62,7 @@ public class MelodyComposer : ProtectedConsolePanel
         this.Session = session;
         notes = notes ?? new ListNoteSource();
         this.userCyclableModes =  [new MelodyComposerNavigationMode() { Composer = this }, new MelodyComposerSelectionMode() { Composer = this }];
-        Viewport = new MelodyComposerViewport(this);
+        Viewport = new MelodyComposerViewport();
         TimelinePlayer = new MelodyComposerPlayer(this);
 
         CanFocus = true;
@@ -70,7 +70,11 @@ public class MelodyComposer : ProtectedConsolePanel
         BoundsChanged.Sync(UpdateViewportBounds, this);
         Focused.Subscribe(EnableKeyboardInput, this);
         backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
-        Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
+        Viewport.Changed.Subscribe(backgroundGrid, _ =>
+        {
+            UpdateAlternatingBackgroundOffset();
+            RefreshVisibleSet();
+        }, backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
         LoadNotes(notes);
         TimelinePlayer.BeatChanged.Subscribe(this, static (me, b) => me.RefreshVisibleSet(), this);  
@@ -97,7 +101,7 @@ public class MelodyComposer : ProtectedConsolePanel
     private void LoadNotes(ListNoteSource notes)
     {
         this.Notes = notes;
-        Viewport.FirstVisibleMidi = notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(MelodyComposerViewport.DefaultFirstVisibleMidi).Min();
+        Viewport.SetFirstVisibleRow(notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(MelodyComposerViewport.DefaultFirstVisibleMidi).Min());
         MaxBeat = notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
         var instruments = notes.Where(n => n.Instrument != null).Select(n => n.Instrument.Name).Distinct().ToArray();
         var instrumentColors = instruments.Select((s, i) => GetInstrumentColor(i)).ToArray();
@@ -146,12 +150,12 @@ public class MelodyComposer : ProtectedConsolePanel
         CurrentMode?.Paint(context);
     }
 
-    private void UpdateAlternatingBackgroundOffset() => backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.FirstVisibleMidi / (double)RowHeightChars);
+    private void UpdateAlternatingBackgroundOffset() => backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.FirstVisibleRow / (double)RowHeightChars);
 
     private void UpdateViewportBounds()
     {
-        Viewport.BeatsOnScreen = Math.Max(1, Width * BeatsPerColumn / ColWidthChars);
-        Viewport.MidisOnScreen = Math.Max(1, Height / RowHeightChars);
+        Viewport.SetBeatsOnScreen(Math.Max(1, Width * BeatsPerColumn / ColWidthChars));
+        Viewport.SetRowsOnScreen(Math.Max(1, Height / RowHeightChars));
     }
 
     public void EnableKeyboardInput()
@@ -197,13 +201,13 @@ public class MelodyComposer : ProtectedConsolePanel
     {
         if(live.Count == 0 && Notes.Count > 0)
         {
-            Viewport.FirstVisibleMidi = Math.Max(0, Notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(MelodyComposerViewport.DefaultFirstVisibleMidi).Min() - 12);
+            Viewport.SetFirstVisibleRow(Math.Max(0, Notes.Where(n => n.Velocity > 0).Select(m => m.MidiNote).DefaultIfEmpty(MelodyComposerViewport.DefaultFirstVisibleMidi).Min() - 12));
         }
         MaxBeat = Notes.Select(n => n.StartBeat + (n.DurationBeats >= 0 ? n.DurationBeats : GetSustainedNoteDurationBeats(n))).DefaultIfEmpty(0).Max();
         double beatStart = Viewport.FirstVisibleBeat;
         double beatEnd = beatStart + Viewport.BeatsOnScreen;
-        int midiTop = Viewport.FirstVisibleMidi;
-        int midiBot = midiTop + Viewport.MidisOnScreen;
+        int midiTop = Viewport.FirstVisibleRow;
+        int midiBot = midiTop + Viewport.RowsOnScreen;
 
         // Track visible notes this frame
         visibleNow.Clear();
@@ -256,7 +260,7 @@ public class MelodyComposer : ProtectedConsolePanel
         double beatsFromLeft = cell.Note.StartBeat - Viewport.FirstVisibleBeat;
 
         int x = ConsoleMath.Round((cell.Note.StartBeat - Viewport.FirstVisibleBeat) / BeatsPerColumn) * ColWidthChars;
-        int y = (Viewport.FirstVisibleMidi + Viewport.MidisOnScreen - 1 - cell.Note.MidiNote) * RowHeightChars;
+        int y = (Viewport.FirstVisibleRow + Viewport.RowsOnScreen - 1 - cell.Note.MidiNote) * RowHeightChars;
 
         double durBeats = cell.Note.DurationBeats >= 0 ? cell.Note.DurationBeats : GetSustainedNoteDurationBeats(cell.Note);
         int w = (int)Math.Max(1, ConsoleMath.Round(durBeats / BeatsPerColumn) * ColWidthChars);

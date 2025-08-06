@@ -55,8 +55,4 @@
   <ItemGroup>
     <ProjectReference Include="$(Klooie_PowerArgs_Path)" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Audio\DAW\Composer\" />
-  </ItemGroup>
 </Project>

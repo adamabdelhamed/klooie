@@ -216,7 +216,7 @@ public class SongComposerEditor
         addClipPreview = Composer.AddPreviewControl();
         addClipPreview.Background = RGB.DarkGreen;
         addClipPreview.ZIndex = 0;
-        Composer.Viewport.SubscribeToAnyPropertyChange(addClipPreview, _ => PositionAddClipPreview(), addClipPreview);
+        Composer.Viewport.Changed.Subscribe(addClipPreview, _ => PositionAddClipPreview(), addClipPreview);
         PositionAddClipPreview();
         Composer.StatusChanged.Fire(ConsoleString.Parse("[White]Press [Cyan]p[White] to add a melody clip here or press ALT + D to cancel."));
     }
@@ -226,7 +226,7 @@ public class SongComposerEditor
         if (pendingAddClip == null || addClipPreview == null) return;
         var (start, duration, trackIndex, melody) = pendingAddClip.Value;
         int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * SongComposer.ColWidthChars;
-        int y = (trackIndex - Composer.Viewport.FirstVisibleTrack) * SongComposer.RowHeightChars;
+        int y = (trackIndex - Composer.Viewport.FirstVisibleRow) * SongComposer.RowHeightChars;
         int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * SongComposer.ColWidthChars);
         int h = SongComposer.RowHeightChars;
         addClipPreview.MoveTo(x, y);

@@ -44,21 +44,21 @@ public class SongComposerNavigationMode : SongComposerInputMode
         }
         else if (k == ConsoleKey.UpArrow || k == ConsoleKey.W)
         {
-            view.ScrollTracks(-1, Composer.Tracks.Count);
+            view.ScrollRows(-1, Composer.Tracks.Count);
         }
         else if (k == ConsoleKey.DownArrow || k == ConsoleKey.S)
         {
-            view.ScrollTracks(1, Composer.Tracks.Count);
+            view.ScrollRows(1, Composer.Tracks.Count);
         }
         else if (k == ConsoleKey.PageUp)
         {
-            int delta = view.TracksOnScreen >= 8 ? -4 : -1;
-            view.ScrollTracks(delta, Composer.Tracks.Count);
+            int delta = view.RowsOnScreen >= 8 ? -4 : -1;
+            view.ScrollRows(delta, Composer.Tracks.Count);
         }
         else if (k == ConsoleKey.PageDown)
         {
-            int delta = view.TracksOnScreen >= 8 ? 4 : 1;
-            view.ScrollTracks(delta, Composer.Tracks.Count);
+            int delta = view.RowsOnScreen >= 8 ? 4 : 1;
+            view.ScrollRows(delta, Composer.Tracks.Count);
         }
         else if (k == ConsoleKey.Home)
         {
@@ -92,11 +92,11 @@ public class SongComposerNavigationMode : SongComposerInputMode
 
         if (beat < view.FirstVisibleBeat)
         {
-            view.FirstVisibleBeat = Math.Max(0, beat);
+            view.SetFirstVisibleBeat(Math.Max(0, beat));
         }
         else if (beat > view.LastVisibleBeat)
         {
-            view.FirstVisibleBeat = Math.Max(0, beat - view.BeatsOnScreen);
+            view.SetFirstVisibleBeat(Math.Max(0, beat - view.BeatsOnScreen));
         }
     }
 }

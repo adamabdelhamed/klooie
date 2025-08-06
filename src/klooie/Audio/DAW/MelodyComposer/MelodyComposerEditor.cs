@@ -236,7 +236,7 @@ public class MelodyComposerEditor
         addNotePreview = Composer.AddPreviewControl();
         addNotePreview.Background = RGB.DarkGreen;
         addNotePreview.ZIndex = 0;
-        Composer.Viewport.SubscribeToAnyPropertyChange(addNotePreview, _ => PositionAddNotePreview(), addNotePreview);
+        Composer.Viewport.Changed.Subscribe(addNotePreview, _ => PositionAddNotePreview(), addNotePreview);
         PositionAddNotePreview();
         Composer.StatusChanged.Fire(ConsoleString.Parse("[White]Press [Cyan]p[White] to add a note here or press ALT + D to deselect."));
     }
@@ -245,7 +245,7 @@ public class MelodyComposerEditor
         if (pendingAddNote == null || addNotePreview == null) return;
         var (start, duration, midi) = pendingAddNote.Value;
         int x = ConsoleMath.Round((start - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn) * MelodyComposer.ColWidthChars;
-        int y = (Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen - 1 - midi) * MelodyComposer.RowHeightChars;
+        int y = (Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - midi) * MelodyComposer.RowHeightChars;
         int w = Math.Max(1, ConsoleMath.Round(duration / Composer.BeatsPerColumn) * MelodyComposer.ColWidthChars);
         int h = MelodyComposer.RowHeightChars;
         addNotePreview.MoveTo(x, y);

@@ -99,7 +99,7 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
     {
         if (selectionPreviewCursorBeatMidi == null)
         {
-            int midBase = Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen / 2;
+            int midBase = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen / 2;
 
             var closest = Composer.Descendents
                 .OfType<NoteCell>()
@@ -222,8 +222,8 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
 
             double beat0 = Composer.Viewport.FirstVisibleBeat + Math.Min(ax, cx) * Composer.BeatsPerColumn;
             double beat1 = Composer.Viewport.FirstVisibleBeat + Math.Max(ax, cx) * Composer.BeatsPerColumn;
-            int midi0 = Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen - 1 - Math.Max(ay, cy);
-            int midi1 = Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen - 1 - Math.Min(ay, cy);
+            int midi0 = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - Math.Max(ay, cy);
+            int midi1 = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - Math.Min(ay, cy);
 
             // Swap if needed to ensure low <= high
             if (beat0 > beat1) (beat0, beat1) = (beat1, beat0);
@@ -335,7 +335,7 @@ public class MelodyComposerSelectionMode : MelodyComposerInputMode
     private (int X, int Y) BeatMidiToXY(double beat, int midi)
     {
         int x = (int)Math.Round((beat - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn);
-        int y = Composer.Viewport.FirstVisibleMidi + Composer.Viewport.MidisOnScreen - 1 - midi;
+        int y = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - midi;
         x = Math.Max(0, Math.Min(Composer.Width / MelodyComposer.ColWidthChars - 1, x));
         y = Math.Max(0, Math.Min(Composer.Height / MelodyComposer.RowHeightChars - 1, y));
         return (x, y);

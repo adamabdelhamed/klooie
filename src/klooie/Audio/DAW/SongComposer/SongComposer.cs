@@ -91,7 +91,7 @@ public partial class SongComposer : ProtectedConsolePanel
         this.Session = session;
         this.MidiProvider = midiProvider;
         this.userCyclableModes = [new SongComposerNavigationMode() { Composer = this }, new SongComposerSelectionMode() { Composer = this }];
-        Viewport = new SongComposerViewport(this);
+        Viewport = new SongComposerViewport();
         Player = new SongComposerPlayer(this);
 
         CanFocus = true;
@@ -99,7 +99,11 @@ public partial class SongComposer : ProtectedConsolePanel
         BoundsChanged.Sync(UpdateViewportBounds, this);
         Focused.Subscribe(EnableKeyboardInput, this);
         backgroundGrid = ProtectedPanel.Add(new AlternatingBackgroundGrid(0, RowHeightChars, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
-        Viewport.SubscribeToAnyPropertyChange(backgroundGrid, _ => UpdateAlternatingBackgroundOffset(), backgroundGrid);
+        Viewport.Changed.Subscribe(backgroundGrid, _ =>
+        {
+            UpdateAlternatingBackgroundOffset();
+            RefreshVisibleSet();
+        }, backgroundGrid);
         ConsoleApp.Current.InvokeNextCycle(RefreshVisibleSet);
 
         // Load provided tracks or make a blank one if none given
@@ -227,13 +231,13 @@ public partial class SongComposer : ProtectedConsolePanel
 
     private void UpdateAlternatingBackgroundOffset()
     {
-        backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.TracksOnScreen / (double)RowHeightChars);
+        backgroundGrid.CurrentOffset = ConsoleMath.Round(Viewport.RowsOnScreen / (double)RowHeightChars);
     }
 
     private void UpdateViewportBounds()
     {
-        Viewport.BeatsOnScreen = Math.Max(1, Width * BeatsPerColumn / ColWidthChars);
-        Viewport.TracksOnScreen = Math.Max(1, Height / RowHeightChars);
+        Viewport.SetBeatsOnScreen(Math.Max(1, Width * BeatsPerColumn / ColWidthChars));
+        Viewport.SetRowsOnScreen(Math.Max(1, Height / RowHeightChars));
     }
 
     public void EnableKeyboardInput()
@@ -282,8 +286,8 @@ public partial class SongComposer : ProtectedConsolePanel
     {
         visibleNow.Clear();
 
-        int trackTop = Viewport.FirstVisibleTrack;
-        int trackBot = trackTop + Viewport.TracksOnScreen - 1;
+        int trackTop = Viewport.FirstVisibleRow;
+        int trackBot = trackTop + Viewport.RowsOnScreen - 1;
 
         for (int t = 0; t < Tracks.Count; t++)
         {
@@ -334,7 +338,7 @@ public partial class SongComposer : ProtectedConsolePanel
         double beatsFromLeft = cell.Melody.StartBeat - Viewport.FirstVisibleBeat;
 
         int x = ConsoleMath.Round((cell.Melody.StartBeat - Viewport.FirstVisibleBeat) / BeatsPerColumn) * ColWidthChars;
-        int y = (trackIndex - Viewport.FirstVisibleTrack) * RowHeightChars;
+        int y = (trackIndex - Viewport.FirstVisibleRow) * RowHeightChars;
 
         double durBeats = cell.Melody.DurationBeats;
         int w = (int)Math.Max(1, ConsoleMath.Round(durBeats / BeatsPerColumn) * ColWidthChars);

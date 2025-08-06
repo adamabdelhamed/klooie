@@ -54,11 +54,11 @@ public class MelodyComposerNavigationMode : MelodyComposerInputMode
         }
         else if (k == ConsoleKey.PageUp)
         {
-            view.ScrollRows(view.MidisOnScreen >= 24 ? 12 : 1);
+            view.ScrollRows(view.RowsOnScreen >= 24 ? 12 : 1);
         }
         else if (k == ConsoleKey.PageDown)
         {
-            view.ScrollRows(view.MidisOnScreen >= 24 ? -12 : -1);
+            view.ScrollRows(view.RowsOnScreen >= 24 ? -12 : -1);
         }
         else if (k == ConsoleKey.Home)
         {
@@ -88,11 +88,11 @@ public class MelodyComposerNavigationMode : MelodyComposerInputMode
 
         if (beat < view.FirstVisibleBeat)
         {
-            view.FirstVisibleBeat = Math.Max(0, beat);
+            view.SetFirstVisibleBeat(Math.Max(0, beat));
         }
         else if (beat > view.LastVisibleBeat)
         {
-            view.FirstVisibleBeat = Math.Max(0, beat - view.BeatsOnScreen);
+            view.SetFirstVisibleBeat(Math.Max(0, beat - view.BeatsOnScreen));
         }
     }
 }

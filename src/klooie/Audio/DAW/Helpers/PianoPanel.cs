@@ -16,20 +16,20 @@ public class PianoPanel : ProtectedConsolePanel
         vp = viewport;
         CanFocus = false;
         Background = new RGB(240, 240, 240); // match grid
-        viewport.SubscribeToAnyPropertyChange(this, _ => Refresh(), this);
+        viewport.Changed.Subscribe(this, _ => Refresh(), this);
     }
 
     public void Refresh()
     {
-        Height = vp.MidisOnScreen;
+        Height = vp.RowsOnScreen;
     }
 
     protected override void OnPaint(ConsoleBitmap ctx)
     {
-        int midiTop = vp.FirstVisibleMidi;
-        for (int i = 0; i < vp.MidisOnScreen; i++)
+        int midiTop = vp.FirstVisibleRow;
+        for (int i = 0; i < vp.RowsOnScreen; i++)
         {
-            int midi = midiTop + (vp.MidisOnScreen - 1 - i); // top to bottom
+            int midi = midiTop + (vp.RowsOnScreen - 1 - i); // top to bottom
             var (noteName, isWhite) = MidiNoteHelper.NoteName(midi);
 
             if (isWhite)

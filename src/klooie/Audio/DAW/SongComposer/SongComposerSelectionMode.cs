@@ -100,7 +100,7 @@ public class SongComposerSelectionMode : SongComposerInputMode
     {
         if (selectionPreviewCursorBeatTrack == null)
         {
-            int trackBase = Composer.Viewport.FirstVisibleTrack + Composer.Viewport.TracksOnScreen / 2;
+            int trackBase = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen / 2;
 
             // Pick the first visible melody clip, if any, otherwise default to middle track
             var closest = Composer.Tracks
@@ -224,8 +224,8 @@ public class SongComposerSelectionMode : SongComposerInputMode
 
             double beat0 = Composer.Viewport.FirstVisibleBeat + colMin * Composer.BeatsPerColumn;
             double beat1 = Composer.Viewport.FirstVisibleBeat + colMax * Composer.BeatsPerColumn;
-            int track0 = Composer.Viewport.FirstVisibleTrack + Math.Min(ay, cy);
-            int track1 = Composer.Viewport.FirstVisibleTrack + Math.Max(ay, cy);
+            int track0 = Composer.Viewport.FirstVisibleRow + Math.Min(ay, cy);
+            int track1 = Composer.Viewport.FirstVisibleRow + Math.Max(ay, cy);
 
             if (beat0 > beat1) (beat0, beat1) = (beat1, beat0);
             if (track0 > track1) (track0, track1) = (track1, track0);
@@ -332,9 +332,9 @@ public class SongComposerSelectionMode : SongComposerInputMode
     private (int X, int Y) BeatTrackToXY(double beat, int track)
     {
         int x = (int)Math.Round((beat - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn);
-        int y = track - Composer.Viewport.FirstVisibleTrack;
+        int y = track - Composer.Viewport.FirstVisibleRow;
         x = Math.Max(0, Math.Min(Composer.Width / SongComposer.ColWidthChars - 1, x));
-        y = Math.Max(0, Math.Min(Composer.Viewport.TracksOnScreen - 1, y));
+        y = Math.Max(0, Math.Min(Composer.Viewport.RowsOnScreen - 1, y));
         return (x, y);
     }
 
