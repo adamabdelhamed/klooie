@@ -34,6 +34,7 @@ public sealed class NoteExpression
     public double StartBeat { get; set; }
     public double DurationBeats { get; set; }
     public int Velocity { get; set; }
+    [JsonIgnore]
     public double BeatsPerMinute { get; set; }
 
     [JsonIgnore]
@@ -103,6 +104,7 @@ public sealed class NoteExpression
 /// </summary>
 public class ListNoteSource : List<NoteExpression>
 {
+    [JsonIgnore]
     public double BeatsPerMinute { get; set; } = 60;
 
     public ListNoteSource() : base() { }
