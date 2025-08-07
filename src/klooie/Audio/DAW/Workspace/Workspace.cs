@@ -91,6 +91,19 @@ public class Workspace
                 {
                     var json = await File.ReadAllTextAsync(file);
                     var song = JsonSerializer.Deserialize<SongInfo>(json);
+
+                    foreach(var track in song.Tracks)
+                    {
+                        foreach(var melody in track.Melodies)
+                        {
+                            melody.Melody.BeatsPerMinute = song.BeatsPerMinute;
+                            foreach (var note in melody.Melody)
+                            {
+                                note.BeatsPerMinute = song.BeatsPerMinute;
+                            }
+                        }
+                    }
+
                     InstrumentPicker.Hydrate(song);
                     if (song != null)
                     {
