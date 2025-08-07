@@ -51,7 +51,7 @@ public class MidiGrid : BeatGrid<NoteExpression>
         BeatStart = value.StartBeat,
         BeatEnd = value.StartBeat + (value.DurationBeats > 0 ? value.DurationBeats : GetSustainedNoteDurationBeats(value)),
         IsHidden = value.Velocity <= 0,
-        Row = (Viewport.FirstVisibleRow + Viewport.RowsOnScreen - 1) - value.MidiNote
+        Row = 127 - value.MidiNote,
     };
 
     protected override double CalculateMaxBeat() => Notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();

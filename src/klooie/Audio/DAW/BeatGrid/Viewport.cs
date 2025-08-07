@@ -15,7 +15,7 @@ public class Viewport
     public double LastVisibleBeat => FirstVisibleBeat + BeatsOnScreen;
 
     public int FirstVisibleRow { get; private set; }
-    public int LastVisibleRow => FirstVisibleRow + RowsOnScreen;
+    public int LastVisibleRow => FirstVisibleRow + RowsOnScreen - 1;
     public int RowsOnScreen { get; private set; }
     public Event Changed { get; private set; } = Event.Create();
 
@@ -51,7 +51,7 @@ public class Viewport
         }
     }
 
-    public void ScrollRows(int delta, int rowCount = 0)
+    public void ScrollRows(int delta, int rowCount)
     {
         if (delta == 0) return;
         FirstVisibleRow = Math.Clamp(FirstVisibleRow + delta, 0, Math.Max(0, rowCount - RowsOnScreen));

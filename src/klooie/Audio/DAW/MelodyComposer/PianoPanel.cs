@@ -29,7 +29,8 @@ public class PianoPanel : ProtectedConsolePanel
         int midiTop = vp.FirstVisibleRow;
         for (int i = 0; i < vp.RowsOnScreen; i++)
         {
-            int midi = midiTop + (vp.RowsOnScreen - 1 - i); // top to bottom
+            int midi = 127 - (midiTop + i);   
+
             var (noteName, isWhite) = MidiNoteHelper.NoteName(midi);
 
             if (isWhite)
