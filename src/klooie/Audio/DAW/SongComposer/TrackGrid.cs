@@ -99,8 +99,8 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
         var maxFocusDepth = Math.Max(ConsoleApp.Current.LayoutRoot.FocusStackDepth, ConsoleApp.Current.LayoutRoot.Descendents.Select(d => d.FocusStackDepth).Max());
         var newFocusDepth = maxFocusDepth + 1;
         var panel = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel() { FocusStackDepth = newFocusDepth }).Fill();
-
-        var melodyComposer = panel.Add(new MelodyComposer(WorkspaceSession.Current, melody.Melody, MidiProvider)).Fill();
+        var track = Tracks.FirstOrDefault(t => t.Melodies.Contains(melody));
+        var melodyComposer = panel.Add(new MelodyComposer(WorkspaceSession.Current, track, melody.Melody, MidiProvider)).Fill();
         melodyComposer.Grid.Color = GetColor(melody);
         melodyComposer.Grid.Focus();
 
