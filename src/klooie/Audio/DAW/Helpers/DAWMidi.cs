@@ -51,6 +51,7 @@ public class DAWMidi : Recyclable
         pianoWithTimeline.Grid.Player.StopAtEnd = false;
         pianoWithTimeline.Grid.Player.Play();
         pianoWithTimeline.Grid.Notes.Add(noteExpression);
+        pianoWithTimeline.Grid.EnsureMidiVisible(noteExpression.MidiNote);
         pianoWithTimeline.Grid.RefreshVisibleCells();
         noteTrackers[ev.NoteNumber] = SustainedNoteTracker.Create(noteExpression, voices);
     }

@@ -26,29 +26,28 @@ public class PianoPanel : ProtectedConsolePanel
 
     protected override void OnPaint(ConsoleBitmap ctx)
     {
-        int midiTop = vp.FirstVisibleRow;
         for (int i = 0; i < vp.RowsOnScreen; i++)
         {
-            int midi = 127 - (midiTop + i);   
+            int midi = 127 - (vp.FirstVisibleRow + i);
+            if (midi < 0 || midi > 127)
+                continue;
 
             var (noteName, isWhite) = MidiNoteHelper.NoteName(midi);
 
             if (isWhite)
             {
-                // Regular white key: fill entire width
                 ctx.FillRect(RGB.White, 0, i, KeyWidth, 1);
                 ctx.DrawString(noteName, RGB.Black, RGB.White, 0, i);
             }
             else
             {
-                // Black key with white at right edge
                 int blackWidth = KeyWidth - 3;
                 if (blackWidth > 0) ctx.FillRect(RGB.Black, 0, i, blackWidth, 1);
 
-                // White "bottom" on the right
                 ctx.FillRect(RGB.White, blackWidth, i, 3, 1);
                 ctx.DrawString(noteName, RGB.White, RGB.Black, 0, i);
             }
         }
     }
+
 }
