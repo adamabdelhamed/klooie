@@ -31,7 +31,7 @@ public class BeatGridPlayer<T>
     public void Play()
     {
         if (IsPlaying) return;
-        if(CurrentBeat >= Grid.MaxBeat)
+        if(CurrentBeat >= Grid.MaxBeat && StopAtEnd)
         {
             CurrentBeat = 0; // Reset to start if at or past the end
         }
