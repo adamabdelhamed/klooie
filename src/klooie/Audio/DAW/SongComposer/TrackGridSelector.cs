@@ -247,7 +247,7 @@ public class TrackGridSelector : BeatGridInputMode<MelodyClip>
 
             // Optionally, colorize MelodyCells for feedback
             var selectedSet = new HashSet<MelodyClip>(Composer.SelectedValues);
-            foreach (var cell in Composer.Descendents.OfType<ComposerCell<MelodyClip>>())
+            foreach (var cell in Composer.Descendents.OfType<BeatCell<MelodyClip>>())
             {
                 if (selectedSet.Contains(cell.Value)) cell.Background = SelectedMelodyColor;
             }

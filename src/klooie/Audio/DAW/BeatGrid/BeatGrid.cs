@@ -19,7 +19,7 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
 
     public static readonly RGB SelectedCellColor = RGB.Cyan;
 
-    private readonly Dictionary<T, ComposerCell<T>> visibleCells = new();
+    private readonly Dictionary<T, BeatCell<T>> visibleCells = new();
     private readonly HashSet<T> tempHashSet = new HashSet<T>();
 
     public WorkspaceSession Session { get; private init; }
@@ -110,6 +110,8 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
 
     protected abstract IEnumerable<T> EnumerateValues();
 
+    protected abstract BeatCell<T> BeatCellFactory(T value);
+
     public void RefreshVisibleCells()
     {
         MaxBeat = CalculateMaxBeat();
@@ -130,9 +132,10 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
 
             tempHashSet.Add(value);
 
-            if (!visibleCells.TryGetValue(value, out ComposerCell<T> cell))
+            if (!visibleCells.TryGetValue(value, out BeatCell<T> cell))
             {
-                cell = ProtectedPanel.Add(new ComposerCell<T>(value) { ZIndex = 1 });
+                cell = ProtectedPanel.Add(BeatCellFactory(value));
+                cell.ZIndex = 1;
                 visibleCells[value] = cell;
             }
             cell.Background = SelectedValues.Contains(value) ? SelectedCellColor :GetColor(value);
@@ -185,7 +188,7 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
     public abstract void HandleKeyInput(ConsoleKeyInfo key);
     protected abstract CellPositionInfo GetCellPositionInfo(T value);
     protected abstract double CalculateMaxBeat();
-    private void PositionCell(ComposerCell<T> cell)
+    private void PositionCell(BeatCell<T> cell)
     {
         var positionInfo = GetCellPositionInfo(cell.Value);
         double beatsFromLeft = positionInfo.BeatStart - Viewport.FirstVisibleBeat;
@@ -209,54 +212,4 @@ public struct CellPositionInfo
     public double BeatEnd;
     public int Row;
     public bool IsHidden;
-}
-
-public class ComposerCell<T> : ConsoleControl
-{
-    public readonly T Value;
-    public ComposerCell(T value)
-    {
-        (Value, CanFocus) = (value, false);
-        Foreground = RGB.Black;
-    }
-
-    protected override void OnPaint(ConsoleBitmap ctx)
-    {
-        base.OnPaint(ctx);
-
-        if (typeof(T) == typeof(MelodyClip))
-        {
-            ctx.DrawRect(new ConsoleCharacter('#', Background.Darker, Background),0,0, Width, Height);
-        }
-
-    }
-
-
-    private static readonly RGB[] BaseTrackColors = new[]
-    {
-        new RGB(220, 60, 60),
-        new RGB(60, 180, 90),
-        new RGB(65, 105, 225),
-        new RGB(240, 200, 60),
-        new RGB(200, 60, 200),
-        new RGB(50, 220, 210),
-        new RGB(245, 140, 30),
-    };
-
-    private static readonly float[] PaleFractions = new[]
-    {
-        0.0f,
-        0.35f,
-        0.7f,
-    };
-
-    public static RGB GetColor(int index)
-    {
-        int baseCount = BaseTrackColors.Length;
-        int shade = index / baseCount;
-        int colorIdx = index % baseCount;
-        float pale = PaleFractions[Math.Min(shade, PaleFractions.Length - 1)];
-        RGB color = BaseTrackColors[colorIdx];
-        return color.ToOther(RGB.White, pale);
-    }
 }

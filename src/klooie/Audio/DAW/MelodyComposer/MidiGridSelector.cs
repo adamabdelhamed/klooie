@@ -93,7 +93,7 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
             int midBase = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen / 2;
 
             var closest = Composer.Descendents
-                .OfType<ComposerCell<NoteExpression>>()
+                .OfType<BeatCell<NoteExpression>>()
                 .Where(c => c.Value.Velocity > 0)
                 .OrderBy(c => Math.Abs(c.Value.StartBeat - Composer.Player.CurrentBeat))
                 .FirstOrDefault();
@@ -236,7 +236,7 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
 
             // Colorize any NoteCells that are currently visible and selected (optional, for user feedback)
             var selectedSet = new HashSet<NoteExpression>(Composer.SelectedValues);
-            foreach (var cell in Composer.Descendents.OfType<ComposerCell<NoteExpression>>())
+            foreach (var cell in Composer.Descendents.OfType<BeatCell<NoteExpression>>())
             {
                 if (selectedSet.Contains(cell.Value))
                     cell.Background = SelectedNoteColor;

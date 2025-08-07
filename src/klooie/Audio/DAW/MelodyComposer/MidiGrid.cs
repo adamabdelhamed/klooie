@@ -62,6 +62,8 @@ public class MidiGrid : BeatGrid<NoteExpression>
     protected override RGB GetColor(NoteExpression note) => Color;
     public override Song Compose() => new Song(Notes, BeatsPerMinute);
 
+    protected override BeatCell<NoteExpression> BeatCellFactory(NoteExpression value) => new BeatCell<NoteExpression>(value);
+
     internal void EnsureMidiVisible(int midiNote)
     {
         int row = 127 - midiNote;
