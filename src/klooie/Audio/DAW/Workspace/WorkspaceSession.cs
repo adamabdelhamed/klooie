@@ -19,25 +19,29 @@ public class WorkspaceSession
         {
             CurrentSong = Workspace.Songs.FirstOrDefault(s => s.Title == Workspace.Settings.LastOpenedSong);
         }
-        else
+
+        if(CurrentSong != null)
         {
-            var songName = (await TextInputDialog.Show(new ShowTextInputOptions("Enter song name".ToYellow()) { AllowEscapeToClose = false }))?.ToString().Trim();
-            if (string.IsNullOrWhiteSpace(songName))
-            {
-                await Initialize();
-                return;
-            }
-            CurrentSong = new SongInfo()
-            {
-                Title = songName,
-                BeatsPerMinute = 60,
-                Tracks = new List<ComposerTrack>()
-                {
-                    new ComposerTrack("Track 1", new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create })
-                }
-            };
-            Workspace.Settings.LastOpenedSong = songName;
-            Workspace.AddSong(CurrentSong);
+            return;
         }
+
+        var songName = (await TextInputDialog.Show(new ShowTextInputOptions("Enter song name".ToYellow()) { AllowEscapeToClose = false }))?.ToString().Trim();
+        if (string.IsNullOrWhiteSpace(songName))
+        {
+            await Initialize();
+            return;
+        }
+        CurrentSong = new SongInfo()
+        {
+            Title = songName,
+            BeatsPerMinute = 60,
+            Tracks = new List<ComposerTrack>()
+                {
+                    new ComposerTrack("Track 1",  InstrumentPicker.GetAllKnownInstruments().First())
+                }
+        };
+        Workspace.Settings.LastOpenedSong = songName;
+        Workspace.AddSong(CurrentSong);
+
     }
 }
