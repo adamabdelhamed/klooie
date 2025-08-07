@@ -77,7 +77,6 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
         ConsoleApp.Current.InvokeNextCycle(()=>
         {
             RefreshVisibleCells();
-            Viewport.SetFirstVisibleRow(Math.Max(0, EnumerateValues().Where(n => GetCellPositionInfo(n).IsHidden == false).Select(m => GetCellPositionInfo(m).Row).DefaultIfEmpty(0).Min()));
         });
         KeyInputReceived.Subscribe(EnableKeyboardInput, this);
     }
