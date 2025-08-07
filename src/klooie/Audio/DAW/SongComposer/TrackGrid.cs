@@ -20,6 +20,7 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
     public TrackGrid(WorkspaceSession session, TrackGridEditor editor, IMidiProvider midiProvider) : base(session, session.CurrentSong.BeatsPerMinute)
     {
         Viewport.RowHeightChars = 3;
+        ConsoleApp.Current.InvokeNextCycle(() => Viewport.SetFirstVisibleRow(0));
         this.MidiProvider = midiProvider;
         this.editor = editor;
         if (Tracks == null || Tracks.Count == 0)
