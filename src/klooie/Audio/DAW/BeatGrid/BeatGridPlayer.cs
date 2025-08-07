@@ -31,7 +31,10 @@ public class BeatGridPlayer<T>
     public void Play()
     {
         if (IsPlaying) return;
-
+        if(CurrentBeat >= Grid.MaxBeat)
+        {
+            CurrentBeat = 0; // Reset to start if at or past the end
+        }
         var autoStopSuffix = StopAtEnd ? " (auto-stop)" : "";
         Grid.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
 
