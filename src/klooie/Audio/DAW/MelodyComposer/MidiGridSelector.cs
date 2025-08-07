@@ -4,10 +4,6 @@ using System.Linq;
 
 namespace klooie;
 
-/// <summary>
-/// TODOS: 
-/// - Selection mode should work when part of the selection is off-screen, so that notes out of theviewport can be selected. We want the user to be able to zoom in and out during selection.
-/// </summary>
 public class MidiGridSelector : BeatGridInputMode<NoteExpression>
 {
     public MidiGrid MelodyComposer => this.Composer as MidiGrid;
@@ -29,7 +25,6 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
     private ConsoleControl? selectionRectangle = null;
     private ConsoleControl? anchorPreviewControl = null;
 
-
     public override void Paint(ConsoleBitmap context)
     {
         base.Paint(context);
@@ -41,10 +36,7 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
             for (int y = 0; y < Composer.Height; y++)
             {
                 var existingPixel = context.GetPixel(x, y);
-                context.DrawString(
-                    "|".ToConsoleString(SelectionModeColor, existingPixel.BackgroundColor),
-                    x, y
-                );
+                context.DrawString("|".ToConsoleString(SelectionModeColor, existingPixel.BackgroundColor), x, y);
             }
         }
     }
@@ -86,10 +78,8 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
         MelodyComposer.ModeChanging.SubscribeOnce((m) =>
         {
             selectionAnchor = null;
-
             selectionRectangle?.TryDispose();
             selectionRectangle = null;
-
             anchorPreviewControl?.TryDispose();
             anchorPreviewControl = null;
         });
@@ -185,7 +175,6 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
         selectionPreviewCursorBeatMidi = null;
     }
 
-    // -- Expand Selection Phase --
     private void HandleExpandSelectionPhase(ConsoleKeyInfo k)
     {
         if (selectionCursorBeatMidi == null) return;
@@ -342,16 +331,9 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
         return (x, y);
     }
 
-    // -- Utility helpers for keys --
-    private bool IsLeft(ConsoleKeyInfo k)
-        => k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A;
-    private bool IsRight(ConsoleKeyInfo k)
-        => k.Key == ConsoleKey.RightArrow || k.Key == ConsoleKey.D;
-    private bool IsUp(ConsoleKeyInfo k)
-        => k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W;
-    private bool IsDown(ConsoleKeyInfo k)
-        => k.Key == ConsoleKey.DownArrow || k.Key == ConsoleKey.S;
-
-
+    private bool IsLeft(ConsoleKeyInfo k) => k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A;
+    private bool IsRight(ConsoleKeyInfo k)  => k.Key == ConsoleKey.RightArrow || k.Key == ConsoleKey.D;
+    private bool IsUp(ConsoleKeyInfo k) => k.Key == ConsoleKey.UpArrow || k.Key == ConsoleKey.W;
+    private bool IsDown(ConsoleKeyInfo k) => k.Key == ConsoleKey.DownArrow || k.Key == ConsoleKey.S;
 }
 

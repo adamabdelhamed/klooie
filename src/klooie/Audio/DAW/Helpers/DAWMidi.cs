@@ -60,21 +60,13 @@ public class DAWMidi : Recyclable
         if (!noteTrackers.TryGetValue(noteNumber, out var tracker)) return;
 
         double playheadBeat = pianoWithTimeline.Grid.Player.CurrentBeat;
-
-        // Snap the start and end beats to the desired grid
         double snappedStart = SnapToGrid(tracker.Note.StartBeat);
         double snappedEnd = SnapToGrid(playheadBeat);
-
-        // If snappedEnd is accidentally less than snappedStart (possible with fast playing), set minimum length
-        if (snappedEnd <= snappedStart)
-            snappedEnd = snappedStart + pianoWithTimeline.Grid.BeatsPerColumn;
+        if (snappedEnd <= snappedStart) snappedEnd = snappedStart + pianoWithTimeline.Grid.BeatsPerColumn;
 
         double duration = snappedEnd - snappedStart;
-
         pianoWithTimeline.Grid.Notes.Remove(tracker.Note);
-        WorkspaceSession.Current.Commands.Execute(
-            new AddNoteCommand(pianoWithTimeline.Grid, NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument))
-        );
+        WorkspaceSession.Current.Commands.Execute(new AddNoteCommand(pianoWithTimeline.Grid, NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument)));
         tracker.ReleaseNote();
         noteTrackers.Remove(noteNumber);
     }
