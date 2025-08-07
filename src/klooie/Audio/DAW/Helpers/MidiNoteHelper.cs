@@ -19,7 +19,7 @@ public static class MidiNoteHelper
         {
             int n = midi % 12;
             bool isWhite = Names[n].Length == 1;
-            int octave = (midi / 12) - 1;
+            int octave = midi / 12;
             // Example: "60: C4"
             string disp = $"{midi}: {Names[n]}{octave}";
             NoteCache[midi] = (disp, isWhite);

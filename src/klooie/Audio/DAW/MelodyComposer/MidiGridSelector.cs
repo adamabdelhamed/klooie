@@ -212,8 +212,9 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
 
             double beat0 = Composer.Viewport.FirstVisibleBeat + Math.Min(ax, cx) * Composer.BeatsPerColumn;
             double beat1 = Composer.Viewport.FirstVisibleBeat + Math.Max(ax, cx) * Composer.BeatsPerColumn;
-            int midi0 = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - Math.Max(ay, cy);
-            int midi1 = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - Math.Min(ay, cy);
+            int row0 = Math.Min(ay, cy), row1 = Math.Max(ay, cy);
+            int midi0 = 127 - (Composer.Viewport.FirstVisibleRow + row0);
+            int midi1 = 127 - (Composer.Viewport.FirstVisibleRow + row1);
 
             // Swap if needed to ensure low <= high
             if (beat0 > beat1) (beat0, beat1) = (beat1, beat0);

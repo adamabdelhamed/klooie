@@ -46,19 +46,19 @@ public class MidiGridNavigator : BeatGridInputMode<NoteExpression>
         }
         else if (k == ConsoleKey.UpArrow || k == ConsoleKey.W)
         {
-            view.ScrollRows(-1, 127);
+            view.ScrollRows(-1, 128);
         }
         else if (k == ConsoleKey.DownArrow || k == ConsoleKey.S)
         {
-            view.ScrollRows(1, 127);
+            view.ScrollRows(1, 128);
         }
         else if (k == ConsoleKey.PageUp)
         {
-            view.ScrollRows(view.RowsOnScreen >= 24 ? -12 : -1, 127);
+            view.ScrollRows(view.RowsOnScreen >= 24 ? -12 : -1, 128);
         }
         else if (k == ConsoleKey.PageDown)
         {
-            view.ScrollRows(view.RowsOnScreen >= 24 ? 12 : 1, 127);
+            view.ScrollRows(view.RowsOnScreen >= 24 ? 12 : 1, 128);
         }
         else if (k == ConsoleKey.Home)
         {

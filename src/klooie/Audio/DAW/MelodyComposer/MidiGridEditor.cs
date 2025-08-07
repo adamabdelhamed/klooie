@@ -202,18 +202,20 @@ public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
         PositionAddPreview();
         FireStatusChanged(ConsoleString.Parse("[White]Press [Cyan]p[White] to add a note here or press ALT + D to deselect."));
     }
-
     public void PositionAddPreview()
     {
         if (pendingAddNote == null || addNotePreview == null) return;
         var (start, duration, midi) = pendingAddNote.Value;
+
         int x = ConsoleMath.Round((start - Grid.Viewport.FirstVisibleBeat) / Grid.BeatsPerColumn) * Grid.Viewport.ColWidthChars;
-        int y = (Grid.Viewport.FirstVisibleRow + Grid.Viewport.RowsOnScreen - 1 - midi) * Grid.Viewport.RowHeightChars;
+        int row = 127 - midi;
+        int y = (row - Grid.Viewport.FirstVisibleRow) * Grid.Viewport.RowHeightChars;
         int w = Math.Max(1, ConsoleMath.Round(duration / Grid.BeatsPerColumn) * Grid.Viewport.ColWidthChars);
         int h = Grid.Viewport.RowHeightChars;
         addNotePreview.MoveTo(x, y);
         addNotePreview.ResizeTo(w, h);
     }
+
 
     public void ClearAddPreview()
     {
