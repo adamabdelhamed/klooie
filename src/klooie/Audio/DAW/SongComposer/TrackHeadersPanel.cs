@@ -62,6 +62,7 @@ public class TrackHeadersPanel : ConsoleControl
                 var newTrackName = await TextInputDialog.Show(new ShowTextInputOptions("Enter new track name".ToYellow())
                 {
                     DialogWidth = 60,
+                    SpeedPercentage = 0,
                 });
                 if(string.IsNullOrWhiteSpace(newTrackName?.StringValue))
                     return; // Cancelled or empty input
@@ -84,7 +85,8 @@ public class TrackHeadersPanel : ConsoleControl
     private void AddMelodyToTrack()
     {
         var notes = new ListNoteSource();
-        var startBeat = Tracks[SelectedTrackIndex].Melodies.Count > 0 ? Tracks[SelectedTrackIndex].Melodies.Max(m => m.StartBeat + m.DurationBeats) : 0;
+
+        var startBeat = composer.Grid.Player.CurrentBeat;
         var newMelody = new MelodyClip(startBeat, notes);
         Tracks[SelectedTrackIndex].Melodies.Add(newMelody);
 

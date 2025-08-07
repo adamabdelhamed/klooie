@@ -19,7 +19,6 @@ public class SongComposer : ProtectedConsolePanel
 
     public SongComposer(WorkspaceSession session, ConsoleControl commandBar, IMidiProvider midiProvider)
     {
-
         this.MidiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
         var rowSpecPrefix = commandBar == null ? "1r" : "1p;1r";
         var rowOffset = commandBar == null ? 0 : 1;
@@ -39,7 +38,32 @@ public class SongComposer : ProtectedConsolePanel
         }
 
         Grid.StatusChanged.Subscribe(message => StatusBar.Message = message, this);
+        SetupKeyForwarding();
     }
+
+    private void SetupKeyForwarding()
+    {
+        ConsoleApp.Current.GlobalKeyPressed.Subscribe(OnGlobalKeyPressed, this);
+    }
+
+    private void OnGlobalKeyPressed(ConsoleKeyInfo info)
+    {
+        if (ConsoleApp.Current.FocusedControl != Grid && TryForwardToGrid(info)) return;
+        // Add more forwarding logic here if needed
+    }
+
+    private bool TryForwardToGrid(ConsoleKeyInfo info)
+    {
+        if(IsHorizontalArrow(info) || info.Key == ConsoleKey.Spacebar || info.Key == ConsoleKey.M)
+        {
+            Grid.KeyInputReceived.Fire(info);
+            Grid.Focus();
+            return true;
+        }
+        return false;
+    }
+
+    private bool IsHorizontalArrow(ConsoleKeyInfo info) => info.Key == ConsoleKey.LeftArrow || info.Key == ConsoleKey.RightArrow;
 }
 
 

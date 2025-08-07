@@ -2,10 +2,6 @@
 using PowerArgs;
 
 var app = new ConsoleApp();
-
-
-app.Invoke(() => app.FocusChanged.Sync(() => app.WriteLine($"Focused control is of type: {app.FocusedControl?.GetType().Name ?? "null"}".ToBlack()),app));
-
 app.Invoke(async () =>
 {
     app.Sound = new AudioPlaybackEngine();
