@@ -326,11 +326,13 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
     private (int X, int Y) BeatMidiToXY(double beat, int midi)
     {
         int x = (int)Math.Round((beat - Composer.Viewport.FirstVisibleBeat) / Composer.BeatsPerColumn);
-        int y = Composer.Viewport.FirstVisibleRow + Composer.Viewport.RowsOnScreen - 1 - midi;
+        int row = 127 - midi;
+        int y = row - Composer.Viewport.FirstVisibleRow;
         x = Math.Max(0, Math.Min(Composer.Width / Composer.Viewport.ColWidthChars - 1, x));
         y = Math.Max(0, Math.Min(Composer.Height / Composer.Viewport.RowHeightChars - 1, y));
         return (x, y);
     }
+
 
     private bool IsLeft(ConsoleKeyInfo k) => k.Key == ConsoleKey.LeftArrow || k.Key == ConsoleKey.A;
     private bool IsRight(ConsoleKeyInfo k)  => k.Key == ConsoleKey.RightArrow || k.Key == ConsoleKey.D;
