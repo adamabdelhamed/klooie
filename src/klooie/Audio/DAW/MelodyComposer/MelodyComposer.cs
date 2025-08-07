@@ -23,7 +23,7 @@ public class MelodyComposer : ProtectedConsolePanel
         var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
         layout.Add(commandBar, 0, 0, columnSpan: 2);
 
-        var midi = DAWMidi.Create(midiProvider, this);
+        var midi = MidiDeviceInterpretor.Create(midiProvider, this);
         commandBar.Add(midi.CreateMidiProductDropdown());
         this.OnDisposed(() => midi.Dispose());
         

@@ -5,21 +5,21 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-public class DAWMidi : Recyclable
+public class MidiDeviceInterpretor : Recyclable
 {
     private IMidiInput midiInput;
     private Dropdown midiDropdown;
     private IMidiProvider midiImpl;
     private MidiNoteOnOffDetector noteDetector;
     private Dictionary<int, SustainedNoteTracker> noteTrackers = new Dictionary<int, SustainedNoteTracker>();
-    private MelodyComposer pianoWithTimeline;
-    private DAWMidi() { }
-    private static LazyPool<DAWMidi> lazyPool = new(() => new DAWMidi());
+    private MelodyComposer melodyComposer;
+    private MidiDeviceInterpretor() { }
+    private static LazyPool<MidiDeviceInterpretor> lazyPool = new(() => new MidiDeviceInterpretor());
 
-    public static DAWMidi Create(IMidiProvider midiImpl, MelodyComposer pianoWithTimeline)
+    public static MidiDeviceInterpretor Create(IMidiProvider midiImpl, MelodyComposer melodyComposer)
     {
         var instance = lazyPool.Value.Rent();
-        instance.pianoWithTimeline = pianoWithTimeline ?? throw new ArgumentNullException(nameof(pianoWithTimeline));
+        instance.melodyComposer = melodyComposer ?? throw new ArgumentNullException(nameof(melodyComposer));
         instance.midiImpl = midiImpl ?? throw new ArgumentNullException(nameof(midiImpl));
         return instance;
     }
@@ -44,15 +44,15 @@ public class DAWMidi : Recyclable
     {
         if (noteTrackers.ContainsKey(ev.NoteNumber)) return;
 
-        var noteExpression = NoteExpression.Create(ev.NoteNumber, pianoWithTimeline.Grid.Player.CurrentBeat, -1, ev.Velocity, pianoWithTimeline.Grid.Instrument);
+        var noteExpression = NoteExpression.Create(ev.NoteNumber, melodyComposer.Grid.Player.CurrentBeat, -1, ev.Velocity, melodyComposer.Grid.Instrument);
         var voices = ConsoleApp.Current.Sound.PlaySustainedNote(noteExpression);
         if (voices == null) return;
 
-        pianoWithTimeline.Grid.Player.StopAtEnd = false;
-        pianoWithTimeline.Grid.Player.Play();
-        pianoWithTimeline.Grid.Notes.Add(noteExpression);
-        pianoWithTimeline.Grid.EnsureMidiVisible(noteExpression.MidiNote);
-        pianoWithTimeline.Grid.RefreshVisibleCells();
+        melodyComposer.Grid.Player.StopAtEnd = false;
+        melodyComposer.Grid.Player.Play();
+        melodyComposer.Grid.Notes.Add(noteExpression);
+        melodyComposer.Grid.EnsureMidiVisible(noteExpression.MidiNote);
+        melodyComposer.Grid.RefreshVisibleCells();
         noteTrackers[ev.NoteNumber] = SustainedNoteTracker.Create(noteExpression, voices);
     }
 
@@ -60,14 +60,14 @@ public class DAWMidi : Recyclable
     {
         if (!noteTrackers.TryGetValue(noteNumber, out var tracker)) return;
 
-        double playheadBeat = pianoWithTimeline.Grid.Player.CurrentBeat;
+        double playheadBeat = melodyComposer.Grid.Player.CurrentBeat;
         double snappedStart = SnapToGrid(tracker.Note.StartBeat);
         double snappedEnd = SnapToGrid(playheadBeat);
-        if (snappedEnd <= snappedStart) snappedEnd = snappedStart + pianoWithTimeline.Grid.BeatsPerColumn;
+        if (snappedEnd <= snappedStart) snappedEnd = snappedStart + melodyComposer.Grid.BeatsPerColumn;
 
         double duration = snappedEnd - snappedStart;
-        pianoWithTimeline.Grid.Notes.Remove(tracker.Note);
-        WorkspaceSession.Current.Commands.Execute(new AddNoteCommand(pianoWithTimeline.Grid, NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument)));
+        melodyComposer.Grid.Notes.Remove(tracker.Note);
+        WorkspaceSession.Current.Commands.Execute(new AddNoteCommand(melodyComposer.Grid, NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument)));
         tracker.ReleaseNote();
         noteTrackers.Remove(noteNumber);
     }
@@ -93,7 +93,7 @@ public class DAWMidi : Recyclable
         noteDetector?.Dispose();
         noteDetector = null;
         noteTrackers.Clear();
-        pianoWithTimeline = null!;
+        melodyComposer = null!;
         midiDropdown?.TryDispose();
         midiDropdown = null;
     }

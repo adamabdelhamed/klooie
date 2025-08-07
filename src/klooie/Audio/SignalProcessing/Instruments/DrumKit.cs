@@ -97,7 +97,7 @@ A basic kick drum patch with a punchy attack and a short decay.
 
         }
 
-        var ret = builder.Build().WithVolume(.5f);
+        var ret = builder.Build().WithVolume(.15f);
         return ret;
     }
 }

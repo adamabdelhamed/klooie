@@ -33,7 +33,7 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
     // Add a new track with default instrument
     public void AddTrack(string name, InstrumentExpression? instrument = null)
     {
-        instrument ??= new InstrumentExpression() { Name = "Default", PatchFunc = SynthLead.Create };
+        instrument ??= InstrumentPicker.GetAllKnownInstruments().FirstOrDefault();
         AddTrack(new ComposerTrack(name, instrument));
     }
 

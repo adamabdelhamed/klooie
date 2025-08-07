@@ -54,6 +54,7 @@ public class SongComposer : ProtectedConsolePanel
 
     private bool TryForwardToGrid(ConsoleKeyInfo info)
     {
+        if (ConsoleApp.Current.FocusStackDepth != Grid.FocusStackDepth) return false;
         if(IsHorizontalArrow(info) || info.Key == ConsoleKey.Spacebar || info.Key == ConsoleKey.M)
         {
             Grid.KeyInputReceived.Fire(info);

@@ -28,8 +28,7 @@ public static class MidiNoteHelper
 
     public static (string DisplayString, bool IsWhite) NoteName(int midi)
     {
-        if (midi < 0 || midi >= NoteCache.Length)
-            throw new ArgumentOutOfRangeException(nameof(midi), "MIDI note out of range (0-127)");
+        if (midi < 0 || midi >= NoteCache.Length) throw new ArgumentOutOfRangeException(nameof(midi), "MIDI note out of range (0-127)");
         return NoteCache[midi];
     }
 }
