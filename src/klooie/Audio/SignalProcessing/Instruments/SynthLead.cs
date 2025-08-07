@@ -34,7 +34,7 @@ public static class SynthLead
              .WithWaveForm(WaveformType.Saw)
              .WithEnvelope(0.004, 0.11, 0.80, 0.20))
          .Build()
-         .WithPortamento()
+ 
          .WithVolume(.05f);
     }
 }
