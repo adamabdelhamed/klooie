@@ -11,20 +11,23 @@ public static class DrumKit
 A basic kick drum patch with a punchy attack and a short decay.
 """)]
     public static ISynthPatch Kick() => LayeredPatch.CreateBuilder()
-        .AddLayer(patch: SynthPatch.Create()
-            .WithWaveForm(WaveformType.Sine)
-            .WithMidiOverride(36)
-            .WithEnvelope(0f, KickDecay, 0f, 0.02f)
-            .WithPitchBend(KickPitchBend, KickDecay))
-        .AddLayer(patch: SynthPatch.Create()
-            .WithWaveForm(WaveformType.Noise)
-            .WithEnvelope(0f, KickDecay, 0f, .01f)
-            .WithLowPass(cutoffHz: 80)
-            .WithVolume(.06f))
-        .Build()
-        .WithVolume(7f)
-        .WithHighPass(400);
-    
+    .AddLayer(patch: SynthPatch.Create()
+        .WithWaveForm(WaveformType.Sine)
+        .WithMidiOverride(36)
+        .WithEnvelope(0f, KickDecay, 0f, 0.02f)
+        .WithPitchBend(KickPitchBend, KickDecay)
+        .WithSubOscillator(0.5f, -1)
+        .WithLowShelf(50, 5f))
+    .AddLayer(patch: SynthPatch.Create()
+        .WithWaveForm(WaveformType.Noise)
+        .WithEnvelope(0f, KickDecay * 1.5f, 0f, 0.01f)
+        .WithLowPass(80)
+        .WithVolume(0.06f))
+    .Build()
+    //.WithReverb(0.8f, 0.6f, 0.3f, 0.25f, 0.75f, 0.3f)
+    .WithVolume(10f)
+    .WithHighPass(300);
+
     private static float KickPitchBend(float time)
     {
         float maxCents = 400f;
@@ -38,20 +41,22 @@ A basic kick drum patch with a punchy attack and a short decay.
     [SynthCategory("Drums")]
     [SynthDocumentation("A basic snare drum.")]
     public static ISynthPatch Snare() => LayeredPatch.CreateBuilder()
-        .AddLayer(patch: SynthPatch.Create()
-           .WithEnvelope(.01f, SnareDecay, 0f, .001f)
-           .WithWaveForm(WaveformType.Sine)
-           .WithMidiOverride(36)
-           .WithPitchBend(SnarePitchBend, SnareDecay)
-           .WithVolume(1))
-        .AddLayer(patch: SynthPatch.Create()
-            .WithWaveForm(WaveformType.VioletNoise)
-            .WithEnvelope(.001f, .1f, .1f, .01f)
-            .WithReverb(feedback: .95f, diffusion: .55f, damping: .7f, wet: .5f, dry: .5f, duration: .1f)
-            .WithVolume(.02f))
-        .Build()
-        .WithVolume(4f)
-        .WithHighPass(400f);
+    .AddLayer(patch: SynthPatch.Create()
+        .WithWaveForm(WaveformType.Sine)
+        .WithMidiOverride(38)
+        .WithEnvelope(0.01f, SnareDecay, 0f, 0.01f)
+        .WithPitchBend(SnarePitchBend, SnareDecay)
+        .WithVolume(1.2f))
+    .AddLayer(patch: SynthPatch.Create()
+        .WithWaveForm(WaveformType.VioletNoise)
+        .WithEnvelope(0.001f, 0.1f, 0.05f, 0.02f)
+        .WithAggroDistortion(10, 0.7f, 0.1f)
+        .WithChorus(12, 3, 0.4f, 0.3f)
+        //.WithReverb(0.95f, 0.6f, 0.5f, 0.5f, 0.6f, 0.2f)
+        .WithVolume(0.08f))
+    .Build()
+    .WithHighPass(600)
+    .WithVolume(6f);
 
     private static float SnarePitchBend(float time)
     {
@@ -79,7 +84,7 @@ A basic kick drum patch with a punchy attack and a short decay.
         var currentVolume = 1f;
         var currentAttack = .01f;
         var currentDecay = .08f;
-        for(var i = 0; i < layers; i++)
+        for (var i = 0; i < layers; i++)
         {
             builder.AddLayer(1, 0, 0, SynthPatch.Create()
             .WithWaveForm(WaveformType.PinkNoise)
@@ -88,9 +93,9 @@ A basic kick drum patch with a punchy attack and a short decay.
             .WithPeakEQ(freq: freqInc * i, gainDb: -8f, q: 1)
             .WithPeakEQ(freq: 500 + freqInc * i, gainDb: -2f, q: 1)
             .WithPeakEQ(freq: 2000 + freqInc * i, gainDb: 4f, q: 1)
-            .WithLowPass(cutoffHz: 8000 - (i*100))
+            .WithLowPass(cutoffHz: 8000 - (i * 100))
             .WithVolume(1));
-            
+
             currentAttack = currentAttack + attackSpacing;
             currentDecay = currentDecay * decayDecay;
             currentVolume = currentVolume * volumeDecay;
