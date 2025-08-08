@@ -84,10 +84,20 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
     protected override void OnReturn()
     {
         base.OnReturn();
+        (basePatch as Recyclable)?.Dispose();
         basePatch = null;
         numVoices = 0;
         detuneCents = 0f;
         panSpread = 0f;
+
+        for(int i = 0; i < _innerPatches.Length; i++)
+        {
+            if (_innerPatches[i] is Recyclable recyclable)
+            {
+                recyclable.Dispose();
+            }
+        }
+
         _innerPatches = null!;
     }
 
