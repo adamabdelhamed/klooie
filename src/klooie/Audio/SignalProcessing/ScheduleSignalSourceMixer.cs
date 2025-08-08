@@ -39,6 +39,8 @@ public class ScheduledNoteEvent : Recyclable
     public NoteExpression Previous;
     public int RemainingVoices;
     private CancellationTokenRegistration? CancellationTokenRegistration;
+
+    public ISynthPatch? Patch;
     private void Cancel()
     {
         IsCancelled = true;
@@ -76,6 +78,11 @@ public class ScheduledNoteEvent : Recyclable
         Previous = null;
         RemainingVoices = 0;
         IsCancelled = false;
+        if(Patch != null && Patch is Recyclable recyclablePatch)
+        {
+            recyclablePatch.Dispose();
+            Patch = null;
+        }
         base.OnReturn();
     }
 }
@@ -222,7 +229,9 @@ public class ScheduledSignalSourceMixer
                 if (patch is Recyclable r) r.Dispose();
                 continue;
             }
+            scheduledNoteEvent.Patch= patch;
             var voices = patch.SpawnVoices(NoteExpression.MidiNoteToFrequency(scheduledNoteEvent.Note.MidiNote), scheduledNoteEvent).ToArray();
+ 
             scheduledNoteEvent.RemainingVoices = voices.Length;
 
             int durSamples = (int)(scheduledNoteEvent.DurationSeconds * SoundProvider.SampleRate);
