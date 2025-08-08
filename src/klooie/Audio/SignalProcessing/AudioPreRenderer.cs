@@ -173,25 +173,31 @@ public sealed class AudioPreRenderer
         int blockFloats = BlockFrames * channels;
 
         var blockBuffer = new float[blockFloats];
-        var allFloats = new List<float>();
-
-        while (mixer.HasWork)
+        var allFloats = RecyclableListPool<float>.Instance.Rent(100_000);
+        try
         {
-            int read = mixer.Read(blockBuffer, 0, blockFloats);
-            allFloats.AddRange(blockBuffer.AsSpan(0, read).ToArray());
+            while (mixer.HasWork)
+            {
+                int read = mixer.Read(blockBuffer, 0, blockFloats);
+                allFloats.Items.AddRange(blockBuffer.AsSpan(0, read).ToArray());
+            }
+
+            // Strip leading silence that was at note.StartTime
+            int sampleRate = SoundProvider.SampleRate;
+            int offsetFrames = (int)Math.Round(note.StartTime.TotalSeconds * sampleRate);
+            int offsetFloats = Math.Clamp(offsetFrames * channels, 0, allFloats.Count);
+
+            int trimmedFloats = allFloats.Count - offsetFloats;
+            float[] data = new float[trimmedFloats];
+            allFloats.Items.CopyTo(offsetFloats, data, 0, trimmedFloats);
+
+            int totalFrames = trimmedFloats / channels;
+            return new CachedWave(data, totalFrames);
         }
-
-        // Strip leading silence that was at note.StartTime
-        int sampleRate = SoundProvider.SampleRate;
-        int offsetFrames = (int)Math.Round(note.StartTime.TotalSeconds * sampleRate);
-        int offsetFloats = Math.Clamp(offsetFrames * channels, 0, allFloats.Count);
-
-        int trimmedFloats = allFloats.Count - offsetFloats;
-        float[] data = new float[trimmedFloats];
-        allFloats.CopyTo(offsetFloats, data, 0, trimmedFloats);
-
-        int totalFrames = trimmedFloats / channels;
-        return new CachedWave(data, totalFrames);
+        finally
+        {
+            allFloats.Dispose();
+        }
     }
 
     /* ----- key / cache helpers ----- */
