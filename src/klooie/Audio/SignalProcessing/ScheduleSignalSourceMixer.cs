@@ -237,10 +237,16 @@ public class ScheduledSignalSourceMixer
 
     private void MixActiveVoices(float[] buffer, int offset, int samplesRequested, long bufferStart, long bufferEnd, float[] scratch)
     {
+        MixBufferedVoices(buffer, offset, samplesRequested, bufferStart);
+        MixRealTimeVoices(buffer, offset, samplesRequested, bufferStart, bufferEnd, scratch);
+    }
+
+    private void MixBufferedVoices(float[] buffer, int offset, int samplesRequested, long bufferStart)
+    {
         for (int b = bufferedVoices.Count - 1; b >= 0; b--)
         {
             var bv = bufferedVoices[b];
-            if (bv.NoteEvent.IsCancelled) 
+            if (bv.NoteEvent.IsCancelled)
             {
                 bv.NoteEvent.Dispose();
                 bufferedVoices.RemoveAt(b);
@@ -290,7 +296,10 @@ public class ScheduledSignalSourceMixer
                 bufferedVoices.RemoveAt(b);
             }
         }
+    }
 
+    private void MixRealTimeVoices(float[] buffer, int offset, int samplesRequested, long bufferStart, long bufferEnd, float[] scratch)
+    {
         for (int v = activeVoices.Count - 1; v >= 0; v--)
         {
             var av = activeVoices[v];
@@ -362,6 +371,8 @@ public class ScheduledSignalSourceMixer
             }
         }
     }
+
+
 
     public static async Task<RenderAnalysis> ToWav(Song song, string outputFileName, double endSilenceSeconds = 2)
     {
