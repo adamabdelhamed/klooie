@@ -242,7 +242,9 @@ public class ScheduledSignalSourceMixer
             var bv = bufferedVoices[b];
             if (bv.NoteEvent.IsCancelled) 
             {
-                // TODO: Implement before commit
+                bv.NoteEvent.Dispose();
+                bufferedVoices.RemoveAt(b);
+                continue;
             }
 
             long absStart = bv.NoteEvent.StartSample;
