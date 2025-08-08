@@ -49,7 +49,14 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
         }
 
         if (orig == null) throw new InvalidOperationException("ReverbPatch requires an EnvelopeEffect in the base patch.");
-        if(wet.Effects.OfType<EnvelopeEffect>().Count() != 1) throw new InvalidOperationException("ReverbPatch requires a single EnvelopeEffect in the base patch.");
+
+        var envelopeCount = 0;
+        for (int i = 0; i < wet.Effects.Items.Count; i++)
+        {
+            if (wet.Effects[i] is EnvelopeEffect) envelopeCount++;
+        }
+
+        if (envelopeCount != 1) throw new InvalidOperationException("ReverbPatch requires a single EnvelopeEffect in the base patch.");
     }
 
     public IEnumerable<ISynthPatch> GetPatches()
