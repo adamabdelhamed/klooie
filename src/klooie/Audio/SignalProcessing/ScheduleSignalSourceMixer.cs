@@ -31,7 +31,7 @@ public class ScheduledSongEvent : Recyclable
 public class ScheduledNoteEvent : Recyclable
 {
     public long StartSample; // Absolute sample offset
-    public ISynthPatch Patch;
+
     public double DurationSeconds => Note.DurationTime.TotalSeconds;
     public NoteExpression Note { get; private set; }
     public bool IsCancelled { get; private set; }
@@ -46,11 +46,10 @@ public class ScheduledNoteEvent : Recyclable
 
     private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
     protected ScheduledNoteEvent() { }
-    public static ScheduledNoteEvent Create(NoteExpression note, ISynthPatch patch, CancellationToken? cancellationToken)
+    public static ScheduledNoteEvent Create(NoteExpression note, CancellationToken? cancellationToken)
     {
         var ret = pool.Value.Rent();
         ret.Note = note;
-        ret.Patch = patch;
         ret.StartSample = 0;
         ret.Next = null;
         ret.Previous = null;
@@ -70,10 +69,8 @@ public class ScheduledNoteEvent : Recyclable
     protected override void OnReturn()
     {
         Note = null;
-        if (Patch is Recyclable r) r.Dispose();
         CancellationTokenRegistration?.Dispose();
         CancellationTokenRegistration = null;
-        Patch = null!;
         StartSample = 0;
         Next = null;
         Previous = null;
@@ -89,12 +86,16 @@ public class ScheduledSignalSourceMixer
     private readonly ConcurrentQueue<ScheduledSongEvent> scheduledSongs = new();
     private readonly List<ActiveVoice> activeVoices = new();
     private long samplesRendered = 0;
-
+    private readonly List<ActiveVoiceBuffered> bufferedVoices = new();
+    private static readonly AudioPreRenderer pre = new AudioPreRenderer();
+    private bool preRenderEnabled;
     public bool HasWork => scheduledSongs.Count > 0 || scheduledNotes.Count > 0 || activeVoices.Count > 0;
 
     public long SamplesRendered => samplesRendered;
-
-    public ScheduledSignalSourceMixer() { }
+    public ScheduledSignalSourceMixer(bool prerender = true) 
+    {
+        preRenderEnabled = prerender; 
+    }
 
     public void ScheduleSong(Song s, CancellationToken? cancellationToken)
     {
@@ -127,12 +128,13 @@ public class ScheduledSignalSourceMixer
 
     private void DrainScheduledSongs()
     {
-        var didWork = false;
+        var didWork = false; 
         while (scheduledSongs.TryDequeue(out var ev))
         {
             didWork = true;
             var song = ev.Song;
             var tracks = new Dictionary<string, RecyclableList<ScheduledNoteEvent>>();
+
             for (int i = 0; i < song.Count; i++)
             {
                 var note = song[i];
@@ -143,13 +145,8 @@ public class ScheduledSignalSourceMixer
                     tracks[trackKey] = track;
                 }
 
-                var patch = note.Instrument?.PatchFunc?.Invoke() ?? SynthLead.Create();
-                if (!patch.IsNotePlayable(note.MidiNote))
-                {
-                    continue;
-                }
 
-                var scheduledNote = ScheduledNoteEvent.Create(note, patch, ev.CancellationToken);
+                var scheduledNote = ScheduledNoteEvent.Create(note, ev.CancellationToken);
                 track.Items.Add(scheduledNote);
             }
 
@@ -164,6 +161,10 @@ public class ScheduledSignalSourceMixer
                     if (j < track.Items.Count - 1) noteEvent.Next = track.Items[j + 1].Note;
 
                     scheduledNotes.Add(noteEvent);
+                    if (preRenderEnabled)
+                    {
+                        pre.Queue(noteEvent.Note);
+                    }
                 }
                 track.Dispose();
             }
@@ -199,7 +200,29 @@ public class ScheduledSignalSourceMixer
                 continue;
             }
 
-            var voices = scheduledNoteEvent.Patch.SpawnVoices(NoteExpression.MidiNoteToFrequency(scheduledNoteEvent.Note.MidiNote), scheduledNoteEvent).ToArray();
+
+            if (preRenderEnabled && pre.TryGet(scheduledNoteEvent.Note, out var wave) == true)
+            {
+                // skip live spawning
+                bufferedVoices.Add(new ActiveVoiceBuffered
+                {
+                    NoteEvent = scheduledNoteEvent,
+                    Wave = wave,
+                    FrameCursor = 0
+                });
+                SoundProvider.Debug($"Scheduled note {scheduledNoteEvent.Note.MidiNote} from {scheduledNoteEvent.Note.Instrument?.Name ?? "Patch"} with cached wave.".ToDarkGreen());
+                continue;          
+            }
+
+            SoundProvider.Debug($"Scheduled note {scheduledNoteEvent.Note.MidiNote} from {scheduledNoteEvent.Note.Instrument?.Name ?? "Patch"} with live spawning.".ToOrange());
+            var patch = scheduledNoteEvent.Note.Instrument?.PatchFunc() ?? SynthLead.Create();
+
+            if (!patch.IsNotePlayable(scheduledNoteEvent.Note.MidiNote))
+            {
+                if (patch is Recyclable r) r.Dispose();
+                continue;
+            }
+            var voices = patch.SpawnVoices(NoteExpression.MidiNoteToFrequency(scheduledNoteEvent.Note.MidiNote), scheduledNoteEvent).ToArray();
             scheduledNoteEvent.RemainingVoices = voices.Length;
 
             int durSamples = (int)(scheduledNoteEvent.DurationSeconds * SoundProvider.SampleRate);
@@ -214,6 +237,58 @@ public class ScheduledSignalSourceMixer
 
     private void MixActiveVoices(float[] buffer, int offset, int samplesRequested, long bufferStart, long bufferEnd, float[] scratch)
     {
+        for (int b = bufferedVoices.Count - 1; b >= 0; b--)
+        {
+            var bv = bufferedVoices[b];
+            if (bv.NoteEvent.IsCancelled) 
+            {
+                // TODO: Implement before commit
+            }
+
+            long absStart = bv.NoteEvent.StartSample;
+            int frameCursor = bv.FrameCursor;
+            long relPosFrames = absStart + frameCursor - bufferStart;
+            int srcFrame = frameCursor;
+            int dst;
+
+            int framesAvailable = bv.Wave.Frames - srcFrame;
+            int framesThisPass;
+
+            if (relPosFrames < 0)
+            {
+                // Note started before this buffer: skip some frames in the cached wave
+                int framesToSkip = (int)(-relPosFrames);
+                srcFrame += framesToSkip;
+                if (srcFrame >= bv.Wave.Frames) { bufferedVoices.RemoveAt(b); continue; }
+                dst = offset;
+                framesThisPass = Math.Min(framesAvailable - framesToSkip, samplesRequested);
+            }
+            else
+            {
+                // Note starts at or after this buffer
+                dst = offset + (int)relPosFrames * SoundProvider.ChannelCount;
+                framesThisPass = Math.Min(framesAvailable, samplesRequested - (int)relPosFrames);
+            }
+            if (framesThisPass <= 0) continue;
+
+            int src = srcFrame * SoundProvider.ChannelCount;
+            int floats = framesThisPass * SoundProvider.ChannelCount;
+
+            // SAFETY: Do not mix past end of output buffer
+            if (dst + floats > buffer.Length) floats = buffer.Length - dst;
+
+            for (int i = 0; i < floats; i++)
+                buffer[dst + i] += bv.Wave.Data[src + i];
+
+            bv.FrameCursor = srcFrame + framesThisPass;
+
+            if (bv.FrameCursor >= bv.Wave.Frames)
+            {
+                bv.NoteEvent.Dispose();
+                bufferedVoices.RemoveAt(b);
+            }
+        }
+
         for (int v = activeVoices.Count - 1; v >= 0; v--)
         {
             var av = activeVoices[v];
@@ -432,6 +507,12 @@ public struct ActiveVoice
     }
 }
 
+struct ActiveVoiceBuffered
+{
+    public ScheduledNoteEvent NoteEvent;
+    public CachedWave Wave;
+    public int FrameCursor;         // how many frames already mixed
+}
 
 public class RenderAnalysis
 {

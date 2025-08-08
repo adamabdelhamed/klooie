@@ -45,7 +45,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
         }
 
 
-        var ev = ScheduledNoteEvent.Create(note, patch, null);
+        var ev = ScheduledNoteEvent.Create(note, null);
         var result = RecyclableListPool<SynthVoiceProvider>.Instance.Rent(8);
         foreach (var voice in patch.SpawnVoices(MIDIInput.MidiNoteToFrequency(note.MidiNote), ev))
         {

@@ -40,7 +40,7 @@ public static class SynthLead
          // Global effects chain
          .WithChorus(delayMs: 24, depthMs: 6, rateHz: 0.28f, mix: 0.22f)
          .WithPingPongDelay(delayMs: 360, feedback: 0.42f, mix: 0.33f)
-        // .WithReverb(duration: 2.6f)
-         .WithVolume(0.05f);
+         .WithReverb(duration: 2.6f, wet: .05f)
+         .WithVolume(0.03f);
     }
 }
