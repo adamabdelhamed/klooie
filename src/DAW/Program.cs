@@ -1,6 +1,7 @@
 ﻿using klooie;
 using PowerArgs;
-
+File.WriteAllText(@"C:\Users\adama\OneDrive\Desktop\doc.html", SynthDocGenerator.GenerateHtml());
+File.WriteAllText(@"C:\Users\adama\OneDrive\Desktop\doc.md", SynthDocGenerator.GenerateMarkdown());
 var app = new ConsoleApp();
 app.Invoke(async () =>
 {
