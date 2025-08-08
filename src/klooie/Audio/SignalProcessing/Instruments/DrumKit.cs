@@ -93,8 +93,7 @@ A basic kick drum patch with a punchy attack and a short decay.
             .WithPeakEQ(freq: freqInc * i, gainDb: -8f, q: 1)
             .WithPeakEQ(freq: 500 + freqInc * i, gainDb: -2f, q: 1)
             .WithPeakEQ(freq: 2000 + freqInc * i, gainDb: 4f, q: 1)
-            .WithLowPass(cutoffHz: 8000 - (i * 100))
-            .WithVolume(1));
+            .WithLowPass(cutoffHz: 8000 - (i * 100)));
 
             currentAttack = currentAttack + attackSpacing;
             currentDecay = currentDecay * decayDecay;

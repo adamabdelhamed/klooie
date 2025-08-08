@@ -291,6 +291,27 @@ public class SongInfo
     public string? Filename { get; set; }
     public double BeatsPerMinute { get; set; }
     public List<ComposerTrack> Tracks { get; set; } = new();
+
+    public Song Compose()
+    {
+        var notes = new ListNoteSource() { BeatsPerMinute = this.BeatsPerMinute };
+
+        for (var i = 0; i < Tracks.Count; i++)
+        {
+            for (int j = 0; j < Tracks[i].Melodies.Count; j++)
+            {
+                var melody = Tracks[i].Melodies[j];
+                for (int k = 0; k < melody.Melody.Count; k++)
+                {
+                    var originalNote = melody.Melody[k];
+                    var noteWithOffset = NoteExpression.Create(originalNote.MidiNote, melody.StartBeat + originalNote.StartBeat, originalNote.DurationBeats, originalNote.BeatsPerMinute, originalNote.Velocity, originalNote.Instrument);
+                    notes.Add(noteWithOffset);
+                }
+            }
+        }
+        var song = new Song(notes, notes.BeatsPerMinute);
+        return song;
+    }
 }
 
 // --- PatchFactoryInfo: one per static ISynthPatch factory method ---
@@ -309,6 +330,7 @@ public class WorkspaceSettings
 {
     public string? LastOpenedSong { get; set; }
     public string? LastMidiDevice { get; set; }
+    public string? LastExportedDSLFilePath { get; set; }
     public string? LastExportedWavFilePath { get; set; }
 }
 
