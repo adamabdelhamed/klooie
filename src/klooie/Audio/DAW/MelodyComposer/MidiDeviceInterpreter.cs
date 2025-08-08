@@ -67,7 +67,9 @@ public class MidiDeviceInterpretor : Recyclable
 
         double duration = snappedEnd - snappedStart;
         melodyComposer.Grid.Notes.Remove(tracker.Note);
-        WorkspaceSession.Current.Commands.Execute(new AddNoteCommand(melodyComposer.Grid, NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument)));
+        var completedNote = NoteExpression.Create(tracker.Note.MidiNote, snappedStart, duration, tracker.Note.Velocity, tracker.Note.Instrument);
+        AudioPreRenderer.Instance.Queue(completedNote);
+        WorkspaceSession.Current.Commands.Execute(new AddNoteCommand(melodyComposer.Grid, completedNote));
         tracker.ReleaseNote();
         noteTrackers.Remove(noteNumber);
     }
