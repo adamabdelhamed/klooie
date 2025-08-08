@@ -87,7 +87,7 @@ public class ScheduledSignalSourceMixer
     private readonly List<ActiveVoice> activeVoices = new();
     private long samplesRendered = 0;
     private readonly List<ActiveVoiceBuffered> bufferedVoices = new();
-    private static readonly AudioPreRenderer pre = new AudioPreRenderer();
+
     private bool preRenderEnabled;
     public bool HasWork => scheduledSongs.Count > 0 || scheduledNotes.Count > 0 || activeVoices.Count > 0;
 
@@ -163,7 +163,7 @@ public class ScheduledSignalSourceMixer
                     scheduledNotes.Add(noteEvent);
                     if (preRenderEnabled)
                     {
-                        pre.Queue(noteEvent.Note);
+                        AudioPreRenderer.Instance.Queue(noteEvent.Note);
                     }
                 }
                 track.Dispose();
@@ -201,7 +201,7 @@ public class ScheduledSignalSourceMixer
             }
 
 
-            if (preRenderEnabled && pre.TryGet(scheduledNoteEvent.Note, out var wave) == true)
+            if (preRenderEnabled && AudioPreRenderer.Instance.TryGet(scheduledNoteEvent.Note, out var wave) == true)
             {
                 // skip live spawning
                 bufferedVoices.Add(new ActiveVoiceBuffered

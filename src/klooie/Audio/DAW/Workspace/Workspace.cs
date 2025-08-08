@@ -100,6 +100,7 @@ public class Workspace
                             foreach (var note in melody.Melody)
                             {
                                 note.BeatsPerMinute = song.BeatsPerMinute;
+                                AudioPreRenderer.Instance.Queue(note);
                             }
                         }
                     }

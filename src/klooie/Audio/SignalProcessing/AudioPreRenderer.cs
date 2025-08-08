@@ -140,7 +140,9 @@ public sealed class AudioPreRenderer
 
     /* ---------- implementation ---------- */
 
-    public AudioPreRenderer()
+    public static readonly AudioPreRenderer Instance = new AudioPreRenderer();
+
+    private AudioPreRenderer()
     {
         _jobs = new BlockingCollection<RenderJob>();
         SpawnWorkers(ComputeThreadCount());
@@ -202,7 +204,7 @@ public sealed class AudioPreRenderer
     {
         _waves[key] = wave;
         cacheCount++;
-        SoundProvider.Debug($"Added note to cache: Cache Count {cacheCount}, Job Count: {jobCount}".ToBlue());
+        SoundProvider.Debug($"Added note to cache: Cache Count {cacheCount}, Job Count: {jobCount}, Cache Size MB: {MathF.Round(_bytes / (1024 * 1024))}".ToBlue());
         lock (_lruLock)
         {
             _lru.AddFirst(key);
