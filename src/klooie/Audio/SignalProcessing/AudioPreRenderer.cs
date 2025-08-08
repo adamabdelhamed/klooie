@@ -159,6 +159,8 @@ public sealed class AudioPreRenderer
         }
     }
 
+    [ThreadStatic]
+    private static float[] BlockBuffer;
     private CachedWave RenderViaMixer(NoteExpression note)
     {
         // Build a 1-note song
@@ -172,14 +174,17 @@ public sealed class AudioPreRenderer
         int channels = SoundProvider.ChannelCount;
         int blockFloats = BlockFrames * channels;
 
-        var blockBuffer = new float[blockFloats];
-        var allFloats = RecyclableListPool<float>.Instance.Rent(100_000);
+        BlockBuffer = BlockBuffer ??= new float[blockFloats];
+        var allFloats = RecyclableListPool<float>.Instance.Rent(1024 * 1024);
         try
         {
             while (mixer.HasWork)
             {
-                int read = mixer.Read(blockBuffer, 0, blockFloats);
-                allFloats.Items.AddRange(blockBuffer.AsSpan(0, read).ToArray());
+                int read = mixer.Read(BlockBuffer, 0, blockFloats);
+                for(int i = 0; i < read; i++)
+                {
+                    allFloats.Items.Add(BlockBuffer[i]);
+                }
             }
 
             // Strip leading silence that was at note.StartTime
