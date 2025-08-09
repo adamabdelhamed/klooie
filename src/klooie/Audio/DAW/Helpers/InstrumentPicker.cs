@@ -7,6 +7,25 @@ using System.Threading.Tasks;
 namespace klooie;
 public class InstrumentPicker
 {
+    private static Dictionary<string,InstrumentExpression> GetInstrumentMap()
+    {
+        return GetAllKnownInstruments().ToDictionary(i => i.Name, i => new InstrumentExpression()
+        {
+            Name = i.Name,
+            PatchFunc = i.PatchFunc
+        });
+    }
+
+    public static InstrumentExpression ResolveInstrument(string name)
+    {
+        var instrumentMap = GetInstrumentMap();
+        if (instrumentMap.TryGetValue(name, out var instrument))
+        {
+            return instrument;
+        }
+        return new InstrumentExpression() { Name = name, PatchFunc = SynthLead.Create };
+    }
+
     public static Dropdown CreatePickerDropdown() => new Dropdown(GetAllKnownInstruments().Select(i => new DialogChoice() { DisplayText = i.Name.ToWhite(), Id = i.Name, Value = i }));
 
     public static IEnumerable<InstrumentExpression> GetAllKnownInstruments()
@@ -16,34 +35,5 @@ public class InstrumentPicker
         yield return new InstrumentExpression() { Name = "Snare", PatchFunc = DrumKit.Snare };
         yield return new InstrumentExpression() { Name = "Clap", PatchFunc = DrumKit.Clap };
     }
-
-    public static void Hydrate(SongInfo song)
-    {
-        foreach (var track in song.Tracks)
-        {
-            if (track.Instrument == null)
-            {
-                track.Instrument = new InstrumentExpression();
-            }
-            Hydrate(track.Instrument);
-
-            foreach(var melody in track.Melodies)
-            {
-                foreach(var note in melody.Melody)
-                {
-                    if (note.Instrument == null)
-                    {
-                        note.Instrument = new InstrumentExpression();
-                    }
-                    Hydrate(note.Instrument);
-                }
-            }
-        }
-    }
-
-    public static void Hydrate(InstrumentExpression expression)
-    {
-        var instrument = GetAllKnownInstruments().FirstOrDefault(i => i.Name == expression.Name);
-        expression.PatchFunc = instrument?.PatchFunc ?? expression.PatchFunc ?? SynthLead.Create;
-    }
+ 
 }

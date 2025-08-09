@@ -85,16 +85,16 @@ public class Workspace
         Songs.Clear();
         if (Directory.Exists(SongsDirectory))
         {
-            foreach (var file in Directory.GetFiles(SongsDirectory, "*.song.json"))
+            foreach (var file in Directory.GetFiles(SongsDirectory, "*.sng"))
             {
                 try
                 {
-                    var json = await File.ReadAllTextAsync(file);
-                    var song = JsonSerializer.Deserialize<SongInfo>(json);
+                    var dsl = await File.ReadAllTextAsync(file);
+                    var song = MusicDSL.ParseSongDsl_Aligned(dsl, InstrumentPicker.ResolveInstrument);
 
-                    foreach(var track in song.Tracks)
+                    foreach (var track in song.Tracks)
                     {
-                        foreach(var melody in track.Melodies)
+                        foreach (var melody in track.Melodies)
                         {
                             melody.Melody.BeatsPerMinute = song.BeatsPerMinute;
                             foreach (var note in melody.Melody)
@@ -105,7 +105,6 @@ public class Workspace
                         }
                     }
 
-                    InstrumentPicker.Hydrate(song);
                     if (song != null)
                     {
                         song.Filename = file;
@@ -142,16 +141,16 @@ public class Workspace
 
         // Prepare song file paths and JSON
         var songFilePaths = new List<string>(Songs.Count);
-        var songJsons = new List<string>(Songs.Count);
+        var sontDSls = new List<string>(Songs.Count);
 
         foreach (var song in Songs)
         {
             if (song.Filename == null)
             {
-                song.Filename = Path.Combine(SongsDirectory, MakeSafeFileName(song.Title ?? "Untitled") + ".song.json");
+                song.Filename = Path.Combine(SongsDirectory, MakeSafeFileName(song.Title ?? "Untitled") + ".sng");
             }
             songFilePaths.Add(song.Filename);
-            songJsons.Add(JsonSerializer.Serialize(song, new JsonSerializerOptions { WriteIndented = true }));
+            sontDSls.Add(MusicDSL.WriteSongDsl_Aligned(song));
         }
 
         // Asynchronously write all files
@@ -163,7 +162,7 @@ public class Workspace
 
         for (int i = 0; i < songFilePaths.Count; i++)
         {
-            fileWriteTasks.Add(File.WriteAllTextAsync(songFilePaths[i], songJsons[i]));
+            fileWriteTasks.Add(File.WriteAllTextAsync(songFilePaths[i], sontDSls[i]));
         }
 
         await Task.WhenAll(fileWriteTasks);
@@ -176,7 +175,7 @@ public class Workspace
     {
         if (song.Filename == null)
         {
-            song.Filename = Path.Combine(SongsDirectory, MakeSafeFileName(song.Title ?? "Untitled") + ".song.json");
+            song.Filename = Path.Combine(SongsDirectory, MakeSafeFileName(song.Title ?? "Untitled") + ".sng");
         }
         Songs.Add(song);
         SaveDebounced();
@@ -284,7 +283,7 @@ public class InstrumentInfo
     public string? PatchSourceFilename { get; set; }
 }
 
-// --- SongInfo: persisted in songs/*.song.json ---
+// --- SongInfo: persisted in songs/*.song.sng ---
 public class SongInfo
 {
     public string? Title { get; set; }
