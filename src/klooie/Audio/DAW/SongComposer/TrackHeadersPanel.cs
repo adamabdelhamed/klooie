@@ -77,7 +77,7 @@ public class TrackHeadersPanel : ConsoleControl
     private void AddMelodyToTrack()
     {
         var notes = new ListNoteSource();
-
+        notes.BeatsPerMinute = WorkspaceSession.Current.CurrentSong.BeatsPerMinute;
         var startBeat = composer.Grid.Player.CurrentBeat;
         var newMelody = new MelodyClip(startBeat, notes);
         Tracks[SelectedTrackIndex].Melodies.Add(newMelody);
