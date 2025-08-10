@@ -16,12 +16,13 @@ public class SongComposer : ProtectedConsolePanel
     public IMidiProvider MidiProvider { get; private set; }
 
     public TrackGridEditor Editor { get; }
-
-    public SongComposer(WorkspaceSession session, ConsoleControl commandBar, IMidiProvider midiProvider)
+    private StackPanel commandBar;
+    public SongComposer(WorkspaceSession session, IMidiProvider midiProvider)
     {
         this.MidiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
-        var rowSpecPrefix = commandBar == null ? "1r" : "1p;1r";
-        var rowOffset = commandBar == null ? 0 : 1;
+        commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
+        var rowSpecPrefix =  "1p;1r";
+        var rowOffset =  1;
         // 16p for track headers, rest for grid
         layout = ProtectedPanel.Add(new GridLayout($"{rowSpecPrefix};{StatusBar.Height}p", "16p;1r")).Fill();
 
@@ -32,13 +33,28 @@ public class SongComposer : ProtectedConsolePanel
 
         StatusBar = layout.Add(new StatusBar(), column: 0, row: rowOffset + 1, columnSpan: 2);
 
-        if (commandBar != null)
-        {
-            layout.Add(commandBar, 0, 0, columnSpan: 2);
-        }
-
+        layout.Add(commandBar, 0, 0, columnSpan: 2);
+        ExportSongUXHelper.SetupExport(Grid.Compose, commandBar);
+        AddBPMDropdown();
         Grid.StatusChanged.Subscribe(message => StatusBar.Message = message, this);
         SetupKeyForwarding();
+    }
+
+    private void AddBPMDropdown()
+    {
+        double[] options = [30, 60, 75, 90, 120, 180, 240];
+        var dd = commandBar.Add(new Dropdown(options.Select(o => new DialogChoice() { DisplayText = $"{o} BPM".ToWhite(), Id = o.ToString(), Value = o  })));
+        var selected = dd.Options.Where(o => (double)o.Value == WorkspaceSession.Current.CurrentSong.BeatsPerMinute).SingleOrDefault();
+        if(selected != null)
+        {
+            dd.Value = selected;
+        }
+
+        dd.ValueChanged.Subscribe(() =>
+        {
+            if (UpdateBPMCommand.IsExecuting) return;
+            WorkspaceSession.Current.Commands.Execute(new UpdateBPMCommand(this, dd, (double)dd.Value.Value));
+        }, dd);
     }
 
     private void SetupKeyForwarding()

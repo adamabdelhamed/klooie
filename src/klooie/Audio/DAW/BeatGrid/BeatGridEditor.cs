@@ -20,8 +20,6 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
         if (Matches(k, ConsoleKey.V, shift: true)) return Paste();
         if (Matches(k, ConsoleKey.Delete)) return DeleteSelected();
         if (Matches(k, ConsoleKey.LeftArrow, alt: true) || Matches(k, ConsoleKey.RightArrow, alt: true) || Matches(k, ConsoleKey.UpArrow, alt: true) || Matches(k, ConsoleKey.DownArrow, alt: true))  return MoveSelection(k);
-        if (Matches(k, ConsoleKey.Z, ctrl: true)) return Undo();
-        if (Matches(k, ConsoleKey.Y, ctrl: true)) return Redo();
 
         return false;
     }
@@ -83,15 +81,4 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
     // --- MOVE ---
     protected abstract bool MoveSelection(ConsoleKeyInfo k);
 
-    // --- UNDO/REDO ---
-    protected virtual bool Undo()
-    {
-        CommandStack.Undo();
-        return true;
-    }
-    protected virtual bool Redo()
-    {
-        CommandStack.Redo();
-        return true;
-    }
 }

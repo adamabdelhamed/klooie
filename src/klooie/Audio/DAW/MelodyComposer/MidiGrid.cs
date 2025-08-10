@@ -20,7 +20,7 @@ public class MidiGrid : BeatGrid<NoteExpression>
 
     protected override IEnumerable<NoteExpression> EnumerateValues() => Notes;
 
-    public MidiGrid(WorkspaceSession session, ListNoteSource notes) : base(session, notes.BeatsPerMinute)
+    public MidiGrid(WorkspaceSession session, ListNoteSource notes) : base(session)
     {
         this.Notes = notes;
         Editor = new MidiGridEditor(this, session.Commands);
@@ -60,7 +60,7 @@ public class MidiGrid : BeatGrid<NoteExpression>
 
     protected override double CalculateMaxBeat() => Notes.Select(n => n.StartBeat + n.DurationBeats).DefaultIfEmpty(0).Max();
     protected override RGB GetColor(NoteExpression note) => Color;
-    public override Song Compose() => new Song(Notes, BeatsPerMinute);
+    public override Song Compose() => new Song(Notes);
 
     protected override BeatCell<NoteExpression> BeatCellFactory(NoteExpression value) => new BeatCell<NoteExpression>(value);
 

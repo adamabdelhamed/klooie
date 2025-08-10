@@ -16,18 +16,27 @@ public class DAWPanel : ProtectedConsolePanel
         Session = session;
         this.midiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
         Ready.SubscribeOnce(async () => await InitializeAsync());
+
+        ConsoleApp.Current.GlobalKeyPressed.Subscribe(OnGlobalKeyPressed, this);
+
+    }
+
+    private void OnGlobalKeyPressed(ConsoleKeyInfo info)
+    {
+        if(info.Key == ConsoleKey.Z && info.Modifiers.HasFlag(ConsoleModifiers.Control))
+        {
+            Session.Commands.Undo();
+        }
+        else if(info.Key == ConsoleKey.Y && info.Modifiers.HasFlag(ConsoleModifiers.Control))
+        {
+            Session.Commands.Redo();
+        }
     }
 
     private async Task InitializeAsync()
     {
         await Session.Initialize();
-
-        var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
-
-        ComposerWithTracks = ProtectedPanel.Add(new SongComposer(Session, commandBar, midiProvider)).Fill();
+        ComposerWithTracks = ProtectedPanel.Add(new SongComposer(Session, midiProvider)).Fill();
         ComposerWithTracks.Grid.Focus();
-
- 
-        ExportSongUXHelper.SetupExport(() => ComposerWithTracks.Grid.Compose(), commandBar);
     }
 }

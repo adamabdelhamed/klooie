@@ -46,14 +46,6 @@ public class TrackHeadersPanel : ConsoleControl
         {
             AddMelodyToTrack();
         }
-        else if (info.Key == ConsoleKey.Z && info.Modifiers.HasFlag(ConsoleModifiers.Control))
-        {
-            session.Commands.Undo();
-        }
-        else if (info.Key == ConsoleKey.Y && info.Modifiers.HasFlag(ConsoleModifiers.Control))
-        {
-            session.Commands.Redo();
-        }
         else if(info.Key == ConsoleKey.F2)
         {
             ConsoleApp.Current.Invoke(async () =>

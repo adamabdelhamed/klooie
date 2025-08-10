@@ -17,7 +17,7 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
 
     protected override IEnumerable<MelodyClip> EnumerateValues() => Session.CurrentSong.Tracks.SelectMany(t => t.Melodies);
     protected override BeatCell<MelodyClip> BeatCellFactory(MelodyClip value) => new MelodyClipCell(value, this, Viewport);
-    public TrackGrid(WorkspaceSession session, TrackGridEditor editor, IMidiProvider midiProvider) : base(session, session.CurrentSong.BeatsPerMinute)
+    public TrackGrid(WorkspaceSession session, TrackGridEditor editor, IMidiProvider midiProvider) : base(session)
     {
         Viewport.RowHeightChars = 3;
         ConsoleApp.Current.InvokeNextCycle(() => Viewport.SetFirstVisibleRow(0));
@@ -74,7 +74,7 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
 
     public override Song Compose()
     {
-        var notes = new ListNoteSource() { BeatsPerMinute = this.BeatsPerMinute };
+        var notes = new ListNoteSource() { BeatsPerMinute = WorkspaceSession.Current.CurrentSong.BeatsPerMinute };
 
         for (var i = 0; i < Tracks.Count; i++)
         {

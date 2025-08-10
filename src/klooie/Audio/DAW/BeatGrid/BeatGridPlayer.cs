@@ -111,7 +111,7 @@ public class BeatGridPlayer<T>
     {
         if (playbackStartTimestamp == null) return;
         double elapsedSeconds = Stopwatch.GetElapsedTime(playbackStartTimestamp.Value).TotalSeconds;
-        var beat = playheadStartBeat + elapsedSeconds * Grid.BeatsPerMinute / 60.0;
+        var beat = playheadStartBeat + elapsedSeconds * WorkspaceSession.Current.CurrentSong.BeatsPerMinute / 60.0;
 
         if (StopAtEnd && beat > Grid.MaxBeat)
         {

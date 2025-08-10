@@ -44,15 +44,13 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
         }
     }
 
-    public double BeatsPerMinute { get; private set; }
-
     public virtual bool IsNavigating => true;
 
     private readonly BeatGridInputMode<T>[] userCyclableModes;
     public BeatGridInputMode<T> CurrentMode { get; private set; }
     public Event<BeatGridInputMode<T>> ModeChanging { get; } = Event<BeatGridInputMode<T>>.Create();
 
-    public BeatGrid(WorkspaceSession session,  double bpm)
+    public BeatGrid(WorkspaceSession session)
     {
         this.Session = session ?? throw new ArgumentNullException(nameof(session));
         Viewport = new Viewport();
@@ -60,7 +58,6 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
         SetMode(userCyclableModes[0]);
         CanFocus = true;
         ProtectedPanel.Background = new RGB(240, 240, 240);
-        BeatsPerMinute = bpm;
 
         backgroundGrid = ProtectedPanel.Add(new BeatGridBackground<T>(0, this, new RGB(240, 240, 240), new RGB(220, 220, 220), RGB.Cyan.ToOther(RGB.Gray.Brighter, .95f), () => HasFocus)).Fill();
         
