@@ -80,7 +80,7 @@ public class TrackHeadersPanel : ConsoleControl
         notes.BeatsPerMinute = WorkspaceSession.Current.CurrentSong.BeatsPerMinute;
         var startBeat = composer.Grid.Player.CurrentBeat;
         var newMelody = new MelodyClip(startBeat, notes);
-        Tracks[SelectedTrackIndex].Melodies.Add(newMelody);
+        Tracks[SelectedTrackIndex].Clips.Add(newMelody);
 
         composer.Grid.OpenMelody(newMelody);
     }

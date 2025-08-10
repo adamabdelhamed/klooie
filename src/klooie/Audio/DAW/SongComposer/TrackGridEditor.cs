@@ -10,7 +10,7 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
     public TrackGridEditor(SongComposer composer, CommandStack commandStack) : base(commandStack) => Composer = composer;
 
     protected override List<MelodyClip> GetSelectedValues() => Grid.SelectedValues;
-    protected override List<MelodyClip> GetAllValues() => Grid.Tracks.SelectMany(t => t.Melodies).ToList();
+    protected override List<MelodyClip> GetAllValues() => Grid.Tracks.SelectMany(t => t.Clips).ToList();
     protected override void RefreshVisibleCells() => Grid.RefreshVisibleCells();
     protected override void FireStatusChanged(ConsoleString msg) => Grid.StatusChanged.Fire(msg);
 
@@ -19,7 +19,7 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
         var left = k.Key == ConsoleKey.LeftArrow;
         var sel = GetSelectedValues();
         sel.Clear();
-        sel.AddRange(Grid.Tracks.SelectMany(t => t.Melodies).Where(n =>
+        sel.AddRange(Grid.Tracks.SelectMany(t => t.Clips).Where(n =>
             (left && n.StartBeat <= Grid.Player.CurrentBeat) ||
             (!left && n.StartBeat >= Grid.Player.CurrentBeat)));
         RefreshVisibleCells();
@@ -28,7 +28,7 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
     }
 
     protected override IEnumerable<MelodyClip> DeepCopyClipboard(IEnumerable<MelodyClip> src)
-        => src.Select(m => new MelodyClip(m.StartBeat, new ListNoteSource(m.Melody)) { Name = m.Name }).ToList();
+        => src.Select(m => new MelodyClip(m.StartBeat, new ListNoteSource(m.Notes)) { Name = m.Name }).ToList();
 
     protected override bool PasteClipboard()
     {
@@ -43,7 +43,7 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
         var addCmds = new List<ICommand>();
         foreach (var clip in Clipboard)
         {
-            var newClip = new MelodyClip(Math.Max(0, clip.StartBeat - offset + pasteBeat), clip.Melody)
+            var newClip = new MelodyClip(Math.Max(0, clip.StartBeat - offset + pasteBeat), clip.Notes)
             {
                 Name = clip.Name
             };
@@ -68,7 +68,7 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
         {
             for (int trackIdx = 0; trackIdx < Grid.Tracks.Count; ++trackIdx)
             {
-                if (Grid.Tracks[trackIdx].Melodies.Contains(melody))
+                if (Grid.Tracks[trackIdx].Clips.Contains(melody))
                 {
                     deleteCmds.Add(new DeleteMelodyClipCommand(Grid, trackIdx, melody));
                     break;
@@ -87,24 +87,24 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
         if (k.Key == ConsoleKey.X && k.Modifiers.HasFlag(ConsoleModifiers.Shift) && Grid.SelectedValues.Count == 1)
         {
             var clip = Grid.SelectedValues[0];
-            var trackIndex = Grid.Tracks.FindIndex(t => t.Melodies.Contains(clip));
+            var trackIndex = Grid.Tracks.FindIndex(t => t.Clips.Contains(clip));
             if (trackIndex < 0) throw new InvalidOperationException("Selected clip not found in any track");
 
             var splitPoint = Grid.Player.CurrentBeat;
 
             // compute absolute end of the clip
-            var clipEnd = clip.StartBeat + (clip.Melody.Count == 0 ? 0 : clip.Melody.Max(n => n.StartBeat + n.DurationBeats));
+            var clipEnd = clip.StartBeat + (clip.Notes.Count == 0 ? 0 : clip.Notes.Max(n => n.StartBeat + n.DurationBeats));
             if (splitPoint <= clip.StartBeat || splitPoint >= clipEnd) return true; // nothing to split
 
             var offset = splitPoint - clip.StartBeat;
 
             // Snapshot and CLONE notes (do NOT mutate originals)
-            var leftNotes = clip.Melody
+            var leftNotes = clip.Notes
                 .Where(n => clip.StartBeat + n.StartBeat < splitPoint)
                 .Select(n => NoteExpression.Create(n.MidiNote,  n.StartBeat, n.DurationBeats,  n.BeatsPerMinute, n.Velocity, n.Instrument))
                 .ToList();
 
-            var rightNotes = clip.Melody
+            var rightNotes = clip.Notes
                 .Where(n => clip.StartBeat + n.StartBeat >= splitPoint)
                 .Select(n => NoteExpression.Create( n.MidiNote, n.StartBeat - offset, n.DurationBeats, n.BeatsPerMinute, n.Velocity, n.Instrument))
                 .ToList();
@@ -139,10 +139,10 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
         var movedClips = new List<MelodyClip>();
         foreach (var clip in Grid.SelectedValues.ToList())
         {
-            int trackIdx = Grid.Tracks.FindIndex(t => t.Melodies.Contains(clip));
+            int trackIdx = Grid.Tracks.FindIndex(t => t.Clips.Contains(clip));
             if (trackIdx < 0) continue;
 
-            var newClip = new MelodyClip(Math.Max(0, clip.StartBeat + beatDelta), clip.Melody) { Name = clip.Name };
+            var newClip = new MelodyClip(Math.Max(0, clip.StartBeat + beatDelta), clip.Notes) { Name = clip.Name };
             moveCmds.Add(new ChangeMelodyClipCommand(Grid, trackIdx, clip, newClip));
             movedClips.Add(newClip);
         }

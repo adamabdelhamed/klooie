@@ -23,12 +23,12 @@ public class MusicDSL
             // Track-local registry of first fully-specified clip by name -> fingerprint
             var firstClipFingerprintByName = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            foreach (var clip in track.Melodies.Where(m => m.Melody.Count > 0).OrderBy(m => m.StartBeat))
+            foreach (var clip in track.Clips.Where(m => m.Notes.Count > 0).OrderBy(m => m.StartBeat))
             {
                 sb.AppendLine($"#CLIP: {clip.Name}  START: {clip.StartBeat}");
 
                 // Sort notes for predictable grouping and fingerprinting
-                var notes = clip.Melody.OrderBy(n => n.StartBeat).ToList();
+                var notes = clip.Notes.OrderBy(n => n.StartBeat).ToList();
 
                 string fingerprint = ClipFingerprint(track, notes);
 
@@ -164,9 +164,9 @@ public class MusicDSL
         {
             if (previousClip != null && templatesByName != null)
             {
-                if (!templatesByName.ContainsKey(previousClip.Name) && previousClip.Melody.Count > 0)
+                if (!templatesByName.ContainsKey(previousClip.Name) && previousClip.Notes.Count > 0)
                 {
-                    templatesByName[previousClip.Name] = previousClip.Melody
+                    templatesByName[previousClip.Name] = previousClip.Notes
                         .OrderBy(n => n.StartBeat)
                         .Select(n => (
                             start: n.StartBeat,
@@ -218,8 +218,8 @@ public class MusicDSL
                 var parts = line.Substring(6).Trim().Split(new[] { "  START:" }, StringSplitOptions.None);
                 var name = parts[0].Trim();
                 double startBeat = parts.Length > 1 ? double.Parse(parts[1].Trim()) : 0;
-                currentClip = new MelodyClip { Name = name, StartBeat = startBeat, Melody = new ListNoteSource() };
-                currentTrack?.Melodies.Add(currentClip);
+                currentClip = new MelodyClip { Name = name, StartBeat = startBeat, Notes = new ListNoteSource() };
+                currentTrack?.Clips.Add(currentClip);
                 inNotesTable = false;
                 previousClip = currentClip;
             }
@@ -232,7 +232,7 @@ public class MusicDSL
                     {
                         var instrument = resolveInstrument(inst);
                         var note = NoteExpression.Create(midi, start, dur, vel, instrument);
-                        currentClip.Melody.Add(note);
+                        currentClip.Notes.Add(note);
                     }
                 }
                 inNotesTable = false;
@@ -283,7 +283,7 @@ public class MusicDSL
                 for (int k = 0; k < count; k++)
                 {
                     var note = NoteExpression.Create(midi, startBeat + k * step, duration, velocity, instrument);
-                    currentClip?.Melody.Add(note);
+                    currentClip?.Notes.Add(note);
                 }
             }
             else

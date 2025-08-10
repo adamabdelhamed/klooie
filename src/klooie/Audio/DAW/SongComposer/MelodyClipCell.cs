@@ -13,7 +13,7 @@ public class MelodyClipCell : BeatCell<MelodyClip>
     public MelodyClipCell(MelodyClip value, BeatGrid<MelodyClip> grid, Viewport vp) : base(value) 
     {
         this.grid = grid ?? throw new ArgumentNullException(nameof(grid));
-        track = WorkspaceSession.Current.CurrentSong.Tracks.FirstOrDefault(t => t.Melodies.Contains(value)) 
+        track = WorkspaceSession.Current.CurrentSong.Tracks.FirstOrDefault(t => t.Clips.Contains(value)) 
                 ?? throw new ArgumentException("MelodyClip does not belong to any track.", nameof(value));
         viewport = vp ?? throw new ArgumentNullException(nameof(vp));
     }
@@ -27,9 +27,9 @@ public class MelodyClipCell : BeatCell<MelodyClip>
             var beatAtStartOfPixel = Value.StartBeat + (double)x * grid.BeatsPerColumn / viewport.ColWidthChars;
             var beatAtEndOfPixel = Value.StartBeat + (double)(x + 1) * grid.BeatsPerColumn / viewport.ColWidthChars;
             var notesAtBeat = 0;
-            for(var i = 0; i < Value.Melody.Count; i++)
+            for(var i = 0; i < Value.Notes.Count; i++)
             {
-                var note = Value.Melody[i];
+                var note = Value.Notes[i];
                 var noteStart = Value.StartBeat + note.StartBeat;
                 var noteEnd = noteStart + note.DurationBeats;
                 if (noteStart < beatAtEndOfPixel && noteEnd > beatAtStartOfPixel)

@@ -94,10 +94,10 @@ public class Workspace
 
                     foreach (var track in song.Tracks)
                     {
-                        foreach (var melody in track.Melodies)
+                        foreach (var melody in track.Clips)
                         {
-                            melody.Melody.BeatsPerMinute = song.BeatsPerMinute;
-                            foreach (var note in melody.Melody)
+                            melody.Notes.BeatsPerMinute = song.BeatsPerMinute;
+                            foreach (var note in melody.Notes)
                             {
                                 note.BeatsPerMinute = song.BeatsPerMinute;
                                 AudioPreRenderer.Instance.Queue(note);
@@ -297,12 +297,12 @@ public class SongInfo
 
         for (var i = 0; i < Tracks.Count; i++)
         {
-            for (int j = 0; j < Tracks[i].Melodies.Count; j++)
+            for (int j = 0; j < Tracks[i].Clips.Count; j++)
             {
-                var melody = Tracks[i].Melodies[j];
-                for (int k = 0; k < melody.Melody.Count; k++)
+                var melody = Tracks[i].Clips[j];
+                for (int k = 0; k < melody.Notes.Count; k++)
                 {
-                    var originalNote = melody.Melody[k];
+                    var originalNote = melody.Notes[k];
                     var noteWithOffset = NoteExpression.Create(originalNote.MidiNote, melody.StartBeat + originalNote.StartBeat, originalNote.DurationBeats, originalNote.BeatsPerMinute, originalNote.Velocity, originalNote.Instrument);
                     notes.Add(noteWithOffset);
                 }

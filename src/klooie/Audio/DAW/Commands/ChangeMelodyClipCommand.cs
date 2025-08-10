@@ -21,7 +21,7 @@ public class ChangeMelodyClipCommand : ICommand
 
     public void Do()
     {
-        var melodies = grid.Tracks[trackIndex].Melodies;
+        var melodies = grid.Tracks[trackIndex].Clips;
         int idx = melodies.IndexOf(oldClip);
         if (idx >= 0)
         {
@@ -34,7 +34,7 @@ public class ChangeMelodyClipCommand : ICommand
 
     public void Undo()
     {
-        var melodies = grid.Tracks[trackIndex].Melodies;
+        var melodies = grid.Tracks[trackIndex].Clips;
         int idx = melodies.IndexOf(newClip);
         if (idx >= 0)
         {

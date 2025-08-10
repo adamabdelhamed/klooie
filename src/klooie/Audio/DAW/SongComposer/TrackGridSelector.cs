@@ -106,7 +106,7 @@ public class TrackGridSelector : BeatGridInputMode<MelodyClip>
 
             // Pick the first visible melody clip, if any, otherwise default to middle track
             var closest = SongComposer.Tracks
-                .SelectMany((t, ti) => t.Melodies.Select(m => (melody: m, trackIdx: ti)))
+                .SelectMany((t, ti) => t.Clips.Select(m => (melody: m, trackIdx: ti)))
                 .OrderBy(pair => Math.Abs(pair.melody.StartBeat - Composer.Player.CurrentBeat))
                 .FirstOrDefault();
 
@@ -235,7 +235,7 @@ public class TrackGridSelector : BeatGridInputMode<MelodyClip>
             // Select melodies that overlap with the selection region
             for (int t = track0; t <= track1 && t < SongComposer.Tracks.Count; t++)
             {
-                foreach (var melody in SongComposer.Tracks[t].Melodies)
+                foreach (var melody in SongComposer.Tracks[t].Clips)
                 {
                     double melodyStart = melody.StartBeat;
                     double melodyEnd = melody.StartBeat + melody.DurationBeats;

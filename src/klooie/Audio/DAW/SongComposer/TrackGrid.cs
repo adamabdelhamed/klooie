@@ -15,7 +15,7 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
 
     private TrackGridEditor editor;
 
-    protected override IEnumerable<MelodyClip> EnumerateValues() => Session.CurrentSong.Tracks.SelectMany(t => t.Melodies);
+    protected override IEnumerable<MelodyClip> EnumerateValues() => Session.CurrentSong.Tracks.SelectMany(t => t.Clips);
     protected override BeatCell<MelodyClip> BeatCellFactory(MelodyClip value) => new MelodyClipCell(value, this, Viewport);
     public TrackGrid(WorkspaceSession session, TrackGridEditor editor, IMidiProvider midiProvider) : base(session)
     {
@@ -67,7 +67,7 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
 
     protected override RGB GetColor(MelodyClip value)
     {
-        var track = Tracks.FirstOrDefault(t => t.Melodies.Contains(value));
+        var track = Tracks.FirstOrDefault(t => t.Clips.Contains(value));
         var index = track != null ? Tracks.IndexOf(track) : 0;
         return BeatCell<object>.GetColor(index);
     }
@@ -78,12 +78,12 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
 
         for (var i = 0; i < Tracks.Count; i++)
         {
-            for (int j = 0; j < Tracks[i].Melodies.Count; j++)
+            for (int j = 0; j < Tracks[i].Clips.Count; j++)
             {
-                var melody = Tracks[i].Melodies[j];
-                for (int k = 0; k < melody.Melody.Count; k++)
+                var melody = Tracks[i].Clips[j];
+                for (int k = 0; k < melody.Notes.Count; k++)
                 {
-                    var originalNote = melody.Melody[k];
+                    var originalNote = melody.Notes[k];
                     var noteWithOffset = NoteExpression.Create(originalNote.MidiNote, melody.StartBeat + originalNote.StartBeat, originalNote.DurationBeats, originalNote.BeatsPerMinute, originalNote.Velocity, originalNote.Instrument);
                     notes.Add(noteWithOffset);
                 }
@@ -99,26 +99,26 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
         var maxFocusDepth = Math.Max(ConsoleApp.Current.LayoutRoot.FocusStackDepth, ConsoleApp.Current.LayoutRoot.Descendents.Select(d => d.FocusStackDepth).Max());
         var newFocusDepth = maxFocusDepth + 1;
         var panel = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel() { FocusStackDepth = newFocusDepth }).Fill();
-        var track = Tracks.FirstOrDefault(t => t.Melodies.Contains(melody));
-        var melodyComposer = panel.Add(new MelodyComposer(WorkspaceSession.Current, track, melody.Melody, MidiProvider)).Fill();
+        var track = Tracks.FirstOrDefault(t => t.Clips.Contains(melody));
+        var melodyComposer = panel.Add(new MelodyComposer(WorkspaceSession.Current, track, melody.Notes, MidiProvider)).Fill();
         melodyComposer.Grid.Color = GetColor(melody);
         melodyComposer.Grid.Focus();
 
         ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => panel.Dispose(), panel);
         panel.OnDisposed(() =>
         {
-            if (melody.Melody.Count == 0)
+            if (melody.Notes.Count == 0)
             {
-                var track = Tracks.FirstOrDefault(t => t.Melodies.Contains(melody));
-                track.Melodies.Remove(melody);
+                var track = Tracks.FirstOrDefault(t => t.Clips.Contains(melody));
+                track.Clips.Remove(melody);
             }
             RefreshVisibleCells();
         });
     }
 
 
-    protected override CellPositionInfo GetCellPositionInfo(MelodyClip value) => new CellPositionInfo() {  BeatStart = value.StartBeat, BeatEnd = value.StartBeat + value.DurationBeats, IsHidden = false, Row = Tracks.IndexOf(Tracks.FirstOrDefault(t => t.Melodies.Contains(value))), };
-    protected override double CalculateMaxBeat() => Tracks.SelectMany(t => t.Melodies.Select(m => m.StartBeat + m.DurationBeats)).DefaultIfEmpty(0).Max();
+    protected override CellPositionInfo GetCellPositionInfo(MelodyClip value) => new CellPositionInfo() {  BeatStart = value.StartBeat, BeatEnd = value.StartBeat + value.DurationBeats, IsHidden = false, Row = Tracks.IndexOf(Tracks.FirstOrDefault(t => t.Clips.Contains(value))), };
+    protected override double CalculateMaxBeat() => Tracks.SelectMany(t => t.Clips.Select(m => m.StartBeat + m.DurationBeats)).DefaultIfEmpty(0).Max();
 
  
 
@@ -141,14 +141,14 @@ public class MelodyClip
     public double StartBeat { get; set; }
 
     [JsonIgnore]
-    public double DurationBeats => Melody.Select(n => n.EndBeat).MaxOrDefault(0);
-    public ListNoteSource Melody { get; set; }
+    public double DurationBeats => Notes.Select(n => n.EndBeat).MaxOrDefault(0);
+    public ListNoteSource Notes { get; set; }
     public string Name { get; set; } = "Melody Clip";
 
     public MelodyClip(double startBeat, ListNoteSource melody)
     {
         StartBeat = startBeat;
-        Melody = melody;
+        Notes = melody;
     }
 
     public MelodyClip() { }
@@ -159,7 +159,7 @@ public class ComposerTrack
 {
     public string Name { get; set; }
     public InstrumentExpression Instrument { get; set; }
-    public List<MelodyClip> Melodies { get; set; } = new();
+    public List<MelodyClip> Clips { get; set; } = new();
 
     public ComposerTrack() { }
 

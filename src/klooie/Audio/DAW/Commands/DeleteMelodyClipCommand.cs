@@ -19,14 +19,14 @@ public class DeleteMelodyClipCommand : ICommand
 
     public void Do()
     {
-        grid.Tracks[trackIndex].Melodies.Remove(clip);
+        grid.Tracks[trackIndex].Clips.Remove(clip);
         grid.RefreshVisibleCells();
         grid.Session.Workspace.UpdateSong(grid.Session.CurrentSong);
     }
 
     public void Undo()
     {
-        grid.Tracks[trackIndex].Melodies.Add(clip);
+        grid.Tracks[trackIndex].Clips.Add(clip);
         grid.RefreshVisibleCells();
         grid.Session.Workspace.UpdateSong(grid.Session.CurrentSong);
     }
