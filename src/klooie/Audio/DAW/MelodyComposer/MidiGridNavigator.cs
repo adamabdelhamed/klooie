@@ -67,7 +67,9 @@ public class MidiGridNavigator : BeatGridInputMode<NoteExpression>
         }
         else if (k == ConsoleKey.End)
         {
-            player.Seek(Composer.MaxBeat);
+            var beatsPerColumn = Composer.BeatsPerColumn;
+            var nextColumn = Math.Ceiling(Composer.MaxBeat / beatsPerColumn) * beatsPerColumn;
+            player.Seek(nextColumn);
             EnsurePlayheadVisible();
         }
         else

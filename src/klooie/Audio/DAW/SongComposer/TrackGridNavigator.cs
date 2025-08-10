@@ -70,7 +70,9 @@ public class TrackGridNavigator : BeatGridInputMode<MelodyClip>
         }
         else if (k == ConsoleKey.End)
         {
-            player.Seek(Composer.MaxBeat);
+            var beatsPerColumn = Composer.BeatsPerColumn;
+            var nextColumn = Math.Ceiling(Composer.MaxBeat / beatsPerColumn) * beatsPerColumn;
+            player.Seek(nextColumn);
             EnsurePlayheadVisible();
         }
         else if (k == ConsoleKey.Enter && Composer.SelectedValues.Count == 1)
