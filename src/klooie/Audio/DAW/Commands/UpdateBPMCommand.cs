@@ -49,6 +49,7 @@ public class UpdateBPMCommand : ComposerCommand
             for (var j = 0; j < track.Melodies.Count; j++)
             {
                 var melody = track.Melodies[j];
+                melody.Melody.BeatsPerMinute = bpm;
                 for (var k = 0; k < melody.Melody.Count; k++)
                 {
                     var note = s.Tracks[i].Melodies[j].Melody[k];
