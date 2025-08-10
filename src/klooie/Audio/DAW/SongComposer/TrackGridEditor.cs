@@ -14,7 +14,18 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
     protected override void RefreshVisibleCells() => Grid.RefreshVisibleCells();
     protected override void FireStatusChanged(ConsoleString msg) => Grid.StatusChanged.Fire(msg);
 
-    protected override bool SelectAllLeftOrRight(ConsoleKeyInfo k) => false;
+    protected override bool SelectAllLeftOrRight(ConsoleKeyInfo k)
+    {
+        var left = k.Key == ConsoleKey.LeftArrow;
+        var sel = GetSelectedValues();
+        sel.Clear();
+        sel.AddRange(Grid.Tracks.SelectMany(t => t.Melodies).Where(n =>
+            (left && n.StartBeat <= Grid.Player.CurrentBeat) ||
+            (!left && n.StartBeat >= Grid.Player.CurrentBeat)));
+        RefreshVisibleCells();
+
+        return true;
+    }
 
     protected override IEnumerable<MelodyClip> DeepCopyClipboard(IEnumerable<MelodyClip> src)
         => src.Select(m => new MelodyClip(m.StartBeat, new ListNoteSource(m.Melody)) { Name = m.Name }).ToList();
