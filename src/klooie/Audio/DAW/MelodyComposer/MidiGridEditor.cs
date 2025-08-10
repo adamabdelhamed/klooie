@@ -154,7 +154,7 @@ public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
 
         foreach (var n in Grid.SelectedValues)
         {
-            double newDuration = Math.Max(0.1, n.DurationBeats + deltaBeats); // Don't allow zero or negative duration
+            double newDuration = Math.Round(Math.Max(0.1, n.DurationBeats + deltaBeats),3); // Don't allow zero or negative duration
             var nn = NoteExpression.Create(n.MidiNote, n.StartBeat, newDuration, n.BeatsPerMinute, n.Velocity, n.Instrument);
             updated.Add(nn);
             durCmds.Add(new ChangeNoteCommand(Grid, n, nn));
