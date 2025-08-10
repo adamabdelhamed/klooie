@@ -23,7 +23,7 @@ public class MusicDSL
             // Track-local registry of first fully-specified clip by name -> fingerprint
             var firstClipFingerprintByName = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            foreach (var clip in track.Melodies.Where(m => m.Melody.Count > 0))
+            foreach (var clip in track.Melodies.Where(m => m.Melody.Count > 0).OrderBy(m => m.StartBeat))
             {
                 sb.AppendLine($"#CLIP: {clip.Name}  START: {clip.StartBeat}");
 
