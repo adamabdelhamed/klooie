@@ -21,6 +21,12 @@ public abstract class BaseGridEditor<TGrid, TItem> where TGrid : BeatGrid<TItem>
         if (Matches(k, ConsoleKey.Delete)) return DeleteSelected();
         if (Matches(k, ConsoleKey.LeftArrow, alt: true) || Matches(k, ConsoleKey.RightArrow, alt: true) || Matches(k, ConsoleKey.UpArrow, alt: true) || Matches(k, ConsoleKey.DownArrow, alt: true))  return MoveSelection(k);
 
+        return HandleUnhandledKeyInput(k);
+    }
+
+    protected virtual bool HandleUnhandledKeyInput(ConsoleKeyInfo k)
+    {
+        // Default unhandled key input handling
         return false;
     }
 

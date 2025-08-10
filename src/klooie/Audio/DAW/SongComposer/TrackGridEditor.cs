@@ -71,6 +71,50 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
         return true;
     }
 
+    protected override bool HandleUnhandledKeyInput(ConsoleKeyInfo k)
+    {
+        if (k.Key == ConsoleKey.X && k.Modifiers.HasFlag(ConsoleModifiers.Shift) && Grid.SelectedValues.Count == 1)
+        {
+            var clip = Grid.SelectedValues[0];
+            var trackIndex = Grid.Tracks.FindIndex(t => t.Melodies.Contains(clip));
+            if (trackIndex < 0) throw new InvalidOperationException("Selected clip not found in any track");
+
+            var splitPoint = Grid.Player.CurrentBeat;
+
+            // compute absolute end of the clip
+            var clipEnd = clip.StartBeat + (clip.Melody.Count == 0 ? 0 : clip.Melody.Max(n => n.StartBeat + n.DurationBeats));
+            if (splitPoint <= clip.StartBeat || splitPoint >= clipEnd) return true; // nothing to split
+
+            var offset = splitPoint - clip.StartBeat;
+
+            // Snapshot and CLONE notes (do NOT mutate originals)
+            var leftNotes = clip.Melody
+                .Where(n => clip.StartBeat + n.StartBeat < splitPoint)
+                .Select(n => NoteExpression.Create(n.MidiNote,  n.StartBeat, n.DurationBeats,  n.BeatsPerMinute, n.Velocity, n.Instrument))
+                .ToList();
+
+            var rightNotes = clip.Melody
+                .Where(n => clip.StartBeat + n.StartBeat >= splitPoint)
+                .Select(n => NoteExpression.Create( n.MidiNote, n.StartBeat - offset, n.DurationBeats, n.BeatsPerMinute, n.Velocity, n.Instrument))
+                .ToList();
+
+            var newClip1 = new MelodyClip(clip.StartBeat, new ListNoteSource(leftNotes)) { Name = clip.Name + " (split 1)" };
+            var newClip2 = new MelodyClip(splitPoint, new ListNoteSource(rightNotes)) { Name = clip.Name + " (split 2)" };
+
+            CommandStack.Execute(new MultiCommand(
+            [
+                new AddMelodyClipCommand(Grid, trackIndex, newClip1),
+                new AddMelodyClipCommand(Grid, trackIndex, newClip2),
+                new DeleteMelodyClipCommand(Grid, trackIndex, clip)
+            ], "Split Melody Clip"));
+
+            Grid.SelectedValues.Clear();
+            return true;
+        }
+        return base.HandleUnhandledKeyInput(k);
+    }
+
+
     protected override bool MoveSelection(ConsoleKeyInfo k)
     {
         if (Grid.SelectedValues.Count == 0) return true;
