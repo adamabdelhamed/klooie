@@ -136,7 +136,7 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
 }
 
 // Represents a melody "clip" in the composer, with a position and reference to the source melody
-public class MelodyClip
+public class MelodyClip : IEquatable<MelodyClip>
 {
     public double StartBeat { get; set; }
 
@@ -149,6 +149,23 @@ public class MelodyClip
     {
         StartBeat = startBeat;
         Notes = melody;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as MelodyClip);
+    }
+
+    public bool Equals(MelodyClip? other)
+    {
+        if (other is null) return false;
+        if(other.StartBeat != StartBeat) return false;
+        for(var i = 0; i < Notes.Count; i++)
+        {
+            if (i >= other.Notes.Count || !Notes[i].Equals(other.Notes[i]))
+                return false;
+        }
+        return true;
     }
 
     public MelodyClip() { }

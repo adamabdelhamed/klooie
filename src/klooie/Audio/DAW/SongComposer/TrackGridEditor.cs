@@ -33,9 +33,7 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
     protected override bool PasteClipboard()
     {
         if (Clipboard.Count == 0) return true;
-        int targetTrack = Composer.TrackHeaders.SelectedTrackIndex;
-        if (targetTrack < 0 || targetTrack >= Grid.Tracks.Count) targetTrack = 0;
-
+ 
         double pasteBeat = Grid.Player.CurrentBeat;
         double offset = Clipboard.Min(c => c.StartBeat);
 
@@ -43,11 +41,13 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
         var addCmds = new List<ICommand>();
         foreach (var clip in Clipboard)
         {
+            var trackIndex = Grid.Tracks.FindIndex(t => t.Clips.Contains(clip));
+            if(trackIndex < 0) throw new InvalidOperationException("Clipboard clip not found in any track");
             var newClip = new MelodyClip(Math.Max(0, clip.StartBeat - offset + pasteBeat), clip.Notes)
             {
                 Name = clip.Name
             };
-            addCmds.Add(new AddMelodyClipCommand(Grid, targetTrack, newClip));
+            addCmds.Add(new AddMelodyClipCommand(Grid, trackIndex, newClip));
             pasted.Add(newClip);
         }
         CommandStack.Execute(new MultiCommand(addCmds, "Paste Melody Clips"));

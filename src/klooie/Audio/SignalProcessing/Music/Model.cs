@@ -25,7 +25,7 @@ public sealed class InstrumentExpression
     public static InstrumentExpression Create(string name, Func<ISynthPatch> patchFunc) => new(name, patchFunc);
 }
 
-public sealed class NoteExpression
+public sealed class NoteExpression : IEquatable<NoteExpression>
 {
     public int MidiNote { get; set; }
 
@@ -96,6 +96,22 @@ public sealed class NoteExpression
         return 440f * (float)Math.Pow(2, (noteNumber - 69) / 12.0);
     }
     public override string ToString() => $"Note(Midi: {MidiNote}, Start: {StartBeat}, Duration: {DurationBeats}, Velocity: {Velocity})";
+
+    public override bool Equals(object? obj)
+    {
+        return Equals(obj as NoteExpression);
+    }
+
+    public bool Equals(NoteExpression? other)
+    {
+        if (other is null) return false;
+        return MidiNote == other.MidiNote &&
+               StartBeat == other.StartBeat &&
+               DurationBeats == other.DurationBeats &&
+               Velocity == other.Velocity &&
+               BeatsPerMinute == other.BeatsPerMinute &&
+               Instrument?.Name == other.Instrument?.Name;
+    }
 }
 
 
