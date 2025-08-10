@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -40,6 +41,12 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
                 beatsPerColumn = value;
                 UpdateViewportBounds();
                 RefreshVisibleCells();
+
+                var halfWidthBeats = Viewport.BeatsOnScreen * 0.5;
+                var leftBeatIfCentered = Player.CurrentBeat - halfWidthBeats;
+                var newFirst = Math.Max(0, leftBeatIfCentered);
+                newFirst = Math.Round(newFirst / beatsPerColumn) * beatsPerColumn;
+                Viewport.SetFirstVisibleBeat(newFirst);
             }
         }
     }
@@ -169,12 +176,16 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
         else if (k.Key == ConsoleKey.OemPlus || k.Key == ConsoleKey.Add)
         {
             if (BeatsPerColumn / 2 >= MinBeatsPerColumn)
+            {
                 BeatsPerColumn /= 2; // zoom in
+            }
         }
         else if (k.Key == ConsoleKey.OemMinus || k.Key == ConsoleKey.Subtract)
         {
             if (BeatsPerColumn * 2 <= MaxBeatsPerColumn)
+            {
                 BeatsPerColumn *= 2; // zoom out
+            }
         }
         else HandleKeyInput(k);
     }
