@@ -136,7 +136,7 @@ public sealed class AudioPreRenderer
         if (!_jobs.IsAddingCompleted) return;     // already running
 
         _jobs = new BlockingCollection<RenderJob>();
-        SpawnWorkers(ComputeThreadCount());
+        SpawnWorkers(ComputeWorkerCount());
     }
 
     /* ---------- implementation ---------- */
@@ -146,7 +146,7 @@ public sealed class AudioPreRenderer
     private AudioPreRenderer()
     {
         _jobs = new BlockingCollection<RenderJob>();
-        SpawnWorkers(ComputeThreadCount());
+        SpawnWorkers(ComputeWorkerCount());
     }
 
     /* ----- worker loop ----- */
@@ -259,11 +259,11 @@ public sealed class AudioPreRenderer
             new Thread(WorkerLoop) { IsBackground = true, Name = $"PreRender-{i}" }.Start();
     }
 
-    private static int ComputeThreadCount()
-    {
-        int logical = Environment.ProcessorCount;
-        return Math.Max(1, Math.Min(6, logical - 1));
-    }
+    // Try to use the whole CPU, but leave some cores for UI and other tasks.
+    // The workers will sleep if there is no work, so this is safe. But when we get a batch of 
+    // jobs we want the notes to render as fast as possible so there's a better chance of smooth
+    // realtime playback.
+    private static int ComputeWorkerCount() => Math.Max(1, Environment.ProcessorCount - 4);
 
     /* ---------- fields ---------- */
     private ConcurrentDictionary<NoteKey, CachedWave> _waves = new();
