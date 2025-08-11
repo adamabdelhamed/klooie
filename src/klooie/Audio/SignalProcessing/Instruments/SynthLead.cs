@@ -17,30 +17,19 @@ public static class SynthLead
         return LayeredPatch.CreateBuilder()
          .AddLayer(volume: 0.9f, pan: -0.4f, transpose: 0, patch: SynthPatch.Create()
              .WithWaveForm(WaveformType.Saw)
-             .WithEnvelope(0.004, 0.09, 0.95, 0.22)
+             .WithVolume(.03f)
+             .WithEnvelope(delay: 0, attack: 0.002, decay: 0.07, sustainLevel: 0.95, release: 0.22)
              .WithDCBlocker()
-             .WithPitchDrift(0.25f, 4f)
-             .WrapWithUnison(numVoices: 5, detuneCents: 14f, panSpread: 1.0f))
-         .AddLayer(volume: 0.7f, pan: 0.4f, transpose: 12, patch: SynthPatch.Create()
-             .WithWaveForm(WaveformType.Square)
-             .WithEnvelope(0.003, 0.11, 0.90, 0.2)
-             .WithSubOscillator(subOscLevel: 0.5f, subOscOctaveOffset: -1)
-             .WithDCBlocker()
-             .WithPitchDrift(0.2f, 3f)
-             .WithPeakEQRelative(0.5f, +3.5f, 0.7f)
-             .WithLowPassRelative(2.8f)
-             .WrapWithUnison(numVoices: 4, detuneCents: 10f, panSpread: 0.9f))
-         .AddLayer(volume: 0.5f, pan: 0.0f, transpose: -12, patch: SynthPatch.Create()
-             .WithWaveForm(WaveformType.Saw)
-             .WithEnvelope(0.005, 0.10, 0.85, 0.22)
-             .WithPresenceShelf(4.0f))
-
+             .WithPitchDrift(0.75f, 6f)
+             .WrapWithUnison(numVoices: 4, detuneCents: 28f, panSpread: 1.0f)
+             .WrapWithPowerChord([0,7,12])
+             .WithChorus(delayMs: 24, depthMs: 6, rateHz: 0.28f, mix: 0.22f)
+             .WithPingPongDelay(delayMs: 360, feedback: 0.42f, mix: 0.33f)
+             .WithReverb(duration: .2f, wet: .1f, dry: .8f, damping: .2f)
+            )
+ 
+ 
          .Build()
-
-         // Global effects chain
-         .WithChorus(delayMs: 24, depthMs: 6, rateHz: 0.28f, mix: 0.22f)
-         .WithPingPongDelay(delayMs: 360, feedback: 0.42f, mix: 0.33f)
-         .WithReverb(duration: .3f, wet: .05f)
-         .WithVolume(0.03f);
+      ;
     }
 }
