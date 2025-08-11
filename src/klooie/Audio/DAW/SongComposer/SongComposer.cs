@@ -17,6 +17,9 @@ public class SongComposer : ProtectedConsolePanel
 
     public TrackGridEditor Editor { get; }
     private StackPanel commandBar;
+
+    private MidiJamInterpretor? midiJamInterpretor;
+
     public SongComposer(WorkspaceSession session, IMidiProvider midiProvider)
     {
         this.MidiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));
@@ -39,6 +42,9 @@ public class SongComposer : ProtectedConsolePanel
         AddSynthTweakerCommand();
         Grid.StatusChanged.Subscribe(message => StatusBar.Message = message, this);
         SetupKeyForwarding();
+
+        midiJamInterpretor = MidiJamInterpretor.Create(midiProvider, () => TrackHeaders.Tracks[TrackHeaders.SelectedTrackIndex].Instrument);
+        commandBar.Add(midiJamInterpretor.CreateMidiProductDropdown());
     }
 
     private void AddSynthTweakerCommand()
