@@ -20,7 +20,7 @@ public static class ElectricGuitar
             .WithPresenceShelf(-1.7f)
             .WithPeakEQRelative(.13f, -2f, 1.0f)
             .WithHighShelf(7000f, -4.5f)
-            .WithAggroDistortion(10.5f, 0.74f, 0.025f)
+            .WithAggroDistortion(7.5f, 0.74f, 0.025f)
             .WrapWithUnison(numVoices: 2, detuneCents: 8f, panSpread: 0.75f)
             .WrapWithPowerChord(intervals: [0, 7], detuneCents: 10f, panSpread: 1.15f))
         .AddLayer(volume: 0.48f, pan: +0.6f, transpose: 12, patch: SynthPatch.Create(note)
@@ -32,7 +32,7 @@ public static class ElectricGuitar
             .WithPresenceShelf(0.6f)
             .WithPeakEQRelative(.25f, -3.8f, 0.93f)
             .WithHighShelf(8000f, -2f)
-            .WithAggroDistortion(9f, 0.68f, 0.045f)
+            .WithAggroDistortion(7f, 0.68f, 0.045f)
             .WrapWithUnison(numVoices: 2, detuneCents: 12f, panSpread: 0.87f))
         .AddLayer(volume: 0.38f, pan: 0.0f, transpose: 0, patch: SynthPatch.Create(note)
             .WithWaveForm(WaveformType.PluckedString)
@@ -41,7 +41,9 @@ public static class ElectricGuitar
             .WithPeakEQRelative(.52f, +3.1f, 0.56f)
             .WithToneStack(bass: 1.9f, mid: 1.8f, treble: 1.01f)
             .WithPresenceShelf(-0.7f)
-            .WithAggroDistortion(7.5f, 0.79f, 0.022f))
-        .Build();
+            .WithAggroDistortion(5.5f, 0.79f, 0.022f))
+        .Build()
+        .WithReverb()
+        .WithVolume(.08f);
 
 }
