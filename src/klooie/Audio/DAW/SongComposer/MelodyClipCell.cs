@@ -42,5 +42,11 @@ public class MelodyClipCell : BeatCell<MelodyClip>
         }
 
         context.DrawRect(new ConsoleCharacter('#', Background.Darker, Background), 0, 0, Width, Height);
+
+        if(Width >= Value.Name.Length + 2)
+        {
+            var left = (Width - Value.Name.Length) / 2;
+            context.DrawString(Value.Name.ToConsoleString(Background.Darker, Background), left, 0, false);
+        }
     }
 }

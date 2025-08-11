@@ -79,6 +79,19 @@ public class TrackGridNavigator : BeatGridInputMode<MelodyClip>
         {
             SongComposer.OpenMelody(Composer.SelectedValues[0]);
         }
+        else if(k == ConsoleKey.F2 && Composer.SelectedValues.Count == 1)
+        {
+            ConsoleApp.Current.Invoke(async () =>
+            {
+                var newName = await TextInputDialog.Show(new ShowTextInputOptions("Enter a new name for the selected clip".ToYellow())
+                {
+                    SpeedPercentage = 0,
+                    DialogWidth = 50
+                });
+                if (string.IsNullOrWhiteSpace(newName?.StringValue)) return;
+                WorkspaceSession.Current.Commands.Execute(new RenameClipCommand(Composer.SelectedValues[0], newName.StringValue));
+            });
+        }
         else
         {
             handled = false;
