@@ -19,6 +19,11 @@ public class DAWPanel : ProtectedConsolePanel
 
         ConsoleApp.Current.GlobalKeyPressed.Subscribe(OnGlobalKeyPressed, this);
 
+        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, async () =>
+        {
+            var choice = await ChoiceDialog.Show(new ShowMessageOptions("Are you sure you want to exit?") { UserChoices = DialogChoice.YesNo, SpeedPercentage = 0, DialogWidth = 50, });
+            if ("yes".Equals(choice?.Value?.ToString(), StringComparison.OrdinalIgnoreCase)) ConsoleApp.Current.Stop();
+        }, this);
     }
 
     private void OnGlobalKeyPressed(ConsoleKeyInfo info)
