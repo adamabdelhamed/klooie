@@ -28,7 +28,7 @@ public class TrackGridEditor : BaseGridEditor<TrackGrid, MelodyClip>
     }
 
     protected override IEnumerable<MelodyClip> DeepCopyClipboard(IEnumerable<MelodyClip> src)
-        => src.Select(m => new MelodyClip(m.StartBeat, new ListNoteSource(m.Notes)) { Name = m.Name }).ToList();
+        => src.Select(m => new MelodyClip(m.StartBeat, new ListNoteSource(m.Notes) { BeatsPerMinute = WorkspaceSession.Current.CurrentSong.BeatsPerMinute }) { Name = m.Name }).ToList();
 
     protected override bool PasteClipboard()
     {
