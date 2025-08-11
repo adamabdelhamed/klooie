@@ -74,10 +74,10 @@ A basic kick drum patch with a punchy attack and a short decay.
     public static ISynthPatch Clap()
     {
         var builder = LayeredPatch.CreateBuilder();
-        var attackSpacing = .053f;
-        var decayDecay = .55f;
-        var volumeDecay = .4f;
-        var layers = 8;
+        var attackSpacing = .045f;
+        var decayDecay = .75f;
+        var volumeDecay = .3f;
+        var layers = 3;
 
         var freqInc = 5f;
 
@@ -98,7 +98,7 @@ A basic kick drum patch with a punchy attack and a short decay.
             currentAttack = currentAttack + attackSpacing;
             currentDecay = currentDecay * decayDecay;
             currentVolume = currentVolume * volumeDecay;
-
+                
         }
 
         var ret = builder.Build().WithVolume(.125f);

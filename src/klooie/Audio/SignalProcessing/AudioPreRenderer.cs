@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace klooie;
 
-#region Keys & DTOs
+
 /// <summary>Unique identity of a note for caching purposes.</summary>
 public readonly struct NoteKey : IEquatable<NoteKey>
 {
@@ -65,7 +65,6 @@ internal sealed class RenderJob
         Key = key;
     }
 }
-#endregion
 
 /// <summary>
 /// Global service that pre-renders notes on background threads
@@ -117,7 +116,9 @@ public sealed class AudioPreRenderer
             foreach (var k in _lru)
             {
                 if (_waves.TryRemove(k, out var w))
+                {
                     _bytes -= w.Bytes;
+                }
             }
             _lru.Clear();
             _waves.Clear();

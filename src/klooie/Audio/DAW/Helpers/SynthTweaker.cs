@@ -163,7 +163,7 @@ public sealed class SynthTweaker : Recyclable, IDisposable
 
             var alc = new AssemblyLoadContext($"TweakerCtx_{Guid.NewGuid():N}", isCollectible: true);
             var asm = alc.LoadFromStream(peStream, pdbStream);
-
+            AudioPreRenderer.Instance.ClearCache();
             var factories = FindPatchFactories(asm).ToList();
             if (!factories.Any())
             {

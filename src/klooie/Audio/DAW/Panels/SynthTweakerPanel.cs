@@ -45,7 +45,8 @@ public class SynthTweakerPanel : ProtectedConsolePanel
             .CenterHorizontally()
             .DockToBottom(padding: 1);
 
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Spacebar, PlayCurrentNote, this);
+        Ready.SubscribeOnce(() => ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Spacebar, PlayCurrentNote, this));
+        
     }
 
     private void ListenForFileOpenShortcut() => ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.O, ConsoleModifiers.Alt, () => ConsoleApp.Current.Invoke(async()=> await OpenFileDialog()), this);
@@ -101,15 +102,14 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         SaveSettings();
     }
 
-    private void PlayCurrentNote()
+    private void  PlayCurrentNote()
     {
         if (currentPatch == null || noteEditor.NoteExpression == null) return;
         settings.LatestMidiNote = noteEditor.MidiNote;
         settings.LatestVelocity = noteEditor.Velocity;
         settings.LatestDuration = noteEditor.DurationSeconds;
         SaveSettings();
-        var noteExpression = noteEditor.NoteExpression
-            .WithInstrument(InstrumentExpression.Create("Current Patch", currentPatch.Factory));
+        var noteExpression = noteEditor.NoteExpression.WithInstrument(InstrumentExpression.Create(currentPatch.Name, currentPatch.Factory));
         var noteList = new ListNoteSource([noteExpression]);
         noteList.BeatsPerMinute = 60;
         var song = new Song(noteList);
