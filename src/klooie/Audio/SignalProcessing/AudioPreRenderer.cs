@@ -167,8 +167,8 @@ public sealed class AudioPreRenderer
         // Build a 1-note song
         var oneNoteSong = new Song(new ListNoteSource { note });
 
-        // Drive a private mixer
-        var mixer = new ScheduledSignalSourceMixer(prerender: false);
+        // Drive a private mixer that bypasses the pre-rendering logic and just renders the note for us to read.
+        var mixer = new ScheduledSignalSourceMixer(mode: ScheduledSignalMixerMode.Realtime);
         mixer.ScheduleSong(oneNoteSong, null);
 
         const int BlockFrames = 4096;

@@ -87,6 +87,13 @@ public class ScheduledNoteEvent : Recyclable
     }
 }
 
+public enum ScheduledSignalMixerMode
+{
+    Realtime,
+    RealtimeWithPreRenderOptimized,
+    PreRenderOnly
+}
+
 public class ScheduledSignalSourceMixer
 {
     private readonly List<ScheduledNoteEvent> scheduledNotes = new();
@@ -95,13 +102,13 @@ public class ScheduledSignalSourceMixer
     private long samplesRendered = 0;
     private readonly List<ActiveVoiceBuffered> bufferedVoices = new();
 
-    private bool preRenderEnabled;
-    public bool HasWork => scheduledSongs.Count > 0 || scheduledNotes.Count > 0 || activeVoices.Count > 0;
+    private ScheduledSignalMixerMode mode;
+    public bool HasWork => scheduledSongs.Count > 0 || scheduledNotes.Count > 0 || activeVoices.Count > 0 || bufferedVoices.Count > 0;
 
     public long SamplesRendered => samplesRendered;
-    public ScheduledSignalSourceMixer(bool prerender = true) 
+    public ScheduledSignalSourceMixer(ScheduledSignalMixerMode mode = ScheduledSignalMixerMode.RealtimeWithPreRenderOptimized) 
     {
-        preRenderEnabled = prerender; 
+        this.mode = mode;
     }
 
     public void ScheduleSong(Song s, CancellationToken? cancellationToken)
@@ -168,7 +175,7 @@ public class ScheduledSignalSourceMixer
                     if (j < track.Items.Count - 1) noteEvent.Next = track.Items[j + 1].Note;
 
                     scheduledNotes.Add(noteEvent);
-                    if (preRenderEnabled)
+                    if (mode == ScheduledSignalMixerMode.RealtimeWithPreRenderOptimized || mode == ScheduledSignalMixerMode.PreRenderOnly)
                     {
                         AudioPreRenderer.Instance.Queue(noteEvent.Note);
                     }
@@ -200,6 +207,12 @@ public class ScheduledSignalSourceMixer
         while (scheduledNotes.Count > 0 && scheduledNotes[0].StartSample < bufferEnd)
         {
             var scheduledNoteEvent = scheduledNotes[0];
+            CachedWave? preRenderedWave = null;
+
+            // If we're in pre-render only mode, then we wait to schedule this note until it has been pre-rendered.
+            if (mode == ScheduledSignalMixerMode.PreRenderOnly && AudioPreRenderer.Instance.TryGet(scheduledNoteEvent.Note, out preRenderedWave) == false) break;
+            
+
             scheduledNotes.RemoveAt(0);
             if (scheduledNoteEvent.IsCancelled)
             {
@@ -207,38 +220,35 @@ public class ScheduledSignalSourceMixer
                 continue;
             }
 
+            // If we are in either pre-render mode, try to get a pre-rendered wave for this note. It will likely miss if we are in pre-render only mode since we just checked above,
+            // but in the case of RealtimeWithPreRenderOptimized, we can still use a cached wave if it exists.
+            preRenderedWave = preRenderedWave != null ? preRenderedWave : mode == ScheduledSignalMixerMode.RealtimeWithPreRenderOptimized && AudioPreRenderer.Instance.TryGet(scheduledNoteEvent.Note, out preRenderedWave) ? preRenderedWave : null;
 
-            if (preRenderEnabled && AudioPreRenderer.Instance.TryGet(scheduledNoteEvent.Note, out var wave) == true)
+            // If we have a pre-rendered wave, we can use it directly without synthesizing any sound.
+            if (preRenderedWave != null)
             {
-                // skip live spawning
-                bufferedVoices.Add(new ActiveVoiceBuffered
-                {
-                    NoteEvent = scheduledNoteEvent,
-                    Wave = wave,
-                    FrameCursor = 0
-                });
+                bufferedVoices.Add(new ActiveVoiceBuffered { NoteEvent = scheduledNoteEvent, Wave = preRenderedWave, FrameCursor = 0  });
                 SoundProvider.Debug($"Scheduled note {scheduledNoteEvent.Note.MidiNote} from {scheduledNoteEvent.Note.Instrument?.Name ?? "Patch"} with cached wave.".ToDarkGreen());
                 continue;          
             }
 
             SoundProvider.Debug($"Scheduled note {scheduledNoteEvent.Note.MidiNote} from {scheduledNoteEvent.Note.Instrument?.Name ?? "Patch"} with live spawning.".ToOrange());
             var patch = scheduledNoteEvent.Note.Instrument?.PatchFunc() ?? SynthLead.Create();
-
             if (!patch.IsNotePlayable(scheduledNoteEvent.Note.MidiNote))
             {
                 if (patch is Recyclable r) r.Dispose();
                 continue;
             }
-            scheduledNoteEvent.Patch= patch;
+            scheduledNoteEvent.Patch = patch;
             var voices = patch.SpawnVoices(NoteExpression.MidiNoteToFrequency(scheduledNoteEvent.Note.MidiNote), scheduledNoteEvent).ToArray();
  
             scheduledNoteEvent.RemainingVoices = voices.Length;
-
-            int durSamples = (int)(scheduledNoteEvent.DurationSeconds * SoundProvider.SampleRate);
-            long releaseSample = scheduledNoteEvent.StartSample + durSamples;
-
+            int durSamples = (int)Math.Round(scheduledNoteEvent.DurationSeconds * SoundProvider.SampleRate);
             for (int i = 0; i < voices.Length; i++)
             {
+                //TODO: Introduce a delay time for voices and then add that to the release sample here. That way, complex patches with multiple voices can
+                // have a staggered attack with different release times.
+                long releaseSample = scheduledNoteEvent.StartSample + durSamples;
                 activeVoices.Add(new ActiveVoice(scheduledNoteEvent, voices[i], 0, releaseSample));
             }
         }
@@ -276,7 +286,7 @@ public class ScheduledSignalSourceMixer
                 // Note started before this buffer: skip some frames in the cached wave
                 int framesToSkip = (int)(-relPosFrames);
                 srcFrame += framesToSkip;
-                if (srcFrame >= bv.Wave.Frames) { bufferedVoices.RemoveAt(b); continue; }
+                if (srcFrame >= bv.Wave.Frames) { bv.NoteEvent.Dispose(); bufferedVoices.RemoveAt(b); continue; }
                 dst = offset;
                 framesThisPass = Math.Min(framesAvailable - framesToSkip, samplesRequested);
             }
@@ -293,6 +303,7 @@ public class ScheduledSignalSourceMixer
 
             // SAFETY: Do not mix past end of output buffer
             if (dst + floats > buffer.Length) floats = buffer.Length - dst;
+            framesThisPass = Math.Min(framesThisPass, floats / SoundProvider.ChannelCount);
 
             for (int i = 0; i < floats; i++)
                 buffer[dst + i] += bv.Wave.Data[src + i];
