@@ -10,15 +10,15 @@ public static class DrumKit
     [SynthDocumentation("""
 A basic kick drum patch with a punchy attack and a short decay.
 """)]
-    public static ISynthPatch Kick() => LayeredPatch.CreateBuilder()
-    .AddLayer(patch: SynthPatch.Create()
+    public static ISynthPatch Kick(NoteExpression note) => LayeredPatch.CreateBuilder()
+    .AddLayer(patch: SynthPatch.Create(note)
         .WithWaveForm(WaveformType.Sine)
         .WithMidiOverride(36)
         .WithEnvelope(0f, KickDecay, 0f, 0.02f)
         .WithPitchBend(KickPitchBend, KickDecay)
         .WithSubOscillator(0.5f, -1)
         .WithLowShelf(50, 5f))
-    .AddLayer(patch: SynthPatch.Create()
+    .AddLayer(patch: SynthPatch.Create(note)
         .WithWaveForm(WaveformType.Noise)
         .WithEnvelope(0f, KickDecay * 1.5f, 0f, 0.01f)
         .WithLowPass(80)
@@ -40,14 +40,14 @@ A basic kick drum patch with a punchy attack and a short decay.
 
     [SynthCategory("Drums")]
     [SynthDocumentation("A basic snare drum.")]
-    public static ISynthPatch Snare() => LayeredPatch.CreateBuilder()
-    .AddLayer(patch: SynthPatch.Create()
+    public static ISynthPatch Snare(NoteExpression note) => LayeredPatch.CreateBuilder()
+    .AddLayer(patch: SynthPatch.Create(note)
         .WithWaveForm(WaveformType.Sine)
         .WithMidiOverride(38)
         .WithEnvelope(0.01f, SnareDecay, 0f, 0.01f)
         .WithPitchBend(SnarePitchBend, SnareDecay)
         .WithVolume(1.2f))
-    .AddLayer(patch: SynthPatch.Create()
+    .AddLayer(patch: SynthPatch.Create(note)
         .WithWaveForm(WaveformType.VioletNoise)
         .WithEnvelope(0.001f, 0.1f, 0.05f, 0.02f)
         .WithAggroDistortion(10, 0.7f, 0.1f)
@@ -71,7 +71,7 @@ A basic kick drum patch with a punchy attack and a short decay.
 
     [SynthCategory("Drums")]
     [SynthDocumentation("A basic clap drum.")]
-    public static ISynthPatch Clap()
+    public static ISynthPatch Clap(NoteExpression note)
     {
         var builder = LayeredPatch.CreateBuilder();
 
@@ -96,7 +96,7 @@ A basic kick drum patch with a punchy attack and a short decay.
             var delay = i * delaySpacing;
 
             builder.AddLayer(1, 0, 0,
-                SynthPatch.Create()
+                SynthPatch.Create(note)
                     .WithWaveForm(WaveformType.PinkNoise)
                     // NEW: use delay-aware envelope (delay, attack, decay, sustain, release)
                     .WithEnvelope(delay, baseAttack, currentDecay, 0.0f, release)

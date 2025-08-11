@@ -35,7 +35,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
 
     public static SustainedNoteInfo? CreateSustainedNote(NoteExpression note)
     {
-        var patch = note.Instrument?.PatchFunc() ?? ElectricGuitar.Create();
+        var patch = note.Instrument?.PatchFunc(note) ?? ElectricGuitar.Create(note);
 
 
         if (!patch.IsNotePlayable(note.MidiNote))

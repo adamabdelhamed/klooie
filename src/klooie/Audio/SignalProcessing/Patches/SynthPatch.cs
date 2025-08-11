@@ -29,10 +29,11 @@ public class SynthPatch : Recyclable, ISynthPatch
     public ISynthPatch InnerPatch => this;
     private SynthPatch() { }
     private static LazyPool<SynthPatch> _pool = new(() => new SynthPatch());
-    public static SynthPatch Create()
+    public static SynthPatch Create(NoteExpression note)
     {
         var patch = _pool.Value.Rent();
         patch.Waveform = WaveformType.Sine; 
+        patch.Note = note;
         patch.EnableTransient = false;
         patch.EnableSubOsc = false;
         patch.EnablePitchDrift = false; 
@@ -40,6 +41,8 @@ public class SynthPatch : Recyclable, ISynthPatch
         patch.FrequencyOverride = null;
         return patch;
     }
+
+    public NoteExpression Note { get; private set; }
 
     public List<LfoSettings> Lfos { get; } = new();
 
@@ -90,7 +93,7 @@ public class SynthPatch : Recyclable, ISynthPatch
 
     public ISynthPatch Clone()
     {
-        var clone = SynthPatch.Create();
+        var clone = SynthPatch.Create(this.Note);
         clone.Waveform = this.Waveform;
         clone.DriftFrequencyHz = this.DriftFrequencyHz;
         clone.DriftAmountCents = this.DriftAmountCents;
@@ -129,6 +132,7 @@ public class SynthPatch : Recyclable, ISynthPatch
         }
         Effects?.Dispose();
         Effects = null!;
+        Note = null!;
     }
 
     public virtual IEnumerable<SynthSignalSource> SpawnVoices(float frequencyHz, ScheduledNoteEvent noteEvent)

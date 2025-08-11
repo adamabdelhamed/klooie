@@ -185,8 +185,8 @@ public sealed class SynthTweaker : Recyclable, IDisposable
     public class PatchFactoryInfo
     {
         public string Name { get; }
-        public Func<ISynthPatch> Factory { get; }
-        public PatchFactoryInfo(string Name, Func<ISynthPatch> Factory)
+        public Func<NoteExpression,ISynthPatch> Factory { get; }
+        public PatchFactoryInfo(string Name, Func<NoteExpression, ISynthPatch> Factory)
         {
             this.Name = Name ?? throw new ArgumentNullException(nameof(Name));
             this.Factory = Factory ?? throw new ArgumentNullException(nameof(Factory));
@@ -212,12 +212,12 @@ public sealed class SynthTweaker : Recyclable, IDisposable
             foreach (var m in t.GetMethods(BindingFlags.Public | BindingFlags.Static))
             {
                 if (typeof(ISynthPatch).IsAssignableFrom(m.ReturnType)
-                    && m.GetParameters().Length == 0)
+                    && m.GetParameters().Length == 1 && m.GetParameters().First().ParameterType == typeof(NoteExpression))
                 {
                     string name = $"{t.FullName}.{m.Name}";
                     yield return new PatchFactoryInfo(
                         name,
-                        () => (ISynthPatch)m.Invoke(null, null)!);
+                        (n) => (ISynthPatch)m.Invoke(null, [n])!);
                 }
             }
         }

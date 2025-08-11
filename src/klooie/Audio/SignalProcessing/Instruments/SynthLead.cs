@@ -12,10 +12,12 @@ chorus, delay and reverb for an epic, evolving tone.
 """)]
 public static class SynthLead
 {
-    public static ISynthPatch Create()
+    public static ISynthPatch Create(NoteExpression note)
     {
         return LayeredPatch.CreateBuilder()
-         .AddLayer(volume: 0.9f, pan: -0.4f, transpose: 0, patch: SynthPatch.Create()
+         .AddLayer
+         (
+             volume: 0.9f, pan: -0.4f, transpose: 0, patch: SynthPatch.Create(note)
              .WithWaveForm(WaveformType.Saw)
              .WithVolume(.03f)
              .WithEnvelope(delay: 0, attack: 0.002, decay: 0.07, sustainLevel: 0.95, release: 0.22)
@@ -26,10 +28,7 @@ public static class SynthLead
              .WithChorus(delayMs: 24, depthMs: 6, rateHz: 0.28f, mix: 0.22f)
              .WithPingPongDelay(delayMs: 360, feedback: 0.42f, mix: 0.33f)
              .WithReverb(duration: .2f, wet: .1f, dry: .8f, damping: .2f)
-            )
- 
- 
-         .Build()
-      ;
+        )
+        .Build();
     }
 }

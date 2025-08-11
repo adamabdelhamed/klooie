@@ -11,18 +11,18 @@ public sealed class InstrumentExpression
 {
     public string Name { get; set; }
     [JsonIgnore]
-    public Func<ISynthPatch> PatchFunc { get; set; }
+    public Func<NoteExpression, ISynthPatch> PatchFunc { get; set; }
 
     public InstrumentExpression() { }
 
-    private InstrumentExpression(string name, Func<ISynthPatch> patchFunc)
+    private InstrumentExpression(string name, Func<NoteExpression, ISynthPatch> patchFunc)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Instrument name cannot be null or empty.", nameof(name));
         if (patchFunc == null) throw new ArgumentNullException(nameof(patchFunc), "Patch function cannot be null.");
         Name = name;
         PatchFunc = patchFunc;
     }
-    public static InstrumentExpression Create(string name, Func<ISynthPatch> patchFunc) => new(name, patchFunc);
+    public static InstrumentExpression Create(string name, Func<NoteExpression, ISynthPatch> patchFunc) => new(name, patchFunc);
 }
 
 public sealed class NoteExpression : IEquatable<NoteExpression>
