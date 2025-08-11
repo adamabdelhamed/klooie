@@ -26,6 +26,9 @@ public class SynthSignalSource : Recyclable
     protected float effectivePan;
     private List<IPitchModEffect>? pitchMods;
     private ADSREnvelope envelope;
+
+    public ADSREnvelope Envelope => envelope;
+
     private float? noteReleaseTime = null; // in seconds
 
     // --- Phase accumulator for main oscillator ---

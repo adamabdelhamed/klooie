@@ -258,6 +258,19 @@ public static class SynthPatchExtensions
         return patch.WithEffect(EnvelopeEffect.Create(in settings));
     }
 
+    public static ISynthPatch WithEnvelope(this ISynthPatch patch, double delay, double attack, double decay, double sustainLevel, double release)
+    {
+        var settings = new EnvelopeEffect.Settings
+        {
+            Delay = delay,
+            Attack = attack,
+            Decay = decay,
+            Sustain = sustainLevel,
+            Release = release
+        };
+        return patch.WithEffect(EnvelopeEffect.Create(in settings));
+    }
+
     [ExtensionToEffect(typeof(ToneStackEffect))]
     public static ISynthPatch WithToneStack(this ISynthPatch patch, float bass = 1f, float mid = 1f, float treble = 1f)
     {

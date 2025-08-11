@@ -250,10 +250,13 @@ public class ScheduledSignalSourceMixer
             int durSamples = (int)Math.Round(scheduledNoteEvent.DurationSeconds * SoundProvider.SampleRate);
             for (int i = 0; i < voices.Length; i++)
             {
-                //TODO: Introduce a delay time for voices and then add that to the release sample here. That way, complex patches with multiple voices can
-                // have a staggered attack with different release times.
-                long releaseSample = scheduledNoteEvent.StartSample + durSamples;
-                activeVoices.Add(new ActiveVoice(scheduledNoteEvent, voices[i], 0, releaseSample));
+                var voice = voices[i];
+                var delay = voice.Envelope.Delay;
+                int delaySamples = (int)Math.Round(delay * SoundProvider.SampleRate);
+                long startSample = scheduledNoteEvent.StartSample + delaySamples;
+                long releaseSample = startSample + durSamples; // push by delay so the voice gets full playtime
+                // pass the per-voice delay so the synth starts this voice later
+                activeVoices.Add(new ActiveVoice(scheduledNoteEvent, voices[i], delaySamples, releaseSample));
             }
         }
     }

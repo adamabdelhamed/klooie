@@ -74,34 +74,44 @@ A basic kick drum patch with a punchy attack and a short decay.
     public static ISynthPatch Clap()
     {
         var builder = LayeredPatch.CreateBuilder();
-        var attackSpacing = .045f;
-        var decayDecay = .75f;
-        var volumeDecay = .3f;
+
+        // Temporal & envelope shape
+        var delaySpacing = 0.016f;   // layer-to-layer offset (sec)
+        var baseAttack = 0.02f;   // constant attack for all layers
+        var baseDecay = 0.080f;   // starting decay, shortened per layer
+        var decayFactor = 0.97f;    // decay multiplier each layer
+        var release = 0.150f;    // short tail; sustain stays 0 for a crack
+
+        // Amplitude falloff per layer
+        var volume = 1.0f;
+        var volumeFactor = 0.40f;
+
+        // Gentle spectral variation
         var layers = 3;
+        var freqInc = 300f;
 
-        var freqInc = 5f;
-
-        var currentVolume = 1f;
-        var currentAttack = .01f;
-        var currentDecay = .08f;
+        var currentDecay = baseDecay;
         for (var i = 0; i < layers; i++)
         {
-            builder.AddLayer(1, 0, 0, SynthPatch.Create()
-            .WithWaveForm(WaveformType.PinkNoise)
-            .WithEnvelope(currentAttack, currentDecay, 0.0f, 0.1f)
-            .WithVolume(currentVolume)
-            .WithPeakEQ(freq: freqInc * i, gainDb: -8f, q: 1)
-            .WithPeakEQ(freq: 500 + freqInc * i, gainDb: -2f, q: 1)
-            .WithPeakEQ(freq: 2000 + freqInc * i, gainDb: 4f, q: 1)
-            .WithLowPass(cutoffHz: 8000 - (i * 100)));
+            var delay = i * delaySpacing;
 
-            currentAttack = currentAttack + attackSpacing;
-            currentDecay = currentDecay * decayDecay;
-            currentVolume = currentVolume * volumeDecay;
-                
+            builder.AddLayer(1, 0, 0,
+                SynthPatch.Create()
+                    .WithWaveForm(WaveformType.PinkNoise)
+                    // NEW: use delay-aware envelope (delay, attack, decay, sustain, release)
+                    .WithEnvelope(delay, baseAttack, currentDecay, 0.0f, release)
+                    .WithVolume(volume)
+                    .WithPeakEQ(freq: freqInc * i, gainDb: -8f, q: 1)
+                    .WithPeakEQ(freq: 500 + freqInc * i, gainDb: -2f, q: 1)
+                    .WithPeakEQ(freq: 2000 + freqInc * i, gainDb: 4f, q: 1)
+                    .WithLowPass(cutoffHz: 8000 - (i * 100)))
+            ;
+
+            // next layer tweaks
+            currentDecay *= decayFactor;
+            volume *= volumeFactor;
         }
 
-        var ret = builder.Build().WithVolume(.125f);
-        return ret;
+        return builder.Build().WithVolume(0.125f);
     }
 }
