@@ -50,6 +50,7 @@ public class SongComposer : ProtectedConsolePanel
             if (MidiProvider.TryConnect(MidiProvider.GetProductNames()[0], out IMidiInput input) == false) return;
             var maxDepth = Math.Max(ConsoleApp.Current.LayoutRoot.FocusStackDepth, ConsoleApp.Current.LayoutRoot.Descendents.Max(d => d.FocusStackDepth));
             var tweaker = ConsoleApp.Current.LayoutRoot.Add(new SynthTweakerPanel(input, WorkspaceSession.Current.CurrentSong.BeatsPerMinute) { FocusStackDepth = maxDepth+1 }).Fill();
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => tweaker.Dispose(), tweaker);
         }, uiHint);
     }
 
