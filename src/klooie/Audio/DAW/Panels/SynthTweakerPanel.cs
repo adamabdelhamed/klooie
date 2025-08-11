@@ -23,9 +23,9 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         // Layout: 1 row, 2 columns: code on left, melody on right
         layout = ProtectedPanel.Add(new GridLayout("1r", "30p;1r;25p")).Fill();
         var codeContainer = layout.Add(new ConsolePanel(), 1, 0);
-        codeLabel = codeContainer.Add(new Label()).Fill(new Thickness(2,2,1,1));
+        codeLabel = codeContainer.Add(new Label()).Fill(new Thickness(2, 2, 1, 1));
         codeLabel.CompositionMode = CompositionMode.BlendBackground;
-        codeLabel.Background = new RGB(20,20,20);
+        codeLabel.Background = new RGB(20, 20, 20);
         codeContainer.Background = codeLabel.Background;
         noteEditor = layout.Add(SingleNoteEditor.Create(), 2, 0);
         noteEditor.NoteChanged.Subscribe(PlayCurrentNote, noteEditor);
@@ -36,9 +36,19 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         noteEditor.DurationSeconds = settings.LatestDuration;
         if (settings.LatestSourcePath != null && File.Exists(settings.LatestSourcePath))
         {
-            this.Ready.SubscribeOnce(()=> LoadFile(settings.LatestSourcePath));
+            this.Ready.SubscribeOnce(() => LoadFile(settings.LatestSourcePath));
         }
 
+        var oldMode = SoundProvider.Current.ScheduledSignalMixer.Mode;
+        SoundProvider.Current.ScheduledSignalMixer.Mode = ScheduledSignalMixerMode.PreRenderOnly;
+        OnDisposed(() =>
+        {
+            // Restore the old mode when the panel is disposed
+            SoundProvider.Current.ScheduledSignalMixer.Mode = oldMode;
+            // Clear the audio cache since patch functions may have been edited. We want 
+            // to make sure we don't use stale audio data.
+            AudioPreRenderer.Instance.ClearCache();
+        });
 
 
         ProtectedPanel.Add(new ConsoleStringRenderer(ConsoleString.Parse("[White]Press [B=Cyan][Black] ALT + O [D][White] to open a file.")) { CompositionMode = CompositionMode.BlendBackground })

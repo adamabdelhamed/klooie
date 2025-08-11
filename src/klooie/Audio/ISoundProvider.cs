@@ -34,6 +34,7 @@ public interface ISoundProvider
     IReleasableNote? PlaySustainedNote(NoteExpression note);
     void Play(Song song, ILifetime? lifetime = null);
     EventLoop EventLoop { get; }
+    public ScheduledSignalSourceMixer ScheduledSignalMixer { get; }
 }
 
 public class NoOpSoundProvider : ISoundProvider
@@ -46,7 +47,8 @@ public class NoOpSoundProvider : ISoundProvider
     public void Resume() { }
     public void ClearCache() { }
     public long SamplesRendered => 0;
-  
+
+    public ScheduledSignalSourceMixer ScheduledSignalMixer => throw new NotImplementedException("NoOpSoundProvider does not support ScheduledSignalMixer.");
 
     public void Play(Song song, ILifetime? lifetime = null)
     {

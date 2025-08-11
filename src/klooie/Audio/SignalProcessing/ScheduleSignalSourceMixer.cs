@@ -102,13 +102,13 @@ public class ScheduledSignalSourceMixer
     private long samplesRendered = 0;
     private readonly List<ActiveVoiceBuffered> bufferedVoices = new();
 
-    private ScheduledSignalMixerMode mode;
+    public ScheduledSignalMixerMode Mode { get; set; }
     public bool HasWork => scheduledSongs.Count > 0 || scheduledNotes.Count > 0 || activeVoices.Count > 0 || bufferedVoices.Count > 0;
 
     public long SamplesRendered => samplesRendered;
     public ScheduledSignalSourceMixer(ScheduledSignalMixerMode mode = ScheduledSignalMixerMode.RealtimeWithPreRenderOptimized) 
     {
-        this.mode = mode;
+        this.Mode = mode;
     }
 
     public void ScheduleSong(Song s, CancellationToken? cancellationToken)
@@ -175,7 +175,7 @@ public class ScheduledSignalSourceMixer
                     if (j < track.Items.Count - 1) noteEvent.Next = track.Items[j + 1].Note;
 
                     scheduledNotes.Add(noteEvent);
-                    if (mode == ScheduledSignalMixerMode.RealtimeWithPreRenderOptimized || mode == ScheduledSignalMixerMode.PreRenderOnly)
+                    if (Mode == ScheduledSignalMixerMode.RealtimeWithPreRenderOptimized || Mode == ScheduledSignalMixerMode.PreRenderOnly)
                     {
                         AudioPreRenderer.Instance.Queue(noteEvent.Note);
                     }
@@ -204,6 +204,10 @@ public class ScheduledSignalSourceMixer
 
     private void DrainDueNotes(long bufferEnd)
     {
+        // mode might be changed by another thread so grab it here and use
+        // it for the entire loop. Changing mode is supported, but not mid
+        // loop.
+        var mode = Mode;
         while (scheduledNotes.Count > 0 && scheduledNotes[0].StartSample < bufferEnd)
         {
             var scheduledNoteEvent = scheduledNotes[0];

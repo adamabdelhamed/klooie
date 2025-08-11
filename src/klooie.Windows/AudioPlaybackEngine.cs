@@ -17,7 +17,7 @@ public class AudioPlaybackEngine : ISoundProvider
     private SoundCache soundCache;
     public VolumeKnob MasterVolume { get; set; }
     public EventLoop EventLoop => eventLoop;
-
+    public ScheduledSignalSourceMixer ScheduledSignalMixer => scheduledSynthProvider;
     public long SamplesRendered => scheduledSynthProvider.SamplesRendered;
 
     public AudioPlaybackEngine()
