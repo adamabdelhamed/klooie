@@ -61,7 +61,7 @@ public class SynthSignalSource : Recyclable
     public int Id { get; private set; }
 
     // === LFO support ===
-    public enum LfoTarget { Pitch, FilterCutoff, Amp, Pan }
+    public enum LfoTarget { Pitch, FilterCutoff, Amp, Pan, VibratoDepth }
 
     public struct LfoSettings
     {
@@ -113,7 +113,7 @@ public class SynthSignalSource : Recyclable
     private ScheduledNoteEvent noteEvent;
     private NoteExpression note => noteEvent.Note;
     private EffectContext ctx;
-
+    private float lfoVibratoDepthFrame;
     // === Performance constants / LUTs ===
     private const float INV_TWO_PI = 1f / (2f * MathF.PI);
     private static readonly float LN2 = MathF.Log(2f);
@@ -291,9 +291,19 @@ public class SynthSignalSource : Recyclable
         if (wave == patch.Waveform && patch.EnableVibrato)
         {
             float vibratoPhase = 2 * MathF.PI * patch.VibratoRateHz * time + patch.VibratoPhaseOffset;
-            totalCents += FastSin(vibratoPhase) * patch.VibratoDepthCents;
-        }
 
+            // Base vibrato depth (cents)
+            float vibDepth = patch.VibratoDepthCents;
+
+            // Add envelope-grown depth (0..1 * VibratoDepthEnvCents)
+            float envLevel = envelope.GetLevel(time); // 0..1; already per-voice
+            vibDepth += envLevel * patch.VibratoDepthEnvCents;
+
+            // Add slow LFO-grown depth (bipolar), computed in Render() this frame
+            vibDepth += lfoVibratoDepthFrame;
+
+            totalCents += FastSin(vibratoPhase) * vibDepth;
+        }
         if (pitchMods != null && wave == patch.Waveform)
         {
             var pmCtx = new PitchModContext { Time = time, ReleaseTime = noteReleaseTime, NoteEvent = noteEvent };
@@ -528,8 +538,7 @@ public class SynthSignalSource : Recyclable
             ctx.Time = time;
             ctx.Input = 0f;
 
-            // === LFO: Compute non-pitch modulation ===
-            float lfoCutoff = 0f, lfoAmp = 0f, lfoPan = 0f;
+            float lfoCutoff = 0f, lfoAmp = 0f, lfoPan = 0f, lfoVibratoDepth = 0f;
             if (lfos != null)
             {
                 for (int i = 0; i < lfos.Length; i++)
@@ -551,11 +560,15 @@ public class SynthSignalSource : Recyclable
                         lfoAmp += lfo * lfoDepth;
                     else if (st.Settings.Target == LfoTarget.Pan)
                         lfoPan += lfo * lfoDepth;
+                    else if (st.Settings.Target == LfoTarget.VibratoDepth)
+                        lfoVibratoDepth += lfo * lfoDepth;
 
                     lfos[i].Phase += lfos[i].PhaseInc;
                     if (lfos[i].Phase >= 1f) lfos[i].Phase -= 1f;
                 }
             }
+
+            lfoVibratoDepthFrame = lfoVibratoDepth;
 
             // [OPTIMIZED] Direct, unrolled pipeline
             float sample = RunPipeline(ctx);
