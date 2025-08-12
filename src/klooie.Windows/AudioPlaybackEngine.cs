@@ -67,7 +67,7 @@ public class AudioPlaybackEngine : ISoundProvider
         return ret;
     }
 
-    public void Play(Song song, ILifetime? lifetime = null)
+    public Task Play(Song song, ILifetime? lifetime = null)
     {
         CancellationToken? token = null;
         if(lifetime != null)
@@ -76,8 +76,9 @@ public class AudioPlaybackEngine : ISoundProvider
             lifetime.OnDisposed(source, static (source) => source.Cancel());
             token = source.Token;
         }
-        scheduledSynthProvider.ScheduleSong(song, token);
+        return scheduledSynthProvider.ScheduleSong(song, token);
     }
+
 
     private void AddMixerInput(RecyclableSampleProvider? sample)
     {

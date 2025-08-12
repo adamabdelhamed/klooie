@@ -5,28 +5,30 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-public class ScheduledSongEvent : Recyclable
+public class ScheduledSongEvent 
 {
     public Song Song { get; private set; }
-    // The cancellation lifetime for this song event. It was created on the app thread and should be disposed on the app thread so it only
-    // get's nulled within this system, but Dispose is managed by the app thread.
+
     public CancellationToken? CancellationToken { get;private set; } 
 
-    private static LazyPool<ScheduledSongEvent> pool = new LazyPool<ScheduledSongEvent>(() => new ScheduledSongEvent());
+    private TaskCompletionSource? songCompletionSource;
+    public TaskCompletionSource? SongCompletionSource => songCompletionSource;
+
+    public int NotesRemaining { get; set; }
+
     protected ScheduledSongEvent() { }
-    public static ScheduledSongEvent Create(Song song, CancellationToken? cancellationToken)
+    public ScheduledSongEvent(Song song, TaskCompletionSource? songCompletionSource, CancellationToken? cancellationToken)
     {
-        var ret = pool.Value.Rent();
-        ret.Song = song;
-        ret.CancellationToken = cancellationToken;
-        return ret;
+        this.songCompletionSource = songCompletionSource;
+        NotesRemaining = song.Notes.Count;
+        Song = song;
+        CancellationToken = cancellationToken;
     }
 
-    protected override void OnReturn()
+    public void Done()
     {
-        CancellationToken = null;
-        Song = null!;
-        base.OnReturn();
+        songCompletionSource?.SetResult();
+        songCompletionSource = null;
     }
 }
 
@@ -41,7 +43,7 @@ public class ScheduledNoteEvent : Recyclable
     public NoteExpression Previous;
     public int RemainingVoices;
     private CancellationTokenRegistration? CancellationTokenRegistration;
-
+    private ScheduledSongEvent? scheduledSong;
     public ISynthPatch? Patch;
     private void Cancel()
     {
@@ -50,9 +52,10 @@ public class ScheduledNoteEvent : Recyclable
 
     private static LazyPool<ScheduledNoteEvent> pool = new LazyPool<ScheduledNoteEvent>(() => new ScheduledNoteEvent());
     protected ScheduledNoteEvent() { }
-    public static ScheduledNoteEvent Create(NoteExpression note, CancellationToken? cancellationToken)
+    public static ScheduledNoteEvent Create(NoteExpression note, ScheduledSongEvent? scheduledSong, CancellationToken? cancellationToken)
     {
         var ret = pool.Value.Rent();
+        ret.scheduledSong = scheduledSong;
         ret.Note = note;
         ret.StartSample = 0;
         ret.Next = null;
@@ -73,6 +76,15 @@ public class ScheduledNoteEvent : Recyclable
     protected override void OnReturn()
     {
         Note = null;
+        if (scheduledSong != null)
+        {
+            scheduledSong.NotesRemaining--;
+            if (scheduledSong.NotesRemaining == 0)
+            {
+                scheduledSong.Done();
+            }
+            scheduledSong = null;
+        }
         CancellationTokenRegistration?.Dispose();
         CancellationTokenRegistration = null;
         StartSample = 0;
@@ -113,9 +125,11 @@ public class ScheduledSignalSourceMixer
         this.Mode = mode;
     }
 
-    public void ScheduleSong(Song s, CancellationToken? cancellationToken)
+    public Task ScheduleSong(Song s, CancellationToken? cancellationToken)
     {
-        scheduledSongs.Enqueue(ScheduledSongEvent.Create(s, cancellationToken));
+        var tcs = new TaskCompletionSource();
+        scheduledSongs.Enqueue(new ScheduledSongEvent(s, tcs, cancellationToken));
+        return tcs.Task;
     }
 
 
@@ -146,10 +160,10 @@ public class ScheduledSignalSourceMixer
     private void DrainScheduledSongs()
     {
         var didWork = false; 
-        while (scheduledSongs.TryDequeue(out var ev))
+        while (scheduledSongs.TryDequeue(out var scheduledSong))
         {
             didWork = true;
-            var song = ev.Song;
+            var song = scheduledSong.Song;
             var tracks = new Dictionary<string, RecyclableList<ScheduledNoteEvent>>();
 
             for (int i = 0; i < song.Count; i++)
@@ -163,7 +177,7 @@ public class ScheduledSignalSourceMixer
                 }
 
 
-                var scheduledNote = ScheduledNoteEvent.Create(note, ev.CancellationToken);
+                var scheduledNote = ScheduledNoteEvent.Create(note, scheduledSong, scheduledSong.CancellationToken);
                 track.Items.Add(scheduledNote);
             }
 

@@ -32,7 +32,7 @@ public interface ISoundProvider
     void ClearCache();
     long SamplesRendered { get; }
     IReleasableNote? PlaySustainedNote(NoteExpression note);
-    void Play(Song song, ILifetime? lifetime = null);
+    Task Play(Song song, ILifetime? lifetime = null);
     EventLoop EventLoop { get; }
     public ScheduledSignalSourceMixer ScheduledSignalMixer { get; }
 }
@@ -50,9 +50,9 @@ public class NoOpSoundProvider : ISoundProvider
 
     public ScheduledSignalSourceMixer ScheduledSignalMixer => throw new NotImplementedException("NoOpSoundProvider does not support ScheduledSignalMixer.");
 
-    public void Play(Song song, ILifetime? lifetime = null)
+    public Task Play(Song song, ILifetime? lifetime = null)
     {
-
+        return Task.CompletedTask;
     }
 
     public IReleasableNote? PlaySustainedNote(NoteExpression note) => null;
