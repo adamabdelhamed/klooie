@@ -1,6 +1,8 @@
 ﻿using klooie;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 public class ScheduledSongEvent : Recyclable
@@ -129,11 +131,12 @@ public class ScheduledSignalSourceMixer
         DrainDueNotes(bufferEnd);
 
         Array.Clear(buffer, offset, count);
-        var scratch = System.Buffers.ArrayPool<float>.Shared.Rent(count);
+        var scratch = RecyclableListPool<float>.Instance.Rent(count);
+        for(var i = 0; i < count; i++) scratch.Items.Add(0f);
+    
+        MixActiveVoices(buffer, offset, samplesRequested, bufferStart, bufferEnd, scratch.Items);
 
-        MixActiveVoices(buffer, offset, samplesRequested, bufferStart, bufferEnd, scratch);
-
-        System.Buffers.ArrayPool<float>.Shared.Return(scratch);
+        scratch.Dispose();
         samplesRendered += samplesRequested;
         return count;
     }
@@ -261,7 +264,7 @@ public class ScheduledSignalSourceMixer
         }
     }
 
-    private void MixActiveVoices(float[] buffer, int offset, int samplesRequested, long bufferStart, long bufferEnd, float[] scratch)
+    private void MixActiveVoices(float[] buffer, int offset, int samplesRequested, long bufferStart, long bufferEnd, List<float> scratch)
     {
         MixBufferedVoices(buffer, offset, samplesRequested, bufferStart);
         MixRealTimeVoices(buffer, offset, samplesRequested, bufferStart, bufferEnd, scratch);
@@ -325,7 +328,7 @@ public class ScheduledSignalSourceMixer
         }
     }
 
-    private void MixRealTimeVoices(float[] buffer, int offset, int samplesRequested, long bufferStart, long bufferEnd, float[] scratch)
+    private void MixRealTimeVoices(float[] buffer, int offset, int samplesRequested, long bufferStart, long bufferEnd, List<float> scratch)
     {
         for (int v = activeVoices.Count - 1; v >= 0; v--)
         {
@@ -365,7 +368,8 @@ public class ScheduledSignalSourceMixer
             }
 
             int floatsNeeded = samplesAvailable * SoundProvider.ChannelCount;
-            int read = voice.Render(scratch, 0, floatsNeeded);
+            Span<float> span = CollectionsMarshal.AsSpan(scratch);
+            int read = voice.Render(span, 0, floatsNeeded);
 
             // === NOTEPLAYING LOGIC ===
             if (!av.Played && read > 0)

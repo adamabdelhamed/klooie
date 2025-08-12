@@ -9,8 +9,8 @@ namespace klooie;
 // =========================
 class AllPassFilter : Recyclable
 {
-    private float[] buffer;
-    private int bufferLen;
+    private RecyclableList<float> buffer;
+
     private int pos;
     private float feedback;
 
@@ -27,9 +27,8 @@ class AllPassFilter : Recyclable
     protected void Construct(int delaySamples, float feedback)
     {
         // Rent and zero only the logical region we’ll use
-        buffer = ArrayPool<float>.Shared.Rent(delaySamples);
-        bufferLen = delaySamples;
-        Array.Clear(buffer, 0, bufferLen);
+        buffer = RecyclableListPool<float>.Instance.Rent(delaySamples);
+        for (var i = 0; i < delaySamples; i++) buffer.Items.Add(0f); // Initialize to zero
 
         this.feedback = feedback;
         pos = 0;
@@ -43,20 +42,14 @@ class AllPassFilter : Recyclable
         buffer[pos] = input + bufOut * feedback;
         if (Math.Abs(buffer[pos]) < 1e-12f) buffer[pos] = 0f;
         pos++;
-        if (pos >= bufferLen) pos = 0;
+        if (pos >= buffer.Count) pos = 0;
         return output;
     }
 
     protected override void OnReturn()
     {
-        if (buffer != null)
-        {
-            // Ensure state is clean for the next renter
-            Array.Clear(buffer, 0, bufferLen);
-            ArrayPool<float>.Shared.Return(buffer);
-        }
+        buffer?.Dispose();
         buffer = null;
-        bufferLen = 0;
         pos = 0;
         base.OnReturn();
     }
@@ -67,8 +60,7 @@ class AllPassFilter : Recyclable
 // =========================
 class CombFilter : Recyclable
 {
-    private float[] buffer;
-    private int bufferLen;
+    private RecyclableList<float> buffer;
     private int baseDelay, pos;
     private float feedback;
     private float lastFiltered; // for damping
@@ -94,9 +86,8 @@ class CombFilter : Recyclable
 
         // Capacity must cover max mod depth + a little safety
         int needed = delaySamples + (int)Math.Ceiling(lfoDepthSamples) + 2;
-        buffer = ArrayPool<float>.Shared.Rent(needed);
-        bufferLen = needed;
-        Array.Clear(buffer, 0, bufferLen);
+        buffer = RecyclableListPool<float>.Instance.Rent(needed);
+        for(var i = 0; i < needed; i++) buffer.Items.Add(0f); // Initialize to zero
 
         this.feedback = feedback;
         this.damping = damping;
@@ -121,7 +112,7 @@ class CombFilter : Recyclable
         }
 
         int readPos = pos - modDelay;
-        if (readPos < 0) readPos += bufferLen;
+        if (readPos < 0) readPos += buffer.Count;
 
         float output = buffer[readPos];
 
@@ -131,19 +122,14 @@ class CombFilter : Recyclable
         buffer[pos] = input + lastFiltered * feedback;
 
         pos++;
-        if (pos >= bufferLen) pos = 0;
+        if (pos >= buffer.Count) pos = 0;
         return output;
     }
 
     protected override void OnReturn()
     {
-        if (buffer != null)
-        {
-            Array.Clear(buffer, 0, bufferLen);
-            ArrayPool<float>.Shared.Return(buffer);
-        }
+        buffer?.Dispose();
         buffer = null;
-        bufferLen = 0;
         pos = 0;
         lastFiltered = 0f;
         lfoPhase = 0f;

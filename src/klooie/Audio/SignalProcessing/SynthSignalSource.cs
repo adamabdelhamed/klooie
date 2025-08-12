@@ -520,7 +520,7 @@ public class SynthSignalSource : Recyclable
     }
 
     // ---- [OPTIMIZED] Render loop, pipeline unrolled ----
-    public int Render(float[] buffer, int offset, int count)
+    public int Render(Span<float> buffer, int offset, int count)
     {
         if (isDone || IsStillValid(Lease) == false)
         {
