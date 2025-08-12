@@ -45,6 +45,7 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
             orig = ee.Envelope;
             wet.Effects.Items.RemoveAt(i);
             wet.Effects.Items.Insert(i, EnvelopeEffect.Create(orig.Attack, orig.Decay, orig.Sustain, patchSettings.Duration));
+            orig.Dispose();
             break;
         }
 
