@@ -1,4 +1,9 @@
-﻿namespace klooie;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+
+namespace klooie;
+
 public interface IObjectPool
 {
     int Created { get; }
@@ -17,18 +22,29 @@ public interface IObjectPool
 
 public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 {
+    // Atomic, overflow-safe counters
+    private long _created;
+    private long _rented;
+    private long _returned;
 
-    public int Created { get; private set; }
-    public int Rented { get; private set; }
-    public int Returned { get; private set; }
+    // Expose int metrics via clamped reads to avoid negative wrap
+    public int Created => ClampToInt(Interlocked.Read(ref _created));
+    public int Rented => ClampToInt(Interlocked.Read(ref _rented));
+    public int Returned => ClampToInt(Interlocked.Read(ref _returned));
     int Pending => Rented - Returned;
     public int AllocationsSaved => Rented - Created;
+
 #if DEBUG
     public HashSet<PendingRecyclableTracker> PendingReturns { get; } = new HashSet<PendingRecyclableTracker>();
     public StackHunter StackHunter { get; private set; } = new StackHunter() { Mode = Recyclable.StackHunterMode };
 #endif
-    [ThreadStatic]
-    private static Stack<T> _pool;
+
+    // Per-instance, per-thread stacks (do NOT share across pool instances)
+    private readonly ThreadLocal<Stack<T>> _tlsStacks =
+        new(() => new Stack<T>(), trackAllValues: true);
+
+    private Stack<T> StackForCurrentThread => _tlsStacks.Value!;
+
     public abstract T Factory();
     public int DefaultFillSize { get; set; } = 10;
 
@@ -40,8 +56,12 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public override string ToString()
     {
         var typeName = GetFriendlyName(typeof(T));
-        return $"{typeName}: Pending Return: {Rented - Returned} Created: {Created} Rented: {Rented} Returned: {Returned} AllocationsSaved: {AllocationsSaved}";
-
+        var rented = Interlocked.Read(ref _rented);
+        var returned = Interlocked.Read(ref _returned);
+        var created = Interlocked.Read(ref _created);
+        var pending = rented - returned;
+        var saved = rented - created;
+        return $"{typeName}: Pending Return: {pending} Created: {created} Rented: {rented} Returned: {returned} AllocationsSaved: {saved}";
     }
 
     public static string GetFriendlyName(Type type)
@@ -69,19 +89,15 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     {
         if (Recyclable.PoolingEnabled == false)
         {
-            var fresh = Factory();
-            if(fresh == null)
-            {
-                throw new InvalidOperationException("Factory returned null, cannot rent from pool.");
-            }
-            fresh.Pool = this;
+            var fresh = Factory() ?? throw new InvalidOperationException("Factory returned null, cannot rent from pool.");
+            // Do NOT attach to the pool when pooling is disabled
             fresh.ThreadId = Thread.CurrentThread.ManagedThreadId;
             lease = fresh.CurrentVersion;
             return fresh;
         }
 
+        Interlocked.Increment(ref _rented);
 
-        Rented++;
 #if DEBUG
         ComparableStackTrace? trace = null;
         if (Recyclable.StackHunterMode == StackHunterMode.Full)
@@ -89,29 +105,29 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
             trace = StackHunter.RegisterCurrentStackTrace(2, 10);
         }
 #endif
+
         T ret;
-        _pool = _pool ?? new Stack<T>();
-        if (_pool.Count > 0)
+        var stack = StackForCurrentThread;
+        if (stack.Count > 0)
         {
-            ret = _pool.Pop();
+            ret = stack.Pop();
             ret.Rent();
         }
         else
         {
-
-            Created++;
-            ret = Factory();
+            Interlocked.Increment(ref _created);
+            ret = Factory() ?? throw new InvalidOperationException("Factory returned null, cannot rent from pool.");
             ret.ThreadId = Thread.CurrentThread.ManagedThreadId;
-            if (ret == null)
-            {
-                throw new InvalidOperationException("Factory returned null, cannot rent from pool.");
-            }
         }
+
         ret.Pool = this;
         lease = ret.CurrentVersion;
 
 #if DEBUG
-        if (trace != null && Recyclable.StackHunterMode == StackHunterMode.Full) PendingReturns.Add(new PendingRecyclableTracker(ret, trace));
+        if (trace != null && Recyclable.StackHunterMode == StackHunterMode.Full)
+        {
+            PendingReturns.Add(new PendingRecyclableTracker(ret, trace));
+        }
 #endif
 
         return ret;
@@ -124,49 +140,63 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
 
     public void ReturnThatShouldOnlyBeCalledInternally(Recyclable rented)
     {
-        T rentedT = (T)rented;
-        if (rentedT == null)
-        {
-            throw new ArgumentNullException(nameof(rented), "Cannot return a null object to the pool.");
-        }
-        Returned++;
+        T rentedT = (T)rented ?? throw new ArgumentNullException(nameof(rented), "Cannot return a null object to the pool.");
+
 #if DEBUG
         PendingReturns.Remove(new PendingRecyclableTracker(rentedT, null));
 #endif
-        if (rented.ThreadId != Thread.CurrentThread.ManagedThreadId) throw new InvalidOperationException
-                ("This pool was rented from a different thread");
-        if (rentedT.Pool != this) throw new InvalidOperationException("Object returned to wrong pool");
+
+        if (rented.ThreadId != Thread.CurrentThread.ManagedThreadId)
+            throw new InvalidOperationException("This pool was rented from a different thread");
+        if (!ReferenceEquals(rentedT.Pool, this))
+            throw new InvalidOperationException("Object returned to wrong pool");
+
         rentedT.Pool = null;
-        _pool = _pool ?? new Stack<T>();
-        _pool.Push(rentedT);
+
+        var stack = StackForCurrentThread;
+        stack.Push(rentedT);
+
+        // Count the return only after validation & push
+        Interlocked.Increment(ref _returned);
     }
 
     public void Clear()
     {
-        _pool = _pool ?? new Stack<T>();
-        _pool.Clear();
-        Created = 0;
-        Rented = 0;
-        Returned = 0;
+        // Optional: throw if pending > 0 to catch leaks; comment out if you prefer silent clearing
+        // if ((Interlocked.Read(ref _rented) - Interlocked.Read(ref _returned)) > 0)
+        //     throw new InvalidOperationException("Cannot Clear() with pending rentals.");
+
+        foreach (var s in _tlsStacks.Values)
+            s.Clear();
+
+        Interlocked.Exchange(ref _created, 0);
+        Interlocked.Exchange(ref _rented, 0);
+        Interlocked.Exchange(ref _returned, 0);
+
 #if DEBUG
-        StackHunter = new StackHunter();
+        StackHunter = new StackHunter() { Mode = Recyclable.StackHunterMode };
+        PendingReturns.Clear();
 #endif
     }
 
     public IObjectPool Fill(int? count = null)
     {
         count ??= DefaultFillSize;
+        var stack = StackForCurrentThread;
         for (var i = 0; i < count.Value; i++)
         {
-            var fresh = Factory();
-            if (fresh == null)
-            {
-                throw new InvalidOperationException("Factory returned null, cannot fill pool.");
-            }
-            _pool = _pool ?? new Stack<T>();
-            _pool.Push(fresh);
+            var fresh = Factory() ?? throw new InvalidOperationException("Factory returned null, cannot fill pool.");
+            // Note: we do not increment _created here to keep Created == number of on-demand creations
+            stack.Push(fresh);
         }
         return this;
+    }
+
+    private static int ClampToInt(long value)
+    {
+        if (value <= int.MinValue) return int.MinValue;
+        if (value >= int.MaxValue) return int.MaxValue;
+        return (int)value;
     }
 }
 
@@ -195,7 +225,7 @@ public class PendingRecyclableTracker
 
 public sealed class FuncPool<T> : RecycleablePool<T> where T : Recyclable
 {
-    private Func<T> factory;
+    private readonly Func<T> factory;
     internal FuncPool(Func<T> factory) => this.factory = factory ?? throw new ArgumentNullException(nameof(factory));
     public override T Factory() => factory();
 }
