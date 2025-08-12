@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 
 namespace klooie;
@@ -9,6 +10,7 @@ namespace klooie;
 class AllPassFilter : Recyclable
 {
     private float[] buffer;
+    private int bufferLen;
     private int pos;
     private float feedback;
 
@@ -24,7 +26,11 @@ class AllPassFilter : Recyclable
 
     protected void Construct(int delaySamples, float feedback)
     {
-        buffer = new float[delaySamples];
+        // Rent and zero only the logical region we’ll use
+        buffer = ArrayPool<float>.Shared.Rent(delaySamples);
+        bufferLen = delaySamples;
+        Array.Clear(buffer, 0, bufferLen);
+
         this.feedback = feedback;
         pos = 0;
     }
@@ -36,15 +42,21 @@ class AllPassFilter : Recyclable
         if (Math.Abs(output) < 1e-12f) output = 0f;
         buffer[pos] = input + bufOut * feedback;
         if (Math.Abs(buffer[pos]) < 1e-12f) buffer[pos] = 0f;
-        pos = (pos + 1) % buffer.Length;
+        pos++;
+        if (pos >= bufferLen) pos = 0;
         return output;
     }
 
     protected override void OnReturn()
     {
         if (buffer != null)
-            Array.Clear(buffer, 0, buffer.Length);
+        {
+            // Ensure state is clean for the next renter
+            Array.Clear(buffer, 0, bufferLen);
+            ArrayPool<float>.Shared.Return(buffer);
+        }
         buffer = null;
+        bufferLen = 0;
         pos = 0;
         base.OnReturn();
     }
@@ -56,6 +68,7 @@ class AllPassFilter : Recyclable
 class CombFilter : Recyclable
 {
     private float[] buffer;
+    private int bufferLen;
     private int baseDelay, pos;
     private float feedback;
     private float lastFiltered; // for damping
@@ -78,7 +91,13 @@ class CombFilter : Recyclable
         float lfoFreq, float lfoDepthSamples, float sampleRate)
     {
         baseDelay = delaySamples;
-        buffer = new float[delaySamples + (int)Math.Ceiling(lfoDepthSamples) + 2]; // pad for mod
+
+        // Capacity must cover max mod depth + a little safety
+        int needed = delaySamples + (int)Math.Ceiling(lfoDepthSamples) + 2;
+        buffer = ArrayPool<float>.Shared.Rent(needed);
+        bufferLen = needed;
+        Array.Clear(buffer, 0, bufferLen);
+
         this.feedback = feedback;
         this.damping = damping;
         pos = 0;
@@ -100,8 +119,10 @@ class CombFilter : Recyclable
             if (lfoPhase > 2 * Math.PI) lfoPhase -= 2 * (float)Math.PI;
             modDelay += (int)(lfo * lfoDepth);
         }
+
         int readPos = pos - modDelay;
-        if (readPos < 0) readPos += buffer.Length;
+        if (readPos < 0) readPos += bufferLen;
+
         float output = buffer[readPos];
 
         // Damping (lowpass)
@@ -109,15 +130,20 @@ class CombFilter : Recyclable
 
         buffer[pos] = input + lastFiltered * feedback;
 
-        pos = (pos + 1) % buffer.Length;
+        pos++;
+        if (pos >= bufferLen) pos = 0;
         return output;
     }
 
     protected override void OnReturn()
     {
         if (buffer != null)
-            Array.Clear(buffer, 0, buffer.Length);
+        {
+            Array.Clear(buffer, 0, bufferLen);
+            ArrayPool<float>.Shared.Return(buffer);
+        }
         buffer = null;
+        bufferLen = 0;
         pos = 0;
         lastFiltered = 0f;
         lfoPhase = 0f;
