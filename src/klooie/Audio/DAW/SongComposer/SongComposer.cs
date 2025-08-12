@@ -20,6 +20,8 @@ public class SongComposer : ProtectedConsolePanel
 
     private MidiJamInterpretor? midiJamInterpretor;
 
+    public StackPanel CommandBar => commandBar;
+
     public SongComposer(WorkspaceSession session, IMidiProvider midiProvider)
     {
         this.MidiProvider = midiProvider ?? throw new ArgumentNullException(nameof(midiProvider));

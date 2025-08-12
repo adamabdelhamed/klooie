@@ -38,10 +38,34 @@ public class DAWPanel : ProtectedConsolePanel
         }
     }
 
+    private void AddNewSongCommand()
+    {
+        var uiHint = new ConsoleStringRenderer(ConsoleString.Parse("[B=Cyan][Black] ALT + N [D][White] New Song"));
+        ComposerWithTracks.CommandBar.Controls.Insert(0, uiHint);
+        ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
+        {
+            if (k.Modifiers != ConsoleModifiers.Alt || k.Key != ConsoleKey.N) return;
+
+            try
+            {
+                await WorkspaceSession.Current.NewSong();
+                ComposerWithTracks.Dispose();
+                ComposerWithTracks = ProtectedPanel.Add(new SongComposer(Session, midiProvider)).Fill();
+                ComposerWithTracks.Grid.Focus();
+                AddNewSongCommand();
+            }
+            catch (Exception ex)
+            {
+                ConsoleApp.Current.WriteLine(ex.Message.ToRed());
+            }
+        }, uiHint);
+    }
+
     private async Task InitializeAsync()
     {
         await Session.Initialize();
         ComposerWithTracks = ProtectedPanel.Add(new SongComposer(Session, midiProvider)).Fill();
+        AddNewSongCommand();
         ComposerWithTracks.Grid.Focus();
     }
 }

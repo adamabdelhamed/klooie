@@ -25,6 +25,12 @@ public class WorkspaceSession
             return;
         }
 
+        await NewSong();
+
+    }
+
+    public async Task NewSong()
+    {
         var songName = (await TextInputDialog.Show(new ShowTextInputOptions("Enter song name".ToYellow()) { AllowEscapeToClose = false }))?.ToString().Trim();
         if (string.IsNullOrWhiteSpace(songName))
         {
@@ -42,6 +48,5 @@ public class WorkspaceSession
         };
         Workspace.Settings.LastOpenedSong = songName;
         Workspace.AddSong(CurrentSong);
-
     }
 }
