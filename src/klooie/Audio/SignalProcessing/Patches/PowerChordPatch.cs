@@ -90,12 +90,23 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
 
     protected override void OnReturn()
     {
-        base.OnReturn();
-        basePatch = null;
-        intervals = null;
+        if (patches != null)
+        {
+            for (int i = 0; i < patches.Length; i++)
+            {
+                (patches[i] as Recyclable)?.Dispose();
+            }
+            patches = null!;
+        }
+
+        (basePatch as Recyclable)?.Dispose();
+        basePatch = null!;
+
+        intervals = null!;
         detuneCents = 0f;
         panSpread = 0f;
-        patches = null;
+
+        base.OnReturn();
     }
 
     [SynthDocumentation("""
