@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Threading;
 
 namespace klooie;
@@ -164,10 +165,12 @@ public sealed class AudioPreRenderer
     private static float[] BlockBuffer;
     private CachedWave RenderViaMixer(NoteExpression note)
     {
-        // Build a 1-note song
-        var oneNoteSong = new Song(new ListNoteSource { note });
+        var noteWithZeroStartBeat = NoteExpression.Create(midi: note.MidiNote, startBeat: 0, durationBeats: note.DurationBeats, bpm: note.BeatsPerMinute, velocity: note.Velocity, instrument: note.Instrument);
+        var notes = new ListNoteSource();
+        notes.BeatsPerMinute = note.BeatsPerMinute;
+        notes.Add(noteWithZeroStartBeat);
+        var oneNoteSong = new Song(notes, notes.BeatsPerMinute);
 
-        // Drive a private mixer that bypasses the pre-rendering logic and just renders the note for us to read.
         var mixer = new ScheduledSignalSourceMixer(mode: ScheduledSignalMixerMode.Realtime);
         mixer.ScheduleSong(oneNoteSong, null);
 
@@ -175,27 +178,26 @@ public sealed class AudioPreRenderer
         int channels = SoundProvider.ChannelCount;
         int blockFloats = BlockFrames * channels;
 
-        BlockBuffer = BlockBuffer ??= new float[blockFloats];
+        BlockBuffer ??= new float[blockFloats];
         var allFloats = RecyclableListPool<float>.Instance.Rent(1024 * 1024);
         try
         {
             while (mixer.HasWork)
             {
                 int read = mixer.Read(BlockBuffer, 0, blockFloats);
-                for(int i = 0; i < read; i++)
+                if (read <= 0) break;
+                for (int i = 0; i < read; i++)
                 {
                     allFloats.Items.Add(BlockBuffer[i]);
                 }
             }
 
-            // Strip leading silence that was at note.StartTime
-            int sampleRate = SoundProvider.SampleRate;
-            int offsetFrames = (int)Math.Round(note.StartTime.TotalSeconds * sampleRate);
-            int offsetFloats = Math.Clamp(offsetFrames * channels, 0, allFloats.Count);
+            // NO leading-silence trim; local starts at t=0
+            int trimmedFloats = allFloats.Count;
+            if (trimmedFloats <= 0) trimmedFloats = 0;
 
-            int trimmedFloats = allFloats.Count - offsetFloats;
-            float[] data = new float[trimmedFloats];
-            allFloats.Items.CopyTo(offsetFloats, data, 0, trimmedFloats);
+            var data = new float[trimmedFloats];
+            if (trimmedFloats > 0) allFloats.Items.CopyTo(0, data, 0, trimmedFloats);
 
             int totalFrames = trimmedFloats / channels;
             return new CachedWave(data, totalFrames);
@@ -208,7 +210,7 @@ public sealed class AudioPreRenderer
 
     /* ----- key / cache helpers ----- */
 
-   
+
 
     private int cacheCount = 0;
     // LRU bookkeeping
