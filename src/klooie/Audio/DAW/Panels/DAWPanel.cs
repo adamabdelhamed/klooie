@@ -53,6 +53,32 @@ public class DAWPanel : ProtectedConsolePanel
                 ComposerWithTracks = ProtectedPanel.Add(new SongComposer(Session, midiProvider)).Fill();
                 ComposerWithTracks.Grid.Focus();
                 AddNewSongCommand();
+                AddOpenSongCommand();
+            }
+            catch (Exception ex)
+            {
+                ConsoleApp.Current.WriteLine(ex.Message.ToRed());
+            }
+        }, uiHint);
+    }
+
+    private void AddOpenSongCommand()
+    {
+        var uiHint = new ConsoleStringRenderer(ConsoleString.Parse("[B=Cyan][Black] ALT + O [D][White] Open Song"));
+        ComposerWithTracks.CommandBar.Controls.Insert(1, uiHint);
+        ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
+        {
+            if (k.Modifiers != ConsoleModifiers.Alt || k.Key != ConsoleKey.O) return;
+
+            try
+            {
+                var opened = await WorkspaceSession.Current.OpenSong();
+                if(opened == false) return;
+                ComposerWithTracks.Dispose();
+                ComposerWithTracks = ProtectedPanel.Add(new SongComposer(Session, midiProvider)).Fill();
+                ComposerWithTracks.Grid.Focus();
+                AddNewSongCommand();
+                AddOpenSongCommand();
             }
             catch (Exception ex)
             {
@@ -66,6 +92,7 @@ public class DAWPanel : ProtectedConsolePanel
         await Session.Initialize();
         ComposerWithTracks = ProtectedPanel.Add(new SongComposer(Session, midiProvider)).Fill();
         AddNewSongCommand();
+        AddOpenSongCommand();
         ComposerWithTracks.Grid.Focus();
     }
 }

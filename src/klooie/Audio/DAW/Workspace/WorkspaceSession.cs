@@ -31,6 +31,7 @@ public class WorkspaceSession
 
     public async Task NewSong()
     {
+        await Task.Yield();
         var songName = (await TextInputDialog.Show(new ShowTextInputOptions("Enter song name".ToYellow()) { AllowEscapeToClose = false }))?.ToString().Trim();
         if (string.IsNullOrWhiteSpace(songName))
         {
@@ -46,7 +47,20 @@ public class WorkspaceSession
                     new ComposerTrack("Track 1",  InstrumentPicker.GetAllKnownInstruments().First())
                 }
         };
-        Workspace.Settings.LastOpenedSong = songName;
+        Workspace.UpdateSettings(s => s.LastOpenedSong = CurrentSong.Title);
         Workspace.AddSong(CurrentSong);
+    }
+
+    public async Task<bool> OpenSong()
+    {
+        await Task.Yield();
+        var songName = (await TextInputDialog.Show(new ShowTextInputOptions("Enter song name".ToYellow()) { AllowEscapeToClose = false }))?.ToString().Trim();
+        if(string.IsNullOrWhiteSpace(songName)) return false;
+        var choice = Workspace.Songs.FirstOrDefault(s => s.Title.Equals(songName, StringComparison.OrdinalIgnoreCase));
+        if (choice == null) return false;
+
+        CurrentSong = choice;
+        Workspace.UpdateSettings(s => s.LastOpenedSong = CurrentSong.Title);
+        return true;
     }
 }
