@@ -370,7 +370,7 @@ public sealed class ColliderGroup
 
         for (int i = 0; i < list.Count; i++)
         {
-            var obstacle = list[i] as GameCollider;
+            var obstacle = list[i];
             if (obstacle == null || ReferenceEquals(obstacle, item) || spatialIndex.IsExpired(obstacle) || !CollidableFast.CanCollideFast(item, obstacle)) continue;
 
             var distance = obstacle.Bounds.CalculateDistanceTo(proposed);
