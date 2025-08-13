@@ -11,9 +11,27 @@ public sealed class ConsoleBitmap : Recyclable
     private static readonly ConsoleCharacter EmptySpace = new ConsoleCharacter(' ');
 
     private static FastConsoleWriter fastConsoleWriter = new FastConsoleWriter();
-    private static ChunkPool chunkPool = new ChunkPool();
-    private static List<Chunk> chunksOnLine = new List<Chunk>();
     private static ChunkAwarePaintBuffer paintBuilder = new ChunkAwarePaintBuffer();
+
+    // Per-line run list to avoid per-frame allocations in Paint()
+    private readonly struct Run
+    {
+        public readonly int Start;
+        public readonly int Length;
+        public readonly RGB FG;
+        public readonly RGB BG;
+        public readonly bool Underlined;
+
+        public Run(int start, int length, RGB fg, RGB bg, bool underlined)
+        {
+            Start = start;
+            Length = length;
+            FG = fg;
+            BG = bg;
+            Underlined = underlined;
+        }
+    }
+    private static readonly List<Run> runsOnLine = new List<Run>(128);
 
     // todo: make internal after migration
     /// <summary>
@@ -21,7 +39,6 @@ public sealed class ConsoleBitmap : Recyclable
     /// </summary>
     [ThreadStatic]
     public static Loc[] LineBuffer;
-
 
     // larger is faster, but may cause gaps
     private const float DrawPrecision = .5f;
@@ -49,7 +66,6 @@ public sealed class ConsoleBitmap : Recyclable
     private ConsoleCharacter[][] Pixels;
 
     private int lastBufferWidth;
-
 
     /// <summary>
     /// Creates a new ConsoleBitmap
@@ -194,7 +210,6 @@ public sealed class ConsoleBitmap : Recyclable
     /// <returns>true if the given coordinates are within the boundaries of the image</returns>
     public bool IsInBounds(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
 
-
     /// <summary>
     /// Draws the given string onto the bitmap
     /// </summary>
@@ -219,7 +234,6 @@ public sealed class ConsoleBitmap : Recyclable
 
         var minX = Math.Max(x, 0);
         var minY = Math.Max(y, 0);
-
 
         Span<ConsoleCharacter[]> xSpan = Pixels.AsSpan().Slice(minX, maxX - minX);
 
@@ -603,7 +617,6 @@ public sealed class ConsoleBitmap : Recyclable
         return clone;
     }
 
-
     /// <summary>
     /// Paints this bitmap to its console provider. If we detect Ansi support
     /// then the rendering will use Ansi, allowing for richer colors, underlined
@@ -621,106 +634,85 @@ public sealed class ConsoleBitmap : Recyclable
             this.Console.Clear();
         }
 
-        try
+        // Bounded retry loop to replace recursive retries
+        int attempts = 0;
+        while (true)
         {
-            paintBuilder.Clear();
-            Chunk currentChunk = null;
-            char val;
-            RGB fg;
-            RGB bg;
-            bool underlined;
-
-            for (int y = 0; y < Height; y++)
+            try
             {
-                for (int x = 0; x < Width; x++)
+                paintBuilder.Clear();
+
+                if (Width == 0 || Height == 0)
                 {
-                    ref var pixel = ref Pixels[x][y];
+                    fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
+                    return;
+                }
 
+                for (int y = 0; y < Height; y++)
+                {
+                    runsOnLine.Clear();
 
-
-                    val = pixel.Value;
-                    fg = pixel.ForegroundColor;
-                    bg = pixel.BackgroundColor;
-                    underlined = pixel.IsUnderlined;
-
-                    if (currentChunk == null)
+                    // Build style runs without copying chars into intermediate buffers
+                    int x = 0;
+                    while (x < Width)
                     {
-                        // first pixel always gets added to the current empty chunk
-                        currentChunk = chunkPool.Get(Width);
-                        currentChunk.FG = fg;
-                        currentChunk.BG = bg;
-                        currentChunk.Underlined = underlined;
-                        currentChunk.Add(val);
+                        // Start of a run
+                        ref var p = ref Pixels[x][y];
+                        var fg = p.ForegroundColor;
+                        var bg = p.BackgroundColor;
+                        bool under = p.IsUnderlined;
+                        int start = x;
+
+                        // Advance while style matches
+                        x++;
+                        while (x < Width)
+                        {
+                            ref var q = ref Pixels[x][y];
+                            if (q.ForegroundColor != fg || q.BackgroundColor != bg || q.IsUnderlined != under) break;
+                            x++;
+                        }
+
+                        runsOnLine.Add(new Run(start, x - start, fg, bg, under));
                     }
-                    else if (fg == currentChunk.FG && bg == currentChunk.BG && underlined == currentChunk.Underlined)
+
+                    // Flush runs: set cursor + colors once per run, copy chars directly to paint buffer
+                    for (int i = 0; i < runsOnLine.Count; i++)
                     {
-                        // characters that have changed only get chunked if their styles match to minimize the number of writes
-                        currentChunk.Add(val);
-                    }
-                    else
-                    {
-                        chunksOnLine.Add(currentChunk);
-                        currentChunk = chunkPool.Get(Width);
-                        currentChunk.FG = fg;
-                        currentChunk.BG = bg;
-                        currentChunk.Underlined = underlined;
-                        currentChunk.Add(val);
+                        var localRuns = runsOnLine; // materialize into a local variable
+                        var run = localRuns[i];
+ 
+
+                        if (run.Underlined) paintBuilder.Append(Ansi.Text.UnderlinedOn);
+
+                        Ansi.Cursor.Move.ToLocation(run.Start + 1, y + 1, paintBuilder);
+                        Ansi.Color.Foreground.Rgb(run.FG, paintBuilder);
+                        Ansi.Color.Background.Rgb(run.BG, paintBuilder);
+
+                        // Copy chars for this run directly into the final buffer
+                        paintBuilder.AppendRunFromPixels(Pixels, run.Start, y, run.Length);
+
+                        if (run.Underlined) paintBuilder.Append(Ansi.Text.UnderlinedOff);
                     }
                 }
 
-                if (currentChunk.Length > 0)
-                {
-                    chunksOnLine.Add(currentChunk);
-                }
+                // Nudge cursor to avoid some terminals dropping the last line
+                Ansi.Cursor.Move.ToLocation(Width - 1, Height - 1, paintBuilder);
 
-                currentChunk = null;
-
-
-                var left = 0;
-                for (var i = 0; i < chunksOnLine.Count; i++)
-                {
-                    var chunk = chunksOnLine[i];
-
-
-                    if (chunk.Underlined)
-                    {
-                        paintBuilder.Append(Ansi.Text.UnderlinedOn);
-                    }
-
-                    Ansi.Cursor.Move.ToLocation(left + 1, y + 1, paintBuilder);
-                    Ansi.Color.Foreground.Rgb(chunk.FG, paintBuilder);
-                    Ansi.Color.Background.Rgb(chunk.BG, paintBuilder);
-                    paintBuilder.Append(chunk);
-                    if (chunk.Underlined)
-                    {
-                        paintBuilder.Append(Ansi.Text.UnderlinedOff);
-                    }
-
-
-                    left += chunk.Length;
-                }
-
-
-                foreach (var chunk in chunksOnLine)
-                {
-                    chunkPool.Return(chunk);
-                }
-                chunksOnLine.Clear();
+                fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
+                break; // success
             }
-            Ansi.Cursor.Move.ToLocation(Width - 1, Height - 1, paintBuilder);
-            fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
-        }
-        catch (IOException)
-        {
-            Paint();
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            Paint();
+            catch (IOException) when (attempts++ < 2)
+            {
+                // retry
+                continue;
+            }
+            catch (ArgumentOutOfRangeException) when (attempts++ < 2)
+            {
+                // retry
+                continue;
+            }
         }
     }
-
-
 
     /// <summary>
     /// Gets a string representation of this image 
@@ -817,7 +809,6 @@ public sealed class ConsoleBitmap : Recyclable
                 outer = stack.Pop();
             }
 
-
             for (int x = 0; x < width; x++)
             {
                 outer[x] = InnerPool.Rent(height);
@@ -837,17 +828,16 @@ public sealed class ConsoleBitmap : Recyclable
                 }
             }
 
-
             if (!OuterCache.TryGetValue(width, out var stack))
             {
                 stack = new Stack<T[][]>();
                 OuterCache[width] = stack;
             }
             stack.Push(array);
-
         }
     }
 }
+
 internal class ChunkAwarePaintBuffer : PaintBuffer
 {
     internal void Append(Chunk c)
@@ -860,9 +850,20 @@ internal class ChunkAwarePaintBuffer : PaintBuffer
             Buffer[Length++] = span[i];
         }
     }
+
+    // New: write directly from the pixel grid for a single run
+    internal void AppendRunFromPixels(ConsoleCharacter[][] pixels, int startX, int y, int length)
+    {
+        EnsureBigEnough(Length + length);
+        int end = startX + length;
+        for (int x = startX; x < end; x++)
+        {
+            Buffer[Length++] = pixels[x][y].Value;
+        }
+    }
 }
 
-
+// Kept for backward compatibility (unused by the optimized Paint path)
 internal class Chunk
 {
     public RGB FG;
@@ -888,42 +889,10 @@ internal class Chunk
     public override string ToString() => new string(buffer, 0, Length);
 }
 
-
-
-internal class ChunkPool
-{
-    Dictionary<int, List<Chunk>> pool = new Dictionary<int, List<Chunk>>();
-    public Chunk Get(int w)
-    {
-        if(pool.TryGetValue(w, out List<Chunk> chunks) == false || chunks.None())
-        {
-            return new Chunk(w);
-        }
-        else
-        {
-            var ret = chunks[0];
-            chunks.RemoveAt(0);
-            return ret;
-        }
-    }
-
-    public void Return(Chunk obj)
-    {
-        if (pool.TryGetValue(obj.BufferLength, out List<Chunk> chunks) == false)
-        {
-            chunks = new List<Chunk>();
-            pool.Add(obj.BufferLength, chunks);
-        }
-        obj.Clear();
-        chunks.Add(obj);
-    }
-}
-
 public static class ConsoleStringEx
 {
     public static ConsoleBitmap ToConsoleBitmap(this ConsoleString cstring)
     {
-
         var str = cstring.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\t", "    ");
         var lines = str.Split("\n");
         var h = lines.Count;
@@ -942,7 +911,7 @@ public static class ConsoleStringEx
             }
             else
             {
-                ret.GetPixel(x++,y) = c;
+                ret.GetPixel(x++, y) = c;
             }
         }
 
@@ -988,5 +957,3 @@ public class FastConsoleWriter
         }
     }
 }
-
-
