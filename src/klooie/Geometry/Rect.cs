@@ -17,7 +17,7 @@ public readonly struct Rect
     public Loc BottomLeft => new Loc(Left, Bottom);
     public Loc BottomRight => new Loc(Right, Bottom);
 
-    public float Hypotenous => (float)Math.Sqrt(Width * Width + Height * Height);
+    public float Hypotenous => MathF.Sqrt(Width * Width + Height * Height);
 
     public Rect(int x, int y, int w, int h)
     {

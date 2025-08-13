@@ -177,12 +177,12 @@ public readonly struct Circle
         else
         {
             // Two solutions.
-            t = (float)((-B + Math.Sqrt(det)) / (2 * A));
+            t = (-B + MathF.Sqrt(det)) / (2f * A);
 
             ox1 = x1 + t * dx;
             oy1 = y1 + t * dy;
 
-            t = (float)((-B - Math.Sqrt(det)) / (2 * A));
+            t = (-B - MathF.Sqrt(det)) / (2f * A);
 
             ox2 = x1 + t * dx;
             oy2 = y1 + t * dy;

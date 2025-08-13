@@ -29,19 +29,19 @@ public readonly struct Angle
     /// <summary>
     /// points up and to the left
     /// </summary>
-    public static readonly Angle UpLeft = (Up.Value + Left.Value) / 2;
+    public static readonly Angle UpLeft = (Up.Value + Left.Value) / 2f;
     /// <summary>
     /// points up and to the right
     /// </summary>
-    public static readonly Angle UpRight = (Up.Value + 360) / 2;
+    public static readonly Angle UpRight = (Up.Value + 360f) / 2f;
     /// <summary>
     /// points down and to the right
     /// </summary>
-    public static readonly Angle DownRight = (Down.Value + Right.Value) / 2;
+    public static readonly Angle DownRight = (Down.Value + Right.Value) / 2f;
     /// <summary>
     /// points down and to the left
     /// </summary>
-    public static readonly Angle DownLeft = (Down.Value + Left.Value) / 2;
+    public static readonly Angle DownLeft = (Down.Value + Left.Value) / 2f;
 
     /// <summary>
     /// the angle value as a float between 0 (inclusive) and 360 (exclusive)
@@ -80,7 +80,7 @@ public readonly struct Angle
         Value = Normalize360(val);
     }
 
-    public static Angle FromRadians(float radians) => radians * (180 / MathF.PI);
+    public static Angle FromRadians(float radians) => radians * (180f / MathF.PI);
 
     public float ToRadians() => Value * (MathF.PI / 180f);
     
@@ -136,9 +136,9 @@ public readonly struct Angle
     public Angle Add(float other)
     {
         var ret = Value + other;
-        ret = ret % 360;
-        ret = ret >= 0 ? ret : ret + 360;
-        if (ret == 360) return new Angle(0);
+        ret %= 360f;
+        ret = ret >= 0f ? ret : ret + 360f;
+        if (ret == 360f) return new Angle(0f);
         return new Angle(ret);
     }
 
@@ -153,7 +153,7 @@ public readonly struct Angle
     /// Gets the angle that is 180 degrees away from the current angle
     /// </summary>
     /// <returns>the angle that is 180 degrees away from the current angle</returns>
-    public Angle Opposite() => Add(180);
+    public Angle Opposite() => Add(180f);
 
     /// <summary>
     /// Uses the shortest path to get the # of degrees between this angle and another one.
@@ -162,9 +162,9 @@ public readonly struct Angle
     /// <returns>the # of degrees between this angle and a given other angle</returns>
     public float DiffShortest(Angle other)
     {
-        var c = Math.Abs(Value - other.Value);
-        c = c <= 180 ? c : Math.Abs(360 - c);
-        if (c == 360) return 0;
+        var c = MathF.Abs(Value - other.Value);
+        c = c <= 180f ? c : MathF.Abs(360f - c);
+        if (c == 360f) return 0f;
         return c;
     }
 
@@ -197,7 +197,7 @@ public readonly struct Angle
     /// </summary>
     /// <param name="nearest">The amount to round to (e.g. 90) to round to the nearest NEWS</param>
     /// <returns>a new angle that is the current angle rounded to the nearest angle</returns>
-    public Angle RoundAngleToNearest(Angle nearest) => new Angle(((float)ConsoleMath.Round(Value / nearest.Value) * nearest.Value) % 360);
+    public Angle RoundAngleToNearest(Angle nearest) => new Angle((ConsoleMath.Round(Value / nearest.Value) * nearest.Value) % 360f);
 
     /// <summary>
     /// Determines if Clockwise is the shortest rotational path from this angle to another one
@@ -255,7 +255,7 @@ public readonly struct Angle
     {
         get
         {
-            var tolerance = 30;
+            var tolerance = 30f;
             if (this.DiffShortest(0) <= tolerance || this.DiffShortest(180) <= tolerance || this.DiffShortest(360) <= tolerance)
             {
                 return '-';
@@ -289,14 +289,14 @@ public readonly struct Angle
     /// </summary>
     /// <param name="degrees">the angle in degrees</param>
     /// <returns>the original angle, converted to radians</returns>
-    public static float ToRadians(Angle degrees) => (float)(Math.PI * degrees.Value / 180.0);
+    public static float ToRadians(Angle degrees) => MathF.PI * degrees.Value / 180f;
 
     /// <summary>
     /// Converts radians to an Angle
     /// </summary>
     /// <param name="radians">a number in radians</param>
     /// <returns>An angle in degrees</returns>
-    public static Angle ToDegrees(float radians) => new Angle((float)(radians * (180.0 / Math.PI)) % 360);
+    public static Angle ToDegrees(float radians) => new Angle((radians * (180f / MathF.PI)) % 360f);
 
     /// <summary>
     /// Implicit definition for converting a float into an Angle
@@ -316,7 +316,7 @@ public readonly struct Angle
     {
         if (float.TryParse(val, out float f))
         {
-            if (f < 0 || f >= 360) throw new ValidationArgException($"Angles must be >=0 and < 360, given: {val}");
+            if (f < 0f || f >= 360f) throw new ValidationArgException($"Angles must be >=0 and < 360, given: {val}");
             return new Angle(f);
         }
         else if (nameof(Up).Equals(val, StringComparison.OrdinalIgnoreCase))
@@ -350,6 +350,6 @@ public readonly struct Angle
             yield return initialAngle.Add(increment);
             yield return initialAngle.Add(-increment);
         }
-        yield return initialAngle.Add(180); // 180°
+        yield return initialAngle.Add(180f); // 180°
     }
 }

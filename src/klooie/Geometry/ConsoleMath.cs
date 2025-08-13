@@ -25,7 +25,7 @@ public static class ConsoleMath
     /// <param name="f">the # to round</param>
     /// <param name="digits">the number of digits to round to</param>
     /// <returns>the rounded number</returns>
-    public static float Round(float f, int digits) => (float)Math.Round(f, digits, MidpointRounding.AwayFromZero);
+    public static float Round(float f, int digits) => MathF.Round(f, digits, MidpointRounding.AwayFromZero);
     
     /// <summary>
     /// Rounds using normal rounding, not banker's rounding
@@ -33,21 +33,21 @@ public static class ConsoleMath
     /// <param name="f">the # to round</param>
     /// <param name="digits">the number of digits to round to</param>
     /// <returns>the rounded number</returns>
-    public static float Round(double d, int digits) => (float)Math.Round(d, digits, MidpointRounding.AwayFromZero);
+    public static float Round(double d, int digits) => MathF.Round((float)d, digits, MidpointRounding.AwayFromZero);
     
     /// <summary>
     /// Rounds to an int using normal rounding, not banker's rounding
     /// </summary>
     /// <param name="f">the number to round</param>
     /// <returns>the rounded number</returns>
-    public static int Round(float f) => (int)Math.Round(f, MidpointRounding.AwayFromZero);
+    public static int Round(float f) => (int)MathF.Round(f, MidpointRounding.AwayFromZero);
 
     /// <summary>
     /// Rounds to an int using normal rounding, not banker's rounding
     /// </summary>
     /// <param name="f">the number to round</param>
     /// <returns>the rounded number</returns>
-    public static int Round(double d) => (int)Math.Round(d, MidpointRounding.AwayFromZero);
+    public static int Round(double d) => (int)MathF.Round((float)d, MidpointRounding.AwayFromZero);
 
 
     /// <summary>
@@ -64,8 +64,8 @@ public static class ConsoleMath
     /// <returns>the normalized quantity</returns>
     public static float NormalizeQuantity(this float quantity, Angle angle, bool reverse = false)
     {
-        var degreesFromFlat = angle.Value <= 180 ? Math.Min(180 - angle.Value, angle.Value) : Math.Min(angle.Value - 180, 360 - angle.Value);
-        var skewPercentage = 1 + (degreesFromFlat / 90);
+        var degreesFromFlat = angle.Value <= 180f ? MathF.Min(180f - angle.Value, angle.Value) : MathF.Min(angle.Value - 180f, 360f - angle.Value);
+        var skewPercentage = 1f + (degreesFromFlat / 90f);
         return reverse ? quantity * skewPercentage : quantity / skewPercentage;
     }
 }
