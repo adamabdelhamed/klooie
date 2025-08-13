@@ -435,7 +435,7 @@ public class EventLoop : Recyclable
         });
     }
 
-    public void Invoke(Action work) => Invoke(()=>
+    public void Invoke(Action work) => Invoke(work, static (work)=>
     {
         work();
         return Task.CompletedTask;
@@ -522,8 +522,7 @@ public class EventLoop : Recyclable
     
     public void Invoke(object o, Action a) => Invoke(o, StaticActionTaskWork);
 
-    public void Invoke<TScope>(TScope scope, Action<TScope> action)
-        => Invoke(scope, (s) => { action(s); return Task.CompletedTask; });
+    public void Invoke<TScope>(TScope scope, Action<TScope> action) => Invoke((action, scope), static (s) => { s.action(s.scope); return Task.CompletedTask; });
 
     public void Invoke<TScope>(TScope workState, Func<TScope, Task> work)
     {
