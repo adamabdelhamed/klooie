@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace klooie.Gaming;
@@ -15,10 +17,7 @@ public class Collision : Recyclable
     public CollisionPrediction Prediction { get; private set; }
     public override string ToString() => $"{Prediction.LKGX},{Prediction.LKGY} - {ColliderHit?.GetType().Name}";
 
-    protected override void OnInit()
-    {
-        Reset();
-    }
+    protected override void OnInit() => Reset();
 
     public void Bind(float speed, Angle angle, ICollidable movingObject, ICollidable colliderHit, CollisionPrediction prediction)
     {
@@ -28,8 +27,8 @@ public class Collision : Recyclable
         ColliderHit = colliderHit;
         Prediction = prediction;
 
-        if(movingObject is GameCollider gc) MovingObjectLeaseState = LeaseHelper.Track(gc);
-        if(colliderHit is GameCollider ch) ColliderHitLeaseState = LeaseHelper.Track(ch);
+        if (movingObject is GameCollider gc) MovingObjectLeaseState = LeaseHelper.Track(gc);
+        if (colliderHit is GameCollider ch) ColliderHitLeaseState = LeaseHelper.Track(ch);
     }
 
     public void Reset()
@@ -61,11 +60,7 @@ public sealed class CollisionPrediction : Recyclable
 
     public LocF Intersection => new LocF(IntersectionX, IntersectionY);
 
-
-    protected override void OnInit()
-    {
-        Reset();
-    }
+    protected override void OnInit() => Reset();
 
     public void Reset()
     {
@@ -86,16 +81,25 @@ public enum CastingMode
 public static class CollisionDetector
 {
     public const float VerySmallNumber = 1e-5f;
+    private const float VerySmallNumberSquared = VerySmallNumber * VerySmallNumber;
 
     private static Edge[] rayBuffer = null;
-    public static bool HasLineOfSight<T>(this ICollidable from, ICollidable to, IList<T> obstacles) where T : ICollidable => GetLineOfSightObstruction(from, to, obstacles) == null;
 
-    public static ICollidable? GetLineOfSightObstruction<T>(this ICollidable from, ICollidable to, IList<T> obstacleControls, CastingMode castingMode = CastingMode.Rough, CollisionPrediction prediction = null) where T : ICollidable
+    public static bool HasLineOfSight<T>(this ICollidable from, ICollidable to, IList<T> obstacles)
+        where T : ICollidable
+        => GetLineOfSightObstruction(from, to, obstacles) == null;
+
+    public static ICollidable? GetLineOfSightObstruction<T>(
+        this ICollidable from,
+        ICollidable to,
+        IList<T> obstacleControls,
+        CastingMode castingMode = CastingMode.Rough,
+        CollisionPrediction prediction = null) where T : ICollidable
     {
         var massBounds = from.Bounds;
         var colliders = ArrayPlusOnePool<T>.Instance.Rent();
         var autoDisposePrediction = prediction == null;
-        prediction = prediction ?? CollisionPredictionPool.Instance.Rent();
+        prediction ??= CollisionPredictionPool.Instance.Rent();
         colliders.Bind(obstacleControls, to);
         try
         {
@@ -110,64 +114,89 @@ public static class CollisionDetector
         finally
         {
             colliders.Dispose();
-            if (autoDisposePrediction)
-            {
-                prediction.Dispose();
-            }
+            if (autoDisposePrediction) prediction.Dispose();
         }
     }
 
-    public static CollisionPrediction Predict<T>(ICollidable from, Angle angle, IList<T> colliders, float visibility, CastingMode mode, int bufferLen, CollisionPrediction prediction, List<Edge> edgesHitOutput = null) where T : ICollidable
+    public static CollisionPrediction Predict<T>(
+        ICollidable from,
+        Angle angle,
+        IList<T> colliders,
+        float visibility,
+        CastingMode mode,
+        int bufferLen,
+        CollisionPrediction prediction,
+        List<Edge> edgesHitOutput = null) where T : ICollidable
     {
         var movingObject = from.Bounds;
+
         prediction.Reset();
         prediction.LKGX = movingObject.Left;
         prediction.LKGY = movingObject.Top;
-        prediction.Visibility = visibility;
 
         if (visibility == 0)
         {
+            prediction.Visibility = 0;
             prediction.CollisionPredicted = false;
             return prediction;
         }
 
         prediction.Visibility = visibility;
 
-        var rayCount = CreateRays(angle, visibility, mode, movingObject);
+        int rayCount = CreateRays(angle, visibility, mode, movingObject);
 
-        var closestIntersectionDistance = float.MaxValue;
+        float visibilitySlack = float.IsPositiveInfinity(visibility) ? visibility : (visibility + VerySmallNumber);
+        float visibility2Limit = float.IsPositiveInfinity(visibilitySlack) ? float.PositiveInfinity : visibilitySlack * visibilitySlack;
+
+        float closestIntersectionDistance2 = float.MaxValue;
         int closestIntersectingObstacleIndex = -1;
         Edge closestEdge = default;
         float closestIntersectionX = 0;
         float closestIntersectionY = 0;
 
-        for (var i = 0; i < bufferLen; i++)
+        for (int i = 0; i < bufferLen; i++)
         {
             ICollidable obstacle = colliders[i];
 
             if (ReferenceEquals(from, obstacle) || !from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
-            if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obstacle.Bounds) > visibility + VerySmallNumber) continue;
+
+            var obBounds = obstacle.Bounds;
+            if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obBounds) > visibility + VerySmallNumber) continue;
 
             Span<Edge> singleObstacleEdgeBuffer = stackalloc Edge[4];
-            singleObstacleEdgeBuffer[0] = obstacle.Bounds.TopEdge;
-            singleObstacleEdgeBuffer[1] = obstacle.Bounds.BottomEdge;
-            singleObstacleEdgeBuffer[2] = obstacle.Bounds.LeftEdge;
-            singleObstacleEdgeBuffer[3] = obstacle.Bounds.RightEdge;
+            singleObstacleEdgeBuffer[0] = obBounds.TopEdge;
+            singleObstacleEdgeBuffer[1] = obBounds.BottomEdge;
+            singleObstacleEdgeBuffer[2] = obBounds.LeftEdge;
+            singleObstacleEdgeBuffer[3] = obBounds.RightEdge;
 
             Sort4ElementEdgeSpan(movingObject, singleObstacleEdgeBuffer);
 
-            for (var j = 0; j < singleObstacleEdgeBuffer.Length; j++)
+            for (int j = 0; j < 4; j++)
             {
                 var edge = singleObstacleEdgeBuffer[j];
-                ProcessEdge(i, edge, rayCount, edgesHitOutput, visibility, ref closestIntersectionDistance, ref closestIntersectingObstacleIndex, ref closestEdge, ref closestIntersectionX, ref closestIntersectionY);
+                ProcessEdge(
+                    i,
+                    edge,
+                    rayCount,
+                    edgesHitOutput,
+                    visibility2Limit,
+                    ref closestIntersectionDistance2,
+                    ref closestIntersectingObstacleIndex,
+                    ref closestEdge,
+                    ref closestIntersectionX,
+                    ref closestIntersectionY);
             }
         }
 
         if (closestIntersectingObstacleIndex >= 0)
         {
             prediction.ObstacleHitBounds = colliders[closestIntersectingObstacleIndex].Bounds;
-            prediction.ColliderHit = colliders == null ? null : colliders[closestIntersectingObstacleIndex];
-            prediction.LKGD = closestIntersectionDistance;
+            prediction.ColliderHit = colliders[closestIntersectingObstacleIndex];
+
+            // Convert once, reproduce old bias ≈ (distance - 2*eps)
+            float d = MathF.Sqrt(closestIntersectionDistance2) - 2f * VerySmallNumber;
+            prediction.LKGD = d > 0 ? d : 0f;
+
             prediction.LKGX = closestIntersectionX;
             prediction.LKGY = closestIntersectionY;
             prediction.CollisionPredicted = true;
@@ -181,55 +210,51 @@ public static class CollisionDetector
 
     private static int CreateRays(Angle angle, float visibility, CastingMode mode, RectF movingObject)
     {
-        rayBuffer = rayBuffer ?? new Edge[20000];
-        var rayCount = 0;
+        rayBuffer ??= new Edge[20000];
+        int rayCount = 0;
+
+        float left = movingObject.Left, top = movingObject.Top;
+        float right = movingObject.Right, bottom = movingObject.Bottom;
+        float cx = movingObject.CenterX, cy = movingObject.CenterY;
+
+        var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
+        float dx = delta.Left - left;
+        float dy = delta.Top - top;
 
         if (mode == CastingMode.Precise)
         {
-            var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
-            var dx = delta.Left - movingObject.Left;
-            var dy = delta.Top - movingObject.Top;
+            AddRay(rayBuffer, ref rayCount, new Edge(left, top, left + dx, top + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(right, top, right + dx, top + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(left, bottom, left + dx, bottom + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(right, bottom, right + dx, bottom + dy));
 
-            // corners
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, movingObject.Top, movingObject.Left + dx, movingObject.Top + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, movingObject.Top, movingObject.Right + dx, movingObject.Top + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, movingObject.Bottom, movingObject.Left + dx, movingObject.Bottom + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, movingObject.Bottom, movingObject.Right + dx, movingObject.Bottom + dy));
+            const float granularity = .5f;
+            float xEnd = left + movingObject.Width;
+            float yEnd = top + movingObject.Height;
 
-            var granularity = .5f;
-            for (var x = movingObject.Left + granularity; x < movingObject.Left + movingObject.Width; x += granularity)
+            for (float x = left + granularity; x < xEnd; x += granularity)
             {
-                AddRay(rayBuffer, ref rayCount, new Edge(x, movingObject.Top, x + dx, movingObject.Top + dy));
-                AddRay(rayBuffer, ref rayCount, new Edge(x, movingObject.Bottom, x + dx, movingObject.Bottom + dy));
+                AddRay(rayBuffer, ref rayCount, new Edge(x, top, x + dx, top + dy));
+                AddRay(rayBuffer, ref rayCount, new Edge(x, bottom, x + dx, bottom + dy));
             }
 
-            for (var y = movingObject.Top + granularity; y < movingObject.Top + movingObject.Height; y += granularity)
+            for (float y = top + granularity; y < yEnd; y += granularity)
             {
-                AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, y, movingObject.Left + dx, y + dy));
-                AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, y, movingObject.Right + dx, y + dy));
+                AddRay(rayBuffer, ref rayCount, new Edge(left, y, left + dx, y + dy));
+                AddRay(rayBuffer, ref rayCount, new Edge(right, y, right + dx, y + dy));
             }
         }
         else if (mode == CastingMode.Rough)
         {
-            var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
-            var dx = delta.Left - movingObject.Left;
-            var dy = delta.Top - movingObject.Top;
-
-            // corners
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, movingObject.Top, movingObject.Left + dx, movingObject.Top + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, movingObject.Top, movingObject.Right + dx, movingObject.Top + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Left, movingObject.Bottom, movingObject.Left + dx, movingObject.Bottom + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.Right, movingObject.Bottom, movingObject.Right + dx, movingObject.Bottom + dy));
-            // center
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.CenterX, movingObject.CenterY, movingObject.CenterX + dx, movingObject.CenterY + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(left, top, left + dx, top + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(right, top, right + dx, top + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(left, bottom, left + dx, bottom + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(right, bottom, right + dx, bottom + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(cx, cy, cx + dx, cy + dy));
         }
         else if (mode == CastingMode.SingleRay)
         {
-            var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
-            var dx = delta.Left - movingObject.Left;
-            var dy = delta.Top - movingObject.Top;
-            // single center ray
-            AddRay(rayBuffer, ref rayCount, new Edge(movingObject.CenterX, movingObject.CenterY, movingObject.CenterX + dx, movingObject.CenterY + dy));
+            AddRay(rayBuffer, ref rayCount, new Edge(cx, cy, cx + dx, cy + dy));
         }
         else
         {
@@ -252,25 +277,27 @@ public static class CollisionDetector
         in Edge edge,
         int rayCount,
         List<Edge> edgesHitOutput,
-        float visibility,
-        ref float closestIntersectionDistance,
+        float visibility2Limit,  // renamed
+        ref float closestIntersectionDistance2,
         ref int closestIntersectingObstacleIndex,
         ref Edge closestEdge,
         ref float closestIntersectionX,
-        ref float closestIntersectionY
-    )
+        ref float closestIntersectionY)
     {
-        for (var k = 0; k < rayCount; k++)
+        for (int k = 0; k < rayCount; k++)
         {
             var ray = rayBuffer[k];
-            if (TryFindIntersectionPoint(ray, edge, out float ix, out float iy))
+            if (TryFindIntersectionPoint(in ray, in edge, out float ix, out float iy))
             {
                 edgesHitOutput?.Add(ray);
-                var d = LocF.CalculateDistanceTo(ray.X1, ray.Y1, ix, iy) - VerySmallNumber;
 
-                if (d > VerySmallNumber && d < closestIntersectionDistance && d <= visibility)
+                float dx = ix - ray.X1;
+                float dy = iy - ray.Y1;
+                float d2 = dx * dx + dy * dy;
+
+                if (d2 > VerySmallNumberSquared && d2 < closestIntersectionDistance2 && d2 <= visibility2Limit)
                 {
-                    closestIntersectionDistance = d - VerySmallNumber;
+                    closestIntersectionDistance2 = d2; // no epsilon shaving here
                     closestIntersectingObstacleIndex = i;
                     closestEdge = edge;
                     closestIntersectionX = ix;
@@ -280,34 +307,39 @@ public static class CollisionDetector
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryFindIntersectionPoint(in Edge ray, in Edge stationaryEdge, out float x, out float y)
     {
-        var x1 = ray.X1;
-        var y1 = ray.Y1;
-        var x2 = ray.X2;
-        var y2 = ray.Y2;
+        float x1 = ray.X1, y1 = ray.Y1, x2 = ray.X2, y2 = ray.Y2;
+        float x3 = stationaryEdge.X1, y3 = stationaryEdge.Y1, x4 = stationaryEdge.X2, y4 = stationaryEdge.Y2;
 
-        var x3 = stationaryEdge.X1;
-        var y3 = stationaryEdge.Y1;
-        var x4 = stationaryEdge.X2;
-        var y4 = stationaryEdge.Y2;
+        // cheap AABB reject (with small tolerance)
+        float eps = VerySmallNumber;
+        float minRx = x1 < x2 ? x1 : x2, maxRx = x1 > x2 ? x1 : x2;
+        float minRy = y1 < y2 ? y1 : y2, maxRy = y1 > y2 ? y1 : y2;
+        float minSx = x3 < x4 ? x3 : x4, maxSx = x3 > x4 ? x3 : x4;
+        float minSy = y3 < y4 ? y3 : y4, maxSy = y3 > y4 ? y3 : y4;
+
+        if (maxRx + eps < minSx || maxSx + eps < minRx || maxRy + eps < minSy || maxSy + eps < minRy)
+        {
+            x = 0; y = 0;
+            return false;
+        }
+
         float dx1 = x2 - x1, dy1 = y2 - y1;
         float dx2 = x4 - x3, dy2 = y4 - y3;
 
-        // Determinant (denominator)
         float den = dx1 * dy2 - dy1 * dx2;
 
-        if (Math.Abs(den) < 1e-8f) // Prevents floating point precision issues
+        if (MathF.Abs(den) < 1e-8f)
         {
-            // Check if the segments are collinear
-            var det = (x1 - x3) * (y2 - y3) - (y1 - y3) * (x2 - x3);
-            if (Math.Abs(det) >= 1e-8f)
+            float det = (x1 - x3) * (y2 - y3) - (y1 - y3) * (x2 - x3);
+            if (MathF.Abs(det) >= 1e-8f)
             {
-                x = 0;
-                y = 0;
+                x = 0; y = 0;
                 return false;
             }
-            // Overlap check: (axis-aligned bounding box overlap)
+
             if (Math.Max(x1, x2) < Math.Min(x3, x4) ||
                 Math.Max(x3, x4) < Math.Min(x1, x2) ||
                 Math.Max(y1, y2) < Math.Min(y3, y4) ||
@@ -316,56 +348,50 @@ public static class CollisionDetector
                 x = 0; y = 0;
                 return false;
             }
-            // Overlap (collinear): just pick an overlapping point
-            x = x3;
-            y = y3;
+
+            x = x3; y = y3;
             return true;
         }
 
+        // compute t first; bail early if outside [0,1] to save the second division sometimes
         float t = ((x3 - x1) * dy2 - (y3 - y1) * dx2) / den;
-        float u = ((x3 - x1) * dy1 - (y3 - y1) * dx1) / den;
-
-        // Bounds check, using multiplications instead of Between helper
-        if (t >= -1e-5f && t <= 1 + 1e-5f && u >= -1e-5f && u <= 1 + 1e-5f)
+        if (t < -1e-5f || t > 1 + 1e-5f)
         {
-            x = x1 + t * dx1;
-            y = y1 + t * dy1;
-            return true;
+            x = 0; y = 0;
+            return false;
         }
-        x = 0; y = 0;
-        return false;
+
+        float u = ((x3 - x1) * dy1 - (y3 - y1) * dx1) / den;
+        if (u < -1e-5f || u > 1 + 1e-5f)
+        {
+            x = 0; y = 0;
+            return false;
+        }
+
+        x = x1 + t * dx1;
+        y = y1 + t * dy1;
+        return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void Sort4ElementEdgeSpan(RectF rect, Span<Edge> edges)
     {
         float cx = rect.CenterX, cy = rect.CenterY;
-        Span<float> d = stackalloc float[4];
-        for (int i = 0; i < 4; i++)
-        {
-            d[i] = edges[i].CalculateDistanceTo(cx, cy);
-        }
 
+        Edge e0 = edges[0], e1 = edges[1], e2 = edges[2], e3 = edges[3];
+        float d0 = e0.CalculateDistanceTo(cx, cy);
+        float d1 = e1.CalculateDistanceTo(cx, cy);
+        float d2 = e2.CalculateDistanceTo(cx, cy);
+        float d3 = e3.CalculateDistanceTo(cx, cy);
 
-        if (d[0] > d[1]) Swap(edges, d, 0, 1);
-        if (d[1] > d[2]) Swap(edges, d, 1, 2);
-        if (d[2] > d[3]) Swap(edges, d, 2, 3);
-        if (d[0] > d[1]) Swap(edges, d, 0, 1);
-        if (d[1] > d[2]) Swap(edges, d, 1, 2);
-        if (d[0] > d[1]) Swap(edges, d, 0, 1);
-    }
+        if (d0 > d1) { (d0, d1) = (d1, d0); (e0, e1) = (e1, e0); }
+        if (d1 > d2) { (d1, d2) = (d2, d1); (e1, e2) = (e2, e1); }
+        if (d2 > d3) { (d2, d3) = (d3, d2); (e2, e3) = (e3, e2); }
+        if (d0 > d1) { (d0, d1) = (d1, d0); (e0, e1) = (e1, e0); }
+        if (d1 > d2) { (d1, d2) = (d2, d1); (e1, e2) = (e2, e1); }
+        if (d0 > d1) { (d0, d1) = (d1, d0); (e0, e1) = (e1, e0); }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Swap(Span<Edge> edges, Span<float> d, int i, int j)
-    {
-        // Swap distances
-        float tempD = d[i];
-        d[i] = d[j];
-        d[j] = tempD;
-        // Swap edges
-        Edge tempE = edges[i];
-        edges[i] = edges[j];
-        edges[j] = tempE;
+        edges[0] = e0; edges[1] = e1; edges[2] = e2; edges[3] = e3;
     }
 }
 
@@ -383,26 +409,14 @@ public class ArrayPlusOne<T> : Recyclable, IList<ICollidable> where T : ICollida
     public int Count => Length;
     public bool IsReadOnly => true;
 
-
     private bool hasExtra;
     private IList<T> Array;
     private ICollidable ExtraElement;
 
-    // indexer for get
     public ICollidable this[int index]
     {
-        get
-        {
-            if (index == Array.Count)
-            {
-                return ExtraElement;
-            }
-            return Array[index];
-        }
-        set
-        {
-            throw new NotSupportedException();
-        }
+        get => (index == Array.Count) ? ExtraElement : Array[index];
+        set => throw new NotSupportedException();
     }
 
     protected override void OnInit()
@@ -426,54 +440,14 @@ public class ArrayPlusOne<T> : Recyclable, IList<ICollidable> where T : ICollida
         hasExtra = true;
     }
 
-    public int IndexOf(ICollidable item)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void Insert(int index, ICollidable item)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void RemoveAt(int index)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void Add(ICollidable item)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void Clear()
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool Contains(ICollidable item)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void CopyTo(ICollidable[] array, int arrayIndex)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool Remove(ICollidable item)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IEnumerator<ICollidable> GetEnumerator()
-    {
-        throw new NotImplementedException();
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        throw new NotImplementedException();
-    }
-    
+    public int IndexOf(ICollidable item) => throw new NotSupportedException();
+    public void Insert(int index, ICollidable item) => throw new NotSupportedException();
+    public void RemoveAt(int index) => throw new NotSupportedException();
+    public void Add(ICollidable item) => throw new NotSupportedException();
+    public void Clear() => throw new NotSupportedException();
+    public bool Contains(ICollidable item) => throw new NotSupportedException();
+    public void CopyTo(ICollidable[] array, int arrayIndex) => throw new NotSupportedException();
+    public bool Remove(ICollidable item) => throw new NotSupportedException();
+    public IEnumerator<ICollidable> GetEnumerator() => throw new NotSupportedException();
+    IEnumerator IEnumerable.GetEnumerator() => throw new NotSupportedException();
 }

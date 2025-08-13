@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace klooie;
 [ArgReviverType]
@@ -11,9 +13,8 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
 
     public float Right => Left + Width;
     public float Bottom => Top + Height;
-
-    public float CenterX => Left + Width / 2;
-    public float CenterY => Top + Height / 2;
+    public float CenterX => Left + Width * 0.5f;
+    public float CenterY => Top + Height * 0.5f;
     public LocF Center => new LocF(CenterX, CenterY);
     public LocF TopLeft => new LocF(Left, Top);
     public LocF TopRight => new LocF(Right, Top);
@@ -25,32 +26,57 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
     public Edge TopEdge => new Edge(Left, Top, Right, Top);
     public Edge BottomEdge => new Edge(Left, Bottom, Right, Bottom);
 
-    public float Hypotenous => (float)Math.Sqrt(Width * Width + Height * Height);
+    // Keeping the public name "Hypotenous" as-is (typo preserved)
+    public float Hypotenous => MathF.Sqrt(Width * Width + Height * Height);
 
     public RectF Bounds => this;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool CanCollideWith(ICollidable other) => true;
 
     public RectF(float x, float y, float w, float h)
     {
-       // GeometryGuard.ValidateFloats(x, y, w, h);
+        // GeometryGuard.ValidateFloats(x, y, w, h);
         this.Left = x;
         this.Top = y;
         this.Width = w;
         this.Height = h;
     }
 
+    // FAST path: no Regex allocation, no Match boxing, minimal parsing.
     [ArgReviver]
     public static RectF Revive(string key, string value)
     {
-        var regex = new Regex(@"(?<Left>-?\d+),(?<Top>-?\d+),(?<Width>-?\d+),(?<Height>-?\d+)");
-        var match = regex.Match(value);
-        if (match.Success == false) throw new ValidationArgException($"Invalid RectF: "+value);
-        var parse = (Match m, string field) => float.Parse(m.Groups[field].Value);
-        return new RectF(parse(match, "Left"), parse(match, "Top"), parse(match, "Width"), parse(match, "Height"));
+        // Accept the same comma-separated format. We allow optional whitespace around parts.
+        ReadOnlySpan<char> s = value.AsSpan().Trim();
+        int c1 = s.IndexOf(',');
+        if (c1 <= 0) throw new ValidationArgException($"Invalid RectF: " + value);
+        int c2 = s.Slice(c1 + 1).IndexOf(',');
+        if (c2 < 0) throw new ValidationArgException($"Invalid RectF: " + value);
+        c2 += c1 + 1;
+        int c3 = s.Slice(c2 + 1).IndexOf(',');
+        if (c3 < 0) throw new ValidationArgException($"Invalid RectF: " + value);
+        c3 += c2 + 1;
+
+        var l = ParseFloat(s.Slice(0, c1));
+        var t = ParseFloat(s.Slice(c1 + 1, c2 - (c1 + 1)));
+        var w = ParseFloat(s.Slice(c2 + 1, c3 - (c2 + 1)));
+        var h = ParseFloat(s.Slice(c3 + 1));
+
+        return new RectF(l, t, w, h);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static float ParseFloat(ReadOnlySpan<char> part)
+        {
+            part = part.Trim();
+            if (!float.TryParse(part, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var f))
+                throw new ValidationArgException($"Invalid RectF component: {part.ToString()}");
+            return f;
+        }
     }
 
     public override string ToString() => $"{Left},{Top} {Width}x{Height}";
     public bool Equals(in Rect other) => Equals(other.ToRectF());
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(in RectF other) => Left == other.Left && Top == other.Top && Width == other.Width && Height == other.Height;
     public bool Equals(RectF other) => Left == other.Left && Top == other.Top && Width == other.Width && Height == other.Height;
     public override bool Equals(object? obj) => obj is RectF && Equals((RectF)obj);
@@ -70,6 +96,7 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public RectF Offset(float dx, float dy) => Offset(Left, Top, Width, Height, dx, dy);
 
     public RectF RadialOffset(Angle angle, float distance, bool normalized = true) =>
@@ -80,8 +107,8 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
 
     public RectF ToCenterdAt(LocF loc)
     {
-        var x = loc.Left - (Width / 2f);
-        var y = loc.Top - (Height / 2f);
+        var x = loc.Left - (Width * 0.5f);
+        var y = loc.Top - (Height * 0.5f);
         return new RectF(x, y, Width, Height);
     }
 
@@ -90,13 +117,13 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         var center = Center;
         var newW = Width * (1 + percentage);
         var newH = Height * (1 + percentage);
-        return new RectF(center.Left - newW / 2f, center.Top - newH / 2f, newW, newH);
+        return new RectF(center.Left - newW * 0.5f, center.Top - newH * 0.5f, newW, newH);
     }
 
     public RectF Grow(float newWidth, float newHeight)
     {
         var center = Center;
-        return new RectF(center.Left - newWidth / 2f, center.Top - newHeight / 2f, newWidth, newHeight);
+        return new RectF(center.Left - newWidth * 0.5f, center.Top - newHeight * 0.5f, newWidth, newHeight);
     }
 
     public RectF Shrink(float percentage)
@@ -104,7 +131,7 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         var center = Center;
         var newW = Width * (1 - percentage);
         var newH = Height * (1 - percentage);
-        return new RectF(center.Left - newW / 2f, center.Top - newH / 2f, newW, newH);
+        return new RectF(center.Left - newW * 0.5f, center.Top - newH * 0.5f, newW, newH);
     }
 
     public RectF ShrinkBy(float dx, float dy)
@@ -112,19 +139,18 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         var center = Center;
         var newW = Width - dx;
         var newH = Height - dy;
-        return new RectF(center.Left - newW / 2f, center.Top - newH / 2f, newW, newH);
+        return new RectF(center.Left - newW * 0.5f, center.Top - newH * 0.5f, newW, newH);
     }
 
     public LocF GetTopLeftIfCenteredAt(float x, float y)
     {
-        var left = x - Width / 2f;
-        var top = y - Height / 2f;
+        var left = x - Width * 0.5f;
+        var top = y - Height * 0.5f;
         return new LocF(left, top);
     }
 
     public Angle CalculateAngleTo(in RectF other) => CalculateAngleTo(this, other);
     public Angle CalculateAngleTo(float bx, float by, float bw, float bh) => CalculateAngleTo(Left, Top, Width, Height, bx, by, bw, bh);
-
 
     public float CalculateDistanceTo(in RectF other) => CalculateDistanceTo(this, other);
     public float CalculateDistanceTo(float bx, float by, float bw, float bh) => CalculateDistanceTo(Left, Top, Width, Height, bx, by, bw, bh);
@@ -133,21 +159,21 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
 
     public static Angle CalculateAngleTo(float ax, float ay, float aw, float ah, float bx, float by, float bw, float bh)
     {
-        var aCenterX = ax + (aw / 2);
-        var aCenterY = ay + (ah / 2);
+        var aCenterX = ax + (aw * 0.5f);
+        var aCenterY = ay + (ah * 0.5f);
 
-        var bCenterX = bx + (bw / 2);
-        var bCenterY = by + (bh / 2);
+        var bCenterX = bx + (bw * 0.5f);
+        var bCenterY = by + (bh * 0.5f);
         return LocF.CalculateAngleTo(aCenterX, aCenterY, bCenterX, bCenterY);
     }
 
     public static Angle CalculateAngleTo(in RectF a, in RectF b)
     {
-        var aCenterX = a.Left + (a.Width / 2);
-        var aCenterY = a.Top + (a.Height / 2);
+        var aCenterX = a.Left + (a.Width * 0.5f);
+        var aCenterY = a.Top + (a.Height * 0.5f);
 
-        var bCenterX = b.Left + (b.Width / 2);
-        var bCenterY = b.Top + (b.Height / 2);
+        var bCenterX = b.Left + (b.Width * 0.5f);
+        var bCenterY = b.Top + (b.Height * 0.5f);
         return LocF.CalculateAngleTo(aCenterX, aCenterY, bCenterX, bCenterY);
     }
 
@@ -165,117 +191,99 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         return ConsoleMath.NormalizeQuantity(d, a, true);
     }
 
+    // Branchless rectangle distance (same formulation as the in-RectF overload)
     public static float CalculateDistanceTo(in RectF a, in RectF b)
     {
-        float dx = Math.Max(a.Left - (b.Left + b.Width), b.Left - (a.Left + a.Width));
-        float dy = Math.Max(a.Top - (b.Top + b.Height), b.Top - (a.Top + a.Height));
+        float dx = MathF.Max(a.Left - (b.Left + b.Width), b.Left - (a.Left + a.Width));
+        float dy = MathF.Max(a.Top - (b.Top + b.Height), b.Top - (a.Top + a.Height));
 
-        dx = Math.Max(dx, 0);
-        dy = Math.Max(dy, 0);
+        dx = MathF.Max(dx, 0);
+        dy = MathF.Max(dy, 0);
 
-        return (float)Math.Sqrt(dx * dx + dy * dy);
+        return MathF.Sqrt(dx * dx + dy * dy);
     }
 
+    // Replace branchy corner/edge cases with branchless formulation to match the other overload.
     public static float CalculateDistanceTo(float ax, float ay, float aw, float ah, float bx, float by, float bw, float bh)
     {
-        var ar = ax + aw;
-        var ab = ay + ah;
+        float ax2 = ax + aw;
+        float ay2 = ay + ah;
+        float bx2 = bx + bw;
+        float by2 = by + bh;
 
-        var br = bx + bw;
-        var bb = by + bh;
+        float dx = MathF.Max(ax - bx2, bx - ax2);
+        float dy = MathF.Max(ay - by2, by - ay2);
 
-        var left = br < ax;
-        var right = ar < bx;
-        var bottom = bb < ay;
-        var top = ab < by;
-        if (top && left)
-            return LocF.CalculateDistanceTo(ax, ab, br, by);
-        else if (left && bottom)
-            return LocF.CalculateDistanceTo(ax, ay, br, bb);
-        else if (bottom && right)
-            return LocF.CalculateDistanceTo(ar, ay, bx, bb);
-        else if (right && top)
-            return LocF.CalculateDistanceTo(ar, ab, bx, by);
-        else if (left)
-            return ax - br;
-        else if (right)
-            return bx - ar;
-        else if (bottom)
-            return ay - bb;
-        else if (top)
-            return by - ab;
-        else
-            return 0;
+        dx = MathF.Max(dx, 0f);
+        dy = MathF.Max(dy, 0f);
+
+        return MathF.Sqrt(dx * dx + dy * dy);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float NumberOfPixelsThatOverlap(RectF other) => NumberOfPixelsThatOverlap(Left, Top, Width, Height, other.Left, other.Top, other.Width, other.Height);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float NumberOfPixelsThatOverlap(float x2, float y2, float w2, float h2) => NumberOfPixelsThatOverlap(Left, Top, Width, Height, x2, y2, w2, h2);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float OverlapPercentage(RectF other) => OverlapPercentage(Left, Top, Width, Height, other.Left, other.Top, other.Width, other.Height);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float OverlapPercentage(float x2, float y2, float w2, float h2) => OverlapPercentage(Left, Top, Width, Height, x2, y2, w2, h2);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Touches(RectF other) => Touches(Left, Top, Width, Height, other.Left, other.Top, other.Width, other.Height);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Touches(float x2, float y2, float w2, float h2) => Touches(Left, Top, Width, Height, x2, y2, w2, h2);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains(RectF other) => Contains(Left, Top, Width, Height, other.Left, other.Top, other.Width, other.Height);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains(float x2, float y2, float w2, float h2) => Contains(Left, Top, Width, Height, x2, y2, w2, h2);
 
     public static bool Contains(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) =>
-        OverlapPercentage(x1, y1, w1, h1, x2, y2, w2, h2) == 1;
+        OverlapPercentage(x1, y1, w1, h1, x2, y2, w2, h2) == 1f;
 
     public static bool Touches(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2) =>
-        NumberOfPixelsThatOverlap(x1, y1, w1, h1, x2, y2, w2, h2) > 0;
+        NumberOfPixelsThatOverlap(x1, y1, w1, h1, x2, y2, w2, h2) > 0f;
 
     public static float NumberOfPixelsThatOverlap(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2)
     {
-        var rectangleRight = x1 + w1;
-        var otherRight = x2 + w2;
-        var rectangleBottom = y1 + h1;
-        var otherBottom = y2 + h2;
-        var a = Math.Max(0, Math.Min(rectangleRight, otherRight) - Math.Max(x1, x2));
-        if (a == 0) return 0;
-        var b = Math.Max(0, Math.Min(rectangleBottom, otherBottom) - Math.Max(y1, y2));
+        float r1 = x1 + w1;
+        float r2 = x2 + w2;
+        float b1 = y1 + h1;
+        float b2 = y2 + h2;
+
+        float a = MathF.Max(0f, MathF.Min(r1, r2) - MathF.Max(x1, x2));
+        if (a == 0f) return 0f;
+        float b = MathF.Max(0f, MathF.Min(b1, b2) - MathF.Max(y1, y2));
         return a * b;
     }
 
     public static float OverlapPercentage(float x1, float y1, float w1, float h1, float x2, float y2, float w2, float h2)
     {
-        var numerator = NumberOfPixelsThatOverlap(x1, y1, w1, h1, x2, y2, w2, h2);
-        var denominator = w2 * h2;
+        float numerator = NumberOfPixelsThatOverlap(x1, y1, w1, h1, x2, y2, w2, h2);
+        if (numerator <= 0f) return 0f;
 
-        if (numerator == 0) return 0;
-        else if (numerator == denominator) return 1;
+        float denominator = w2 * h2;
+        if (numerator == denominator) return 1f;
 
-        var amount = numerator / denominator;
-        if (amount < 0) amount = 0;
-        else if (amount > 1) amount = 1;
-
-        if (amount > .999)
-        {
-            amount = 1;
-        }
-
+        // amount = clamp(numerator/denominator, 0..1), with a cheap snap-to-1 epsilon like original
+        float amount = numerator / denominator;
+        amount = MathF.Min(1f, MathF.Max(0f, amount));
+        if (amount > 0.999f) amount = 1f;
         return amount;
     }
 
-    public bool IsAbove(RectF other)
-    {
-        return Top < other.Top;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsAbove(RectF other) => Top < other.Top;
 
-    public bool IsBelow(RectF other)
-    {
-        return Bottom > other.Bottom;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsBelow(RectF other) => Bottom > other.Bottom;
 
-    public bool IsLeftOf(RectF other)
-    {
-        return Left < other.Left;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsLeftOf(RectF other) => Left < other.Left;
 
-    public bool IsRightOf(RectF other)
-    {
-        return Right > other.Right;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsRightOf(RectF other) => Right > other.Right;
 
     public static RectF RadialOffset(float x, float y, float w, float h, Angle angle, float distance, bool normalized = true)
     {
@@ -283,11 +291,12 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         return new RectF(newLoc.Left, newLoc.Top, w, h);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static RectF Offset(float x, float y, float w, float h, float dx, float dy) => new RectF(x + dx, y + dy, w, h);
 
     public RectF ToSameWithWiggleRoom() => new RectF(Left + .1f, Top + .1f, Width - .2f, Height - .2f);
 
-
+    // NOTE: This allocates an array by contract; keeping the API intact.
     public LocF[] Corners => new LocF[]
     {
         TopLeft,
@@ -307,7 +316,6 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
 
     public static RectF FromMass(ConsoleControl c, IEnumerable<ConsoleControl> others)
     {
-
         var left = c.Left;
         var top = c.Top;
         var right = c.Right();
@@ -315,10 +323,10 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
 
         foreach (var child in others)
         {
-            left = Math.Min(left, child.Left);
-            top = Math.Min(top, child.Top);
-            right = Math.Max(right, child.Right());
-            bottom = Math.Max(bottom, child.Bottom());
+            left = MathF.Min(left, child.Left);
+            top = MathF.Min(top, child.Top);
+            right = MathF.Max(right, child.Right());
+            bottom = MathF.Max(bottom, child.Bottom());
         }
 
         var bounds = new RectF(left, top, right - left, bottom - top);

@@ -62,7 +62,7 @@ public readonly struct LocF
     public LocF Offset(float dx, float dy) => new LocF(Left + dx, Top + dy);
 
     public static LocF Offset(float x, float y, float dx, float dy) => new LocF(x + dx, y + dy);
-    private const float Deg2Rad = (float)(Math.PI / 180f);
+    private const float Deg2Rad = (MathF.PI / 180f);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static LocF RadialOffset(float x, float y, Angle angle, float distance, bool normalized = true)
@@ -114,28 +114,28 @@ public readonly struct LocF
         else if (dx == 0 && dy > 0) return 90;
         else if (dx == 0) return 270;
 
-        double radians, increment;
+        float radians, increment;
         if (dx >= 0 && dy >= 0)
         {
             // Sin(a) = dy / d
-            radians = Math.Asin(dy / d);
+            radians = MathF.Asin(dy / d);
             increment = 0;
 
         }
         else if (dx < 0 && dy > 0)
         {
             // Sin(a) = dx / d
-            radians = Math.Asin(-dx / d);
+            radians = MathF.Asin(-dx / d);
             increment = 90;
         }
         else if (dy < 0 && dx < 0)
         {
-            radians = Math.Asin(-dy / d);
+            radians = MathF.Asin(-dy / d);
             increment = 180;
         }
         else if (dx > 0 && dy < 0)
         {
-            radians = Math.Asin(dx / d);
+            radians = MathF.Asin(dx / d);
             increment = 270;
         }
         else
@@ -143,7 +143,7 @@ public readonly struct LocF
             throw new Exception($"Failed to calculate angle from {a.Left},{a.Top} to {b.Left},{b.Top}");
         }
 
-        var ret = (float)(increment + radians * 180 / Math.PI);
+        var ret = (increment + radians * 180 / MathF.PI);
 
         if (ret == 360) ret = 0;
 
@@ -155,28 +155,28 @@ public readonly struct LocF
         float dx = x2 - x1; // x difference
         float dy = y2 - y1; // y difference (downward positive)
 
-        double angleInRadians = Math.Atan2(dy, dx);
-        double angleInDegrees = angleInRadians * (180.0 / Math.PI);
+        float angleInRadians = MathF.Atan2(dy, dx);
+        float angleInDegrees = angleInRadians * (180.0f / MathF.PI);
 
         if (angleInDegrees < 0)
         {
-            angleInDegrees += 360.0;
+            angleInDegrees += 360.0f;
         }
 
-        return (float)angleInDegrees;
+        return angleInDegrees;
     }
 
     public static float CalculateDistanceTo(float x1, float y1, float x2, float y2)
     {
         var dx = x1 - x2;
         var dy = y1 - y2;
-        return (float)Math.Sqrt((dx * dx) + (dy * dy));
+        return MathF.Sqrt((dx * dx) + (dy * dy));
     }
 
     public static float CalculateDistanceTo(in LocF a, in LocF b)
     {
         var dx = a.Left - b.Left;
         var dy = a.Top - b.Top;
-        return (float)Math.Sqrt((dx * dx) + (dy * dy));
+        return MathF.Sqrt((dx * dx) + (dy * dy));
     }
 }
