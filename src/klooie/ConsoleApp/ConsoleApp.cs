@@ -179,13 +179,18 @@ public class ConsoleApp : EventLoop
     public Task SendKey(ConsoleKey key, bool shift = false, bool alt = false, bool control = false) => SendKey(key.KeyInfo(shift, alt, control));
 
     private LogTail logTail;
+
+    public static bool LogTailEnabled { get; set; } = true;
+
     public void WriteLine(ConsoleString s)
     {
+        if (!LogTailEnabled) return;
         if (logTail == null) EnsureLogTailInitialized();
         logTail.WriteLine(s);
     }
     public void WriteLine(string s)
     {
+        if (!LogTailEnabled) return;
         if (logTail == null) EnsureLogTailInitialized();
         logTail?.WriteLine(s);
     }
