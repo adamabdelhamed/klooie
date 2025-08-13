@@ -125,9 +125,9 @@ public sealed class Velocity : Recyclable
         {
             if(influenceSubscriptionLifetime != null) throw new InvalidOperationException("influenceSubscriptionLifetime should be null when adding the first influence.");
             influenceSubscriptionLifetime = DefaultRecyclablePool.Instance.Rent();
+            this.BeforeEvaluate.Subscribe(this, static me => me.ApplyInfluences(), influenceSubscriptionLifetime);
         }
         AssertValidInfluenceSubscription();
-        this.BeforeEvaluate.Subscribe(this, static me => me.ApplyInfluences(), influenceSubscriptionLifetime);
     }
 
     public bool ContainsInfluence(MotionInfluence influence)
