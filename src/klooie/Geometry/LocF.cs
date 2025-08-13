@@ -83,7 +83,7 @@ public readonly struct LocF
 
     public LocF RadialOffset(Angle angle, float radius, float aspectRatio = 2.0f)
     {
-        float rad = angle.Value * MathF.PI / 180;
+        float rad = angle.Value * MathF.PI / 180f;
         float x2 = Left + radius * MathF.Cos(rad);
         float y2 = Top + radius * MathF.Sin(rad) / aspectRatio;
         return new LocF(x2, y2);
@@ -109,43 +109,43 @@ public readonly struct LocF
         float dy = b.Top - a.Top;
         float d = a.CalculateDistanceTo(b);
 
-        if (dy == 0 && dx > 0) return 0;
-        else if (dy == 0) return 180;
-        else if (dx == 0 && dy > 0) return 90;
-        else if (dx == 0) return 270;
+        if (dy == 0 && dx > 0) return 0f;
+        else if (dy == 0) return 180f;
+        else if (dx == 0 && dy > 0) return 90f;
+        else if (dx == 0) return 270f;
 
         float radians, increment;
         if (dx >= 0 && dy >= 0)
         {
             // Sin(a) = dy / d
             radians = MathF.Asin(dy / d);
-            increment = 0;
+            increment = 0f;
 
         }
         else if (dx < 0 && dy > 0)
         {
             // Sin(a) = dx / d
             radians = MathF.Asin(-dx / d);
-            increment = 90;
+            increment = 90f;
         }
         else if (dy < 0 && dx < 0)
         {
             radians = MathF.Asin(-dy / d);
-            increment = 180;
+            increment = 180f;
         }
         else if (dx > 0 && dy < 0)
         {
             radians = MathF.Asin(dx / d);
-            increment = 270;
+            increment = 270f;
         }
         else
         {
             throw new Exception($"Failed to calculate angle from {a.Left},{a.Top} to {b.Left},{b.Top}");
         }
 
-        var ret = (increment + radians * 180 / MathF.PI);
+        var ret = increment + radians * 180f / MathF.PI;
 
-        if (ret == 360) ret = 0;
+        if (ret == 360f) ret = 0f;
 
         return ret;
     }

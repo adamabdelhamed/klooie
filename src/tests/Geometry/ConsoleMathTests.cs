@@ -18,17 +18,17 @@ public class ConsoleMathTests
         var agreed = 0;
         for(var someRandomFloat = 0f; someRandomFloat < 100; someRandomFloat+=.5f)
         {
-            var midPointForThisNumber = Math.Floor(someRandomFloat) + .5f;
+            var midPointForThisNumber = MathF.Floor(someRandomFloat) + .5f;
             var roundedRight = ConsoleMath.Round(someRandomFloat);
-            var roundedLame = (int)Math.Round(someRandomFloat);
+            var roundedLame = (int)MathF.Round(someRandomFloat);
 
             if (someRandomFloat < midPointForThisNumber)
             {
-                Assert.AreEqual(Math.Floor(someRandomFloat), roundedRight);
+                Assert.AreEqual(MathF.Floor(someRandomFloat), roundedRight);
             }
             else
             {
-                Assert.AreEqual(Math.Ceiling(someRandomFloat), roundedRight);
+                Assert.AreEqual(MathF.Ceiling(someRandomFloat), roundedRight);
             }
 
             if(roundedRight != roundedLame)
