@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace klooie;
 
@@ -61,26 +62,21 @@ public readonly struct LocF
     public LocF Offset(float dx, float dy) => new LocF(Left + dx, Top + dy);
 
     public static LocF Offset(float x, float y, float dx, float dy) => new LocF(x + dx, y + dy);
+    private const float Deg2Rad = (float)(Math.PI / 180f);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static LocF RadialOffset(float x, float y, Angle angle, float distance, bool normalized = true)
     {
         if (normalized)
-        {
             distance = ConsoleMath.NormalizeQuantity(distance, angle.Value);
-        }
-        var forward = angle.Value > 270 || angle.Value < 90;
-        var up = angle.Value > 180;
 
-        // convert to radians
-        angle = (float)(angle.Value * Math.PI / 180);
-        float dy = (float)Math.Abs(distance * Math.Sin(angle.Value));
-        float dx = (float)Math.Sqrt((distance * distance) - (dy * dy));
+        float rad = angle.Value * Deg2Rad;
 
-        float x2 = forward ? x + dx : x - dx;
-        float y2 = up ? y - dy : y + dy;
+        // Your unsafe tuple SinCos(float x) -> (Sin, Cos)
+        var (sin, cos) = MathF.SinCos(rad);
 
-        x2 = ConsoleMath.Round(x2, 5);
-        y2 = ConsoleMath.Round(y2, 5);
+        float x2 = ConsoleMath.Round(x + distance * cos, 5);
+        float y2 = ConsoleMath.Round(y + distance * sin, 5);
 
         return new LocF(x2, y2);
     }

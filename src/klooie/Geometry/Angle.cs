@@ -1,4 +1,6 @@
-﻿namespace klooie;
+﻿using System.Runtime.CompilerServices;
+
+namespace klooie;
 
 /// <summary>
 /// A type that represents an angle and has geometric properties that are
@@ -46,25 +48,36 @@ public readonly struct Angle
     /// </summary>
     public readonly float Value;
 
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float Normalize360(float x)
+    {
+        // x mod 360 in [0, 360)
+        float r = x - 360f * MathF.Floor(x / 360f);
+
+        // Guard rare case where r can be 360 due to float error
+        if (r >= 360f) r -= 360f;
+
+        // Force +0 to avoid the “-0” oddity with negatives
+        return r == 0f ? 0f : r;
+    }
+
     /// <summary>
     /// Creates a new angle given a float. The float given can be any real number
     /// and will be converted to a value between 0 (inclusive) and 360 (exclusive)
     /// </summary>
     /// <param name="val">the value of the angle</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Angle(float val)
     {
-       // GeometryGuard.ValidateFloat(val);
-        Value = val % 360f;
-        if(Value < 0)
+        // Fast path: nothing to do
+        if (val >= 0f && val < 360f)
         {
-            Value = 360 + Value;
+            Value = val == 0f ? 0f : val; // ensure +0
+            return;
         }
 
-        // handle strange -0 case
-        if(float.IsNegative(Value))
-        {
-            Value = 0;
-        }
+        Value = Normalize360(val);
     }
 
     public static Angle FromRadians(float radians) => radians * (180 / MathF.PI);
