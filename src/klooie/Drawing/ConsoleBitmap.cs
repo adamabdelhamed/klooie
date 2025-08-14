@@ -13,6 +13,11 @@ public sealed class ConsoleBitmap : Recyclable
     private static FastConsoleWriter fastConsoleWriter = new FastConsoleWriter();
     private static ChunkAwarePaintBuffer paintBuilder = new ChunkAwarePaintBuffer();
 
+
+    public static void HideCursor() => fastConsoleWriter.Write("\x1b[?25l".ToCharArray(), "\x1b[?25l".Length);
+
+    public static void ShowCursor() => fastConsoleWriter.Write("\x1b[?25h".ToCharArray(), "\x1b[?25h".Length);
+
     // Per-line run list to avoid per-frame allocations in Paint()
     private readonly struct Run
     {
@@ -628,13 +633,12 @@ public sealed class ConsoleBitmap : Recyclable
     {
         if (Console.WindowHeight == 0) return;
 
-        if (lastBufferWidth != this.Console.BufferWidth)
+        if (lastBufferWidth != Console.BufferWidth)
         {
-            lastBufferWidth = this.Console.BufferWidth;
-            this.Console.Clear();
+            lastBufferWidth = Console.BufferWidth;
+            Console.Clear();
         }
 
-        // Bounded retry loop to replace recursive retries
         int attempts = 0;
         while (true)
         {
@@ -651,19 +655,14 @@ public sealed class ConsoleBitmap : Recyclable
                 for (int y = 0; y < Height; y++)
                 {
                     runsOnLine.Clear();
-
-                    // Build style runs without copying chars into intermediate buffers
                     int x = 0;
                     while (x < Width)
                     {
-                        // Start of a run
                         ref var p = ref Pixels[x][y];
                         var fg = p.ForegroundColor;
                         var bg = p.BackgroundColor;
                         bool under = p.IsUnderlined;
                         int start = x;
-
-                        // Advance while style matches
                         x++;
                         while (x < Width)
                         {
@@ -671,46 +670,28 @@ public sealed class ConsoleBitmap : Recyclable
                             if (q.ForegroundColor != fg || q.BackgroundColor != bg || q.IsUnderlined != under) break;
                             x++;
                         }
-
                         runsOnLine.Add(new Run(start, x - start, fg, bg, under));
                     }
 
-                    // Flush runs: set cursor + colors once per run, copy chars directly to paint buffer
                     for (int i = 0; i < runsOnLine.Count; i++)
                     {
-                        var localRuns = runsOnLine; // materialize into a local variable
-                        var run = localRuns[i];
- 
-
+                        var run = runsOnLine[i];
                         if (run.Underlined) paintBuilder.Append(Ansi.Text.UnderlinedOn);
-
                         Ansi.Cursor.Move.ToLocation(run.Start + 1, y + 1, paintBuilder);
                         Ansi.Color.Foreground.Rgb(run.FG, paintBuilder);
                         Ansi.Color.Background.Rgb(run.BG, paintBuilder);
-
-                        // Copy chars for this run directly into the final buffer
                         paintBuilder.AppendRunFromPixels(Pixels, run.Start, y, run.Length);
-
                         if (run.Underlined) paintBuilder.Append(Ansi.Text.UnderlinedOff);
                     }
                 }
 
-                // Nudge cursor to avoid some terminals dropping the last line
                 Ansi.Cursor.Move.ToLocation(Width - 1, Height - 1, paintBuilder);
 
                 fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
-                break; // success
+                break;
             }
-            catch (IOException) when (attempts++ < 2)
-            {
-                // retry
-                continue;
-            }
-            catch (ArgumentOutOfRangeException) when (attempts++ < 2)
-            {
-                // retry
-                continue;
-            }
+            catch (IOException) when (attempts++ < 2) { continue; }
+            catch (ArgumentOutOfRangeException) when (attempts++ < 2) { continue; }
         }
     }
 
