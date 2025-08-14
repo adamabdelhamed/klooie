@@ -26,7 +26,10 @@ public class SynthSignalSource : Recyclable
     protected float effectivePan;
     private List<IPitchModEffect>? pitchMods;
     private ADSREnvelope envelope;
-
+    private ModBindContext _bindCtx;
+    private ModParam _pitchParam, _panParam;
+    private const int ControlPeriod = 32;
+    private int _controlTick;
     public ADSREnvelope Envelope => envelope;
 
     private float? noteReleaseTime = null; // in seconds
@@ -59,29 +62,7 @@ public class SynthSignalSource : Recyclable
 
     private static int _globalId = 1;
     public int Id { get; private set; }
-
-    // === LFO support ===
-    public enum LfoTarget { Pitch, FilterCutoff, Amp, Pan, VibratoDepth }
-
-    public struct LfoSettings
-    {
-        public LfoTarget Target;
-        public float RateHz;
-        public float Depth;
-        public int Shape; // 0=sine, 1=triangle
-        public float PhaseOffset;
-        public bool VelocityAffectsDepth;
-        public Func<float, float>? DepthVelocityCurve;
-    }
-
-    private struct LfoState
-    {
-        public LfoSettings Settings;
-        public float Phase;
-        public float PhaseInc;
-    }
-
-    private LfoState[]? lfos;
+ 
 
     public virtual void ReleaseNote()
     {
@@ -113,7 +94,7 @@ public class SynthSignalSource : Recyclable
     private ScheduledNoteEvent noteEvent;
     private NoteExpression note => noteEvent.Note;
     private EffectContext ctx;
-    private float lfoVibratoDepthFrame;
+
     // === Performance constants / LUTs ===
     private const float INV_TWO_PI = 1f / (2f * MathF.PI);
     private static readonly float LN2 = MathF.Log(2f);
@@ -177,27 +158,15 @@ public class SynthSignalSource : Recyclable
 
         oscPhase = 0.0;
         oscPhaseSub = 0.0;
-
-        // === LFO: initialize state per patch ===
-        if (patch.Lfos != null && patch.Lfos.Count > 0)
-        {
-            lfos = new LfoState[patch.Lfos.Count];
-            for (int i = 0; i < lfos.Length; i++)
-            {
-                var set = patch.Lfos[i];
-                lfos[i].Settings = set;
-                lfos[i].Phase = set.PhaseOffset;
-                lfos[i].PhaseInc = set.RateHz / (float)sampleRate;
-            }
-        }
-        else
-        {
-            lfos = null;
-        }
+ 
 
         effectiveVolume = 1;
         this.envelope = patch.FindEnvelopeEffect().Envelope;
         envelope.Trigger(0, sampleRate);
+        _bindCtx = new ModBindContext((float)sampleRate, envelope, noteEvent.Note);
+        _pitchParam = ModParam.Bind(in patch.PitchCents, in _bindCtx);
+        _panParam = ModParam.Bind(in patch.Pan, in _bindCtx);
+        _controlTick = 0;
 
         // Pluck buffer if needed
         pluckBuffer = null;
@@ -224,7 +193,12 @@ public class SynthSignalSource : Recyclable
             throw new Exception("Exceeded max effect count; increase MaxEffects!");
 
         for (int i = 0; i < effectsCount; i++)
+        {
+            // Each voice gets its own already-prepared effect instance list on the patch.
+            // We bind modulation-capable effects once here. (Duplicate assignment loop removed.)
             effects[i] = patchEffects[i];
+            if (effects[i] is IVoiceBindableEffect b) b.BindForVoice(_bindCtx);
+        }
         // Zero any extra slots to avoid leaks
         for (int i = effectsCount; i < MaxEffects; i++)
             effects[i] = null!;
@@ -282,28 +256,13 @@ public class SynthSignalSource : Recyclable
     private float Oscillate(ref double phase, float freq, WaveformType wave)
     {
         float totalCents = 0f;
-
+        totalCents += _pitchParam.Current;
         // Pitch Drift (only for main oscillator)
         if (wave == patch.Waveform && patch.EnablePitchDrift)
-            totalCents += patch.DriftAmountCents * FastSin(driftPhase + driftRandomOffset);
-
-        // Vibrato LFO (only for main oscillator)
-        if (wave == patch.Waveform && patch.EnableVibrato)
         {
-            float vibratoPhase = 2 * MathF.PI * patch.VibratoRateHz * time + patch.VibratoPhaseOffset;
-
-            // Base vibrato depth (cents)
-            float vibDepth = patch.VibratoDepthCents;
-
-            // Add envelope-grown depth (0..1 * VibratoDepthEnvCents)
-            float envLevel = envelope.GetLevel(time); // 0..1; already per-voice
-            vibDepth += envLevel * patch.VibratoDepthEnvCents;
-
-            // Add slow LFO-grown depth (bipolar), computed in Render() this frame
-            vibDepth += lfoVibratoDepthFrame;
-
-            totalCents += FastSin(vibratoPhase) * vibDepth;
+            totalCents += patch.DriftAmountCents * FastSin(driftPhase + driftRandomOffset);
         }
+       
         if (pitchMods != null && wave == patch.Waveform)
         {
             var pmCtx = new PitchModContext { Time = time, ReleaseTime = noteReleaseTime, NoteEvent = noteEvent };
@@ -312,29 +271,7 @@ public class SynthSignalSource : Recyclable
                 totalCents += pitchMods[i].GetPitchOffsetCents(pmCtx);
             }
         }
-
-        // === LFO: apply LFO pitch modulation (cents) ===
-        if (lfos != null)
-        {
-            for (int i = 0; i < lfos.Length; i++)
-            {
-                var st = lfos[i];
-                if (st.Settings.Target == LfoTarget.Pitch)
-                {
-                    float lfo;
-                    if (st.Settings.Shape == 0)
-                        lfo = FastSin01(st.Phase);
-                    else
-                        lfo = 1f - 4f * MathF.Abs(st.Phase - 0.5f);
-
-                    float lfoDepth = st.Settings.Depth;
-                    if (st.Settings.VelocityAffectsDepth)
-                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(noteEvent.Note.Velocity / 127f);
-
-                    totalCents += lfo * lfoDepth;
-                }
-            }
-        }
+         
 
         // freq * 2^(cents/1200)  ==>  freq * exp(ln(2) * cents/1200)
         float modulatedFrequency = freq * MathF.Exp(LN2 * (totalCents * (1f / 1200f)));
@@ -493,7 +430,6 @@ public class SynthSignalSource : Recyclable
         ctx = default;
         oscPhase = 0.0;
         oscPhaseSub = 0.0;
-        lfos = null;
 
         // Reset noise state fields
         pink_b0 = 0f;
@@ -511,6 +447,12 @@ public class SynthSignalSource : Recyclable
         invSampleRateF = 0f;
         twoPiOverSampleRate = 0.0;
         subOscMul = 0f;
+
+        pitchMods = null;
+        _bindCtx = default;
+        _pitchParam = default;
+        _panParam = default;
+        _controlTick = 0;
 
         // [OPTIMIZED] Zero effect fields to break ref chains
         for (int i = 0; i < MaxEffects; i++)
@@ -538,47 +480,32 @@ public class SynthSignalSource : Recyclable
             ctx.Time = time;
             ctx.Input = 0f;
 
-            float lfoCutoff = 0f, lfoAmp = 0f, lfoPan = 0f, lfoVibratoDepth = 0f;
-            if (lfos != null)
+            if (_controlTick <= 0)
             {
-                for (int i = 0; i < lfos.Length; i++)
-                {
-                    var st = lfos[i];
-                    float lfo;
-                    if (st.Settings.Shape == 0)
-                        lfo = FastSin01(st.Phase);
-                    else
-                        lfo = 1f - 4f * MathF.Abs(st.Phase - 0.5f);
-
-                    float lfoDepth = st.Settings.Depth;
-                    if (st.Settings.VelocityAffectsDepth)
-                        lfoDepth *= (st.Settings.DepthVelocityCurve ?? EffectContext.EaseLinear)(noteEvent.Note.Velocity / 127f);
-
-                    if (st.Settings.Target == LfoTarget.FilterCutoff)
-                        lfoCutoff += lfo * lfoDepth;
-                    else if (st.Settings.Target == LfoTarget.Amp)
-                        lfoAmp += lfo * lfoDepth;
-                    else if (st.Settings.Target == LfoTarget.Pan)
-                        lfoPan += lfo * lfoDepth;
-                    else if (st.Settings.Target == LfoTarget.VibratoDepth)
-                        lfoVibratoDepth += lfo * lfoDepth;
-
-                    lfos[i].Phase += lfos[i].PhaseInc;
-                    if (lfos[i].Phase >= 1f) lfos[i].Phase -= 1f;
-                }
+                // Provide BPM from note expression if available (>0), else 0.
+                float bpm = 0f;
+                var nbpm = noteEvent.Note.BeatsPerMinute;
+                if (nbpm > 0) bpm = (float)nbpm;
+                var vctx = new VoiceCtx(time, time, noteEvent.Note.Velocity / 127f, noteEvent.Note.MidiNote, (float)sampleRate, bpm, gate: noteReleaseTime == null);
+                _pitchParam.Update(vctx);
+                _panParam.Update(vctx);
+                for (int i = 0; i < effectsCount; i++)
+                    if (effects[i] is IControlRateUpdatable c) c.UpdateControl(vctx);
+                _controlTick = ControlPeriod;
             }
+            _controlTick--;
 
-            lfoVibratoDepthFrame = lfoVibratoDepth;
+       
+
+
 
             // [OPTIMIZED] Direct, unrolled pipeline
-            float sample = RunPipeline(ctx);
+            float finalSample = RunPipeline(ctx);
 
-            // === LFO: Apply non-pitch LFO modulations before output ===
-            float finalSample = sample * (1f + lfoAmp);
 
             // Apply pan (lfoPan)
-            float pan = effectivePan + lfoPan;
-            pan = Math.Max(-1f, Math.Min(1f, pan));
+            float pan = effectivePan + _panParam.Current;
+            if (pan < -1f) pan = -1f; else if (pan > 1f) pan = 1f;
 
             float left = finalSample * (1 - pan) * effectiveVolume;
             float right = finalSample * (1 + pan) * effectiveVolume;

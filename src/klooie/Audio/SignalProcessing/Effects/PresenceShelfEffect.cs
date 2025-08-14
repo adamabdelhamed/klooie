@@ -2,17 +2,34 @@
 
 namespace klooie;
 
-/// <summary>
-/// Resonant low-pass (≈3.3 kHz, Q≈3) *into* a high-shelf booster.
-/// Emulates the electrical resonance of passive guitar pickups
-/// and the presence control on high-gain amps.
-/// </summary>
+ 
+
 [SynthDocumentation("""
-Combines a resonant low‑pass with a high‑shelf boost to mimic the presence
-control found on many guitar amplifiers.
+Settings controlling the amount of high-frequency boost and optional
+velocity-based scaling.
 """)]
+public sealed class PresenceSettings
+{
+    [SynthDocumentation("""
+    Boost applied to the high frequencies in decibels.
+""")]
+    public ModParamSpec GainDb = 0f;
+
+    [SynthDocumentation("""
+    Function used to scale the boost based on note
+    velocity.
+""")]
+    public Func<float, float>? VelocityCurve;
+
+    [SynthDocumentation("""
+    Additional multiplier applied to the velocity
+    curve's output.
+""")]
+    public float VelocityScale;
+}
+
 [SynthCategory("Filter")]
-public sealed class PresenceShelfEffect : Recyclable, IEffect
+public sealed class PresenceShelfEffect : Recyclable, IEffect, IVoiceBindableEffect, IControlRateUpdatable
 {
     /* ---- parameters ---------------------------------------------------- */
     private float shelfGain;        // linear (1 = flat, 2 = +6 dB)
@@ -30,51 +47,44 @@ public sealed class PresenceShelfEffect : Recyclable, IEffect
     private float b0, b1, b2, a1, a2; // biquad (resonant LP)
     private float alphaShelf;
 
+    private ModParam _gainDb;
+    private PresenceSettings _settings = null!;
+
     private static readonly LazyPool<PresenceShelfEffect> _pool =
         new(() => new PresenceShelfEffect());
 
     private PresenceShelfEffect() { }
 
-    [SynthDocumentation("""
-Settings controlling the amount of high-frequency boost and optional
-velocity-based scaling.
-""")]
-    public struct Settings
-    {
-        [SynthDocumentation("""
-Boost applied to the high frequencies in decibels.
-""")]
-        public float PresenceDb;
-
-        [SynthDocumentation("""
-Function used to scale the boost based on note
-velocity.
-""")]
-        public Func<float, float>? VelocityCurve;
-
-        [SynthDocumentation("""
-Additional multiplier applied to the velocity
-curve's output.
-""")]
-        public float VelocityScale;
-    }
-
-    public static PresenceShelfEffect Create(in Settings settings)
+    public static PresenceShelfEffect Create(in PresenceSettings settings)
     {
         var fx = _pool.Value.Rent();
-        fx.shelfGain = MathF.Pow(10f, settings.PresenceDb / 20f);
+        fx._settings = settings;
         fx.Configure();
         fx.resY1 = fx.resY2 = fx.lp = 0f;
         fx.velocityCurve = settings.VelocityCurve ?? EffectContext.EaseLinear;
         fx.velocityScale = settings.VelocityScale;
+        fx.shelfGain = 1f;
+        fx._gainDb = default;
         return fx;
+    }
+
+    public void BindForVoice(in ModBindContext ctx)
+    {
+        _gainDb = ModParam.Bind(in _settings.GainDb, in ctx);
+        shelfGain = MathF.Pow(10f, _gainDb.Current / 20f);
+    }
+
+    public void UpdateControl(in VoiceCtx v)
+    {
+        float gDb = _gainDb.Update(v);
+        shelfGain = MathF.Pow(10f, gDb / 20f);
     }
 
     public IEffect Clone()
     {
-        var settings = new Settings
+        var settings = new PresenceSettings
         {
-            PresenceDb = 20f * MathF.Log10(shelfGain),
+            GainDb = _settings.GainDb,
             VelocityCurve = velocityCurve,
             VelocityScale = velocityScale
         };
@@ -130,6 +140,8 @@ curve's output.
         b0 = b1 = b2 = a1 = a2 = alphaShelf = 0f;
         velocityCurve = EffectContext.EaseLinear;
         velocityScale = 1f;
+        _gainDb = default;
+        _settings = null!;
         base.OnReturn();
     }
 }

@@ -34,7 +34,6 @@ public class InstrumentPicker
         yield return new InstrumentExpression() { Name = "Kick", PatchFunc = DrumKit.Kick };
         yield return new InstrumentExpression() { Name = "Snare", PatchFunc = DrumKit.Snare };
         yield return new InstrumentExpression() { Name = "Clap", PatchFunc = DrumKit.Clap };
-        yield return new InstrumentExpression() { Name = "Electric Guitar", PatchFunc = ElectricGuitar.Create };
     }
  
 }

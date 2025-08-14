@@ -285,13 +285,8 @@ public static class SynthPatchExtensions
     }
 
     [ExtensionToEffect(typeof(PresenceShelfEffect))]
-    public static ISynthPatch WithPresenceShelf(this ISynthPatch patch, float presenceDb = +3f)
+    public static ISynthPatch WithPresenceShelf(this ISynthPatch patch, PresenceSettings settings)
     {
-        var settings = new PresenceShelfEffect.Settings
-        {
-            PresenceDb = presenceDb,
-            VelocityScale = 1f
-        };
         return patch.WithEffect(PresenceShelfEffect.Create(in settings));
     }
 
@@ -491,39 +486,6 @@ public static class SynthPatchExtensions
         return patch;
     }
 
-    [CoreEffect]
-    public static ISynthPatch WithVibrato(
-        this ISynthPatch patch,
-        [SynthDocumentation("""
-        Vibrato rate in Hertz (Hz).  
-        This sets how quickly the pitch oscillates up and down, producing a trembling effect.  
-        Common rates are 4–8 Hz for a typical synth vibrato.  
-        Lower values sound slow and gentle; higher values are more dramatic or unnatural.
-        """)] float rateHz = 5.8f,
-
-        [SynthDocumentation("""
-        Vibrato depth in cents (1/100th of a semitone).  
-        This controls how far the pitch moves above and below the original note.  
-        Subtle values (5–20 cents) add warmth and realism, while larger values (30+ cents) are more noticeable or stylized.
-        """)] float depthCents = 35f,
-
-        [SynthDocumentation("""
-        Starting phase of the vibrato cycle, from 0 to 1 (0 = start, 0.5 = halfway, 1 = full cycle).  
-        Use this to offset the vibrato timing for unison voices or to avoid phase alignment between layers.
-        """)] float phaseOffset = 0f)
-    {
-        patch.ForEachLeafPatch(p =>
-        {
-            if (p is SynthPatch s)
-            {
-                s.EnableVibrato = true;
-                s.VibratoRateHz = rateHz;
-                s.VibratoDepthCents = depthCents;
-                s.VibratoPhaseOffset = phaseOffset;
-            }
-        });
-        return patch;
-    }
 
     [CoreEffect]
     public static ISynthPatch WithSubOscillator(
@@ -551,64 +513,7 @@ public static class SynthPatchExtensions
         return patch;
     }
 
-    [CoreEffect]
-    public static ISynthPatch WithLFO(
-        this ISynthPatch patch,
-        [SynthDocumentation("""
-        The destination parameter modulated by the LFO.  
-        Common targets include pitch, filter cutoff, amplitude (tremolo), and pan.
-        """)] SynthSignalSource.LfoTarget target,
-
-        [SynthDocumentation("""
-        The speed of the LFO cycle, in Hertz (Hz).  
-        Typical values range from very slow (0.1 Hz, for gradual sweeps) to fast (10+ Hz, for FM or AM effects).
-        """)] float rateHz,
-
-        [SynthDocumentation("""
-        How strongly the LFO modulates the target parameter.  
-        The exact range depends on the target (e.g., cents for pitch, dB for volume, percent for pan).
-        """)] float depth,
-
-        [SynthDocumentation("""
-        LFO waveform shape.  
-        0 = Sine, 1 = Triangle, 2 = Square, 3 = Sawtooth, etc.  
-        Each shape produces a distinct modulation character.
-        """)] int shape = 0,
-
-        [SynthDocumentation("""
-        Starting phase of the LFO (0 = beginning of cycle, 1 = end).  
-        Useful for stereo or layered sounds to prevent phase alignment and create motion.
-        """)] float phaseOffset = 0f,
-
-        [SynthDocumentation("""
-        If true, the velocity of the note will scale the depth of the LFO.  
-        This makes harder-played notes more strongly modulated, for expressive or dynamic effects.
-        """)] bool velocityAffectsDepth = false,
-
-        [SynthDocumentation("""
-        Optional function to map velocity (0–1) to an LFO depth multiplier.  
-        Use this for custom dynamic response curves beyond linear scaling.
-        """)] Func<float, float>? depthVelocityCurve = null)
-    {
-        patch.ForEachLeafPatch(p =>
-        {
-            if (p is SynthPatch s)
-            {
-                var lfo = new SynthSignalSource.LfoSettings
-                {
-                    Target = target,
-                    RateHz = rateHz,
-                    Depth = depth,
-                    Shape = shape,
-                    PhaseOffset = phaseOffset,
-                    VelocityAffectsDepth = velocityAffectsDepth,
-                    DepthVelocityCurve = depthVelocityCurve
-                };
-                s.Lfos.Add(lfo);
-            }
-        });
-        return patch;
-    }
+    
 
     [CoreEffect]
     public static ISynthPatch WithWaveForm(

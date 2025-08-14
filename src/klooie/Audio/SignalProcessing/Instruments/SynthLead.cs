@@ -41,9 +41,9 @@ public static class SynthLead
         // ---- Envelope (adaptive) ----
         // Faster attack for higher velocity; decay scales with note length; sustain stays high for a lead; release scales with length.
         var attack = Lerp(0.003f, 0.001f, vNorm);                                         // 3ms -> 1.5ms
-        var decay = (float)Math.Clamp(LerpD(0.025, 0.12, dur01), 0.03, 0.18);             // ~short -> longer
+        var decay = (float)Math.Clamp(LerpD(0.025, 0.1, dur01), 0.03, 0.18);             // ~short -> longer
         var sustain = Lerp(0.88f, 0.96f, vNorm);                                           // more push on high velocity
-        var release = (float)Math.Clamp(LerpD(0.10, 0.30, dur01), 0.08, 0.45);             // stabs don’t smear; long notes breathe
+        var release = (float)Math.Clamp(LerpD(0.10, 0.20, dur01), 0.08, 0.35);             // stabs don’t smear; long notes breathe
 
         // ---- Loudness (adaptive) ----
         // Base layer gain stays ~constant; patch-level volume responds to velocity.
@@ -55,8 +55,8 @@ public static class SynthLead
 
         // ---- Pitch drift (adaptive) ----
         // Longer notes drift a little deeper but slower.
-        var driftDepth = Lerp(0.45f, 0.90f, dur01);
-        var driftRate = Lerp(5.5f, 3.5f, dur01);
+        var driftDepth = Lerp(0.45f, 0.95f, dur01);
+        var driftRate = Lerp(7.5f, 3.5f, dur01);
 
         // ---- Chorus (adaptive) ----
         var chorusDelayMs = Lerp(18f, 28f, vNorm);                                         // subtle widening at low vel, richer at high
@@ -72,7 +72,7 @@ public static class SynthLead
 
         // ---- Reverb (adaptive) ----
         // Slightly longer and wetter for sustained notes; keep dry high to stay forward in the mix.
-        var revDur = Lerp(0.18f, 0.55f, dur01);
+        var revDur = Lerp(0.18f, 0.35f, dur01);
         var revWet = Lerp(0.08f, 0.18f, dur01) * (0.85f + 0.15f * vNorm);
         var revDry = 0.80f;
         var revDamp = 0.22f;
@@ -84,13 +84,11 @@ public static class SynthLead
                 patch: SynthPatch.Create(note)
                     .WithWaveForm(WaveformType.Saw)
                     .WithVolume(patchVol)
+                    .WithPresenceShelf(new PresenceSettings { GainDb = 1.7f.Param().WithClamp(-24f, +24f).WithSmoothing(0.45f).Route(Env.Amp(), depth: +16.5f) })
                     .WithEnvelope(delay: 0, attack: attack, decay: decay, sustainLevel: sustain, release: release)
-                    .WithDCBlocker()
                     .WithPitchDrift(driftDepth, driftRate)
-                    .WrapWithUnison(numVoices: 3, detuneCents: detuneCents, panSpread: panSpread)
+                    .WrapWithUnison(numVoices: 4, detuneCents: detuneCents, panSpread: panSpread)
                     .WrapWithPowerChord([0, 7, 12])
-                    .WithChorus(delayMs: (int)chorusDelayMs, depthMs: (int)chorusDepthMs, rateHz: chorusRateHz, mix: chorusMix)
-                    .WithPingPongDelay(delayMs: delayMs, feedback: delayFb, mix: delayMix)
                     .WithReverb(duration: revDur, wet: revWet, dry: revDry, damping: revDamp)
             )
             .Build();

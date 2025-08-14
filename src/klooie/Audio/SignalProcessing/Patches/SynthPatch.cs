@@ -42,9 +42,13 @@ public class SynthPatch : Recyclable, ISynthPatch
         return patch;
     }
 
+
+    public ModParamSpec PitchCents = 0f;
+    public ModParamSpec Pan = new ModParamSpec().WithClamp(-1f, +1f).WithSmoothing(0.2f);
+
+
     public NoteExpression Note { get; private set; }
 
-    public List<LfoSettings> Lfos { get; } = new();
 
     public WaveformType Waveform { get; set; }
     public bool EnableTransient { get; set; }
@@ -60,13 +64,9 @@ public class SynthPatch : Recyclable, ISynthPatch
     public float DriftAmountCents { get; set; }    
     public int Velocity { get; set; }
 
-    public bool EnableVibrato { get; set; }
-    public float VibratoRateHz { get; set; }
-    public float VibratoDepthCents { get; set; }
-    public float VibratoPhaseOffset { get; set; }
+
     public float? FrequencyOverride { get; set; }
 
-    public float VibratoDepthEnvCents { get; set; }
     public RecyclableList<IEffect> Effects { get; set; }
 
     protected override void OnInit()
@@ -83,13 +83,9 @@ public class SynthPatch : Recyclable, ISynthPatch
         DriftFrequencyHz = 0f;
         DriftAmountCents = 0f;
         Velocity = 127;
-        EnableVibrato = false;
-        VibratoRateHz = 0f;
-        VibratoDepthCents = 0f;
-        VibratoPhaseOffset = 0f;
         FrequencyOverride = null;
-        VibratoDepthEnvCents = 0f;
-        Lfos.Clear();
+        PitchCents = 0f;
+        Pan = new ModParamSpec().WithClamp(-1f, +1f).WithSmoothing(0.2f);
     }
 
     public ISynthPatch Clone()
@@ -105,12 +101,9 @@ public class SynthPatch : Recyclable, ISynthPatch
         clone.EnableTransient = this.EnableTransient;
         clone.TransientDurationSeconds = this.TransientDurationSeconds;
         clone.Velocity = this.Velocity;
-        clone.EnableVibrato = this.EnableVibrato;
-        clone.VibratoRateHz = this.VibratoRateHz;
-        clone.VibratoDepthCents = this.VibratoDepthCents;
-        clone.VibratoPhaseOffset = this.VibratoPhaseOffset;
         clone.FrequencyOverride = this.FrequencyOverride;
-        clone.VibratoDepthEnvCents = this.VibratoDepthEnvCents;
+        clone.PitchCents = this.PitchCents;
+        clone.Pan = this.Pan;
         // ...copy other fields as needed
 
         // Clone all effects (deep clone)
@@ -121,6 +114,9 @@ public class SynthPatch : Recyclable, ISynthPatch
         }
         return clone;
     }
+
+    public SynthPatch SetPitchCents(ModParamSpec spec) { PitchCents = spec; return this; }
+    public SynthPatch SetPan(ModParamSpec spec) { Pan = spec; return this; }
 
     protected override void OnReturn()
     {
