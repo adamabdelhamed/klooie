@@ -6,14 +6,14 @@ public class Walk : Movement
 {
     // -------------------- Tunables / Perf knobs --------------------
     private const float MaxCollisionHorizon = 1.25f;   // seconds – > this long = perfectly safe
-    private const int MaxHistory = 10;      // inertia memory
+    private const int MaxHistory = 10;                 // inertia memory
 
     // Angle sampling: coarse -> refine
     private const float TotalAngularTravelDeg = 225f;  // search half-cone to each side of base
-    private const float CoarseStepDeg = 30f;   // coarse stride
-    private const int CoarseRefineTopK = 2;     // how many coarse peaks to refine
-    private const float FineSpanDeg = 24f;   // refine window around a coarse peak
-    private const float FineStepDeg = 2f;    // refine stride
+    private const float CoarseStepDeg = 30f;           // coarse stride
+    private const int CoarseRefineTopK = 2;            // how many coarse peaks to refine
+    private const float FineSpanDeg = 24f;             // refine window around a coarse peak
+    private const float FineStepDeg = 2f;              // refine stride
 
     // DangerClamp constants (precompute reciprocal to avoid divides)
     private const float DangerClampDanger = 0.2f;
@@ -35,8 +35,12 @@ public class Walk : Movement
 
     private static LazyPool<Walk> pool = new LazyPool<Walk>(() => new Walk());
     private RectF? currentPointOfInterest;
+    private RectF? currentHazard;
 
     public virtual RectF? GetPointOfInterest() => null;
+
+    // NEW: optional hazard (e.g., threat, trap, explosion)
+    public virtual RectF? GetHazard() => null;
 
     protected Walk() { }
 
@@ -80,11 +84,12 @@ public class Walk : Movement
     public RecyclableList<AngleScore> AdjustSpeedAndVelocity(out WanderWeights weights)
     {
         currentPointOfInterest = GetPointOfInterest();
+        currentHazard = GetHazard();
 
         // Populate AngleScores using the optimized scorer
         ComputeScores();
 
-        // Dynamic reweighting stays as-is, but now runs over fewer candidates
+        // Dynamic reweighting stays as-is, but now includes hazard logic
         weights = OptimizeWeights();
 
         ConsiderEmergencyMode();
@@ -146,11 +151,16 @@ public class Walk : Movement
         if (!currentPointOfInterest.HasValue)
             weights.PointOfInterestWeight = 0f;
 
+        // NEW: disable hazard weight if there’s no hazard
+        if (!currentHazard.HasValue)
+            weights.HazardWeight = 0f;
+
         if (minC > 0.8f && spread < 0.1f)
         {
             // Low risk everywhere -> collision weight can relax a lot
             weights.CollisionWeight = 0f;
             weights.PointOfInterestWeight *= 2;
+            // Keep hazard weight as-is if present; still want to avoid it.
         }
 
         // Scale inertia by how much history we have
@@ -165,19 +175,32 @@ public class Walk : Movement
     {
         AngleScores.Items.Clear();
 
-        // Precompute inertial and POI angles as degrees to avoid Angle ops in inner loops
+        // Precompute inertial, POI, and hazard angles as degrees to avoid Angle ops in inner loops
         float inertiaDeg = AverageAngle(LastFewAngles.Items, Velocity.Angle).Value;
         float? poiDeg = currentPointOfInterest.HasValue ? Eye.CalculateAngleTo(currentPointOfInterest.Value).Value : (float?)null;
+        float? hazardDeg = currentHazard.HasValue ? Eye.CalculateAngleTo(currentHazard.Value).Value : (float?)null;
 
 #if DEBUG
-        (this as DebuggableWalk)?.HighlightAngle("PointOfInterestAngle",
-            () => currentPointOfInterest.HasValue ? new Angle?(new Angle(poiDeg.Value)) : null, RGB.Magenta);
+        (this as DebuggableWalk)?.HighlightAngle(
+            "PointOfInterestAngle",
+            () => currentPointOfInterest.HasValue ? new Angle?(new Angle(poiDeg!.Value)) : null,
+            RGB.Magenta);
+        (this as DebuggableWalk)?.HighlightAngle(
+            "HazardAngle",
+            () => currentHazard.HasValue ? new Angle?(new Angle(hazardDeg!.Value)) : null,
+            RGB.Red);
 #endif
 
-        // Base angle: follow POI unless we are already close
+        // Base angle: toward POI unless we’re already close; otherwise away from hazard if present; else keep velocity
         float baseDeg = Velocity.Angle.Value;
-        if (poiDeg.HasValue && !IsCurrentlyCloseEnoughToPointOfInterest)
+
+        bool closeToPoi = currentPointOfInterest.HasValue &&
+                          Eye.Bounds.CalculateNormalizedDistanceTo(currentPointOfInterest.Value) <= CloseEnough;
+
+        if (poiDeg.HasValue && !closeToPoi)
             baseDeg = poiDeg.Value;
+        else if (hazardDeg.HasValue)
+            baseDeg = WrapDeg(hazardDeg.Value + 180f);
 
         // Reuse one obstacles buffer across all candidates (huge win)
         var buffer = ObstacleBufferPool.Instance.Rent();
@@ -192,7 +215,7 @@ public class Walk : Movement
         try
         {
             // 1) Score the base angle first (coarse, no repulsion)
-            ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, baseDeg, writeable, prediction);
+            ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, baseDeg, writeable, prediction);
 
             // 2) Coarse sweep around base; keep top-K coarse picks
             Span<CoarseTop> topAngles = stackalloc CoarseTop[GetTopSize(CoarseRefineTopK)];
@@ -206,8 +229,8 @@ public class Walk : Movement
                 float leftDeg = WrapDeg(baseDeg - delta);
                 float rightDeg = WrapDeg(baseDeg + delta);
 
-                float leftScore = ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, leftDeg, writeable, prediction);
-                float rightScore = ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, rightDeg, writeable, prediction);
+                float leftScore = ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, leftDeg, writeable, prediction);
+                float rightScore = ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, rightDeg, writeable, prediction);
 
                 TryPushTop(topAngles, leftDeg, leftScore);
                 TryPushTop(topAngles, rightDeg, rightScore);
@@ -219,8 +242,7 @@ public class Walk : Movement
             // Refine window half-span
             float halfSpan = FineSpanDeg * 0.5f;
 
-            // To avoid duplicating work when coarse picks are close, track which centers we refined
-            // (small fixed set, so O(K^2) compare is fine)
+            // Avoid refining near-duplicate centers
             Span<float> refinedCenters = stackalloc float[CoarseRefineTopK + 1];
             int refinedCount = 0;
 
@@ -229,7 +251,6 @@ public class Walk : Movement
                 if (!topAngles[i].Valid) continue;
                 float center = topAngles[i].AngleDeg;
 
-                // de-dupe centers that are nearly the same direction
                 bool dup = false;
                 for (int j = 0; j < refinedCount; j++)
                 {
@@ -240,11 +261,10 @@ public class Walk : Movement
                 refinedCenters[refinedCount++] = center;
 
                 // Fine sweep with repulsion check ON
-                // include center point too
                 for (float d = -halfSpan; d <= halfSpan; d += FineStepDeg)
                 {
                     float cand = WrapDeg(center + d);
-                    ScoreAngle_WithRepulsion(inertiaDeg, poiDeg, cand, writeable, prediction);
+                    ScoreAngle_WithRepulsion(inertiaDeg, poiDeg, hazardDeg, cand, writeable, prediction);
                 }
             }
         }
@@ -259,7 +279,7 @@ public class Walk : Movement
 
     // Coarse: skip repulsion penalty (no RadialOffset call).
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private float ScoreAngle_NoRepulsion(float inertiaDeg, float? poiDeg, float candidateDeg,
+    private float ScoreAngle_NoRepulsion(float inertiaDeg, float? poiDeg, float? hazardDeg, float candidateDeg,
                                          List<GameCollider> obstacles,
                                          CollisionPrediction prediction)
     {
@@ -268,17 +288,21 @@ public class Walk : Movement
         float normForward = 1f - Clamp01(AbsShortestDiff(candidateDeg, Velocity.Angle.Value) * Inv090);
         float normPoi = 1f - Clamp01(AbsShortestDiff(candidateDeg, poiDeg.HasValue ? poiDeg.Value : Vision.AngularVisibility) * Inv180);
 
-        var score = new AngleScore(new Angle(candidateDeg), normCollision, normInertia, normForward, normPoi);
+        // NEW: prefer angles AWAY from the hazard (0 when pointing at it, 1 when 180° away)
+        float normHazard = hazardDeg.HasValue
+            ? Clamp01(AbsShortestDiff(candidateDeg, hazardDeg.Value) * Inv180)
+            : 1f;
+
+        var score = new AngleScore(new Angle(candidateDeg), normCollision, normInertia, normForward, normPoi, normHazard);
         AngleScores.Items.Add(score);
 
         // Return an unweighted composite to pick coarse peaks quickly.
-        // (Weights are applied later when choosing the final angle.)
-        return (normCollision + normInertia + normForward + normPoi);
+        return (normCollision + normInertia + normForward + normPoi + normHazard);
     }
 
     // Fine: include repulsion (predict future position, rounded), only for shortlisted angles.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private float ScoreAngle_WithRepulsion(float inertiaDeg, float? poiDeg, float candidateDeg,
+    private float ScoreAngle_WithRepulsion(float inertiaDeg, float? poiDeg, float? hazardDeg, float candidateDeg,
                                            List<GameCollider> obstacles,
                                            CollisionPrediction prediction)
     {
@@ -300,10 +324,15 @@ public class Walk : Movement
         float normForward = 1f - Clamp01(AbsShortestDiff(candidateDeg, Velocity.Angle.Value) * Inv090);
         float normPoi = 1f - Clamp01(AbsShortestDiff(candidateDeg, poiDeg.HasValue ? poiDeg.Value : Vision.AngularVisibility) * Inv180);
 
-        var score = new AngleScore(new Angle(candidateDeg), normCollision, normInertia, normForward, normPoi);
+        // NEW: away-from-hazard component
+        float normHazard = hazardDeg.HasValue
+            ? Clamp01(AbsShortestDiff(candidateDeg, hazardDeg.Value) * Inv180)
+            : 1f;
+
+        var score = new AngleScore(new Angle(candidateDeg), normCollision, normInertia, normForward, normPoi, normHazard);
         AngleScores.Items.Add(score);
 
-        return (normCollision + normInertia + normForward + normPoi);
+        return (normCollision + normInertia + normForward + normPoi + normHazard);
     }
 
     // Predicts time-to-collision in seconds (capped by MaxCollisionHorizon)
@@ -388,7 +417,6 @@ public class Walk : Movement
 
     private static Angle AverageAngle(List<Angle> list, Angle fallback)
     {
-        // Keep the existing semantics (linearly increasing weights by recency).
         if (list.Count == 0) return fallback;
 
         float totalWeight = 0f;
@@ -457,6 +485,8 @@ public class Walk : Movement
         Weights = WanderWeights.Default;
         CloseEnough = 0;
         IsCurrentlyCloseEnoughToPointOfInterest = false;
+        currentPointOfInterest = null;
+        currentHazard = null;
     }
 
     private struct CoarseTop
@@ -510,7 +540,6 @@ public class Walk : Movement
             top[worstIdx].Valid = true;
         }
     }
-
 }
 
 /// <summary>
@@ -520,30 +549,32 @@ public class Walk : Movement
 public readonly struct AngleScore
 {
     public readonly Angle Angle;
-    public readonly float Collision, Inertia, Forward, PointOfInterest;
-    public AngleScore(Angle angle, float collision, float inertia, float forward, float pointOfInterest)
+    public readonly float Collision, Inertia, Forward, PointOfInterest, Hazard;
+    public AngleScore(Angle angle, float collision, float inertia, float forward, float pointOfInterest, float hazard)
     {
         Angle = angle;
         Collision = collision;
         Inertia = inertia;
         Forward = forward;
         PointOfInterest = pointOfInterest;
+        Hazard = hazard;
     }
     public float GetTotal(WanderWeights w)
     {
-        float sumW = w.CollisionWeight + w.InertiaWeight + w.ForwardWeight + w.PointOfInterestWeight;
+        float sumW = w.CollisionWeight + w.InertiaWeight + w.ForwardWeight + w.PointOfInterestWeight + w.HazardWeight;
         if (sumW <= 0f) sumW = 1f;
         return (
             Collision * w.CollisionWeight +
             Inertia * w.InertiaWeight +
             Forward * w.ForwardWeight +
-            PointOfInterest * w.PointOfInterestWeight
+            PointOfInterest * w.PointOfInterestWeight +
+            Hazard * w.HazardWeight
         ) / sumW;
     }
 
     public override string ToString()
     {
-        return $"Angle: {Angle}, Collision: {Collision}, Inertia: {Inertia}, Forward: {Forward}, PointOfInterest: {PointOfInterest}";
+        return $"Angle: {Angle}, Collision: {Collision}, Inertia: {Inertia}, Forward: {Forward}, PointOfInterest: {PointOfInterest}, Hazard: {Hazard}";
     }
 }
 
@@ -556,12 +587,14 @@ public struct WanderWeights
     public float InertiaWeight;
     public float ForwardWeight;
     public float PointOfInterestWeight;
+    public float HazardWeight; // NEW
 
     public static readonly WanderWeights Default = new WanderWeights
     {
         CollisionWeight = 2.5f,
         InertiaWeight = 0.1f,
         ForwardWeight = 0.05f,
-        PointOfInterestWeight = 0.3f
+        PointOfInterestWeight = 0.3f,
+        HazardWeight = 0.8f
     };
 }
