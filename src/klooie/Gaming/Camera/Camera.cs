@@ -9,6 +9,10 @@ public sealed partial class Camera : ConsolePanel
     public Event CameraLocationChanged => cameraLocationChanged ??= Event.Create();
     private LocF cameraLocation;
 
+
+    private Event<ConsoleBitmap> beforePaint;
+    public Event<ConsoleBitmap> BeforePaint => beforePaint ??= Event<ConsoleBitmap>.Create();
+
     /// <summary>
     /// Gets or sets the camera location. If the BigBounds property has been set then
     /// this property's setter will enforce that the camera stays within the boundaries
@@ -171,6 +175,9 @@ public sealed partial class Camera : ConsolePanel
     public override (int X, int Y) Transform(ConsoleControl c) =>
         (ConsoleMath.Round(c.Bounds.Left - cameraLocation.Left), ConsoleMath.Round(c.Bounds.Top - cameraLocation.Top));
 
+
+    public Rect Translate(RectF rect) =>new Rect(ConsoleMath.Round(rect.Left - cameraLocation.Left), ConsoleMath.Round(rect.Top - cameraLocation.Top), ConsoleMath.Round(rect.Width), ConsoleMath.Round(rect.Height));
+
     /// <summary>
     /// Returns true if the control is within the camera bounds
     /// </summary>
@@ -204,10 +211,18 @@ public sealed partial class Camera : ConsolePanel
         yPer = cameraRangeY == 0 ? .5f : yDelta / cameraRangeY;
     }
 
+    protected override void OnPaint(ConsoleBitmap context)
+    {
+        beforePaint?.Fire(context);
+        base.OnPaint(context);
+    }
+
     protected override void OnReturn()
     {
         base.OnReturn();
         cameraLocationChanged?.TryDispose();
         cameraLocationChanged = null;
+        beforePaint?.TryDispose();
+        beforePaint = null;
     }
 }
