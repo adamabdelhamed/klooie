@@ -68,4 +68,23 @@ public readonly struct Rect
     public bool IsBelow(Rect other) => Bottom > other.Bottom;
     public bool IsLeftOf(Rect other) => Left < other.Left;
     public bool IsRightOf(Rect other) => Right > other.Right;
+
+    public Rect ClipTo(in Rect other)
+    {
+        // Determine the maximum left/top and minimum right/bottom edges
+        var x1 = Math.Max(this.Left, other.Left);
+        var y1 = Math.Max(this.Top, other.Top);
+        var x2 = Math.Min(this.Left + this.Width, other.Left + other.Width);
+        var y2 = Math.Min(this.Top + this.Height, other.Top + other.Height);
+
+        // If there’s no intersection, return an empty rect
+        if (x2 <= x1 || y2 <= y1)
+        {
+            return new Rect(0, 0, 0, 0);
+        }
+
+        // Return the intersection rectangle
+        return new Rect(x1, y1, x2 - x1, y2 - y1);
+    }
+
 }
