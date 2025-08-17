@@ -23,6 +23,8 @@ public class Walk : Movement
     private const float Inv180 = 1f / 180f;
     private const float Inv090 = 1f / 90f;
 
+    public virtual bool FearCollision(GameCollider collider) => true;
+
     public MotionInfluence Influence { get; private set; }
     public RecyclableList<Angle> LastFewAngles;
     public RecyclableList<RectF> LastFewRoundedBounds;
@@ -205,9 +207,12 @@ public class Walk : Movement
         // Reuse one obstacles buffer across all candidates (huge win)
         var buffer = ObstacleBufferPool.Instance.Rent();
         var tracked = Vision.TrackedObjectsList;
-        var writeable = buffer.WriteableBuffer;
+        var obstacles = buffer.WriteableBuffer;
         for (int i = 0, n = tracked.Count; i < n; i++)
-            writeable.Add(tracked[i].Target);
+        {
+            if (FearCollision(tracked[i].Target) == false) continue;
+            obstacles.Add(tracked[i].Target);
+        }
 
         // Reuse one CollisionPrediction object across all candidates (overwrite each time)
         var prediction = CollisionPredictionPool.Instance.Rent();
@@ -215,7 +220,7 @@ public class Walk : Movement
         try
         {
             // 1) Score the base angle first (coarse, no repulsion)
-            ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, baseDeg, writeable, prediction);
+            ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, baseDeg, obstacles, prediction);
 
             // 2) Coarse sweep around base; keep top-K coarse picks
             Span<CoarseTop> topAngles = stackalloc CoarseTop[GetTopSize(CoarseRefineTopK)];
@@ -229,8 +234,8 @@ public class Walk : Movement
                 float leftDeg = WrapDeg(baseDeg - delta);
                 float rightDeg = WrapDeg(baseDeg + delta);
 
-                float leftScore = ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, leftDeg, writeable, prediction);
-                float rightScore = ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, rightDeg, writeable, prediction);
+                float leftScore = ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, leftDeg, obstacles, prediction);
+                float rightScore = ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, rightDeg, obstacles, prediction);
 
                 TryPushTop(topAngles, leftDeg, leftScore);
                 TryPushTop(topAngles, rightDeg, rightScore);
@@ -264,7 +269,7 @@ public class Walk : Movement
                 for (float d = -halfSpan; d <= halfSpan; d += FineStepDeg)
                 {
                     float cand = WrapDeg(center + d);
-                    ScoreAngle_WithRepulsion(inertiaDeg, poiDeg, hazardDeg, cand, writeable, prediction);
+                    ScoreAngle_WithRepulsion(inertiaDeg, poiDeg, hazardDeg, cand, obstacles, prediction);
                 }
             }
         }
