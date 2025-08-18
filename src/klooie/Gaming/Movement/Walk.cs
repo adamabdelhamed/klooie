@@ -91,10 +91,10 @@ public class Walk : Movement
         // Populate AngleScores using the optimized scorer
         ComputeScores();
 
+        ConsiderEmergencyMode();
+
         // Dynamic reweighting stays as-is, but now includes hazard logic
         weights = OptimizeWeights();
-
-        ConsiderEmergencyMode();
 
         // Pick the best angle using the (possibly adjusted) weights
         AngleScore best = AngleScores[0];
@@ -110,6 +110,12 @@ public class Walk : Movement
         }
 
         var angle = best.Angle;
+        if (IsStuck)
+        {
+            int h = RuntimeHelpers.GetHashCode(Eye);
+            float sign = ((h & 1) == 0) ? -1f : +1f;
+            angle = new Angle(WrapDeg(angle.Value + sign * 6f));
+        }
         var speed = EvaluateSpeed(angle, bestTotal);
         Influence.Angle = angle;
         Influence.DeltaSpeed = speed;
@@ -165,6 +171,13 @@ public class Walk : Movement
             // Keep hazard weight as-is if present; still want to avoid it.
         }
 
+        if (IsStuck)
+        {
+            weights.CollisionWeight *= 2.0f;
+            weights.InertiaWeight *= 0.1f;
+            weights.ForwardWeight *= 0.1f;
+        }
+
         // Scale inertia by how much history we have
         weights.InertiaWeight = weights.InertiaWeight * LastFewAngles.Count / (float)MaxHistory;
         _ = avgC; // reserved for future heuristics if you want
@@ -217,6 +230,16 @@ public class Walk : Movement
         // Reuse one CollisionPrediction object across all candidates (overwrite each time)
         var prediction = CollisionPredictionPool.Instance.Rent();
 
+        var coarseStep = CoarseStepDeg;
+        var fineSpan = FineSpanDeg;
+        var fineStep = FineStepDeg;
+        if (obstacles.Count >= 8)
+        {
+            coarseStep = 20f;
+            fineSpan = 36f;
+            fineStep = 1f;
+        }
+
         try
         {
             // 1) Score the base angle first (coarse, no repulsion)
@@ -228,8 +251,8 @@ public class Walk : Movement
 
             while (travelCompleted < TotalAngularTravelDeg)
             {
-                float delta = travelCompleted + CoarseStepDeg;
-                travelCompleted += CoarseStepDeg;
+                float delta = travelCompleted + coarseStep;
+                travelCompleted += coarseStep;
 
                 float leftDeg = WrapDeg(baseDeg - delta);
                 float rightDeg = WrapDeg(baseDeg + delta);
@@ -245,7 +268,7 @@ public class Walk : Movement
             TryPushTop(topAngles, baseDeg, 0); // ensure base gets refined too
 
             // Refine window half-span
-            float halfSpan = FineSpanDeg * 0.5f;
+            float halfSpan = fineSpan * 0.5f;
 
             // Avoid refining near-duplicate centers
             Span<float> refinedCenters = stackalloc float[CoarseRefineTopK + 1];
@@ -259,14 +282,14 @@ public class Walk : Movement
                 bool dup = false;
                 for (int j = 0; j < refinedCount; j++)
                 {
-                    if (AbsShortestDiff(center, refinedCenters[j]) < FineStepDeg) { dup = true; break; }
+                    if (AbsShortestDiff(center, refinedCenters[j]) < fineStep) { dup = true; break; }
                 }
                 if (dup) continue;
 
                 refinedCenters[refinedCount++] = center;
 
                 // Fine sweep with repulsion check ON
-                for (float d = -halfSpan; d <= halfSpan; d += FineStepDeg)
+                for (float d = -halfSpan; d <= halfSpan; d += fineStep)
                 {
                     float cand = WrapDeg(center + d);
                     ScoreAngle_WithRepulsion(inertiaDeg, poiDeg, hazardDeg, cand, obstacles, prediction);
@@ -291,9 +314,9 @@ public class Walk : Movement
         float normCollision = DangerClamp(PredictCollision(candidateDeg, obstacles, prediction));
         float normInertia = 1f - Clamp01(AbsShortestDiff(candidateDeg, inertiaDeg) * Inv180);
         float normForward = 1f - Clamp01(AbsShortestDiff(candidateDeg, Velocity.Angle.Value) * Inv090);
-        float normPoi = 1f - Clamp01(AbsShortestDiff(candidateDeg, poiDeg.HasValue ? poiDeg.Value : Vision.AngularVisibility) * Inv180);
-
-        // NEW: prefer angles AWAY from the hazard (0 when pointing at it, 1 when 180° away)
+        float normPoi = poiDeg.HasValue
+            ? 1f - Clamp01(AbsShortestDiff(candidateDeg, poiDeg.Value) * Inv180)
+            : 1f;
         float normHazard = hazardDeg.HasValue
             ? Clamp01(AbsShortestDiff(candidateDeg, hazardDeg.Value) * Inv180)
             : 1f;
@@ -301,8 +324,7 @@ public class Walk : Movement
         var score = new AngleScore(new Angle(candidateDeg), normCollision, normInertia, normForward, normPoi, normHazard);
         AngleScores.Items.Add(score);
 
-        // Return an unweighted composite to pick coarse peaks quickly.
-        return (normCollision + normInertia + normForward + normPoi + normHazard);
+        return CoarseRank(normCollision, normInertia, normForward, normPoi, normHazard);
     }
 
     // Fine: include repulsion (predict future position, rounded), only for shortlisted angles.
@@ -327,9 +349,9 @@ public class Walk : Movement
 
         float normInertia = 1f - Clamp01(AbsShortestDiff(candidateDeg, inertiaDeg) * Inv180);
         float normForward = 1f - Clamp01(AbsShortestDiff(candidateDeg, Velocity.Angle.Value) * Inv090);
-        float normPoi = 1f - Clamp01(AbsShortestDiff(candidateDeg, poiDeg.HasValue ? poiDeg.Value : Vision.AngularVisibility) * Inv180);
-
-        // NEW: away-from-hazard component
+        float normPoi = poiDeg.HasValue
+            ? 1f - Clamp01(AbsShortestDiff(candidateDeg, poiDeg.Value) * Inv180)
+            : 1f;
         float normHazard = hazardDeg.HasValue
             ? Clamp01(AbsShortestDiff(candidateDeg, hazardDeg.Value) * Inv180)
             : 1f;
@@ -337,7 +359,15 @@ public class Walk : Movement
         var score = new AngleScore(new Angle(candidateDeg), normCollision, normInertia, normForward, normPoi, normHazard);
         AngleScores.Items.Add(score);
 
-        return (normCollision + normInertia + normForward + normPoi + normHazard);
+        return CoarseRank(normCollision, normInertia, normForward, normPoi, normHazard);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float CoarseRank(float normCollision, float normInertia, float normForward, float normPoi, float normHazard)
+    {
+        return normCollision * 3f
+             + (normHazard + normPoi) * 0.75f
+             + (normForward + normInertia) * 0.25f;
     }
 
     // Predicts time-to-collision in seconds (capped by MaxCollisionHorizon)
@@ -417,7 +447,11 @@ public class Walk : Movement
         if (IsCurrentlyCloseEnoughToPointOfInterest) return 0;
 
         const float minFactor = 0.2f;
-        return BaseSpeed * (minFactor + (1f - minFactor) * Clamp01(confidence));
+
+        float factor = Smoothstep01(confidence);
+        if (IsStuck) factor = MathF.Max(factor, 0.6f);
+
+        return BaseSpeed * (minFactor + (1f - minFactor) * factor);
     }
 
     private static Angle AverageAngle(List<Angle> list, Angle fallback)
@@ -436,6 +470,9 @@ public class Walk : Movement
     }
 
     private static float Clamp01(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float Smoothstep01(float t) { t = Clamp01(t); return t * t * (3f - 2f * t); }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static float DangerClamp(float timeToCollision)
