@@ -39,6 +39,11 @@ public class Walk : Movement
     private RectF? currentPointOfInterest;
     private RectF? currentHazard;
 
+    private RecyclableList<float> LastGoalDistances; // progress watchdog
+    private int forcedAngleFramesLeft;               // commit to an escape angle for a few frames
+    private Angle forcedAngle;
+
+
     public virtual RectF? GetPointOfInterest() => null;
 
     // NEW: optional hazard (e.g., threat, trap, explosion)
@@ -65,13 +70,41 @@ public class Walk : Movement
         Velocity.AddInfluence(Influence);
         IsStuck = false;
         IsCurrentlyCloseEnoughToPointOfInterest = false;
-
+        LastGoalDistances = RecyclableListPool<float>.Instance.Rent(20);
+        forcedAngleFramesLeft = 0;
         if (autoBindToVision)
         {
             Vision.VisibleObjectsChanged.Subscribe(this, static (me) => me.Tick(), this);
         }
     }
+    private bool HasLineOfSightTo(in RectF target)
+    {
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        var tracked = Vision.TrackedObjectsList;
+        var obstacles = buffer.WriteableBuffer;
+        for (int i = 0, n = tracked.Count; i < n; i++)
+        {
+            if (FearCollision(tracked[i].Target)) obstacles.Add(tracked[i].Target);
+        }
 
+        var prediction = CollisionPredictionPool.Instance.Rent();
+        try
+        {
+            var toTarget = Eye.CalculateAngleTo(target);
+            CollisionDetector.Predict(Eye, toTarget, obstacles, Vision.Range, CastingMode.Precise, obstacles.Count, prediction);
+
+            if (!prediction.CollisionPredicted) return true;
+
+            float distToTarget = Eye.Bounds.Center.CalculateDistanceTo(target.Center);
+            // If the first hit is beyond the target, treat as clear
+            return prediction.LKGD >= distToTarget - Eye.Bounds.Hypotenous * 0.5f;
+        }
+        finally
+        {
+            prediction.Dispose();
+            buffer.Dispose();
+        }
+    }
     private void Tick()
     {
         if (AreAllDependenciesValid == false)
@@ -86,12 +119,40 @@ public class Walk : Movement
     public RecyclableList<AngleScore> AdjustSpeedAndVelocity(out WanderWeights weights)
     {
         currentPointOfInterest = GetPointOfInterest();
+
+        if (currentPointOfInterest.HasValue)
+        {
+            float d = Eye.Bounds.Center.CalculateDistanceTo(currentPointOfInterest.Value.Center);
+            LastGoalDistances.Items.Add(d);
+            if (LastGoalDistances.Count > MaxHistory) LastGoalDistances.Items.RemoveAt(0);
+        }
+        else
+        {
+            LastGoalDistances.Items.Clear();
+        }
+
         currentHazard = GetHazard();
 
         // Populate AngleScores using the optimized scorer
         ComputeScores();
 
         ConsiderEmergencyMode();
+
+        if (currentPointOfInterest.HasValue && HasLineOfSightTo(currentPointOfInterest.Value))
+        {
+            var direct = Eye.CalculateAngleTo(currentPointOfInterest.Value);
+            var s = EvaluateSpeed(direct, 1f);
+            Influence.Angle = direct;
+            Influence.DeltaSpeed = s;
+
+            LastFewAngles.Items.Add(direct);
+            if (LastFewAngles.Count > MaxHistory) LastFewAngles.Items.RemoveAt(0);
+            var r = Eye.Bounds.Round();
+            LastFewRoundedBounds.Items.Add(r);
+            if (LastFewRoundedBounds.Count > MaxHistory) LastFewRoundedBounds.Items.RemoveAt(0);
+            weights = default;
+            return AngleScores;
+        }
 
         // Dynamic reweighting stays as-is, but now includes hazard logic
         weights = OptimizeWeights();
@@ -173,9 +234,10 @@ public class Walk : Movement
 
         if (IsStuck)
         {
-            weights.CollisionWeight *= 2.0f;
-            weights.InertiaWeight *= 0.1f;
-            weights.ForwardWeight *= 0.1f;
+            weights.InertiaWeight = 0f;
+            weights.HazardWeight *= 0.3f;  // don’t let “fear” block the only exit
+            weights.CollisionWeight *= 0.6f; // still avoid, just less timid
+            weights.ForwardWeight *= 1.5f;  // prefer continuing motion
         }
 
         // Scale inertia by how much history we have
@@ -230,26 +292,23 @@ public class Walk : Movement
         // Reuse one CollisionPrediction object across all candidates (overwrite each time)
         var prediction = CollisionPredictionPool.Instance.Rent();
 
-        var coarseStep = CoarseStepDeg;
-        var fineSpan = FineSpanDeg;
-        var fineStep = FineStepDeg;
-        if (obstacles.Count >= 8)
-        {
-            coarseStep = 20f;
-            fineSpan = 36f;
-            fineStep = 1f;
-        }
-
         try
         {
             // 1) Score the base angle first (coarse, no repulsion)
             ScoreAngle_NoRepulsion(inertiaDeg, poiDeg, hazardDeg, baseDeg, obstacles, prediction);
 
+            float sweepTotal = IsStuck ? 360f : TotalAngularTravelDeg;
+            float coarseStep = IsStuck ? 15f : CoarseStepDeg;
+            float fineSpan = IsStuck ? 36f : FineSpanDeg;
+            float fineStep = IsStuck ? 1f : FineStepDeg;
+            int refineTopK = IsStuck ? Math.Min(4, CoarseRefineTopK + 2) : CoarseRefineTopK;
+
+
             // 2) Coarse sweep around base; keep top-K coarse picks
             Span<CoarseTop> topAngles = stackalloc CoarseTop[GetTopSize(CoarseRefineTopK)];
             float travelCompleted = 0f;
 
-            while (travelCompleted < TotalAngularTravelDeg)
+            while (travelCompleted < sweepTotal)
             {
                 float delta = travelCompleted + coarseStep;
                 travelCompleted += coarseStep;
@@ -336,13 +395,12 @@ public class Walk : Movement
         float normCollision = DangerClamp(PredictCollision(candidateDeg, obstacles, prediction));
 
         float repulsionPenalty = 1f;
-        var predictedPos = PredictRoundedPosition(new Angle(candidateDeg));
-        for (int i = 0, n = LastFewRoundedBounds.Count; i < n; i++)
+        if (!IsStuck)
         {
-            if (LastFewRoundedBounds[i].Equals(predictedPos))
+            var predictedPos = PredictRoundedPosition(new Angle(candidateDeg));
+            for (int i = 0, n = LastFewRoundedBounds.Count; i < n; i++)
             {
-                repulsionPenalty = 0.75f; // same as before
-                break;
+                if (LastFewRoundedBounds[i].Equals(predictedPos)) { repulsionPenalty = 0.75f; break; }
             }
         }
         normCollision *= repulsionPenalty;
@@ -442,7 +500,8 @@ public class Walk : Movement
 
         IsCurrentlyCloseEnoughToPointOfInterest =
             currentPointOfInterest.HasValue &&
-            Eye.Bounds.CalculateNormalizedDistanceTo(currentPointOfInterest.Value) <= CloseEnough;
+            Eye.Bounds.CalculateNormalizedDistanceTo(currentPointOfInterest.Value) <= CloseEnough &&
+            HasLineOfSightTo(currentPointOfInterest.Value); // <-- require LOS
 
         if (IsCurrentlyCloseEnoughToPointOfInterest) return 0;
 
