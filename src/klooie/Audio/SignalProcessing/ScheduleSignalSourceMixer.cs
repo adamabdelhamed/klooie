@@ -141,7 +141,7 @@ public class ScheduledSignalSourceMixer
 
     public ScheduledSignalMixerMode Mode { get; set; }
     public bool HasWork => scheduledSongs.Count > 0 || scheduledNotes.Count > 0 || activeVoices.Count > 0 || bufferedVoices.Count > 0;
-
+    public float Volume { get; set; } = 1.0f;
     public long SamplesRendered => samplesRendered;
     public ScheduledSignalSourceMixer(ScheduledSignalMixerMode mode = ScheduledSignalMixerMode.RealtimeWithPreRenderOptimized)
     {
@@ -172,6 +172,14 @@ public class ScheduledSignalSourceMixer
         MixActiveVoices(buffer, offset, samplesRequested, bufferStart, bufferEnd, scratch.Items);
 
         scratch.Dispose();
+
+        // === Apply global volume here ===
+        if (Volume != 1f)
+        {
+            for (int i = offset; i < offset + count; i++)
+                buffer[i] *= Volume;
+        }
+        // ================================
         samplesRendered += samplesRequested;
         return count;
     }
