@@ -179,16 +179,29 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
 
     public static float CalculateNormalizedDistanceTo(in RectF a, in RectF b)
     {
-        var d = CalculateDistanceTo(a, b);
-        var angle = CalculateAngleTo(a, b);
-        return ConsoleMath.NormalizeQuantity(d, angle, true);
+       return CalculateNormalizedDistanceTo(a.Left, a.Top, a.Width, a.Height, b.Left, b.Top, b.Width, b.Height);
     }
 
-    public static float CalculateNormalizedDistanceTo(float ax, float ay, float aw, float ah, float bx, float by, float bw, float bh)
+    public static float CalculateNormalizedDistanceTo(
+        float ax, float ay, float aw, float ah,
+        float bx, float by, float bw, float bh,
+        float aspectRatio = 2.0f)
     {
-        var d = CalculateDistanceTo(ax, ay, aw, ah, bx, by, bw, bh);
-        var a = CalculateAngleTo(ax, ay, aw, ah, bx, by, bw, bh);
-        return ConsoleMath.NormalizeQuantity(d, a, true);
+        float ax2 = ax + aw;
+        float ay2 = ay + ah;
+        float bx2 = bx + bw;
+        float by2 = by + bh;
+
+        float dx = MathF.Max(ax - bx2, bx - ax2);
+        float dy = MathF.Max(ay - by2, by - ay2);
+
+        dx = MathF.Max(dx, 0f);
+        dy = MathF.Max(dy, 0f);
+
+        // squash y before Euclidean
+        dy *= aspectRatio;
+
+        return MathF.Sqrt(dx * dx + dy * dy);
     }
 
     // Branchless rectangle distance (same formulation as the in-RectF overload)
