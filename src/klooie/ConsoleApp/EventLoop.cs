@@ -71,7 +71,7 @@ public class EventLoop : Recyclable
         private void Grow()
         {
             var tmp = pool;
-            pool = new SynchronizedEvent[tmp.Length * 2];
+            pool = new SynchronizedEventBase[tmp.Length * 2];
             Array.Copy(tmp, pool, tmp.Length);
         }
 
