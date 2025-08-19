@@ -115,7 +115,11 @@ public class SingleNoteEditor : ProtectedConsolePanel
     private void DecrementDuration() => DurationSeconds -= 0.05;
     private void UpdateNoteLabel() => noteLabel.Content = $"{MidiNoteHelper.NoteName(MidiNote).DisplayString}".ToWhite() + GetKeyHintLabel("WS");
     private void UpdateVelocityLabel() => velocityLabel.Content = $"{Velocity}".ToWhite() + GetKeyHintLabel("ALT + WS");
-    private void UpdateDurationLabel() => durationLabel.Content = $"{DurationSeconds:0.00}".ToWhite() + GetKeyHintLabel("AD");
+    private void UpdateDurationLabel()
+    {
+        if (durationLabel == null) return;
+        durationLabel.Content = $"{DurationSeconds:0.00}".ToWhite() + GetKeyHintLabel("AD");
+    }
 
     private ConsoleString GetKeyHintLabel(string hint) => HasFocus ?"  ".ToWhite() + $" {hint} ".ToBlack(RGB.Cyan) : ConsoleString.Empty;
 
