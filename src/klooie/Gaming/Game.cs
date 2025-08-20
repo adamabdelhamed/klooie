@@ -141,6 +141,7 @@ public class Game : ConsoleApp
     {
         PaintEnabled = false;
         this.mainColliderGroup = new ColliderGroup(this, pauseManager);
+        PausableScheduler.UseColliderTimeDilation = true;
         this.ruleManager = new RuleManager(RuleProvider);
         await ruleManager.Startup();
         Publish(ReadyEventId);

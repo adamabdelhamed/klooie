@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using klooie.Gaming;
 namespace klooie;
 
 public sealed class SyncronousScheduler
@@ -16,6 +17,17 @@ public sealed class SyncronousScheduler
     public bool IsPaused => pausedTime.HasValue;
 
     public ExecutionMode Mode { get; set; } = SyncronousScheduler.ExecutionMode.AfterPaint;
+
+    // NEW: opt-in collider time dilation per scheduler
+    public bool UseColliderTimeDilation { get; set; } = false;
+
+    // NEW: last loop wall-clock timestamp to integrate scaled time
+    private long lastProcessTimestamp;
+
+    // NEW: helper for current speed ratio (null-safe)
+    private double CurrentSpeedRatio => UseColliderTimeDilation
+        ? (Game.Current?.MainColliderGroup?.SpeedRatio ?? 1.0)
+        : 1.0;
 
     public SyncronousScheduler(ConsoleApp parent)
     {
@@ -37,15 +49,9 @@ public sealed class SyncronousScheduler
     internal void Resume()
     {
         if (pausedTime == null) return;
-        var timePaused = Stopwatch.GetTimestamp() - pausedTime.Value;
 
-        if (schedulerLoopLease?.IsRecyclableValid == true)
-        {
-            for (int i = 0; i < schedulerLoopLease.Recyclable!.PendingWorkItems.Count; i++)
-            {
-                schedulerLoopLease.Recyclable!.PendingWorkItems[i].TimeAddedToSchedule += timePaused;
-            }
-        }
+        // We simply reset the loop's integration point so no time "jumps" on resume.
+        lastProcessTimestamp = Stopwatch.GetTimestamp();
 
         pausedTime = null;
     }
@@ -94,7 +100,7 @@ public sealed class SyncronousScheduler
     {
         try
         {
-            if(delayIfValidInstance.Lease.IsRecyclableValid == false)
+            if (delayIfValidInstance.Lease.IsRecyclableValid == false)
             {
                 return;
             }
@@ -140,11 +146,15 @@ public sealed class SyncronousScheduler
     {
         var loopLifetime = SchedulerLoopLifetime.Create();
         schedulerLoopLease = LeaseHelper.Track(loopLifetime);
+
+        // Initialize integration anchor for scaled time
+        lastProcessTimestamp = Stopwatch.GetTimestamp();
+
         if (Mode == ExecutionMode.AfterPaint)
         {
             parent.AfterPaint.Subscribe(loopLifetime, Process, loopLifetime);
         }
-        else if(Mode == ExecutionMode.EndOfCycle)
+        else if (Mode == ExecutionMode.EndOfCycle)
         {
             parent.EndOfCycle.Subscribe(loopLifetime, Process, loopLifetime);
         }
@@ -157,23 +167,49 @@ public sealed class SyncronousScheduler
     private void Process(SchedulerLoopLifetime loopLifetime)
     {
         if (pausedTime.HasValue) return;
-        var pendingDelayStates = loopLifetime.PendingWorkItems;
-        for (int i = 0; i < pendingDelayStates.Count; i++)
+
+        var now = Stopwatch.GetTimestamp();
+        var wallDeltaTicks = now - lastProcessTimestamp;
+        if (wallDeltaTicks < 0) wallDeltaTicks = 0;
+
+        var ratio = CurrentSpeedRatio;
+        if (!double.IsFinite(ratio) || ratio < 0) ratio = 1.0;
+        var scaledDeltaTicks = wallDeltaTicks * ratio;
+
+        var pending = loopLifetime.PendingWorkItems;
+
+        // Re-entrancy guard: only process items that existed at entry.
+        int end = pending.Count;
+        int i = 0;
+        while (i < end)
         {
-            var delayState = pendingDelayStates.Items[i];
+            var item = pending.Items[i];
 
-            var isDue = delayState.TimeUntilDue <= TimeSpan.Zero;
-            if (isDue == false) continue;
-            FrameDebugger.RegisterTask("ScheduledWork");
-            delayState.InvokeCallback();
-            delayState.Dispose();
-            pendingDelayStates.Items.RemoveAt(i);
-            i--;
+            // Integrate this frame's scaled time for the item we're touching.
+            item.AccumulatedScaledElapsedTicks += scaledDeltaTicks;
 
-            if (pendingDelayStates.Count == 0)
+            // Use your existing due check; if you added IsDue, use that instead.
+            if (item.TimeUntilDue > TimeSpan.Zero)
             {
-                loopLifetime.Dispose();
+                i++; // keep moving forward within the frozen window
+                continue;
             }
+
+            FrameDebugger.RegisterTask("ScheduledWork");
+            item.InvokeCallback();
+            item.Dispose();
+
+            // Remove without advancing i; the next original item slides into i.
+            pending.Items.RemoveAt(i);
+            end--; // shrink the frozen window so we still terminate
+        }
+
+        lastProcessTimestamp = now;
+
+        // Dispose AFTER the iteration, and only if nothing remains.
+        if (pending.Count == 0)
+        {
+            loopLifetime.Dispose();
         }
     }
 
@@ -205,13 +241,23 @@ public sealed class SyncronousScheduler
 
     internal abstract class ScheduledWorkItem : Recyclable
     {
-        public double DelayTicks { get; protected set; }
-        internal double TimeAddedToSchedule;
-        public TimeSpan TimeUntilDue => TimeSpan.FromTicks((long)(DelayTicks - (Stopwatch.GetTimestamp() - TimeAddedToSchedule)));
+        // CHANGED: store delay target in "scaled ticks" space and accumulate progression
+        public double DelayScaledTicks { get; protected set; }
+        internal double AccumulatedScaledElapsedTicks;
+
+        internal double RemainingScaledTicks => DelayScaledTicks - AccumulatedScaledElapsedTicks;
+        public bool IsDue => RemainingScaledTicks <= 0;
+
+        // keep a TimeUntilDue for diagnostics, but compute using Stopwatch.Frequency (seconds -> ticks)
+        public TimeSpan TimeUntilDue =>
+            RemainingScaledTicks <= 0
+                ? TimeSpan.Zero
+                : TimeSpan.FromSeconds(RemainingScaledTicks / Stopwatch.Frequency);
         public abstract void InvokeCallback();
         public override string ToString()
         {
-            return Math.Round(TimeUntilDue.TotalMilliseconds) + "ms until due";
+            var ms = RemainingScaledTicks / Stopwatch.Frequency * 1000.0;
+            return Math.Round(ms) + "ms until due";
         }
     }
 
@@ -224,8 +270,8 @@ public sealed class SyncronousScheduler
         {
             var instance = pool.Value.Rent();
             instance.Callback = callback ?? throw new ArgumentNullException(nameof(callback), "Callback cannot be null");
-            instance.DelayTicks = delay * Stopwatch.Frequency / 1000.0;
-            instance.TimeAddedToSchedule = Stopwatch.GetTimestamp();
+            instance.DelayScaledTicks = delay * Stopwatch.Frequency / 1000.0;
+            instance.AccumulatedScaledElapsedTicks = 0;
             return instance;
         }
         public override void InvokeCallback() => Callback?.Invoke();
@@ -249,8 +295,8 @@ public sealed class SyncronousScheduler
             var instance = pool.Value.Rent();
             instance.State = state ?? throw new ArgumentNullException(nameof(state), "State cannot be null");
             instance.Callback = callback ?? throw new ArgumentNullException(nameof(callback), "Callback cannot be null");
-            instance.DelayTicks = delay * Stopwatch.Frequency / 1000.0;
-            instance.TimeAddedToSchedule = Stopwatch.GetTimestamp();
+            instance.DelayScaledTicks = delay * Stopwatch.Frequency / 1000.0;
+            instance.AccumulatedScaledElapsedTicks = 0;
             return instance;
         }
 
