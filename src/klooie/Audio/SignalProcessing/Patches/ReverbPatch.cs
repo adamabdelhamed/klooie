@@ -38,14 +38,29 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
 
     private void ReplaceEnvelopeWithLongerRelease(SynthPatch wet)
     {
-        ADSREnvelope? orig = null;
+        IEnvelope? orig = null;
         for (int i = 0; i < wet.Effects.Items.Count; i++)
         {
             if (wet.Effects[i] is EnvelopeEffect ee == false) continue;
             orig = ee.Envelope;
             wet.Effects.Items.RemoveAt(i);
-            wet.Effects.Items.Insert(i, EnvelopeEffect.Create(orig.Attack, orig.Decay, orig.Sustain, patchSettings.Duration));
-            orig.Dispose();
+
+            if(orig is ADSREnvelope origEnv)
+            {
+                wet.Effects.Items.Insert(i, EnvelopeEffect.Create(orig.Delay, origEnv.Attack, origEnv.Decay, origEnv.Sustain, patchSettings.Duration));
+                return;
+            }
+            else if (orig is CurvedADSR origCurved)
+            {
+                var origReleaseCurve = origCurved.ReleaseCurve;
+                wet.Effects.Items.Insert(i, CurvedEnvelopeEffect.Create(origCurved.Delay, origCurved.AttackCurve, origCurved.DecayCurve, origCurved.SustainCurve, t =>
+                {
+                    if (t < patchSettings.Duration) return origReleaseCurve(t);
+                    return null;
+                }));
+            }
+
+            (orig as Recyclable)?.Dispose();
             break;
         }
 
@@ -55,6 +70,7 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
         for (int i = 0; i < wet.Effects.Items.Count; i++)
         {
             if (wet.Effects[i] is EnvelopeEffect) envelopeCount++;
+            if (wet.Effects[i] is CurvedEnvelopeEffect) envelopeCount++;
         }
 
         if (envelopeCount != 1) throw new InvalidOperationException("ReverbPatch requires a single EnvelopeEffect in the base patch.");

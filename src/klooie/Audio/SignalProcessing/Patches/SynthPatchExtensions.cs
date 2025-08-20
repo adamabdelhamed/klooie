@@ -258,6 +258,21 @@ public static class SynthPatchExtensions
         return patch.WithEffect(EnvelopeEffect.Create(in settings));
     }
 
+
+    [ExtensionToEffect(typeof(EnvelopeEffect))]
+    public static ISynthPatch WithEnvelope(this ISynthPatch patch, double delay, Func<double,double?> attack, Func<double, double?> decay, Func<double, double> sustainLevel, Func<double, double?> release)
+    {
+        var settings = new CurvedEnvelopeEffect.Settings
+        {
+            Delay = delay,
+            Attack = attack,
+            Decay = decay,
+            Sustain = sustainLevel,
+            Release = release
+        };
+        return patch.WithEffect(CurvedEnvelopeEffect.Create(in settings));
+    }
+
     public static ISynthPatch WithEnvelope(this ISynthPatch patch, double delay, double attack, double decay, double sustainLevel, double release)
     {
         var settings = new EnvelopeEffect.Settings
@@ -595,9 +610,9 @@ public static class SynthPatchExtensions
     }
 
  
-    public static EnvelopeEffect? FindEnvelopeEffect(this ISynthPatch patch)
+    public static IEnvelope? FindEnvelope(this ISynthPatch patch)
     {
-        EnvelopeEffect ret = null;
+        IEnvelope ret = null;
         patch.ForEachLeafPatch(leaf =>
         {
             if (leaf is SynthPatch s && s.Effects.Items != null)
@@ -606,7 +621,12 @@ public static class SynthPatchExtensions
                 {
                     if (s.Effects.Items[j] is EnvelopeEffect env)
                     {
-                        ret = env;
+                        ret = env.Envelope;
+                        return;
+                    }
+                    if (s.Effects.Items[j] is CurvedEnvelopeEffect env2)
+                    {
+                        ret = env2.Envelope;
                         return;
                     }
                 }

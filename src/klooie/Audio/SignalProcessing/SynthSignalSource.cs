@@ -25,12 +25,12 @@ public class SynthSignalSource : Recyclable
     protected float effectiveVolume;
     protected float effectivePan;
     private List<IPitchModEffect>? pitchMods;
-    private ADSREnvelope envelope;
+    private IEnvelope envelope;
     private ModBindContext _bindCtx;
     private ModParam _pitchParam, _panParam;
     private const int ControlPeriod = 32;
     private int _controlTick;
-    public ADSREnvelope Envelope => envelope;
+    public IEnvelope Envelope => envelope;
 
     private float? noteReleaseTime = null; // in seconds
 
@@ -161,7 +161,7 @@ public class SynthSignalSource : Recyclable
  
 
         effectiveVolume = 1;
-        this.envelope = patch.FindEnvelopeEffect().Envelope;
+        this.envelope = patch.FindEnvelope();
         envelope.Trigger(0, sampleRate);
         _bindCtx = new ModBindContext((float)sampleRate, envelope, noteEvent.Note);
         _pitchParam = ModParam.Bind(in patch.PitchCents, in _bindCtx);

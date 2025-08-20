@@ -18,9 +18,9 @@ public interface IModSpec
 public readonly struct ModBindContext
 {
     public readonly float SampleRate;
-    public readonly ADSREnvelope AmpEnvelope;
+    public readonly IEnvelope AmpEnvelope;
     public readonly NoteExpression Note;
-    public ModBindContext(float sampleRate, ADSREnvelope ampEnv, NoteExpression note) { SampleRate = sampleRate; AmpEnvelope = ampEnv; Note = note; }
+    public ModBindContext(float sampleRate, IEnvelope ampEnv, NoteExpression note) { SampleRate = sampleRate; AmpEnvelope = ampEnv; Note = note; }
 }
 
 public struct RouteSpec
@@ -173,7 +173,7 @@ public readonly struct AmpEnvSpec : IModSpec
 {
     public bool IsBipolar => false;
     public IModSource Bind(in ModBindContext ctx) => new EnvSrc(ctx.AmpEnvelope);
-    private sealed class EnvSrc : IModSource { private readonly ADSREnvelope e; public EnvSrc(ADSREnvelope env) { e = env; } public bool IsBipolar => false; public float Next(in VoiceCtx v) => e.GetLevel((float)v.Time); }
+    private sealed class EnvSrc : IModSource { private readonly IEnvelope e; public EnvSrc(IEnvelope env) { e = env; } public bool IsBipolar => false; public float Next(in VoiceCtx v) => e.GetLevel((float)v.Time); }
 }
 
 public readonly struct VelocitySpec : IModSpec

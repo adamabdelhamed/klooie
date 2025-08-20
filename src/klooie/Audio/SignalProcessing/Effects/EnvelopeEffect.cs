@@ -99,18 +99,100 @@ released.
     }
 }
 
-public class ADSREnvelope : Recyclable
+[SynthDocumentation("""
+Applies an Attack-Decay-Sustain-Release envelope to shape the level of the
+incoming signal.
+""")]
+[SynthCategory("Dynamics")]
+public class CurvedEnvelopeEffect : Recyclable, IEffect
+{
+    public CurvedADSR Envelope { get; private set; }
+
+    private static readonly LazyPool<CurvedEnvelopeEffect> _pool = new(() => new CurvedEnvelopeEffect());
+
+    private CurvedEnvelopeEffect() { }
+
+    [SynthDocumentation("""
+Timing values used to construct the envelope.
+""")]
+    public struct Settings
+    {
+        [SynthDocumentation("""
+Silence time before the attack begins (seconds).
+""")]
+        public double Delay;
+
+
+        public Func<double,double?> Attack;
+
+
+        public Func<double, double?> Decay;
+
+
+        public Func<double, double> Sustain;
+
+        public Func<double, double?> Release;
+    }
+
+    // Backward-compatible factory: no delay (0)
+    public static CurvedEnvelopeEffect Create(Func<double, double?> attack, Func<double, double?> decay, Func<double, double> sustain, Func<double, double?> release) =>
+        Create(new Settings() { Delay = 0, Attack = attack, Decay = decay, Sustain = sustain, Release = release });
+
+    // New overload with Delay
+    public static CurvedEnvelopeEffect Create(double delay, Func<double, double?> attack, Func<double, double?> decay, Func<double, double> sustain, Func<double, double?> release) =>
+        Create(new Settings() { Delay = delay, Attack = attack, Decay = decay, Sustain = sustain, Release = release });
+
+    public static CurvedEnvelopeEffect Create(in Settings settings)
+    {
+        var fx = _pool.Value.Rent();
+        fx.Envelope = CurvedADSR.Create(new CurvedADSR.Settings() { Delay = settings.Delay, AttackCurve = settings.Attack, DecayCurve = settings.Decay, SustainCurve = settings.Sustain, ReleaseCurve = settings.Release });
+        fx.Envelope.Trigger(0, SoundProvider.SampleRate);
+        return fx;
+    }
+
+    public IEffect Clone()
+    {
+        return Create(Envelope.Delay, Envelope.AttackCurve, Envelope.DecayCurve, Envelope.SustainCurve, Envelope.ReleaseCurve);
+    }
+
+    public float Process(in EffectContext ctx)
+    {
+        return ctx.Input * Envelope.GetLevel(ctx.Time);
+    }
+
+    public void Release(float time) => Envelope.ReleaseNote(time);
+
+    public bool IsDone(float time) => Envelope.IsDone(time);
+
+    protected override void OnReturn()
+    {
+        Envelope?.Dispose();
+        Envelope = null!;
+        base.OnReturn();
+    }
+}
+
+public interface IEnvelope
+{
+    double Delay { get; }
+    void Trigger(double currentTime, double sampleRate);
+    void ReleaseNote(double currentTime);
+    float GetLevel(double currentTime);
+    bool IsDone(double currentTime);
+}
+
+public class ADSREnvelope : Recyclable, IEnvelope
 {
     private ADSREnvelope() { }
     private static LazyPool<ADSREnvelope> _pool = new(() => new ADSREnvelope());
 
     public static ADSREnvelope Create() => _pool.Value.Rent();
 
-    public double Delay;    // seconds (NEW)
-    public double Attack;   // seconds
-    public double Decay;    // seconds
-    public double Sustain;  // 0.0–1.0
-    public double Release;  // seconds
+    public double Delay { get; set; }    // seconds (NEW)
+    public double Attack { get; set; }    // seconds
+    public double Decay { get; set; }     // seconds
+    public double Sustain { get; set; }   // 0.0–1.0
+    public double Release { get; set; }   // seconds
 
     private double noteOnTime;
     private double? noteOffTime;
@@ -212,4 +294,137 @@ public class ADSREnvelope : Recyclable
         if (!isReleased) return false;
         return currentTime - noteOffTime!.Value >= Release;
     }
+}
+
+public sealed class CurvedADSR : Recyclable, IEnvelope
+{
+    public struct Settings
+    {
+        public double Delay; // seconds of silence before attack
+        public Func<double, double?> AttackCurve;   // input: seconds since attack start
+        public Func<double, double?> DecayCurve;    // input: seconds since decay start
+        public Func<double, double> SustainCurve;   // input: seconds since sustain start
+        public Func<double, double?> ReleaseCurve;  // input: seconds since release start
+    }
+
+    private CurvedADSR() { }
+    private static readonly LazyPool<CurvedADSR> _pool = new(() => new CurvedADSR());
+    public static CurvedADSR Create() => _pool.Value.Rent();
+
+    public static CurvedADSR Create(in Settings s)
+    {
+        var env = Create();
+        env.Delay = s.Delay;
+        env.AttackCurve = s.AttackCurve ?? Linear01;
+        env.DecayCurve = s.DecayCurve ?? Linear01;
+        env.SustainCurve = s.SustainCurve ?? One;
+        env.ReleaseCurve = s.ReleaseCurve ?? Linear01;
+        return env;
+    }
+
+    public double Delay { get; private set; }
+
+    // phase functions
+    public Func<double, double?> AttackCurve = Linear01;
+    public Func<double, double?> DecayCurve = Linear01;
+    public Func<double, double> SustainCurve = One;
+    public Func<double, double?> ReleaseCurve = Linear01;
+
+    private double noteOnTime;
+    private double? noteOffTime;
+
+    private enum Phase { Delay, Attack, Decay, Sustain, Release, Done }
+    private Phase phase;
+    private double phaseStartTime;
+
+    public IEnvelope Clone()
+    {
+        var c = Create();
+        c.Delay = Delay;
+        c.AttackCurve = AttackCurve;
+        c.DecayCurve = DecayCurve;
+        c.SustainCurve = SustainCurve;
+        c.ReleaseCurve = ReleaseCurve;
+        return c;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Delay = 0;
+        AttackCurve = Linear01;
+        DecayCurve = Linear01;
+        SustainCurve = One;
+        ReleaseCurve = Linear01;
+        noteOnTime = 0;
+        noteOffTime = null;
+        phase = Phase.Done;
+        phaseStartTime = 0;
+    }
+
+    public void Trigger(double currentTime, double sampleRate)
+    {
+        noteOnTime = currentTime;
+        noteOffTime = null;
+        phase = Delay > 0 ? Phase.Delay : Phase.Attack;
+        phaseStartTime = currentTime;
+    }
+
+    public void ReleaseNote(double currentTime)
+    {
+        if (phase != Phase.Release && phase != Phase.Done)
+        {
+            noteOffTime = currentTime;
+            phase = Phase.Release;
+            phaseStartTime = currentTime;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static double Clamp01(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
+
+    private static double? Linear01(double t) => Clamp01(t); // default: linear ramp
+    private static double One(double _) => 1.0;
+
+    public float GetLevel(double currentTime)
+    {
+        if (phase == Phase.Done) return 0f;
+
+        double tPhase = currentTime - phaseStartTime;
+
+        switch (phase)
+        {
+            case Phase.Delay:
+                if (tPhase >= Delay)
+                {
+                    phase = Phase.Attack;
+                    phaseStartTime = currentTime;
+                    return GetLevel(currentTime);
+                }
+                return 0f;
+
+            case Phase.Attack:
+                var a = AttackCurve?.Invoke(tPhase);
+                if (a == null) { phase = Phase.Decay; phaseStartTime = currentTime; return GetLevel(currentTime); }
+                return (float)Clamp01(a.Value);
+
+            case Phase.Decay:
+                var d = DecayCurve?.Invoke(tPhase);
+                if (d == null) { phase = Phase.Sustain; phaseStartTime = currentTime; return GetLevel(currentTime); }
+                return (float)Clamp01(d.Value);
+
+            case Phase.Sustain:
+                return (float)Clamp01(SustainCurve?.Invoke(tPhase) ?? 0);
+
+            case Phase.Release:
+                var r = ReleaseCurve?.Invoke(tPhase);
+                if (r == null) { phase = Phase.Done; return 0f; }
+                return (float)Clamp01(r.Value);
+
+            default: // Done
+                return 0f;
+        }
+    }
+
+    public bool IsDone(double currentTime) => phase == Phase.Done;
 }
