@@ -128,271 +128,207 @@ public static class CollisionDetector
         CollisionPrediction prediction,
         List<Edge> edgesHitOutput = null) where T : ICollidable
     {
+        // Preserve existing init/reset behavior & LKG defaults
         var movingObject = from.Bounds;
 
         prediction.Reset();
         prediction.LKGX = movingObject.Left;
         prediction.LKGY = movingObject.Top;
 
-        if (visibility == 0)
+        if (visibility == 0f)
         {
-            prediction.Visibility = 0;
+            prediction.Visibility = 0f;
+            prediction.CollisionPredicted = false;
+            return prediction;
+        }
+        prediction.Visibility = visibility;
+
+        // Compute movement vector exactly like CreateRays()
+        var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
+        float dx = delta.Left - movingObject.Left;
+        float dy = delta.Top - movingObject.Top;
+
+        // If effectively stationary, bail
+        float moveLen2 = dx * dx + dy * dy;
+        if (moveLen2 <= VerySmallNumberSquared)
+        {
             prediction.CollisionPredicted = false;
             return prediction;
         }
 
-        prediction.Visibility = visibility;
+        // Tracks best (closest) hit
+        float bestT = float.PositiveInfinity;      // normalized 0..1 along the cast
+        int bestIndex = -1;
+        Edge bestEdge = default;
+        float bestIX = 0f, bestIY = 0f;
 
-        int rayCount = CreateRays(angle, visibility, mode, movingObject);
-
+        // Visibility check (same semantics as before)
         float visibilitySlack = float.IsPositiveInfinity(visibility) ? visibility : (visibility + VerySmallNumber);
         float visibility2Limit = float.IsPositiveInfinity(visibilitySlack) ? float.PositiveInfinity : visibilitySlack * visibilitySlack;
 
-        float closestIntersectionDistance2 = float.MaxValue;
-        int closestIntersectingObstacleIndex = -1;
-        Edge closestEdge = default;
-        float closestIntersectionX = 0;
-        float closestIntersectionY = 0;
-
         for (int i = 0; i < bufferLen; i++)
         {
-            ICollidable obstacle = colliders[i];
-
+            var obstacle = colliders[i];
             if (ReferenceEquals(from, obstacle) || !from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
 
             var obBounds = obstacle.Bounds;
+
+            // Same coarse distance reject you already had
             if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obBounds) > visibility + VerySmallNumber) continue;
 
-            Span<Edge> singleObstacleEdgeBuffer = stackalloc Edge[4];
-            singleObstacleEdgeBuffer[0] = obBounds.TopEdge;
-            singleObstacleEdgeBuffer[1] = obBounds.BottomEdge;
-            singleObstacleEdgeBuffer[2] = obBounds.LeftEdge;
-            singleObstacleEdgeBuffer[3] = obBounds.RightEdge;
-
-            Sort4ElementEdgeSpan(movingObject, singleObstacleEdgeBuffer);
-
-            for (int j = 0; j < 4; j++)
+            // O(1) swept AABB test; returns earliest TOI t in [0, 1] if hit
+            if (SweptAabbFirstHit(movingObject, obBounds, dx, dy, out float t, out Edge hitEdge, out float ix, out float iy))
             {
-                var edge = singleObstacleEdgeBuffer[j];
-                ProcessEdge(
-                    i,
-                    edge,
-                    rayCount,
-                    edgesHitOutput,
-                    visibility2Limit,
-                    ref closestIntersectionDistance2,
-                    ref closestIntersectingObstacleIndex,
-                    ref closestEdge,
-                    ref closestIntersectionX,
-                    ref closestIntersectionY);
+                // Convert to distance^2 along the path to keep old compare semantics
+                // distance = |v| * t  (|v| ~= visibility)
+                float dist2 = moveLen2 * (t * t);
+
+                // Respect visibility^2 ceiling (kept for parity with previous behavior)
+                if (dist2 <= visibility2Limit && t >= -1e-6f && t <= 1f + 1e-6f)
+                {
+                    if (t < bestT)
+                    {
+                        bestT = t;
+                        bestIndex = i;
+                        bestEdge = hitEdge;
+                        bestIX = ix;
+                        bestIY = iy;
+
+                        // Optional: short-circuit if we literally hit at t==0
+                        if (bestT <= VerySmallNumber) break;
+                    }
+                }
             }
         }
 
-        if (closestIntersectingObstacleIndex >= 0)
+        if (bestIndex >= 0)
         {
-            prediction.ObstacleHitBounds = colliders[closestIntersectingObstacleIndex].Bounds;
-            prediction.ColliderHit = colliders[closestIntersectingObstacleIndex];
+            var hit = colliders[bestIndex];
+            prediction.ObstacleHitBounds = hit.Bounds;
+            prediction.ColliderHit = hit;
 
-            // Convert once, reproduce old bias ≈ (distance - 2*eps)
-            float d = MathF.Sqrt(closestIntersectionDistance2) - 2f * VerySmallNumber;
-            prediction.LKGD = d > 0 ? d : 0f;
+            // Distance along path minus the same 2*eps bias shave you already applied
+            float d = MathF.Sqrt(moveLen2) * bestT - 2f * VerySmallNumber;
+            prediction.LKGD = d > 0f ? d : 0f;
 
-            prediction.LKGX = closestIntersectionX;
-            prediction.LKGY = closestIntersectionY;
+            prediction.LKGX = bestIX;
+            prediction.LKGY = bestIY;
             prediction.CollisionPredicted = true;
-            prediction.Edge = closestEdge;
-            prediction.IntersectionX = closestIntersectionX;
-            prediction.IntersectionY = closestIntersectionY;
+            prediction.Edge = bestEdge;
+            prediction.IntersectionX = bestIX;
+            prediction.IntersectionY = bestIY;
+
+            // No rays in the new algorithm; edgesHitOutput intentionally unused.
         }
 
         return prediction;
     }
 
-    private static int CreateRays(Angle angle, float visibility, CastingMode mode, RectF movingObject)
+    // --- Helper: O(1) continuous collision detection for axis-aligned rectangles ---
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool SweptAabbFirstHit(
+        in RectF a,          // moving rect (start pose)
+        in RectF b,          // stationary rect
+        float dx, float dy,  // movement vector over the "visibility" path
+        out float t,         // normalized time of impact in [0,1]
+        out Edge hitEdge,    // which physical edge on 'b' we touched
+        out float ix, out float iy) // a representative contact point on that edge
     {
-        rayBuffer ??= new Edge[20000];
-        int rayCount = 0;
+        // Defaults
+        t = 0f; ix = 0f; iy = 0f; hitEdge = default;
 
-        float left = movingObject.Left, top = movingObject.Top;
-        float right = movingObject.Right, bottom = movingObject.Bottom;
-        float cx = movingObject.CenterX, cy = movingObject.CenterY;
+        const float eps = 1e-8f;
 
-        var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
-        float dx = delta.Left - left;
-        float dy = delta.Top - top;
-
-        if (mode == CastingMode.Precise)
+        // Compute entry/exit times for X
+        float xEntry, xExit;
+        if (MathF.Abs(dx) <= eps)
         {
-            AddRay(rayBuffer, ref rayCount, new Edge(left, top, left + dx, top + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(right, top, right + dx, top + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(left, bottom, left + dx, bottom + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(right, bottom, right + dx, bottom + dy));
-
-            const float granularity = .5f;
-            float xEnd = left + movingObject.Width;
-            float yEnd = top + movingObject.Height;
-
-            for (float x = left + granularity; x < xEnd; x += granularity)
-            {
-                AddRay(rayBuffer, ref rayCount, new Edge(x, top, x + dx, top + dy));
-                AddRay(rayBuffer, ref rayCount, new Edge(x, bottom, x + dx, bottom + dy));
-            }
-
-            for (float y = top + granularity; y < yEnd; y += granularity)
-            {
-                AddRay(rayBuffer, ref rayCount, new Edge(left, y, left + dx, y + dy));
-                AddRay(rayBuffer, ref rayCount, new Edge(right, y, right + dx, y + dy));
-            }
+            // No horizontal motion: must already overlap on X to ever collide
+            if (a.Right <= b.Left + VerySmallNumber || a.Left >= b.Right - VerySmallNumber) return false;
+            xEntry = float.NegativeInfinity;
+            xExit = float.PositiveInfinity;
         }
-        else if (mode == CastingMode.Rough)
+        else if (dx > 0f)
         {
-            AddRay(rayBuffer, ref rayCount, new Edge(left, top, left + dx, top + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(right, top, right + dx, top + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(left, bottom, left + dx, bottom + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(right, bottom, right + dx, bottom + dy));
-            AddRay(rayBuffer, ref rayCount, new Edge(cx, cy, cx + dx, cy + dy));
-        }
-        else if (mode == CastingMode.SingleRay)
-        {
-            AddRay(rayBuffer, ref rayCount, new Edge(cx, cy, cx + dx, cy + dy));
+            xEntry = (b.Left - a.Right) / dx;
+            xExit = (b.Right - a.Left) / dx;
         }
         else
         {
-            throw new NotSupportedException("Unknown mode: " + mode);
+            xEntry = (b.Right - a.Left) / dx; // dx < 0
+            xExit = (b.Left - a.Right) / dx;
         }
 
-        return rayCount;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void AddRay(Edge[] buffer, ref int count, Edge ray)
-    {
-        if (count >= buffer.Length)
-            throw new InvalidOperationException($"rayBuffer overflow: tried to add {count + 1} of {buffer.Length}");
-        buffer[count++] = ray;
-    }
-
-    private static void ProcessEdge(
-        int i,
-        in Edge edge,
-        int rayCount,
-        List<Edge> edgesHitOutput,
-        float visibility2Limit,  // renamed
-        ref float closestIntersectionDistance2,
-        ref int closestIntersectingObstacleIndex,
-        ref Edge closestEdge,
-        ref float closestIntersectionX,
-        ref float closestIntersectionY)
-    {
-        for (int k = 0; k < rayCount; k++)
+        // Y axis
+        float yEntry, yExit;
+        if (MathF.Abs(dy) <= eps)
         {
-            var ray = rayBuffer[k];
-            if (TryFindIntersectionPoint(in ray, in edge, out float ix, out float iy))
-            {
-                edgesHitOutput?.Add(ray);
-
-                float dx = ix - ray.X1;
-                float dy = iy - ray.Y1;
-                float d2 = dx * dx + dy * dy;
-
-                if (d2 > VerySmallNumberSquared && d2 < closestIntersectionDistance2 && d2 <= visibility2Limit)
-                {
-                    closestIntersectionDistance2 = d2; // no epsilon shaving here
-                    closestIntersectingObstacleIndex = i;
-                    closestEdge = edge;
-                    closestIntersectionX = ix;
-                    closestIntersectionY = iy;
-                }
-            }
+            if (a.Bottom <= b.Top + VerySmallNumber || a.Top >= b.Bottom - VerySmallNumber) return false;
+            yEntry = float.NegativeInfinity;
+            yExit = float.PositiveInfinity;
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryFindIntersectionPoint(in Edge ray, in Edge stationaryEdge, out float x, out float y)
-    {
-        float x1 = ray.X1, y1 = ray.Y1, x2 = ray.X2, y2 = ray.Y2;
-        float x3 = stationaryEdge.X1, y3 = stationaryEdge.Y1, x4 = stationaryEdge.X2, y4 = stationaryEdge.Y2;
-
-        // cheap AABB reject (with small tolerance)
-        float eps = VerySmallNumber;
-        float minRx = x1 < x2 ? x1 : x2, maxRx = x1 > x2 ? x1 : x2;
-        float minRy = y1 < y2 ? y1 : y2, maxRy = y1 > y2 ? y1 : y2;
-        float minSx = x3 < x4 ? x3 : x4, maxSx = x3 > x4 ? x3 : x4;
-        float minSy = y3 < y4 ? y3 : y4, maxSy = y3 > y4 ? y3 : y4;
-
-        if (maxRx + eps < minSx || maxSx + eps < minRx || maxRy + eps < minSy || maxSy + eps < minRy)
+        else if (dy > 0f)
         {
-            x = 0; y = 0;
-            return false;
+            yEntry = (b.Top - a.Bottom) / dy;
+            yExit = (b.Bottom - a.Top) / dy;
         }
-
-        float dx1 = x2 - x1, dy1 = y2 - y1;
-        float dx2 = x4 - x3, dy2 = y4 - y3;
-
-        float den = dx1 * dy2 - dy1 * dx2;
-
-        if (MathF.Abs(den) < 1e-8f)
+        else
         {
-            float det = (x1 - x3) * (y2 - y3) - (y1 - y3) * (x2 - x3);
-            if (MathF.Abs(det) >= 1e-8f)
-            {
-                x = 0; y = 0;
-                return false;
-            }
-
-            if (Math.Max(x1, x2) < Math.Min(x3, x4) ||
-                Math.Max(x3, x4) < Math.Min(x1, x2) ||
-                Math.Max(y1, y2) < Math.Min(y3, y4) ||
-                Math.Max(y3, y4) < Math.Min(y1, y2))
-            {
-                x = 0; y = 0;
-                return false;
-            }
-
-            x = x3; y = y3;
-            return true;
+            yEntry = (b.Bottom - a.Top) / dy; // dy < 0
+            yExit = (b.Top - a.Bottom) / dy;
         }
 
-        // compute t first; bail early if outside [0,1] to save the second division sometimes
-        float t = ((x3 - x1) * dy2 - (y3 - y1) * dx2) / den;
-        if (t < -1e-5f || t > 1 + 1e-5f)
+        // Earliest/latest times we are overlapping on both axes
+        float tEntry = MathF.Max(xEntry, yEntry);
+        float tExit = MathF.Min(xExit, yExit);
+
+        // No overlap during [0,1]
+        if (tEntry > tExit) return false;
+        if (tExit < -VerySmallNumber) return false;       // completely behind start
+        if (tEntry > 1f + VerySmallNumber) return false;  // beyond our path
+
+        // Clamp for robustness (allow grazing/touching at 0/1)
+        if (tEntry < 0f) tEntry = 0f;
+        if (tEntry > 1f) tEntry = 1f;
+
+        t = tEntry;
+
+        // Decide which face we hit (the axis that governed entry)
+        bool hitVerticalFace = xEntry > yEntry;
+
+        if (hitVerticalFace)
         {
-            x = 0; y = 0;
-            return false;
-        }
+            // We struck a vertical face on B (Left/Right)
+            bool fromLeft = dx > 0f; // moving right -> hit B.Left
+            hitEdge = fromLeft ? b.LeftEdge : b.RightEdge;
 
-        float u = ((x3 - x1) * dy1 - (y3 - y1) * dx1) / den;
-        if (u < -1e-5f || u > 1 + 1e-5f)
+            ix = fromLeft ? b.Left : b.Right;
+
+            // Representative contact Y: use A's center advanced to TOI, clamped to the struck edge span
+            float aCy = a.CenterY + dy * t;
+            iy = Math.Clamp(aCy, b.Top, b.Bottom);
+        }
+        else
         {
-            x = 0; y = 0;
-            return false;
+            // We struck a horizontal face on B (Top/Bottom)
+            bool fromTop = dy > 0f; // moving down -> hit B.Top
+            hitEdge = fromTop ? b.TopEdge : b.BottomEdge;
+
+            iy = fromTop ? b.Top : b.Bottom;
+
+            float aCx = a.CenterX + dx * t;
+            ix = Math.Clamp(aCx, b.Left, b.Right);
         }
 
-        x = x1 + t * dx1;
-        y = y1 + t * dy1;
         return true;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void Sort4ElementEdgeSpan(RectF rect, Span<Edge> edges)
-    {
-        float cx = rect.CenterX, cy = rect.CenterY;
 
-        Edge e0 = edges[0], e1 = edges[1], e2 = edges[2], e3 = edges[3];
-        float d0 = e0.CalculateDistanceTo(cx, cy);
-        float d1 = e1.CalculateDistanceTo(cx, cy);
-        float d2 = e2.CalculateDistanceTo(cx, cy);
-        float d3 = e3.CalculateDistanceTo(cx, cy);
+  
 
-        if (d0 > d1) { (d0, d1) = (d1, d0); (e0, e1) = (e1, e0); }
-        if (d1 > d2) { (d1, d2) = (d2, d1); (e1, e2) = (e2, e1); }
-        if (d2 > d3) { (d2, d3) = (d3, d2); (e2, e3) = (e3, e2); }
-        if (d0 > d1) { (d0, d1) = (d1, d0); (e0, e1) = (e1, e0); }
-        if (d1 > d2) { (d1, d2) = (d2, d1); (e1, e2) = (e2, e1); }
-        if (d0 > d1) { (d0, d1) = (d1, d0); (e0, e1) = (e1, e0); }
 
-        edges[0] = e0; edges[1] = e1; edges[2] = e2; edges[3] = e3;
-    }
+
+   
 }
 
 public class ArrayPlusOnePool<T> : RecycleablePool<ArrayPlusOne<T>> where T : ICollidable

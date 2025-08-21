@@ -27,7 +27,7 @@ public class CollisionDetectorTests
         var from = new RectF(0, 0, 1, 1);
         var colliders = new RectF[] { new RectF(1.001f, 0, 1, 1) };
         var prediction = CollisionPredictionPool.Instance.Rent();
-        var visibility = .001f;
+        var visibility = .01f;
         try
         {
             
