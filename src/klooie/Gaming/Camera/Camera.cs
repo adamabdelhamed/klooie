@@ -48,6 +48,9 @@ public sealed partial class Camera : ConsolePanel
         x = given.Right > bounds.Right ? bounds.Right - given.Width : x;
         y = given.Bottom > bounds.Bottom ? bounds.Bottom - given.Height : y;
 
+        x = (int)(x);
+        y = (int)(y);
+
         var ret = new RectF(x, y, given.Width, given.Height);
         return ret;
     }
