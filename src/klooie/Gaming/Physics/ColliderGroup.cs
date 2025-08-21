@@ -305,9 +305,11 @@ public sealed class ColliderGroup
 
     private float CalculateExpectedTravelDistance(GameCollider collider)
     {
-        var initialDt = (now - collider.lastEvalTime) * SpeedRatio * collider.Velocity.SpeedRatio;
+        var elapsed = Math.Max(0f, now - collider.lastEvalTime);
+        var initialDt = elapsed * SpeedRatio * collider.Velocity.SpeedRatio;
         collider.lastEvalTime = now;
-        var timeElapsedSinceLastEval = stopwatch.SupportsMaxDT ? Math.Min(MaxDTSeconds * SpeedRatio * collider.Velocity.SpeedRatio, initialDt) : initialDt;
+        var maxDt = MaxDTSeconds * SpeedRatio * collider.Velocity.SpeedRatio;
+        var timeElapsedSinceLastEval = stopwatch.SupportsMaxDT ? Math.Min(maxDt, initialDt) : initialDt;
         var expectedTravelDistance = ConsoleMath.NormalizeQuantity(collider.Velocity.Speed * timeElapsedSinceLastEval, collider.Velocity.Angle);
         return expectedTravelDistance;
     }
