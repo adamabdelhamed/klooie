@@ -113,7 +113,7 @@ public class LeaseState<TOwner, TRecyclable> : Recyclable where TRecyclable : Re
     /// <summary>
     /// Attempts to dispose the tracked owner using the captured lease.
     /// </summary>
-    public void TryDisposeOwner() => Owner?.TryDispose(OwnerLease);
+    public bool TryDisposeOwner() => Owner == null ? false : Owner.TryDispose(OwnerLease);
 
     /// <summary>
     /// Clears tracked values when the state object is returned to the pool.
