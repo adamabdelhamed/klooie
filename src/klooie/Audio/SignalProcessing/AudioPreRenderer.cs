@@ -261,11 +261,14 @@ public sealed class AudioPreRenderer
             new Thread(WorkerLoop) { IsBackground = true, Name = $"PreRender-{i}" }.Start();
     }
 
-    // Try to use the whole CPU, but leave some cores for UI and other tasks.
-    // The workers will sleep if there is no work, so this is safe. But when we get a batch of 
-    // jobs we want the notes to render as fast as possible so there's a better chance of smooth
-    // realtime playback.
-    private static int ComputeWorkerCount() => Math.Max(1, Environment.ProcessorCount - 4);
+    // We could use lots of workers, but that will use lots of memory since each worker will end up renting its own buffers.
+    // I've found that the GC tends to leave those buffers around for a while, so we end up using lots of memory even after the workers are done.
+    // So we limit the number of workers to 2, unless we have a very low-core-count machine.
+    private static int ComputeWorkerCount()
+    {
+        if(Environment.ProcessorCount <= 2) return 1;
+        return 2;
+    }
 
     /* ---------- fields ---------- */
     private ConcurrentDictionary<NoteKey, CachedWave> _waves = new();
