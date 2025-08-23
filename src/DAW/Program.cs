@@ -1,5 +1,7 @@
 ﻿using klooie;
 using PowerArgs;
+
+AudioPreRendererConfig.ComputeWorkerCountOverride = Math.Max(1, Environment.ProcessorCount - 4);
 File.WriteAllText(@"C:\Users\adama\OneDrive\Desktop\doc.html", SynthDocGenerator.GenerateHtml());
 File.WriteAllText(@"C:\Users\adama\OneDrive\Desktop\doc.md", SynthDocGenerator.GenerateMarkdown());
 var app = new ConsoleApp();

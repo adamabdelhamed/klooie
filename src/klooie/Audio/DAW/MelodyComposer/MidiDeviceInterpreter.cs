@@ -7,38 +7,29 @@ public class MidiDeviceInterpretor : Recyclable
 {
     private IMidiInput midiInput;
     private Dropdown midiDropdown;
-    private IMidiProvider midiImpl;
+ 
     private MidiNoteOnOffDetector noteDetector;
     private MelodyComposer melodyComposer;
     private MidiLiveNoteEngine engine;
     private MidiDeviceInterpretor() { }
     private static LazyPool<MidiDeviceInterpretor> lazyPool = new(() => new MidiDeviceInterpretor());
 
-    public static MidiDeviceInterpretor Create(IMidiProvider midiImpl, MelodyComposer melodyComposer)
+    public static MidiDeviceInterpretor Create(IMidiInput input, MelodyComposer melodyComposer)
     {
         var instance = lazyPool.Value.Rent();
         instance.melodyComposer = melodyComposer ?? throw new ArgumentNullException(nameof(melodyComposer));
-        instance.midiImpl = midiImpl ?? throw new ArgumentNullException(nameof(midiImpl));
+        instance.midiInput = input ?? throw new ArgumentNullException(nameof(input));
         instance.engine = MidiLiveNoteEngine.Create((noteNumber, velocity) => NoteExpression.Create(noteNumber, instance.melodyComposer.Grid.Player.CurrentBeat, -1, WorkspaceSession.Current.CurrentSong.BeatsPerMinute, velocity, instance.melodyComposer.Grid.Instrument));
+
+        instance.noteDetector?.Dispose();
+        instance.noteDetector = MidiNoteOnOffDetector.Create(input);
+        instance.noteDetector.NoteOn.Subscribe(instance.HandleNoteOn, instance.noteDetector);
+        instance.noteDetector.NoteOff.Subscribe(instance.HandleNoteOff, instance.noteDetector);
+        instance.midiInput = input;
+
         return instance;
     }
-
-    private void BindToMidiProduct()
-    {
-        if (midiImpl.TryConnect(midiDropdown.Value.Id, out IMidiInput input))
-        {
-            noteDetector?.Dispose();
-            noteDetector = MidiNoteOnOffDetector.Create(input);
-            noteDetector.NoteOn.Subscribe(HandleNoteOn, noteDetector);
-            noteDetector.NoteOff.Subscribe(HandleNoteOff, noteDetector);
-            midiInput = input;
-        }
-        else
-        {
-            midiInput = null;
-        }
-    }
-
+ 
     private void HandleNoteOn((int NoteNumber, int Velocity) ev)
     {
         if (!engine.TryStart(ev.NoteNumber, ev.Velocity, out var noteExpression, out var tracker)) return;
@@ -75,12 +66,7 @@ public class MidiDeviceInterpretor : Recyclable
         return Math.Round(beat / grid) * grid;
     }
 
-    public Dropdown CreateMidiProductDropdown()
-    {
-        midiDropdown = new Dropdown(midiImpl.GetProductNames().Select(p => new DialogChoice() { DisplayText = p.ToConsoleString(), Id = p }));
-        midiDropdown.ValueChanged.Sync(BindToMidiProduct, midiDropdown);
-        return midiDropdown;
-    }
+ 
 
     protected override void OnReturn()
     {

@@ -11,17 +11,17 @@ namespace klooie;
 public partial class TrackGrid : BeatGrid<MelodyClip>
 {
     public List<ComposerTrack> Tracks => Session.CurrentSong.Tracks;
-    public IMidiProvider MidiProvider { get; private set; }
+    public IMidiInput midi{ get; private set; }
 
     private TrackGridEditor editor;
 
     protected override IEnumerable<MelodyClip> EnumerateValues() => Session.CurrentSong.Tracks.SelectMany(t => t.Clips);
     protected override BeatCell<MelodyClip> BeatCellFactory(MelodyClip value) => new MelodyClipCell(value, this, Viewport);
-    public TrackGrid(WorkspaceSession session, TrackGridEditor editor, IMidiProvider midiProvider) : base(session)
+    public TrackGrid(WorkspaceSession session, TrackGridEditor editor, IMidiInput midi) : base(session)
     {
         Viewport.RowHeightChars = 3;
         ConsoleApp.Current.InvokeNextCycle(() => Viewport.SetFirstVisibleRow(0));
-        this.MidiProvider = midiProvider;
+        this.midi = midi;
         this.editor = editor;
         if (Tracks == null || Tracks.Count == 0)
         {
@@ -100,7 +100,7 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
         var newFocusDepth = maxFocusDepth + 1;
         var panel = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel() { FocusStackDepth = newFocusDepth }).Fill();
         var track = Tracks.FirstOrDefault(t => t.Clips.Contains(melody));
-        var melodyComposer = panel.Add(new MelodyComposer(WorkspaceSession.Current, track, melody.Notes, MidiProvider)).Fill();
+        var melodyComposer = panel.Add(new MelodyComposer(WorkspaceSession.Current, track, melody.Notes, midi)).Fill();
         melodyComposer.Grid.Color = GetColor(melody);
         melodyComposer.Grid.Focus();
 

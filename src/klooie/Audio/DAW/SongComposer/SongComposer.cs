@@ -30,11 +30,12 @@ public class SongComposer : ProtectedConsolePanel
         var rowOffset =  1;
         // 16p for track headers, rest for grid
         layout = ProtectedPanel.Add(new GridLayout($"{rowSpecPrefix};{StatusBar.Height}p", "16p;1r")).Fill();
-
+        midiJamInterpretor = MidiJamInterpretor.Create(midiProvider, () => TrackHeaders.Tracks[TrackHeaders.SelectedTrackIndex].Instrument);
+        commandBar.Add(midiJamInterpretor.CreateMidiProductDropdown());
         // Add the track headers (left, all rows except command/status)
         TrackHeaders = layout.Add(new TrackHeadersPanel(this, session), 0, rowOffset);
         Editor = new TrackGridEditor(this, session.Commands);
-        Grid = layout.Add(new TrackGrid(session, Editor, midiProvider), 1, rowOffset);
+        Grid = layout.Add(new TrackGrid(session, Editor, midiJamInterpretor.MidiInput), 1, rowOffset);
 
         StatusBar = layout.Add(new StatusBar(), column: 0, row: rowOffset + 1, columnSpan: 2);
 
@@ -45,8 +46,6 @@ public class SongComposer : ProtectedConsolePanel
         Grid.StatusChanged.Subscribe(message => StatusBar.Message = message, this);
         SetupKeyForwarding();
 
-        midiJamInterpretor = MidiJamInterpretor.Create(midiProvider, () => TrackHeaders.Tracks[TrackHeaders.SelectedTrackIndex].Instrument);
-        commandBar.Add(midiJamInterpretor.CreateMidiProductDropdown());
     }
 
     private void AddSynthTweakerCommand()

@@ -15,6 +15,8 @@ public sealed class MidiJamInterpretor : Recyclable
     private IMidiProvider midiImpl;
     private MidiNoteOnOffDetector noteDetector;
 
+    public IMidiInput? MidiInput => midiInput;
+
     private Func<InstrumentExpression> jamInstrumentProvider;
     private MidiLiveNoteEngine engine;
 

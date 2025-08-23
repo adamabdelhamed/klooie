@@ -9,7 +9,7 @@ public class MelodyComposer : ProtectedConsolePanel
     public StatusBar StatusBar { get; private init; }
     public BeatGridPlayer<NoteExpression> Player => Grid.Player;
     private ComposerTrack track;
-    public MelodyComposer(WorkspaceSession session, ComposerTrack track, ListNoteSource notes, IMidiProvider midiProvider)
+    public MelodyComposer(WorkspaceSession session, ComposerTrack track, ListNoteSource notes, IMidiInput midiInput)
     {
         this.track = track ?? throw new ArgumentNullException(nameof(track));
         var rowSpecPrefix =  "1p;1r";
@@ -23,10 +23,7 @@ public class MelodyComposer : ProtectedConsolePanel
         var commandBar = new StackPanel() { AutoSize = StackPanel.AutoSizeMode.Both, Margin = 2, Orientation = Orientation.Horizontal };
         layout.Add(commandBar, 0, 0, columnSpan: 2);
 
-        var midi = MidiDeviceInterpretor.Create(midiProvider, this);
-        commandBar.Add(midi.CreateMidiProductDropdown());
-        this.OnDisposed(() => midi.Dispose());
-        
+        var midi = MidiDeviceInterpretor.Create(midiInput, this);
         // Add instrument picker
         var instrumentPicker = InstrumentPicker.CreatePickerDropdown();
         instrumentPicker.Value = instrumentPicker.Options.Where(o => (o.Value as InstrumentExpression).Name == track.Instrument.Name).First();

@@ -12,6 +12,10 @@ chorus, delay and reverb for an epic, evolving tone.
 """)]
 public static class SynthLead
 {
+    public static ISynthPatch CreateSlim(NoteExpression note) => SynthPatch.Create(note)
+        .WithWaveForm(WaveformType.Sine)
+        .WithEnvelope(attack: 0.01f, decay: 0.1f, sustainLevel: 0.8f, release: 0.2f);
+
     public static ISynthPatch Create(NoteExpression note)
     {
         // ---- Derived note context ----

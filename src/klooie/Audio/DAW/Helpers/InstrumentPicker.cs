@@ -31,6 +31,7 @@ public class InstrumentPicker
     public static IEnumerable<InstrumentExpression> GetAllKnownInstruments()
     {
         yield return new InstrumentExpression() { Name = "Synth Lead", PatchFunc = SynthLead.Create };
+        yield return new InstrumentExpression() { Name = "Synth Lead (Slim)", PatchFunc = SynthLead.CreateSlim };
         yield return new InstrumentExpression() { Name = "Kick", PatchFunc = DrumKit.Kick };
         yield return new InstrumentExpression() { Name = "Snare", PatchFunc = DrumKit.Snare };
         yield return new InstrumentExpression() { Name = "Clap", PatchFunc = DrumKit.Clap };

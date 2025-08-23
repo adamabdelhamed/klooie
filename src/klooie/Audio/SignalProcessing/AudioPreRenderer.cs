@@ -261,12 +261,15 @@ public sealed class AudioPreRenderer
             new Thread(WorkerLoop) { IsBackground = true, Name = $"PreRender-{i}" }.Start();
     }
 
+
+
     // We could use lots of workers, but that will use lots of memory since each worker will end up renting its own buffers.
     // I've found that the GC tends to leave those buffers around for a while, so we end up using lots of memory even after the workers are done.
     // So we limit the number of workers to 2, unless we have a very low-core-count machine.
     private static int ComputeWorkerCount()
     {
-        if(Environment.ProcessorCount <= 2) return 1;
+        if(AudioPreRendererConfig.ComputeWorkerCountOverride.HasValue) return AudioPreRendererConfig.ComputeWorkerCountOverride.Value;
+        if (Environment.ProcessorCount <= 2) return 1;
         return 2;
     }
 
@@ -277,4 +280,9 @@ public sealed class AudioPreRenderer
     private readonly LinkedList<NoteKey> _lru = new();
     private readonly object _lruLock = new();
     private long _bytes;
+}
+
+public static class AudioPreRendererConfig
+{
+    public static int? ComputeWorkerCountOverride;
 }
