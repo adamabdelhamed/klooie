@@ -66,10 +66,8 @@ public class DAWPanel : ProtectedConsolePanel
     {
         var uiHint = new ConsoleStringRenderer(ConsoleString.Parse("[B=Cyan][Black] ALT + O [D][White] Open Song"));
         ComposerWithTracks.CommandBar.Controls.Insert(1, uiHint);
-        ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
+        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.O, ConsoleModifiers.Alt, async () =>
         {
-            if (k.Modifiers != ConsoleModifiers.Alt || k.Key != ConsoleKey.O) return;
-
             try
             {
                 var opened = await WorkspaceSession.Current.OpenSong();
