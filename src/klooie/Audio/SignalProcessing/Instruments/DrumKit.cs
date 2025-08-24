@@ -75,43 +75,34 @@ A basic kick drum patch with a punchy attack and a short decay.
     {
         var builder = LayeredPatch.CreateBuilder();
 
-        // Temporal & envelope shape
-        var delaySpacing = 0.016f;   // layer-to-layer offset (sec)
-        var baseAttack = 0.02f;   // constant attack for all layers
-        var baseDecay = 0.080f;   // starting decay, shortened per layer
-        var decayFactor = 0.97f;    // decay multiplier each layer
-        var release = 0.150f;    // short tail; sustain stays 0 for a crack
+        var delaySpacing = 0.02f;   // layer-to-layer offset (sec)
+        var attack = 0.05f; 
+        var decay = 0.06f; 
+        var layers = 2;
 
-        // Amplitude falloff per layer
-        var volume = 1.0f;
-        var volumeFactor = 0.40f;
-
-        // Gentle spectral variation
-        var layers = 3;
-        var freqInc = 300f;
-
-        var currentDecay = baseDecay;
         for (var i = 0; i < layers; i++)
         {
-            var delay = i * delaySpacing;
-
-            builder.AddLayer(1, 0, 0,
-                SynthPatch.Create(note)
-                    .WithWaveForm(WaveformType.PinkNoise)
-                    // NEW: use delay-aware envelope (delay, attack, decay, sustain, release)
-                    .WithEnvelope(delay, baseAttack, currentDecay, 0.0f, release)
-                    .WithVolume(volume)
-                    .WithPeakEQ(freq: freqInc * i, gainDb: -8f, q: 1)
-                    .WithPeakEQ(freq: 500 + freqInc * i, gainDb: -2f, q: 1)
-                    .WithPeakEQ(freq: 2000 + freqInc * i, gainDb: 4f, q: 1)
-                    .WithLowPass(cutoffHz: 8000 - (i * 100)))
-            ;
-
-            // next layer tweaks
-            currentDecay *= decayFactor;
-            volume *= volumeFactor;
+            builder.AddLayer(1, 0, 0, SynthPatch.Create(note)
+                .WithWaveForm(WaveformType.PinkNoise)
+                .WithEnvelope(
+                    delay: i * delaySpacing, 
+                    attack: t=>
+                    {
+                        if (t > attack) return null;
+                        var progress = t / attack;
+                        return progress * progress;
+                    }, 
+                    decay: t =>
+                    {
+                        if (t > decay) return null;
+                        var progress = 1 - (t / decay);
+                        return progress * progress;
+                    }, 
+                    sustainLevel: t => 0,
+                    release: t => null)
+                );
         }
 
-        return builder.Build().WithVolume(0.085f);
+        return builder.Build().WithVolume(1f);
     }
 }
