@@ -25,7 +25,7 @@ A basic kick drum patch with a punchy attack and a short decay.
         .WithVolume(0.06f))
     .Build()
     .WithReverb(0.8f, 0.6f, 0.3f, 0.25f, 0.75f, 0.3f)
-    .WithVolume(5f)
+    .WithVolume(3f)
     .WithHighPass(300);
 
     private static float KickPitchBend(float time)
@@ -103,6 +103,6 @@ A basic kick drum patch with a punchy attack and a short decay.
                 );
         }
 
-        return builder.Build().WithVolume(1f);
+        return builder.Build().WithVolume(.1f);
     }
 }
