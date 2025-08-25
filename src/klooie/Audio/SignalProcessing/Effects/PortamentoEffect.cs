@@ -39,13 +39,12 @@ public class PortamentoEffect : Recyclable, IPitchModEffect
         if (prev == null)
             return 0f;
 
-        /*
-        // Only glide if the previous note ended less than 10ms before this one started ("legato" or overlap)
+         // Only glide if the previous note ended less than 10ms before this one started ("legato" or overlap)
         var prevEnd = prev.StartTime + prev.DurationTime;
         double timeGap = (ctx.NoteEvent.Note.StartTime - prevEnd).TotalSeconds;
         if (timeGap > 0.01)
             return 0f;
-        */
+        
         // Pitch difference in cents
         float diffCents = (ctx.NoteEvent.Note.MidiNote - prev.MidiNote) * 100f;
         // Glide time, clamped to portamento time
