@@ -301,10 +301,10 @@ public sealed class CurvedADSR : Recyclable, IEnvelope
     public struct Settings
     {
         public double Delay; // seconds of silence before attack
-        public Func<double, double?> AttackCurve;   // input: seconds since attack start
-        public Func<double, double?> DecayCurve;    // input: seconds since decay start
-        public Func<double, double> SustainCurve;   // input: seconds since sustain start
-        public Func<double, double?> ReleaseCurve;  // input: seconds since release start
+        public Func<double, double?> AttackCurve;   // returns progress 0..1 (or null when done)
+        public Func<double, double?> DecayCurve;    // returns progress 0..1 (or null when done)
+        public Func<double, double> SustainCurve;  // absolute level 0..1 over sustain time
+        public Func<double, double?> ReleaseCurve;  // returns progress 0..1 (or null when done)
     }
 
     private CurvedADSR() { }
@@ -324,10 +324,10 @@ public sealed class CurvedADSR : Recyclable, IEnvelope
 
     public double Delay { get; private set; }
 
-    // phase functions
+    // phase functions (providers think in normalized progress 0..1; null = “done”)
     public Func<double, double?> AttackCurve = Linear01;
     public Func<double, double?> DecayCurve = Linear01;
-    public Func<double, double> SustainCurve = One;
+    public Func<double, double> SustainCurve = One;      // absolute level
     public Func<double, double?> ReleaseCurve = Linear01;
 
     private double noteOnTime;
@@ -336,6 +336,14 @@ public sealed class CurvedADSR : Recyclable, IEnvelope
     private enum Phase { Delay, Attack, Decay, Sustain, Release, Done }
     private Phase phase;
     private double phaseStartTime;
+
+    // Internal level mapping (we scale curves to actual levels here)
+    private double lastLevel;            // last computed absolute level (0..1)
+
+    private double decayStartLevel;      // level at the start of Decay
+    private double decayTargetLevel;     // snapshot of SustainCurve(0) taken at Decay start
+
+    private double releaseStartLevel;    // level at the start of Release
 
     public IEnvelope Clone()
     {
@@ -356,10 +364,17 @@ public sealed class CurvedADSR : Recyclable, IEnvelope
         DecayCurve = Linear01;
         SustainCurve = One;
         ReleaseCurve = Linear01;
+
         noteOnTime = 0;
         noteOffTime = null;
+
         phase = Phase.Done;
         phaseStartTime = 0;
+
+        lastLevel = 0;
+        decayStartLevel = 0;
+        decayTargetLevel = 0;
+        releaseStartLevel = 0;
     }
 
     public void Trigger(double currentTime, double sampleRate)
@@ -368,23 +383,44 @@ public sealed class CurvedADSR : Recyclable, IEnvelope
         noteOffTime = null;
         phase = Delay > 0 ? Phase.Delay : Phase.Attack;
         phaseStartTime = currentTime;
+
+        lastLevel = 0;
+        decayStartLevel = 1; // default; will be overwritten on Attack→Decay transition
+        // decayTargetLevel is captured when we actually enter Decay
     }
 
     public void ReleaseNote(double currentTime)
     {
-        if (phase != Phase.Release && phase != Phase.Done)
-        {
-            noteOffTime = currentTime;
-            phase = Phase.Release;
-            phaseStartTime = currentTime;
-        }
+        if (phase == Phase.Done || phase == Phase.Release) return;
+
+        // Snapshot current level WITHOUT advancing phase, so release starts exactly at the audible level now.
+        var levelNow = SnapshotLevel(currentTime);
+
+        noteOffTime = currentTime;
+        releaseStartLevel = levelNow;
+        phase = Phase.Release;
+        phaseStartTime = currentTime;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static double Clamp01(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
 
-    private static double? Linear01(double t) => Clamp01(t); // default: linear ramp
+    // Provider helpers
+    private static double? Linear01(double t) => t; // progress (not clamped); we clamp & end-detect internally
     private static double One(double _) => 1.0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static double Map(double start, double target, double progress)
+        => start + (target - start) * progress;
+
+    // Normalizes provider output to progress 0..1 and flags “ended” on null or >=1
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static (double progress, bool ended) NormalizeProgress(double? p)
+    {
+        if (p == null) return (1.0, true);
+        var prog = Clamp01(p.Value);
+        return (prog, prog >= 1.0);
+    }
 
     public float GetLevel(double currentTime)
     {
@@ -395,36 +431,124 @@ public sealed class CurvedADSR : Recyclable, IEnvelope
         switch (phase)
         {
             case Phase.Delay:
-                if (tPhase >= Delay)
                 {
-                    phase = Phase.Attack;
-                    phaseStartTime = currentTime;
-                    return GetLevel(currentTime);
+                    if (tPhase >= Delay)
+                    {
+                        phase = Phase.Attack;
+                        phaseStartTime = currentTime;
+                        return GetLevel(currentTime);
+                    }
+                    lastLevel = 0.0;
+                    return 0f;
                 }
-                return 0f;
 
             case Phase.Attack:
-                var a = AttackCurve?.Invoke(tPhase);
-                if (a == null) { phase = Phase.Decay; phaseStartTime = currentTime; return GetLevel(currentTime); }
-                return (float)Clamp01(a.Value);
+                {
+                    var (prog, ended) = NormalizeProgress(AttackCurve?.Invoke(tPhase));
+                    var level = Map(0.0, 1.0, prog);
+                    lastLevel = level;
+
+                    if (ended)
+                    {
+                        // Prepare Decay start & target using final Attack level and Sustain snapshot
+                        decayStartLevel = level;                   // where attack actually ended
+                        decayTargetLevel = Clamp01(SustainCurve(0)); // sustain level at sustain start
+                        phase = Phase.Decay;
+                        phaseStartTime = currentTime;
+                    }
+                    return (float)level;
+                }
 
             case Phase.Decay:
-                var d = DecayCurve?.Invoke(tPhase);
-                if (d == null) { phase = Phase.Sustain; phaseStartTime = currentTime; return GetLevel(currentTime); }
-                return (float)Clamp01(d.Value);
+                {
+                    var (prog, ended) = NormalizeProgress(DecayCurve?.Invoke(tPhase));
+                    var level = Map(decayStartLevel, decayTargetLevel, prog);
+                    lastLevel = level;
+
+                    if (ended)
+                    {
+                        phase = Phase.Sustain;
+                        phaseStartTime = currentTime;
+                    }
+                    return (float)level;
+                }
 
             case Phase.Sustain:
-                return (float)Clamp01(SustainCurve?.Invoke(tPhase) ?? 0);
+                {
+                    var level = Clamp01(SustainCurve?.Invoke(tPhase) ?? 0.0);
+                    lastLevel = level;
+                    return (float)level;
+                }
 
             case Phase.Release:
-                var r = ReleaseCurve?.Invoke(tPhase);
-                if (r == null) { phase = Phase.Done; return 0f; }
-                return (float)Clamp01(r.Value);
+                {
+                    var (prog, ended) = NormalizeProgress(ReleaseCurve?.Invoke(tPhase));
+                    var level = Map(releaseStartLevel, 0.0, prog);
+                    lastLevel = level;
+
+                    if (ended)
+                    {
+                        phase = Phase.Done;
+                    }
+                    return (float)level;
+                }
 
             default: // Done
+                lastLevel = 0.0;
                 return 0f;
         }
     }
 
     public bool IsDone(double currentTime) => phase == Phase.Done;
+
+    // Computes the instantaneous level WITHOUT advancing phases (used to seed Release correctly).
+    private double SnapshotLevel(double currentTime)
+    {
+        var tPhase = currentTime - phaseStartTime;
+
+        return phase switch
+        {
+            Phase.Delay => 0.0,
+            Phase.Attack => Map(0.0, 1.0, Clamp01(AttackCurve?.Invoke(tPhase) ?? 1.0)),
+            Phase.Decay => Map(decayStartLevel, decayTargetLevel, Clamp01(DecayCurve?.Invoke(tPhase) ?? 1.0)),
+            Phase.Sustain => Clamp01(SustainCurve?.Invoke(tPhase) ?? 0.0),
+            Phase.Release => Map(releaseStartLevel, 0.0, Clamp01(ReleaseCurve?.Invoke(tPhase) ?? 1.0)),
+            _ => 0.0
+        };
+    }
+}
+
+public static class ADSRCurves
+{
+    public static double? Instant(double t) => null;
+    public static double NoSustain(double t) => 0;
+
+
+    public static double? Linear(double t, double duration)
+    {
+        if (t > duration) return null;
+        var progress = t / duration; // 0→1
+        return progress;
+    }
+
+    public static double? Quadratic(double t, double duration)
+    {
+        if (t > duration) return null;
+        var progress = t / duration;
+        return progress * progress;
+    }
+
+    public static double? Cubic(double t, double duration)
+    {
+        if (t > duration) return null;
+        var progress = t / duration;
+        return progress * progress * progress;
+    }
+
+    public static double? Power(double t, double duration, int power)
+    {
+        if (t > duration) return null;
+        var progress = t / duration;
+        return Math.Pow(progress, power);
+    }
 }

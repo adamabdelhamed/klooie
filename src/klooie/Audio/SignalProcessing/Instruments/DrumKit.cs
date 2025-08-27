@@ -75,34 +75,27 @@ A basic kick drum patch with a punchy attack and a short decay.
     {
         var builder = LayeredPatch.CreateBuilder();
 
-        var delaySpacing = 0.02f;   // layer-to-layer offset (sec)
-        var attack = 0.05f; 
-        var decay = 0.06f; 
-        var layers = 2;
+        var delaySpacing = 0.01f;   // layer-to-layer offset (sec)
+        var attack = 0.02f; 
+        var decay = 0.09f; 
+        var layers = 3;
 
+        var volume = 1f;
         for (var i = 0; i < layers; i++)
         {
             builder.AddLayer(1, 0, 0, SynthPatch.Create(note)
                 .WithWaveForm(WaveformType.PinkNoise)
                 .WithEnvelope(
                     delay: i * delaySpacing, 
-                    attack: t=>
-                    {
-                        if (t > attack) return null;
-                        var progress = t / attack;
-                        return progress * progress;
-                    }, 
-                    decay: t =>
-                    {
-                        if (t > decay) return null;
-                        var progress = 1 - (t / decay);
-                        return progress * progress;
-                    }, 
+                    attack: t=> ADSRCurves.Cubic(t, attack), 
+                    decay: t => ADSRCurves.Cubic(t, decay), 
                     sustainLevel: t => 0,
                     release: t => null)
+                .WithVolume(volume)
                 );
+            volume *= 0.3f;
         }
 
-        return builder.Build().WithVolume(.1f);
+        return builder.Build().WithVolume(.08f);
     }
 }
