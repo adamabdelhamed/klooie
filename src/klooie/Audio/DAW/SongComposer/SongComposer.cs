@@ -51,9 +51,8 @@ public class SongComposer : ProtectedConsolePanel
     private void AddSynthTweakerCommand()
     {
         var uiHint = commandBar.Add(new ConsoleStringRenderer(ConsoleString.Parse("[B=Cyan][Black] F10 [D][White] Instruments")));
-        ConsoleApp.Current.GlobalKeyPressed.Subscribe(async k =>
+        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.F10, ()=>
         {
-            if (k.Key != ConsoleKey.F10) return;
             if (MidiProvider.TryConnect(MidiProvider.GetProductNames()[0], out IMidiInput input) == false) return;
             var maxDepth = Math.Max(ConsoleApp.Current.LayoutRoot.FocusStackDepth, ConsoleApp.Current.LayoutRoot.Descendents.Max(d => d.FocusStackDepth));
             var tweaker = ConsoleApp.Current.LayoutRoot.Add(new SynthTweakerPanel(input, WorkspaceSession.Current.CurrentSong.BeatsPerMinute) { FocusStackDepth = maxDepth+1 }).Fill();

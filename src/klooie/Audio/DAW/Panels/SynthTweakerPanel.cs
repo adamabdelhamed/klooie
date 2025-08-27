@@ -15,7 +15,7 @@ public class SynthTweakerPanel : ProtectedConsolePanel
     private SynthTweaker.PatchFactoryInfo? currentPatch => patchMenu?.SelectedItem;
     private SynthTweakerSettings settings;
 
-
+    private MidiNoteOnOffDetector noteDetector;
     private static string SettingsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SynthTweakerSettings.json");
 
     public SynthTweakerPanel(IMidiInput midiInput, double bpm = 60)
@@ -39,6 +39,19 @@ public class SynthTweakerPanel : ProtectedConsolePanel
             this.Ready.SubscribeOnce(() => LoadFile(settings.LatestSourcePath));
         }
 
+        engine = MidiLiveNoteEngine.Create((noteNumber, velocity) =>
+            NoteExpression.Create(
+                midi: noteNumber,
+                startBeat: 0,             // jamming is not recorded/scheduled
+                durationBeats: -1,        // sustained
+                bpm: 120,                 // unused for unscheduled/live notes; safe placeholder
+                velocity: velocity,
+                instrument: new InstrumentExpression() { PatchFunc = currentPatch?.Factory ?? SynthLead.CreateSlim, Name = "Tweaker" }));
+
+        noteDetector = MidiNoteOnOffDetector.Create(midiInput);
+        noteDetector.NoteOn.Subscribe(HandleNoteOn, noteDetector);
+        noteDetector.NoteOff.Subscribe(HandleNoteOff, noteDetector);
+
         var oldMode = SoundProvider.Current.ScheduledSignalMixer.Mode;
         SoundProvider.Current.ScheduledSignalMixer.Mode = ScheduledSignalMixerMode.PreRenderOnly;
         OnDisposed(() =>
@@ -57,6 +70,19 @@ public class SynthTweakerPanel : ProtectedConsolePanel
 
         Ready.SubscribeOnce(() => ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Spacebar, PlayCurrentNote, this));
         
+    }
+
+    MidiLiveNoteEngine engine;
+    private void HandleNoteOn((int NoteNumber, int Velocity) tuple)
+    {
+        engine.TryStart(tuple.NoteNumber, tuple.Velocity, out _, out _);
+    }
+    private void HandleNoteOff(int noteNumber)
+    {
+        if (engine.TryStop(noteNumber, out _, out var tracker))
+        {
+            tracker.ReleaseNote();
+        }
     }
 
     private void ListenForFileOpenShortcut() => ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.O, ConsoleModifiers.Alt, () => ConsoleApp.Current.Invoke(async()=> await OpenFileDialog()), this);
@@ -157,6 +183,9 @@ public class SynthTweakerPanel : ProtectedConsolePanel
     {
         base.OnReturn();
         tweaker?.Dispose();
+        tweaker = null;
+        noteDetector?.Dispose();
+        noteDetector = null;
     }
 }
 

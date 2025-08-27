@@ -59,15 +59,18 @@ public sealed class MidiJamInterpretor : Recyclable
             midiInput = null;
         }
     }
-
+     
     private void HandleNoteOn((int NoteNumber, int Velocity) ev)
     {
+        if (ConsoleApp.Current.LayoutRoot.IsFocusStackAtMyLevel == false) return;
+        
         // Jam mode: just start the sustained note (no transport, no grid)
         engine.TryStart(ev.NoteNumber, ev.Velocity, out _, out _);
     }
 
     private void HandleNoteOff(int noteNumber)
     {
+        if (ConsoleApp.Current.LayoutRoot.IsFocusStackAtMyLevel == false) return;
         if (engine.TryStop(noteNumber, out _, out var tracker))
         {
             tracker.ReleaseNote();
