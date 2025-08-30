@@ -89,18 +89,19 @@ public readonly struct LocF
         return new LocF(x2, y2);
     }
 
-    public static float CalculateNormalizedDistanceTo(in LocF a, in LocF b)
+    public static float CalculateNormalizedDistanceTo(in LocF a, in LocF b, float aspectRatio = 2.0f)
     {
-        var d = CalculateDistanceTo(a, b);
-        var angle = CalculateAngleTo(a, b);
-        return ConsoleMath.NormalizeQuantity(d, angle.Value, true);
+        float dx = b.Left - a.Left;
+        float dy = (b.Top - a.Top) * aspectRatio; 
+        return MathF.Sqrt(dx * dx + dy * dy);
     }
 
-    public static float CalculateNormalizedDistanceTo(float ax, float ay, float bx, float by)
+    public static float CalculateNormalizedDistanceTo(float ax, float ay, float bx, float by, float aspectRatio = 2.0f)
     {
-        var d = CalculateDistanceTo(ax, ay, bx, by);
-        var a = CalculateAngleTo(ax, ay, bx, by);
-        return ConsoleMath.NormalizeQuantity(d, a.Value, true);
+        float dx = bx - ax;
+        float dy = (by - ay) * aspectRatio; 
+
+        return MathF.Sqrt(dx * dx + dy * dy);
     }
 
     public static Angle CalculateAngleTo(in LocF a, in LocF b)
