@@ -16,6 +16,12 @@ public enum CompositionMode
     /// then skip drawing it so that the pixel will end up looking transparent.
     /// </summary>
     BlendVisible = 2,
+    /// <summary>
+    /// Use the top layer's character and its foreground color as long as it is not a space.
+    /// Otherwise use the bottom layer's character entirely. The bottom layer's background color
+    /// is always used.
+    /// </summary>
+    BlendForeground = 3,
 }
 public abstract class Container : ConsoleControl
 {
@@ -23,7 +29,7 @@ public abstract class Container : ConsoleControl
     public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = Event<ConsoleControl>.Create()); }
     public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = Event<ConsoleControl>.Create()); }
     public static SingleThreadObjectPool<List<ConsoleControl>> DescendentBufferPool { get; private set; } = new SingleThreadObjectPool<List<ConsoleControl>>();
-    internal Container() 
+    internal Container()
     {
         OnDisposed(OnReturn);
     }
@@ -55,7 +61,7 @@ public abstract class Container : ConsoleControl
 
     public void PopulateDescendentsWithZeroAllocations(List<ConsoleControl> buffer, bool clear = true)
     {
-        if(clear) buffer.Clear();
+        if (clear) buffer.Clear();
         for (var i = 0; i < Children.Count; i++)
         {
             var child = Children[i];
@@ -132,6 +138,14 @@ public abstract class Container : ConsoleControl
         {
             ComposeBlendBackground(control);
         }
+        else if (control.CompositionMode == CompositionMode.BlendVisible)
+        {
+            ComposeBlendVisible(control);
+        }
+        else if (control.CompositionMode == CompositionMode.BlendForeground)
+        {
+            ComposeBlendForeground(control);
+        }
         else
         {
             ComposeBlendVisible(control);
@@ -154,7 +168,7 @@ public abstract class Container : ConsoleControl
         {
             for (var y = minY; y < maxY; y++)
             {
-                Bitmap.SetPixel(x,y, control.Bitmap.GetPixel(x - position.X, y - position.Y));
+                Bitmap.SetPixel(x, y, control.Bitmap.GetPixel(x - position.X, y - position.Y));
             }
         }
     }
@@ -170,11 +184,11 @@ public abstract class Container : ConsoleControl
         {
             for (var y = minY; y < maxY; y++)
             {
-                var controlPixel = control.Bitmap.GetPixel(x - position.X,y - position.Y);
+                var controlPixel = control.Bitmap.GetPixel(x - position.X, y - position.Y);
                 var myPixel = Bitmap.GetPixel(x, y);
                 var controlIsDefaultBg = controlPixel.BackgroundColor == ConsoleString.DefaultBackgroundColor;
                 var blend = controlIsDefaultBg;
-                Bitmap.SetPixel(x,y, blend ? new ConsoleCharacter(controlPixel.Value, controlPixel.ForegroundColor, myPixel.BackgroundColor) : controlPixel);
+                Bitmap.SetPixel(x, y, blend ? new ConsoleCharacter(controlPixel.Value, controlPixel.ForegroundColor, myPixel.BackgroundColor) : controlPixel);
             }
         }
     }
@@ -192,7 +206,35 @@ public abstract class Container : ConsoleControl
             {
                 var controlPixel = control.Bitmap.GetPixel(x - position.X, y - position.Y);
                 var vis = controlPixel.Value == ' ' ? controlPixel.BackgroundColor != Background : controlPixel.ForegroundColor != Background || controlPixel.BackgroundColor != Background;
-                Bitmap.SetPixel(x,y, vis ? controlPixel : Bitmap.GetPixel(x,y));
+                Bitmap.SetPixel(x, y, vis ? controlPixel : Bitmap.GetPixel(x, y));
+            }
+        }
+    }
+
+    private void ComposeBlendForeground(ConsoleControl control)
+    {
+        var position = Transform(control);
+        var minX = Math.Max(position.X, 0);
+        var minY = Math.Max(position.Y, 0);
+        var maxX = Math.Min(Width, position.X + control.Width);
+        var maxY = Math.Min(Height, position.Y + control.Height);
+        for (var x = minX; x < maxX; x++)
+        {
+            for (var y = minY; y < maxY; y++)
+            {
+                var topPixel = control.Bitmap.GetPixel(x - position.X, y - position.Y);
+                var bottomPixel = Bitmap.GetPixel(x, y);
+
+                if (topPixel.Value != ' ')
+                {
+                    // Use top char and its FG, but always bottom BG
+                    Bitmap.SetPixel(x, y, new ConsoleCharacter(topPixel.Value, topPixel.ForegroundColor, bottomPixel.BackgroundColor));
+                }
+                else
+                {
+                    // Top is space: keep bottom entirely
+                    Bitmap.SetPixel(x, y, bottomPixel);
+                }
             }
         }
     }
