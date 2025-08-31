@@ -345,4 +345,22 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         var bounds = new RectF(left, top, right - left, bottom - top);
         return bounds;
     }
+
+    public RectF ClipTo(in RectF other)
+    {
+        // Determine the maximum left/top and minimum right/bottom edges
+        var x1 = MathF.Max(this.Left, other.Left);
+        var y1 = MathF.Max(this.Top, other.Top);
+        var x2 = MathF.Min(this.Left + this.Width, other.Left + other.Width);
+        var y2 = MathF.Min(this.Top + this.Height, other.Top + other.Height);
+
+        // If there’s no intersection, return an empty rect
+        if (x2 <= x1 || y2 <= y1)
+        {
+            return new RectF(0, 0, 0, 0);
+        }
+
+        // Return the intersection rectangle
+        return new RectF(x1, y1, x2 - x1, y2 - y1);
+    }
 }
