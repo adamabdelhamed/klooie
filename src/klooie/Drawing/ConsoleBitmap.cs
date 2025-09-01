@@ -252,6 +252,34 @@ public sealed class ConsoleBitmap : Recyclable
         }
     }
 
+    public void FillRectChecked(in RGB color, in Rect rect) => FillRectChecked(new ConsoleCharacter(' ', backgroundColor: color), rect.Left, rect.Top, rect.Width, rect.Height);
+    public void FillRectChecked(in ConsoleCharacter pen, in Rect rect) => FillRectChecked(pen, rect.Left, rect.Top, rect.Width, rect.Height);
+    public void FillRectChecked(in RGB color, int x, int y, int w, int h) => FillRectChecked(new ConsoleCharacter(' ', backgroundColor: color), x, y, w, h);
+
+    public void FillRectChecked(in ConsoleCharacter pen, int x, int y, int w, int h)
+    {
+        if (w <= 0 || h <= 0) return;
+
+        int minX = Math.Max(0, x);
+        int minY = Math.Max(0, y);
+        int maxX = Math.Min(Width, x + w);
+        int maxY = Math.Min(Height, y + h);
+
+        if (minX >= maxX || minY >= maxY) return;
+
+        Span<ConsoleCharacter[]> xSpan = Pixels.AsSpan().Slice(minX, maxX - minX);
+
+        for (int xd = 0; xd < xSpan.Length; xd++)
+        {
+            var ySpan = xSpan[xd].AsSpan(minY, maxY - minY);
+            for (int yd = 0; yd < ySpan.Length; yd++)
+            {
+                ySpan[yd] = pen;
+            }
+        }
+    }
+
+
     /// <summary>
     /// Fills the given rectangle with a space character and a given background color
     /// </summary>
