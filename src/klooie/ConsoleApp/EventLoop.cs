@@ -282,7 +282,7 @@ public class EventLoop : Recyclable
 
                 try
                 {
-                    StartOfCycle.Fire();
+                    startOfCycle?.Fire();
                 }
                 catch (Exception ex)
                 {
