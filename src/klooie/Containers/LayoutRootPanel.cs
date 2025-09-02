@@ -33,7 +33,6 @@ public partial class LayoutRootPanel : ConsolePanel
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
         lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
         ResizeTo(lastConsoleWidth, lastConsoleHeight);
-        ConsoleApp.Current!.EndOfCycle.SubscribeThrottled(this, static me => me.DebounceResize(), this, MaxPaintRate);
         ConsoleApp.Current.EndOfCycle.SubscribeThrottled(this, static me => me.DrainPaints(), this, MaxPaintRate);
         DescendentAdded.Subscribe(this, static (me,added) => me.OnDescendentAdded(added), this);
         OnDisposed(RestoreConsoleState);
@@ -76,6 +75,7 @@ public partial class LayoutRootPanel : ConsolePanel
 
     private void DrainPaints()
     {
+        DebounceResize();
         Bitmap.Fill(defaultPen);
         Paint();// ConsoleControl.Paint() is called here
 
@@ -85,7 +85,7 @@ public partial class LayoutRootPanel : ConsolePanel
         }
         paintRateMeter.Increment();
         _afterPaint?.Fire();
-        if (paintRequests.None()) return;
+        if (paintRequests.Count == 0) return;
 
         TaskCompletionSource[] paintRequestsCopy;
         paintRequestsCopy = paintRequests.ToArray();
