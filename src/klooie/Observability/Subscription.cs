@@ -8,6 +8,7 @@ namespace klooie;
 
 internal interface ISubscription
 {
+    int ThreadId { get; }
     int Lease { get; }
     bool IsStillValid(int lease);
     void Notify();
@@ -84,7 +85,8 @@ internal sealed class ScopedSubscription<T> : Subscription
 
 internal class ArgsSubscription<TArgs> : Subscription
 {
-    public TArgs Args { get; set; }
+    public TArgs Args { get; protected set; }
+    public void SetArgs(TArgs args) => Args = args;
     public Action<TArgs> ArgsCallback { get; private set; }
 
     protected ArgsSubscription() { }

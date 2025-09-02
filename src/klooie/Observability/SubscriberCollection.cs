@@ -1,202 +1,137 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace klooie;
-internal class SubscriberCollection
+internal sealed class SubscriberCollection
 {
     [ThreadStatic]
-    private static Stack<SubscriberCollection> collectionLightPool;
+    private static Stack<SubscriberCollection> lightweightCollectionPool;
     [ThreadStatic]
-    private static Stack<SubscriberEntry> entryLightPool;
-
-    private const int SmallNotificationBufferSize = 64;
-
-    // Per-thread stack of reusable small buffers for re-entrant notifications
-    [ThreadStatic]
-    private static Stack<ISubscription[]> _smallBufferStack;
+    private static Stack<Subscriber> lightweightSubscriberPool;
 
     internal int ThreadId;
+    private readonly List<Subscriber> subscribers = new List<Subscriber>(100);
+    private readonly List<PendingAdd> newSubscribersForNextNotificationCycle = new List<PendingAdd>(32);
 
-    private List<SubscriberEntry> entries = new List<SubscriberEntry>(100);
-    public int Count => RefreshAndCountActiveEntries();
+    public int Count => EnsureCoherentState();
+    private SubscriberCollection() => ThreadId = Thread.CurrentThread.ManagedThreadId;
 
     public static SubscriberCollection Create()
     {
-        collectionLightPool = collectionLightPool ?? new Stack<SubscriberCollection>(100);
-        var ret = collectionLightPool.Count > 0 ? collectionLightPool.Pop() : new SubscriberCollection();
-        ret.ThreadId = Thread.CurrentThread.ManagedThreadId;
+        lightweightCollectionPool ??= new Stack<SubscriberCollection>(100);
+        return lightweightCollectionPool.Count > 0 ? lightweightCollectionPool.Pop() : new SubscriberCollection();
+    }
+
+    private static Subscriber CreateSubscriber(ISubscription sub)
+    {
+        lightweightSubscriberPool ??= new Stack<Subscriber>(100);
+        var ret = lightweightSubscriberPool.Count > 0 ? lightweightSubscriberPool.Pop() : new Subscriber();
+        ret.Subscription = sub;
+        ret.Lease = sub.Lease;
         return ret;
     }
 
-    private static SubscriberEntry GetEntry()
+    public void Subscribe(ISubscription subscription)
     {
-        entryLightPool = entryLightPool ?? new Stack<SubscriberEntry>(100);
-        var ret = entryLightPool.Count > 0 ? entryLightPool.Pop() : new SubscriberEntry();
-        ret.ThreadId = Thread.CurrentThread.ManagedThreadId;
-        return ret;
+        AssertThreadForSubscription(subscription);
+        newSubscribersForNextNotificationCycle.Add(new PendingAdd { Entry = CreateSubscriber(subscription), Priority = false });
     }
 
-    private SubscriberCollection() { }
-
-    public void Track(ISubscription subscription)
+    public void SubscribeWithPriority(ISubscription subscription)
     {
-        if (((Recyclable)subscription).ThreadId != this.ThreadId)
-            throw new InvalidOperationException("Cannot track a subscription that was created on a different thread.");
-
-        var entry = GetEntry();
-        if (((Recyclable)subscription).ThreadId != entry.ThreadId)
-            throw new InvalidOperationException("Cannot track a subscription that was created on a different thread.");
-
-        entry.Subscription = subscription;
-        entry.Lease = subscription.Lease;
-        entries.Add(entry);
+        AssertThreadForSubscription(subscription);
+        newSubscribersForNextNotificationCycle.Add(new PendingAdd { Entry = CreateSubscriber(subscription), Priority = true });
     }
 
-    public void TrackWithPriority(ISubscription subscription)
+    private void RemoveEntryAt(int i)
     {
-        if (((Recyclable)subscription).ThreadId != this.ThreadId)
-            throw new InvalidOperationException("Cannot track a subscription that was created on a different thread.");
-
-        var entry = GetEntry();
-        if (((Recyclable)subscription).ThreadId != entry.ThreadId)
-            throw new InvalidOperationException("Cannot track a subscription that was created on a different thread.");
-
-        entry.Subscription = subscription;
-        entry.Lease = subscription.Lease;
-        entries.Insert(0, entry);
-    }
-
-    private void DisposeEntryAt(int i)
-    {
-        var entry = entries[i];
+        var entry = subscribers[i];
+        subscribers.RemoveAt(i);
         entry.Subscription = null;
         entry.Lease = 0;
-        entries.RemoveAt(i);
-        entryLightPool = entryLightPool ?? new Stack<SubscriberEntry>(100);
-        entryLightPool.Push(entry);
+        lightweightSubscriberPool.Push(entry);
     }
 
-    private int RefreshAndCountActiveEntries()
+    public void Notify<T>(T arg)
     {
-        for (var i = entries.Count - 1; i >= 0; i--)
+        AssertThreadForNotify();
+        EnsureCoherentState();
+        for (var i = 0; i < subscribers.Count; i++)
         {
-            var entry = entries[i];
-            if (entry.Subscription.IsStillValid(entry.Lease) == false)
+            (subscribers[i].Subscription as ArgsSubscription<T>)?.SetArgs(arg); // setting args has no side effect. It just prepares the subscription for notification.
+            subscribers[i].Subscription.Notify();
+        }
+    }
+
+    public void Notify()
+    {
+        if (Thread.CurrentThread.ManagedThreadId != ThreadId) throw new InvalidOperationException("Cannot notify subscribers from a different thread than the one that created the SubscriberCollection");
+        EnsureCoherentState();
+        for (var i = 0; i < subscribers.Count; i++) subscribers[i].Subscription.Notify();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int EnsureCoherentState()
+    {
+        subscribers.EnsureCapacity(subscribers.Count + newSubscribersForNextNotificationCycle.Count);
+        for (var i = 0; i < newSubscribersForNextNotificationCycle.Count; i++)
+        {
+            if (newSubscribersForNextNotificationCycle[i].Priority)
             {
-                DisposeEntryAt(i);
+                subscribers.Insert(0, newSubscribersForNextNotificationCycle[i].Entry);
+            }
+            else
+            {
+                subscribers.Add(newSubscribersForNextNotificationCycle[i].Entry);
             }
         }
-        return entries.Count;
+        newSubscribersForNextNotificationCycle.Clear();
+
+        for (var i = subscribers.Count - 1; i >= 0; i--)
+        {
+            var entry = subscribers[i];
+            if (entry.Subscription.IsStillValid(entry.Lease) == false) RemoveEntryAt(i);
+        }
+        return subscribers.Count;
     }
 
     public void Dispose()
     {
-        if (ThreadId != Thread.CurrentThread.ManagedThreadId)
-            throw new InvalidOperationException("Cannot dispose SubscriberCollection from a different thread");
+        if (ThreadId != Thread.CurrentThread.ManagedThreadId) throw new InvalidOperationException("Cannot dispose SubscriberCollection from a different thread");
+        EnsureCoherentState();
 
-        while (entries.Count > 0)
+        for (int i = subscribers.Count - 1; i >= 0; i--)
         {
-            var entry = entries[0];
-            if (entry.Subscription.IsStillValid(entry.Lease))
-            {
-                entry.Subscription.Dispose();
-            }
-            DisposeEntryAt(0);
+            var entry = subscribers[i];
+            entry.Subscription.TryDispose();
+            RemoveEntryAt(i);
         }
-        collectionLightPool = collectionLightPool ?? new Stack<SubscriberCollection>(100);
-        collectionLightPool.Push(this);
+        lightweightCollectionPool.Push(this);
     }
 
-    public void Notify<T>(T arg, DelayState? dependencies = null)
+    private void AssertThreadForSubscription(ISubscription sub)
     {
-        // Phase 1: set args on live entries (preserves original semantics)
-        for (var i = 0; i < entries.Count; i++)
-        {
-            if (entries[i].Subscription is ArgsSubscription<T> sub)
-            {
-                sub.Args = arg;
-            }
-        }
-        // Phase 2: notify via snapshot
-        Notify(dependencies);
+        if (sub.ThreadId != ThreadId) throw new InvalidOperationException("Cannot track a subscription that was created on a different thread.");
+        if (ThreadId != Thread.CurrentThread.ManagedThreadId) throw new InvalidOperationException("Cannot modify SubscriberCollection from a different thread than the one that created it");
     }
 
-    public void Notify(DelayState? dependencies = null)
+    private void AssertThreadForNotify()
     {
-        RefreshAndCountActiveEntries();
-        if (entries.Count == 0) return;
-        var subscriberCount = entries.Count;
-
-        // Fast path: single subscriber
-        if (subscriberCount == 1)
-        {
-            Notify(entries[0].Subscription, dependencies);
-            return;
-        }
-
-        var fromStack = false;
-        ISubscription[] buffer = AcquireBuffer(subscriberCount, out fromStack);
-
-        try
-        {
-            // Copy the current subscribers into the buffer
-            for (var i = 0; i < subscriberCount; i++)
-            {
-                buffer[i] = entries[i].Subscription;
-            }
-
-            // Notify
-            for (var i = 0; i < subscriberCount; i++)
-            {
-                Notify(buffer[i], dependencies);
-            }
-        }
-        finally
-        {
-            ReleaseBuffer(buffer, fromStack);
-        }
+        if (ThreadId != Thread.CurrentThread.ManagedThreadId) throw new InvalidOperationException("Cannot notify subscribers from a different thread than the one that created the SubscriberCollection");
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ISubscription[] AcquireBuffer(int needed, out bool fromStack)
+    private struct PendingAdd
     {
-        if (needed <= SmallNotificationBufferSize)
-        {
-            fromStack = true;
-            _smallBufferStack ??= new Stack<ISubscription[]>(10);
-           return _smallBufferStack.Count > 0 ? _smallBufferStack.Pop() : new ISubscription[SmallNotificationBufferSize];
-        }
-        fromStack = false;
-        return ArrayPool<ISubscription>.Shared.Rent(needed);
+        public Subscriber Entry;
+        public bool Priority;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ReleaseBuffer(ISubscription[] buffer, bool fromStack)
+    private sealed class Subscriber
     {
-        if (fromStack)
-        {
-            _smallBufferStack.Push(buffer);
-        }
-        else
-        {
-            ArrayPool<ISubscription>.Shared.Return(buffer);
-        }
-    }
-
-    private static void Notify(ISubscription sub, DelayState? dependencies)
-    {
-        if (dependencies?.AreAllDependenciesValid == false) return;
-        sub.Notify();
-    }
-
-    private class SubscriberEntry
-    {
-        internal int ThreadId;
-        public ISubscription Subscription { get; set; }
-        public int Lease { get; set; }
+        public ISubscription Subscription;
+        public int Lease;
+        public Subscriber() { }
     }
 }

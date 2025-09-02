@@ -24,7 +24,7 @@ public class Recyclable : ILifetime
     }
 
     internal IObjectPool? Pool { get; set; }
-    internal int ThreadId { get; set; }
+    public int ThreadId { get; internal set; }
     private bool IsExpiring { get; set; }
     private bool IsExpired { get; set; }
 
@@ -137,7 +137,7 @@ public class Recyclable : ILifetime
     {
         if(IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         var subscription = ActionSubscription.Create(cleanupCode);
-        DisposalSubscribers.Track(subscription);
+        DisposalSubscribers.Subscribe(subscription);
     }
 
     public void OnDisposed<T>(T scope, Action<T> cleanupCode)
@@ -145,7 +145,7 @@ public class Recyclable : ILifetime
         if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
         if (scope == null) throw new ArgumentNullException(nameof(scope));
         var subscription = ScopedSubscription<T>.Create(scope, cleanupCode);
-        DisposalSubscribers.Track(subscription);
+        DisposalSubscribers.Subscribe(subscription);
     }
 
     private class EarliestOfTracker : Recyclable

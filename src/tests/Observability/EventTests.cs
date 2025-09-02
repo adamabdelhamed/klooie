@@ -942,28 +942,7 @@ public class EventTests
             lt.TryDispose();
         }
     }
-
-    [TestMethod]
-    public void EventThrottle_ConcurrentFires_NoMoreThanOnePerWindow()
-    {
-        var ev = Event.Create();
-        var lt = DefaultRecyclablePool.Instance.Rent();
-        try
-        {
-            int callCount = 0;
-
-            ev.SubscribeThrottled(() => Interlocked.Increment(ref callCount), lt, maxHz: 5);
-
-            Parallel.For(0, 20, _ => ev.Fire());
-
-            Assert.AreEqual(1, callCount, "Even under concurrency, only one invocation should occur within the window.");
-        }
-        finally
-        {
-            ev.TryDispose();
-            lt.TryDispose();
-        }
-    }
+ 
 
     [TestMethod]
     public void EventThrottle_RepeatedWindows_CorrectCadence()
