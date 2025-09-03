@@ -12,7 +12,6 @@ public class Event : Recyclable
     /// </summary>
     public bool HasSubscriptions => subscribers == null ? false : subscribers.Count > 0;
 
-    public int SubscriberCount => Subscribers?.Count ?? 0;
 
     private Event() { }
 
@@ -23,9 +22,7 @@ public class Event : Recyclable
     /// <summary>
     /// Fires the event. All subscribers will be notified
     /// </summary>
-    public void Fire() => Subscribers.Notify();
-
-    public void Fire(DelayState dependencies) => subscribers?.Notify(dependencies);
+    public void Fire() => subscribers?.Notify();
 
     /// <summary>
     /// Subscribes to this event such that the given handler will be called when the event fires. Notifications will stop
