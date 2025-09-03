@@ -56,7 +56,11 @@ internal sealed class SubscriberCollection
 
     public void Notify<T>(T arg)
     {
+#if DEBUG
+        // Surprisingly, this check is expensive and shows up in profiles, so we only do it in debug builds.
+        // It is dangerous leaving this out of the release build, but we have to balance safety vs performance here.
         AssertThreadForNotify();
+#endif
         EnsureCoherentState();
         for (var i = 0; i < subscribers.Count; i++)
         {
@@ -67,7 +71,11 @@ internal sealed class SubscriberCollection
 
     public void Notify()
     {
-        if (Thread.CurrentThread.ManagedThreadId != ThreadId) throw new InvalidOperationException("Cannot notify subscribers from a different thread than the one that created the SubscriberCollection");
+#if DEBUG
+        // Surprisingly, this check is expensive and shows up in profiles, so we only do it in debug builds.
+        // It is dangerous leaving this out of the release build, but we have to balance safety vs performance here.
+        AssertThreadForNotify();
+#endif
         EnsureCoherentState();
         for (var i = 0; i < subscribers.Count; i++) subscribers[i].Subscription.Notify();
     }
