@@ -13,7 +13,6 @@ public sealed class ConsoleBitmap : Recyclable
     private static FastConsoleWriter fastConsoleWriter = new FastConsoleWriter();
     private static ChunkAwarePaintBuffer paintBuilder = new ChunkAwarePaintBuffer();
 
-
     public static void HideCursor() => fastConsoleWriter.Write("\x1b[?25l".ToCharArray(), "\x1b[?25l".Length);
 
     public static void ShowCursor() => fastConsoleWriter.Write("\x1b[?25h".ToCharArray(), "\x1b[?25h".Length);
@@ -68,9 +67,12 @@ public sealed class ConsoleBitmap : Recyclable
     /// using the built in methods. If you modify the values to an inconsistent state then
     /// you can break the object.
     /// </summary>
-    private ConsoleCharacter[][] Pixels;
+    private ConsoleCharacter[] Pixels; // flattened [y * Width + x]
 
     private int lastBufferWidth;
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private int IndexOf(int x, int y) => y * Width + x;
 
     /// <summary>
     /// Creates a new ConsoleBitmap
@@ -85,11 +87,10 @@ public sealed class ConsoleBitmap : Recyclable
         ret.Height = h;
         ret.Console = ConsoleProvider.Current;
         ret.lastBufferWidth = ret.Console.BufferWidth;
-        ret.Pixels = Array2DPool<ConsoleCharacter>.Rent(w, h);
-        for (int x = 0; x < w; x++)
-        {
-            Array.Fill(ret.Pixels[x], EmptySpace, 0, h);
-        }
+        ret.Pixels = Array1DPool<ConsoleCharacter>.Rent(w * h);
+        // Fill with EmptySpace
+        var span = ret.Pixels.AsSpan(0, w * h);
+        for (int i = 0; i < span.Length; i++) span[i] = EmptySpace;
         return ret;
     }
 
@@ -98,8 +99,8 @@ public sealed class ConsoleBitmap : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        Array2DPool<ConsoleCharacter>.Return(Pixels, Width, Height);
-        Pixels = Array.Empty<ConsoleCharacter[]>();
+        Array1DPool<ConsoleCharacter>.Return(Pixels);
+        Pixels = Array.Empty<ConsoleCharacter>();
         Width = 0;
         Height = 0;
     }
@@ -174,16 +175,27 @@ public sealed class ConsoleBitmap : Recyclable
     {
         if (w == Width && h == Height) return;
 
-        var newPixels = Array2DPool<ConsoleCharacter>.Rent(w, h);
-        for (int x = 0; x < w; x++)
+        var newPixels = Array1DPool<ConsoleCharacter>.Rent(w * h);
+
+        // copy overlap
+        int minW = Math.Min(w, Width);
+        int minH = Math.Min(h, Height);
+        for (int yy = 0; yy < minH; yy++)
         {
-            for (int y = 0; y < h; y++)
+            int srcRow = yy * Width;
+            int dstRow = yy * w;
+            for (int xx = 0; xx < minW; xx++)
             {
-                newPixels[x][y] = (x < Width && y < Height) ? Pixels[x][y] : EmptySpace;
+                newPixels[dstRow + xx] = Pixels[srcRow + xx];
             }
         }
+        // fill the rest with EmptySpace
+        for (int i = 0; i < newPixels.Length; i++)
+        {
+            if (i >= (minH * w) || (i % w) >= minW) newPixels[i] = EmptySpace;
+        }
 
-        Array2DPool<ConsoleCharacter>.Return(Pixels, Width, Height);
+        Array1DPool<ConsoleCharacter>.Return(Pixels);
 
         Pixels = newPixels;
         Width = w;
@@ -193,45 +205,28 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Gets the pixel at the given location
     /// </summary>
-    /// <param name="x">the x coordinate</param>
-    /// <param name="y">the y coordinate</param>
-    /// <returns>the pixel at the given location</returns>
-    public ref ConsoleCharacter GetPixel(int x, int y) => ref Pixels[x][y];
+    public ref ConsoleCharacter GetPixel(int x, int y) => ref Pixels[IndexOf(x, y)];
 
     /// <summary>
     /// Sets the value of the desired pixel
     /// </summary>
-    /// <param name="x">pixel x coordinate</param>
-    /// <param name="y">pixel y coordinate</param>
-    /// <param name="c">the value to set</param>
-    public void SetPixel(int x, int y, in ConsoleCharacter c) => Pixels[x][y] = c;
+    public void SetPixel(int x, int y, in ConsoleCharacter c) => Pixels[IndexOf(x, y)] = c;
 
     /// <summary>
     /// tests to see if the given coordinates are within the boundaries
     /// of the image
     /// </summary>
-    /// <param name="x">pixel x coordinate</param>
-    /// <param name="y">pixel y coordinate</param>
-    /// <returns>true if the given coordinates are within the boundaries of the image</returns>
     public bool IsInBounds(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
 
     /// <summary>
     /// Draws the given string onto the bitmap
     /// </summary>
-    /// <param name="str">the value to write</param>
-    /// <param name="x">the x coordinate to draw the string's fist character</param>
-    /// <param name="y">the y coordinate to draw the string's first character </param>
-    /// <param name="vert">if true, draw vertically, else draw horizontally</param>
     public void DrawString(string str, int x, int y, bool vert = false) => DrawString(new ConsoleString(str), x, y, vert);
 
     /// <summary>
     /// Draws a filled in rectangle bounded by the given coordinates
     /// using the current pen
     /// </summary>
-    /// <param name="x">the left of the rectangle</param>
-    /// <param name="y">the top of the rectangle</param>
-    /// <param name="w">the width of the rectangle</param>
-    /// <param name="h">the height of the rectangle</param>
     public void FillRect(in ConsoleCharacter pen, int x, int y, int w, int h)
     {
         var maxX = Math.Min(x + w, Width);
@@ -240,14 +235,12 @@ public sealed class ConsoleBitmap : Recyclable
         var minX = Math.Max(x, 0);
         var minY = Math.Max(y, 0);
 
-        Span<ConsoleCharacter[]> xSpan = Pixels.AsSpan().Slice(minX, maxX - minX);
-
-        for (int xd = 0; xd < xSpan.Length; xd++)
+        for (int yy = minY; yy < maxY; yy++)
         {
-            var ySpan = xSpan[xd].AsSpan(minY, maxY - minY);
-            for (var yd = 0; yd < ySpan.Length; yd++)
+            int row = yy * Width;
+            for (int xx = minX; xx < maxX; xx++)
             {
-                ySpan[yd] = pen;
+                Pixels[row + xx] = pen;
             }
         }
     }
@@ -267,80 +260,54 @@ public sealed class ConsoleBitmap : Recyclable
 
         if (minX >= maxX || minY >= maxY) return;
 
-        Span<ConsoleCharacter[]> xSpan = Pixels.AsSpan().Slice(minX, maxX - minX);
-
-        for (int xd = 0; xd < xSpan.Length; xd++)
+        for (int yy = minY; yy < maxY; yy++)
         {
-            var ySpan = xSpan[xd].AsSpan(minY, maxY - minY);
-            for (int yd = 0; yd < ySpan.Length; yd++)
+            int row = yy * Width;
+            for (int xx = minX; xx < maxX; xx++)
             {
-                ySpan[yd] = pen;
+                Pixels[row + xx] = pen;
             }
         }
     }
 
-
     /// <summary>
     /// Fills the given rectangle with a space character and a given background color
     /// </summary>
-    /// <param name="color">the fill color</param>
-    /// <param name="x">the rectangle's x coordinate</param>
-    /// <param name="y">the rectangle's y coordinate</param>
-    /// <param name="w">the rectangle's width</param>
-    /// <param name="h">the rectangle's height</param>
     public void FillRect(in RGB color, int x, int y, int w, int h) => FillRect(new ConsoleCharacter(' ', backgroundColor: color), x, y, w, h);
 
     /// <summary>
     /// Fills the given rectangle with a space character and a given background color
     /// </summary>
-    /// <param name="color">the fill color</param>
-    /// <param name="rect">the area to fill</param>
     public void FillRect(in RGB color, in Rect rect) => FillRect(color, rect.Left, rect.Top, rect.Width, rect.Height);
     /// <summary>
     /// Fills the entire bitmap with a space character and a given background color
     /// </summary>
-    /// <param name="color">the fill color</param>
     public void Fill(in RGB color) => Fill(new ConsoleCharacter(' ', backgroundColor: color));
 
     /// <summary>
     /// Fills the entire bitmap with a given pen
     /// </summary>
-    /// <param name="pen">the pen</param>
     public void Fill(in ConsoleCharacter pen)
     {
-        Span<ConsoleCharacter[]> xSpan = Pixels.AsSpan();
-
-        for (int xd = 0; xd < xSpan.Length; xd++)
-        {
-            var ySpan = xSpan[xd].AsSpan();
-            for (var yd = 0; yd < ySpan.Length; yd++)
-            {
-                ySpan[yd] = pen;
-            }
-        }
+        var span = Pixels.AsSpan(0, Width * Height);
+        for (int i = 0; i < span.Length; i++) span[i] = pen;
     }
 
     /// <summary>
     /// Draws a filled in rectangle bounded by the given coordinates
     /// using the current pen, without performing bounds checks
     /// </summary>
-    /// <param name="x">the left of the rectangle</param>
-    /// <param name="y">the top of the rectangle</param>
-    /// <param name="w">the width of the rectangle</param>
-    /// <param name="h">the height of the rectangle</param>
     public void FillRectUnsafe(in ConsoleCharacter pen, int x, int y, int w, int h)
     {
         var maxX = x + w;
         var maxY = y + h;
 
-        Span<ConsoleCharacter[]> xSpan = Pixels.AsSpan().Slice(x, maxX - x);
-
-        for (int xd = 0; xd < xSpan.Length; xd++)
+        for (int yy = y; yy < maxY; yy++)
         {
-            var ySpan = xSpan[xd].AsSpan(y, maxY - y);
-            for (var yd = 0; yd < ySpan.Length; yd++)
+            int row = yy * Width;
+            for (int xx = x; xx < maxX; xx++)
             {
-                ySpan[yd] = pen;
+                Pixels[row + xx] = pen;
             }
         }
     }
@@ -352,10 +319,6 @@ public sealed class ConsoleBitmap : Recyclable
     /// Draws an unfilled in rectangle bounded by the given coordinates
     /// using the current pen
     /// </summary>
-    /// <param name="x">the left of the rectangle</param>
-    /// <param name="y">the top of the rectangle</param>
-    /// <param name="w">the width of the rectangle</param>
-    /// <param name="h">the height of the rectangle</param>
     public void DrawRect(in ConsoleCharacter pen, int x, int y, int w, int h)
     {
         var maxX = Math.Min(x + w, Width);
@@ -363,42 +326,41 @@ public sealed class ConsoleBitmap : Recyclable
         var minX = Math.Max(x, 0);
         var minY = Math.Max(y, 0);
 
+        if (minX >= maxX || minY >= maxY) return;
+
         var xEndIndex = maxX - 1;
         var yEndIndex = maxY - 1;
 
         // left vertical line
         for (var yd = minY; yd < maxY; yd++)
         {
-            Pixels[minX][yd] = pen;
+            Pixels[yd * Width + minX] = pen;
         }
 
         // right vertical line
         for (var yd = minY; yd < maxY; yd++)
         {
-            Pixels[xEndIndex][yd] = pen;
+            Pixels[yd * Width + xEndIndex] = pen;
         }
 
-        var xSpan = Pixels.AsSpan(minX, maxX - minX);
         // top horizontal line
-        for (int xd = 0; xd < xSpan.Length; xd++)
+        int topRow = minY * Width;
+        for (int xd = minX; xd < maxX; xd++)
         {
-            xSpan[xd][minY] = pen;
+            Pixels[topRow + xd] = pen;
         }
 
         // bottom horizontal line
-        for (int xd = 0; xd < xSpan.Length; xd++)
+        int bottomRow = yEndIndex * Width;
+        for (int xd = minX; xd < maxX; xd++)
         {
-            xSpan[xd][yEndIndex] = pen;
+            Pixels[bottomRow + xd] = pen;
         }
     }
 
     /// <summary>
     /// Draws the given string onto the bitmap
     /// </summary>
-    /// <param name="str">the value to write</param>
-    /// <param name="x">the x coordinate to draw the string's fist character</param>
-    /// <param name="y">the y coordinate to draw the string's first character </param>
-    /// <param name="vert">if true, draw vertically, else draw horizontally</param>
     public void DrawString(ConsoleString str, int x, int y, bool vert = false)
     {
         var xStart = x;
@@ -418,7 +380,7 @@ public sealed class ConsoleBitmap : Recyclable
             }
             else if (IsInBounds(x, y))
             {
-                Pixels[x][y] = character;
+                Pixels[IndexOf(x, y)] = character;
             }
 
             if (vert) y++;
@@ -445,7 +407,7 @@ public sealed class ConsoleBitmap : Recyclable
             }
             else if (IsInBounds(x, y))
             {
-                Pixels[x][y] = new ConsoleCharacter(character.Value, fg, bg);
+                Pixels[IndexOf(x, y)] = new ConsoleCharacter(character.Value, fg, bg);
             }
 
             if (vert) y++;
@@ -472,7 +434,7 @@ public sealed class ConsoleBitmap : Recyclable
             }
             else if (IsInBounds(x, y))
             {
-                Pixels[x][y] = new ConsoleCharacter(character, fg, bg);
+                Pixels[IndexOf(x, y)] = new ConsoleCharacter(character, fg, bg);
             }
 
             if (vert) y++;
@@ -498,7 +460,7 @@ public sealed class ConsoleBitmap : Recyclable
             }
             else if (IsInBounds(x, y))
             {
-                Pixels[x][y] = character;
+                Pixels[IndexOf(x, y)] = character;
             }
 
             if (vert) y++;
@@ -509,13 +471,11 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Draw a single pixel value at the given point using the current pen
     /// </summary>
-    /// <param name="x">the x coordinate</param>
-    /// <param name="y">the y coordinate</param>
     public void DrawPoint(in ConsoleCharacter pen, int x, int y)
     {
         if (IsInBounds(x, y))
         {
-            Pixels[x][y] = pen;
+            Pixels[IndexOf(x, y)] = pen;
         }
     }
 
@@ -528,10 +488,6 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Draw a line segment between the given points
     /// </summary>
-    /// <param name="x1">the x coordinate of the first point</param>
-    /// <param name="y1">the y coordinate of the first point</param>
-    /// <param name="x2">the x coordinate of the second point</param>
-    /// <param name="y2">the y coordinate of the second point</param>
     public void DrawLine(in ConsoleCharacter pen, int x1, int y1, int x2, int y2)
     {
         var len = DefineLineBuffered(x1, y1, x2, y2);
@@ -541,7 +497,7 @@ public sealed class ConsoleBitmap : Recyclable
             point = LineBuffer[i];
             if (IsInBounds(point.Left, point.Top))
             {
-                Pixels[point.Left][point.Top] = pen;
+                Pixels[IndexOf(point.Left, point.Top)] = pen;
             }
         }
     }
@@ -549,9 +505,6 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Draws the given bitmap onto this bitmap
     /// </summary>
-    /// <param name="bitmap">the bitmap to draw</param>
-    /// <param name="offsetX">an x offset to apply</param>
-    /// <param name="offsetY">a y offset to apply</param>
     public void DrawBitmap(ConsoleBitmap bitmap, int offsetX, int offsetY)
     {
         for (var x = 0; x < bitmap.Width && x < Width; x++)
@@ -570,12 +523,6 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Given 2 points, defines a line as it can best be rendered in a ConsoleBitmap, but does not draw the line.
     /// </summary>
-    /// <param name="x1">the x coordinate of the first point</param>
-    /// <param name="y1">the y coordinate of the first point</param>
-    /// <param name="x2">the x coordinate of the second point</param>
-    /// <param name="y2">the y coordinate of the second point</param>
-    /// <param name="buffer">a buffer to hold the points, a thread safe default buffer is used if not specified</param>
-    /// <returns></returns>
     public static int DefineLineBuffered(int x1, int y1, int x2, int y2, Loc[] buffer = null)
     {
         // Use provided buffer, or use a static one, allocating if needed
@@ -636,17 +583,12 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Makes a copy of this bitmap
     /// </summary>
-    /// <returns>a copy of this bitmap</returns>
     public ConsoleBitmap Clone()
     {
         var clone = ConsoleBitmap.Create(Width, Height);
-        for (int x = 0; x < Width; x++)
-        {
-            for (int y = 0; y < Height; y++)
-            {
-                clone.Pixels[x][y] = Pixels[x][y];
-            }
-        }
+        var src = Pixels.AsSpan(0, Width * Height);
+        var dst = clone.Pixels.AsSpan(0, Width * Height);
+        src.CopyTo(dst);
         return clone;
     }
 
@@ -686,7 +628,7 @@ public sealed class ConsoleBitmap : Recyclable
                     int x = 0;
                     while (x < Width)
                     {
-                        ref var p = ref Pixels[x][y];
+                        ref var p = ref Pixels[IndexOf(x, y)];
                         var fg = p.ForegroundColor;
                         var bg = p.BackgroundColor;
                         bool under = p.IsUnderlined;
@@ -694,7 +636,7 @@ public sealed class ConsoleBitmap : Recyclable
                         x++;
                         while (x < Width)
                         {
-                            ref var q = ref Pixels[x][y];
+                            ref var q = ref Pixels[IndexOf(x, y)];
                             if (q.ForegroundColor != fg || q.BackgroundColor != bg || q.IsUnderlined != under) break;
                             x++;
                         }
@@ -708,7 +650,7 @@ public sealed class ConsoleBitmap : Recyclable
                         Ansi.Cursor.Move.ToLocation(run.Start + 1, y + 1, paintBuilder);
                         Ansi.Color.Foreground.Rgb(run.FG, paintBuilder);
                         Ansi.Color.Background.Rgb(run.BG, paintBuilder);
-                        paintBuilder.AppendRunFromPixels(Pixels, run.Start, y, run.Length);
+                        paintBuilder.AppendRunFromPixels(Pixels, Width, run.Start, y, run.Length);
                         if (run.Underlined) paintBuilder.Append(Ansi.Text.UnderlinedOff);
                     }
                 }
@@ -726,16 +668,12 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Gets a string representation of this image 
     /// </summary>
-    /// <returns>a string representation of this image</returns>
     public override string ToString() => ToConsoleString().ToString();
 
     /// <summary>
     /// Returns true if the given object is a ConsoleBitmap with
     /// equivalent values as this bitmap, false otherwise
     /// </summary>
-    /// <param name="obj">the object to compare</param>
-    /// <returns>true if the given object is a ConsoleBitmap with
-    /// equivalent values as this bitmap, false otherwise</returns>
     public override bool Equals(Object obj)
     {
         var other = obj as ConsoleBitmap;
@@ -762,15 +700,11 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Gets a hashcode for this bitmap
     /// </summary>
-    /// <returns></returns>
     public override int GetHashCode() => base.GetHashCode();
 
     /// <summary>
     /// Creates a visual diff of two bitmaps. The returned bitmap will have the same dimensions as the input bitmaps.
     /// </summary>
-    /// <param name="a">the original image</param>
-    /// <param name="b">the changed image</param>
-    /// <returns>The diff or null if the provided images are different sizes</returns>
     public static ConsoleBitmap? Diff(ConsoleBitmap a, ConsoleBitmap b)
     {
         if (a.Width != b.Width || a.Height != b.Height)
@@ -798,51 +732,17 @@ public sealed class ConsoleBitmap : Recyclable
         return ret;
     }
 
-    private static class Array2DPool<T>
+    // --- Single-dimension pooling wrapper ---
+    private static class Array1DPool<T>
     {
-        private static readonly ArrayPool<T> InnerPool = ArrayPool<T>.Shared;
+        private static readonly ArrayPool<T> Pool = ArrayPool<T>.Shared;
 
-        // Width -> Stack of T[][]
-        private static readonly Dictionary<int, Stack<T[][]>> OuterCache = new();
+        public static T[] Rent(int length) => Pool.Rent(length);
 
-        public static T[][] Rent(int width, int height)
+        public static void Return(T[] array)
         {
-            T[][] outer;
-
-            if (!OuterCache.TryGetValue(width, out var stack) || stack.Count == 0)
-            {
-                outer = new T[width][];
-            }
-            else
-            {
-                outer = stack.Pop();
-            }
-
-            for (int x = 0; x < width; x++)
-            {
-                outer[x] = InnerPool.Rent(height);
-            }
-
-            return outer;
-        }
-
-        public static void Return(T[][] array, int width, int height)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                if (array[x] != null)
-                {
-                    InnerPool.Return(array[x], clearArray: true);
-                    array[x] = null!;
-                }
-            }
-
-            if (!OuterCache.TryGetValue(width, out var stack))
-            {
-                stack = new Stack<T[][]>();
-                OuterCache[width] = stack;
-            }
-            stack.Push(array);
+            if (array == null) return;
+            Pool.Return(array, clearArray: true);
         }
     }
 }
@@ -860,17 +760,18 @@ internal class ChunkAwarePaintBuffer : PaintBuffer
         }
     }
 
-    // New: write directly from the pixel grid for a single run
-    internal void AppendRunFromPixels(ConsoleCharacter[][] pixels, int startX, int y, int length)
+    // Updated to read from a 1-D pixel buffer
+    internal void AppendRunFromPixels(ConsoleCharacter[] pixels, int width, int startX, int y, int length)
     {
         EnsureBigEnough(Length + length);
-        int end = startX + length;
-        for (int x = startX; x < end; x++)
+        int idx = y * width + startX;
+        for (int i = 0; i < length; i++)
         {
-            Buffer[Length++] = pixels[x][y].Value;
+            Buffer[Length++] = pixels[idx + i].Value;
         }
     }
 }
+
 
 // Kept for backward compatibility (unused by the optimized Paint path)
 internal class Chunk
