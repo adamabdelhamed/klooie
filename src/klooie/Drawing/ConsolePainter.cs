@@ -57,6 +57,7 @@ internal static class ConsolePainter
                 int charBudget = PaintQoS.BudgetedCharsThisFrame();
                 for (int y = 0; y < bitmap.Height; y++)
                 {
+                    if (paintBuilder.Length >= charBudget) break; // <-- hard cap per frame
                     runsOnLine.Clear();
                     int x = 0;
                     while (x < bitmap.Width)
@@ -118,11 +119,6 @@ internal static class ConsolePainter
         private static long _skipUntilTicks;    // wall-clock gate to resume painting
         private static long _frames;            // painted frames
         private static long _lastCheckTicks;
-
-        // Exposed diagnostics (don’t write these to stdout in hot paths)
-        public static double EmaWriteMs => _emaWriteMs;
-        public static double EmaChars => _emaChars;
-
         public static double EstimatedCharsPerMs => (_emaWriteMs > 0) ? (_emaChars / _emaWriteMs) : 0.0;
 
        // How many chars we can afford this frame (with a small headroom factor)
@@ -135,15 +131,6 @@ internal static class ConsolePainter
            return (int) Math.Max(256, Math.Min(maxChars, int.MaxValue));
        }
 
-       // If you overshoot, add debt for the predicted overage
-       public static void AddPredictedOverageMs(double predictedWriteMs)
-       {
-           double delta = predictedWriteMs - FrameBudgetMs;
-           if (delta > 0) _debtMs += delta;
-       }
-
-        public static double DebtMs => _debtMs;
-        public static long Frames => _frames;
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static void BeginWrite() => _tsBegin = Stopwatch.GetTimestamp();
@@ -206,9 +193,6 @@ internal static class ConsolePainter
 
             return true;
         }
-
-        // Call if you change MaxPaintRate at runtime.
-        public static void RecomputeBudget() => FrameBudgetMs = 1000.0 / LayoutRootPanel.MaxPaintRate;
     }
 
     private readonly struct Run
