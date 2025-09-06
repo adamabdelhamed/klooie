@@ -146,8 +146,8 @@ public class ConsoleApp : EventLoop
             OnDisposed(LayoutRoot, TryDisposeMe);
             focus = FocusManagerPool.Instance.Rent();
             OnDisposed(focus, TryDisposeMe);
-            ConsoleBitmap.HideCursor();
-            ConsoleBitmap.EnterAltScreen();
+            ConsolePainter.HideCursor();
+            ConsolePainter.EnterAltScreen();
             base.Run();
         }
         finally
@@ -209,8 +209,8 @@ public class ConsoleApp : EventLoop
     protected override void OnReturn()
     {
         base.OnReturn();
-        ConsoleBitmap.ShowCursor();
-        ConsoleBitmap.ExitAltScreen();
+        ConsolePainter.ShowCursor();
+        ConsolePainter.ExitAltScreen();
         logTail = null;
     }
 }

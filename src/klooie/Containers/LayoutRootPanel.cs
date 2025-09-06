@@ -81,7 +81,7 @@ public partial class LayoutRootPanel : ConsolePanel
 
         if (PaintEnabled)
         {
-            Bitmap.Paint();
+            ConsolePainter.Paint(Bitmap);
         }
         paintRateMeter.Increment();
         _afterPaint?.Fire();
@@ -99,27 +99,27 @@ public partial class LayoutRootPanel : ConsolePanel
 
     private void DebounceResize()
     {
-        if (lastConsoleWidth == ConsoleProvider.Current.BufferWidth && lastConsoleHeight == ConsoleProvider.Current.WindowHeight - 1) return;
+        if (lastConsoleWidth == ConsoleProvider.Current.BufferWidth && lastConsoleHeight == ConsoleProvider.Current.WindowHeight) return;
         ConsoleProvider.Current.Clear();
 
         var lastSyncTime = DateTime.UtcNow;
         while (DateTime.UtcNow - lastSyncTime > TimeSpan.FromSeconds(.25f) == false)
         {
-            if (ConsoleProvider.Current.BufferWidth != lastConsoleWidth || ConsoleProvider.Current.WindowHeight - 1 != lastConsoleHeight)
+            if (ConsoleProvider.Current.BufferWidth != lastConsoleWidth || ConsoleProvider.Current.WindowHeight != lastConsoleHeight)
             {
                 lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
-                lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
+                lastConsoleHeight = ConsoleProvider.Current.WindowHeight;
                 lastSyncTime = DateTime.UtcNow;
             }
         }
 
-        if (Bitmap.Console.BufferWidth < 1 || Bitmap.Console.WindowHeight - 1 < 1)
+        if (Bitmap.Console.BufferWidth < 1 || Bitmap.Console.WindowHeight < 1)
         {
             return;
         }
 
         Width = Bitmap.Console.BufferWidth;
-        Height = Bitmap.Console.WindowHeight - 1;
+        Height = Bitmap.Console.WindowHeight;
         OnWindowResized.Fire();
     }
 }

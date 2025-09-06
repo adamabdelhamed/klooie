@@ -9,39 +9,7 @@ namespace klooie;
 /// </summary>
 public sealed class ConsoleBitmap : Recyclable
 {
-    private static readonly FrameRateMeter skipRateMeter = new FrameRateMeter();
-    private bool _skipNextPaint;
     private static readonly ConsoleCharacter EmptySpace = new ConsoleCharacter(' ');
-
-    private static FastConsoleWriter fastConsoleWriter = new FastConsoleWriter();
-    private static ChunkAwarePaintBuffer paintBuilder = new ChunkAwarePaintBuffer();
-
-    public static void HideCursor() => fastConsoleWriter.Write("\x1b[?25l".ToCharArray(), "\x1b[?25l".Length);
-
-    public static void ShowCursor() => fastConsoleWriter.Write("\x1b[?25h".ToCharArray(), "\x1b[?25h".Length);
-
-    public static void EnterAltScreen() => fastConsoleWriter.Write("\x1b[?1049h".ToCharArray(), "\x1b[?1049h".Length);
-    public static void ExitAltScreen() => fastConsoleWriter.Write("\x1b[?1049l".ToCharArray(), "\x1b[?1049l".Length);
-
-    // Per-line run list to avoid per-frame allocations in Paint()
-    private readonly struct Run
-    {
-        public readonly int Start;
-        public readonly int Length;
-        public readonly RGB FG;
-        public readonly RGB BG;
-        public readonly bool Underlined;
-
-        public Run(int start, int length, RGB fg, RGB bg, bool underlined)
-        {
-            Start = start;
-            Length = length;
-            FG = fg;
-            BG = bg;
-            Underlined = underlined;
-        }
-    }
-    private static readonly List<Run> runsOnLine = new List<Run>(128);
 
     // todo: make internal after migration
     /// <summary>
@@ -73,12 +41,11 @@ public sealed class ConsoleBitmap : Recyclable
     /// using the built in methods. If you modify the values to an inconsistent state then
     /// you can break the object.
     /// </summary>
-    private ConsoleCharacter[] Pixels; // flattened [y * Width + x]
+    internal ConsoleCharacter[] Pixels; // flattened [y * Width + x]
 
-    private int lastBufferWidth;
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    private int IndexOf(int x, int y) => y * Width + x;
+    internal int IndexOf(int x, int y) => y * Width + x;
 
     /// <summary>
     /// Creates a new ConsoleBitmap
@@ -92,8 +59,7 @@ public sealed class ConsoleBitmap : Recyclable
         ret.Width = w;
         ret.Height = h;
         ret.Console = ConsoleProvider.Current;
-        ret.lastBufferWidth = ret.Console.BufferWidth;
-        ret.Pixels = Array1DPool<ConsoleCharacter>.Rent(w * h);
+        ret.Pixels = ArrayPool<ConsoleCharacter>.Shared.Rent(w * h);
         // Fill with EmptySpace
         var span = ret.Pixels.AsSpan(0, w * h);
         for (int i = 0; i < span.Length; i++) span[i] = EmptySpace;
@@ -105,7 +71,7 @@ public sealed class ConsoleBitmap : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        Array1DPool<ConsoleCharacter>.Return(Pixels);
+        ArrayPool<ConsoleCharacter>.Shared.Return(Pixels);
         Pixels = Array.Empty<ConsoleCharacter>();
         Width = 0;
         Height = 0;
@@ -181,7 +147,7 @@ public sealed class ConsoleBitmap : Recyclable
     {
         if (w == Width && h == Height) return;
 
-        var newPixels = Array1DPool<ConsoleCharacter>.Rent(w * h);
+        var newPixels = ArrayPool<ConsoleCharacter>.Shared.Rent(w * h);
 
         // copy overlap
         int minW = Math.Min(w, Width);
@@ -201,7 +167,7 @@ public sealed class ConsoleBitmap : Recyclable
             if (i >= (minH * w) || (i % w) >= minW) newPixels[i] = EmptySpace;
         }
 
-        Array1DPool<ConsoleCharacter>.Return(Pixels);
+        ArrayPool<ConsoleCharacter>.Shared.Return(Pixels);
 
         Pixels = newPixels;
         Width = w;
@@ -598,132 +564,6 @@ public sealed class ConsoleBitmap : Recyclable
         return clone;
     }
 
-    /// <summary>
-    /// Paints this bitmap to its console provider. If we detect Ansi support
-    /// then the rendering will use Ansi, allowing for richer colors, underlined
-    /// characters, and improved performance. If we do not detect Ansi then standard
-    /// System.Console APIs are used to render with limited colors, no underline support,
-    /// and slower performance.
-    /// </summary>
-    public void Paint()
-    {
-        if (Console.WindowHeight == 0) return;
-
-        if (_skipNextPaint)
-        {
-            _skipNextPaint = false;
-            skipRateMeter.Increment();
-            ConsoleApp.Current?.WriteLine("Skips per second: "+ skipRateMeter.CurrentFPS);
-            return;
-        }
-
-        if (lastBufferWidth != Console.BufferWidth)
-        {
-            lastBufferWidth = Console.BufferWidth;
-            Console.Clear();
-        }
-
-        int attempts = 0;
-        while (true)
-        {
-            try
-            {
-                paintBuilder.Clear();
-
-                if (Width == 0 || Height == 0)
-                {
-                    // measure the tiny write too (keeps EMA honest)
-                    PaintQoS.StartRecord();
-                    fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
-                    PaintQoS.FinishRecord();
-                    return;
-                }
-
-                for (int y = 0; y < Height; y++)
-                {
-                    runsOnLine.Clear();
-                    int x = 0;
-                    while (x < Width)
-                    {
-                        ref var p = ref Pixels[IndexOf(x, y)];
-                        var fg = p.ForegroundColor;
-                        var bg = p.BackgroundColor;
-                        bool under = p.IsUnderlined;
-                        int start = x;
-                        x++;
-                        while (x < Width)
-                        {
-                            ref var q = ref Pixels[IndexOf(x, y)];
-                            if (q.ForegroundColor != fg || q.BackgroundColor != bg || q.IsUnderlined != under) break;
-                            x++;
-                        }
-                        runsOnLine.Add(new Run(start, x - start, fg, bg, under));
-                    }
-
-                    for (int i = 0; i < runsOnLine.Count; i++)
-                    {
-                        var run = runsOnLine[i];
-                        if (run.Underlined) paintBuilder.Append(Ansi.Text.UnderlinedOn);
-                        Ansi.Cursor.Move.ToLocation(run.Start + 1, y + 1, paintBuilder);
-                        Ansi.Color.Foreground.Rgb(run.FG, paintBuilder);
-                        Ansi.Color.Background.Rgb(run.BG, paintBuilder);
-                        paintBuilder.AppendRunFromPixels(Pixels, Width, run.Start, y, run.Length);
-                        if (run.Underlined) paintBuilder.Append(Ansi.Text.UnderlinedOff);
-                    }
-                }
-
-                Ansi.Cursor.Move.ToLocation(Width - 1, Height - 1, paintBuilder);
-                PaintQoS.StartRecord();
-                fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
-                PaintQoS.FinishRecord();
-                if (PaintQoS.IsBackpressured) _skipNextPaint = true;
-                break;
-            }
-            catch (IOException) when (attempts++ < 2) { continue; }
-            catch (ArgumentOutOfRangeException) when (attempts++ < 2) { continue; }
-        }
-    }
-
-    private static class PaintQoS
-    {
-        // Config
-        public static double FrameBudgetMs = 1000.0 / LayoutRootPanel.MaxPaintRate;
-        public static double EmaAlpha = 0.12;         // damping for EMA
-        public static double BackpressureMs = 6.0;    // if EMA(write) exceeds this, consider host saturated
-
-        // Live values (readable from anywhere)
-        public static double EmaWriteMs;              // smoothed write() time
-        public static double LastWriteMs;             // last frame's write() time
-        public static long Frames;                  // frames painted
-        public static long BackpressuredFrames;     // frames where EMA(write) > BackpressureMs
-        public static volatile bool IsBackpressured;  // quick flag you can watch
-        public static long lastTimestamp;
-
-        public struct QoSSnapshot
-        {
-            public double EmaWriteMs, LastWriteMs;
-            public bool IsBackpressured;
-            public long Frames, BackpressuredFrames;
-        }
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public static void StartRecord() => lastTimestamp = Stopwatch.GetTimestamp();
-
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        public static void FinishRecord()
-        {
-            double writeMs = Stopwatch.GetElapsedTime(lastTimestamp).TotalMilliseconds;
-            Frames++;
-            LastWriteMs = writeMs;
-
-            // EMA without allocs
-            if (EmaWriteMs <= 0) EmaWriteMs = writeMs;
-            else EmaWriteMs = (EmaAlpha * writeMs) + ((1.0 - EmaAlpha) * EmaWriteMs);
-
-            // backpressure detection
-            IsBackpressured = EmaWriteMs > BackpressureMs;
-            if (IsBackpressured) BackpressuredFrames++;
-        }
-    }
 
     /// <summary>
     /// Gets a string representation of this image 
@@ -791,73 +631,8 @@ public sealed class ConsoleBitmap : Recyclable
         }
         return ret;
     }
-
-    // --- Single-dimension pooling wrapper ---
-    private static class Array1DPool<T>
-    {
-        private static readonly ArrayPool<T> Pool = ArrayPool<T>.Shared;
-
-        public static T[] Rent(int length) => Pool.Rent(length);
-
-        public static void Return(T[] array)
-        {
-            if (array == null) return;
-            Pool.Return(array, clearArray: true);
-        }
-    }
 }
 
-internal class ChunkAwarePaintBuffer : PaintBuffer
-{
-    internal void Append(Chunk c)
-    {
-        EnsureBigEnough(Length + c.Length);
-
-        var span = c.buffer.AsSpan();
-        for (var i = 0; i < c.Length; i++)
-        {
-            Buffer[Length++] = span[i];
-        }
-    }
-
-    // Updated to read from a 1-D pixel buffer
-    internal void AppendRunFromPixels(ConsoleCharacter[] pixels, int width, int startX, int y, int length)
-    {
-        EnsureBigEnough(Length + length);
-        int idx = y * width + startX;
-        for (int i = 0; i < length; i++)
-        {
-            Buffer[Length++] = pixels[idx + i].Value;
-        }
-    }
-}
-
-
-// Kept for backward compatibility (unused by the optimized Paint path)
-internal class Chunk
-{
-    public RGB FG;
-    public RGB BG;
-    public short Length;
-    public char[] buffer;
-    public bool Underlined;
-    public int BufferLength => buffer.Length;
-    public Chunk(int maxWidth)
-    {
-        buffer = new char[maxWidth];
-    }
-
-    public void Clear()
-    {
-        Length = 0;
-        FG = default;
-        BG = default;
-        Underlined = default;
-    }
-
-    public void Add(char c) => buffer[Length++] = c;
-    public override string ToString() => new string(buffer, 0, Length);
-}
 
 public static class ConsoleStringEx
 {
@@ -886,44 +661,5 @@ public static class ConsoleStringEx
         }
 
         return ret;
-    }
-}
-
-public class FastConsoleWriter
-{
-    private readonly Stream _outputStream;
-    private readonly byte[] _byteBuffer;
-    private readonly Encoder _encoder;
-    private readonly int _maxCharCount;
-    private int _bufferPosition;
-
-    public FastConsoleWriter(int bufferSize = 8192)
-    {
-        _outputStream = Console.OpenStandardOutput();
-        _byteBuffer = new byte[bufferSize];
-        _encoder = Encoding.UTF8.GetEncoder();
-        _maxCharCount = Encoding.UTF8.GetMaxCharCount(bufferSize);
-        _bufferPosition = 0;
-    }
-
-    public void Write(char[] buffer, int length)
-    {
-        int charsProcessed = 0;
-        while (charsProcessed < length)
-        {
-            int charsToProcess = Math.Min(_maxCharCount, length - charsProcessed);
-
-            bool completed;
-            int bytesUsed;
-            int charsUsed;
-
-            _encoder.Convert(
-                buffer, charsProcessed, charsToProcess,
-                _byteBuffer, 0, _byteBuffer.Length,
-                false, out charsUsed, out bytesUsed, out completed);
-
-            _outputStream.Write(_byteBuffer, 0, bytesUsed);
-            charsProcessed += charsUsed;
-        }
     }
 }
