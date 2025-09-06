@@ -110,13 +110,9 @@ internal static class ConsolePainter
         private static double EmaWriteMs;              // smoothed write() time
         private static double LastWriteMs;             // last frame's write() time
         private static long Frames;                    // frames painted
-        private static long BackpressuredFrames;       // frames where EMA(write) > BackpressureMs
         private static long lastTimestamp;
 
-        // Skip state
         private static long skipUntilTimestamp;        // stopwatch ticks when painting can resume
-
-        public static volatile bool IsBackpressured;   // quick flag you can watch
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static void StartRecord() => lastTimestamp = Stopwatch.GetTimestamp();
@@ -132,31 +128,25 @@ internal static class ConsolePainter
             else EmaWriteMs = (EmaAlpha * LastWriteMs) + ((1.0 - EmaAlpha) * EmaWriteMs);
 
             // backpressure detection
-            IsBackpressured = EmaWriteMs > BackpressureMs;
-            if (IsBackpressured)
+            var isBackPressured = EmaWriteMs > BackpressureMs;
+            if (isBackPressured)
             {
-                BackpressuredFrames++;
-                DecideSkip();
+                // Scale skip duration relative to how far we exceed budget
+                double over = EmaWriteMs - BackpressureMs;
+                // heuristic: skip at least one frame budget, then scale up
+                double skipMs = FrameBudgetMs + over * 1.5;
+                if (skipMs > MaxSkipMs) skipMs = MaxSkipMs;
+                skipUntilTimestamp = Stopwatch.GetTimestamp() + (long)(skipMs * Stopwatch.Frequency / 1000.0);
             }
             else
             {
+                // not backpressured, clear any skips
                 skipUntilTimestamp = 0;
             }
         }
 
-        private static void DecideSkip()
-        {
-            // Scale skip duration relative to how far we exceed budget
-            double over = EmaWriteMs - BackpressureMs;
-            // heuristic: skip at least one frame budget, then scale up
-            double skipMs = FrameBudgetMs + over * 1.5;
-            if (skipMs > MaxSkipMs) skipMs = MaxSkipMs;
-            skipUntilTimestamp = Stopwatch.GetTimestamp() + (long)(skipMs * Stopwatch.Frequency / 1000.0);
-        }
-
         public static bool CanPaint() => Stopwatch.GetTimestamp() >= skipUntilTimestamp;
     }
-
 
     private readonly struct Run
     {
