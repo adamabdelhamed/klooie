@@ -147,6 +147,7 @@ public class ConsoleApp : EventLoop
             focus = FocusManagerPool.Instance.Rent();
             OnDisposed(focus, TryDisposeMe);
             ConsoleBitmap.HideCursor();
+            ConsoleBitmap.EnterAltScreen();
             base.Run();
         }
         finally
@@ -209,6 +210,7 @@ public class ConsoleApp : EventLoop
     {
         base.OnReturn();
         ConsoleBitmap.ShowCursor();
+        ConsoleBitmap.ExitAltScreen();
         logTail = null;
     }
 }

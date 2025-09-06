@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using System.Text;
 
 namespace klooie;
@@ -8,6 +9,8 @@ namespace klooie;
 /// </summary>
 public sealed class ConsoleBitmap : Recyclable
 {
+    private static readonly FrameRateMeter skipRateMeter = new FrameRateMeter();
+    private bool _skipNextPaint;
     private static readonly ConsoleCharacter EmptySpace = new ConsoleCharacter(' ');
 
     private static FastConsoleWriter fastConsoleWriter = new FastConsoleWriter();
@@ -16,6 +19,9 @@ public sealed class ConsoleBitmap : Recyclable
     public static void HideCursor() => fastConsoleWriter.Write("\x1b[?25l".ToCharArray(), "\x1b[?25l".Length);
 
     public static void ShowCursor() => fastConsoleWriter.Write("\x1b[?25h".ToCharArray(), "\x1b[?25h".Length);
+
+    public static void EnterAltScreen() => fastConsoleWriter.Write("\x1b[?1049h".ToCharArray(), "\x1b[?1049h".Length);
+    public static void ExitAltScreen() => fastConsoleWriter.Write("\x1b[?1049l".ToCharArray(), "\x1b[?1049l".Length);
 
     // Per-line run list to avoid per-frame allocations in Paint()
     private readonly struct Run
@@ -603,6 +609,14 @@ public sealed class ConsoleBitmap : Recyclable
     {
         if (Console.WindowHeight == 0) return;
 
+        if (_skipNextPaint)
+        {
+            _skipNextPaint = false;
+            skipRateMeter.Increment();
+            ConsoleApp.Current?.WriteLine("Skips per second: "+ skipRateMeter.CurrentFPS);
+            return;
+        }
+
         if (lastBufferWidth != Console.BufferWidth)
         {
             lastBufferWidth = Console.BufferWidth;
@@ -618,7 +632,10 @@ public sealed class ConsoleBitmap : Recyclable
 
                 if (Width == 0 || Height == 0)
                 {
+                    // measure the tiny write too (keeps EMA honest)
+                    PaintQoS.StartRecord();
                     fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
+                    PaintQoS.FinishRecord();
                     return;
                 }
 
@@ -656,12 +673,55 @@ public sealed class ConsoleBitmap : Recyclable
                 }
 
                 Ansi.Cursor.Move.ToLocation(Width - 1, Height - 1, paintBuilder);
-
+                PaintQoS.StartRecord();
                 fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
+                PaintQoS.FinishRecord();
+                if (PaintQoS.IsBackpressured) _skipNextPaint = true;
                 break;
             }
             catch (IOException) when (attempts++ < 2) { continue; }
             catch (ArgumentOutOfRangeException) when (attempts++ < 2) { continue; }
+        }
+    }
+
+    private static class PaintQoS
+    {
+        // Config
+        public static double FrameBudgetMs = 1000.0 / LayoutRootPanel.MaxPaintRate;
+        public static double EmaAlpha = 0.12;         // damping for EMA
+        public static double BackpressureMs = 6.0;    // if EMA(write) exceeds this, consider host saturated
+
+        // Live values (readable from anywhere)
+        public static double EmaWriteMs;              // smoothed write() time
+        public static double LastWriteMs;             // last frame's write() time
+        public static long Frames;                  // frames painted
+        public static long BackpressuredFrames;     // frames where EMA(write) > BackpressureMs
+        public static volatile bool IsBackpressured;  // quick flag you can watch
+        public static long lastTimestamp;
+
+        public struct QoSSnapshot
+        {
+            public double EmaWriteMs, LastWriteMs;
+            public bool IsBackpressured;
+            public long Frames, BackpressuredFrames;
+        }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static void StartRecord() => lastTimestamp = Stopwatch.GetTimestamp();
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        public static void FinishRecord()
+        {
+            double writeMs = Stopwatch.GetElapsedTime(lastTimestamp).TotalMilliseconds;
+            Frames++;
+            LastWriteMs = writeMs;
+
+            // EMA without allocs
+            if (EmaWriteMs <= 0) EmaWriteMs = writeMs;
+            else EmaWriteMs = (EmaAlpha * writeMs) + ((1.0 - EmaAlpha) * EmaWriteMs);
+
+            // backpressure detection
+            IsBackpressured = EmaWriteMs > BackpressureMs;
+            if (IsBackpressured) BackpressuredFrames++;
         }
     }
 
