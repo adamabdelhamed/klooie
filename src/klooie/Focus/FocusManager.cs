@@ -230,7 +230,7 @@ public partial class FocusManager : Recyclable,  IObservableObject
         StackDepth = 1;
         ConsoleApp.Current.LayoutRoot.DescendentAdded.SubscribeWithPriority(this, static (me,added) => me.Add(added), ConsoleApp.Current);
         ConsoleApp.Current.LayoutRoot.DescendentRemoved.SubscribeWithPriority(this, static (me, removed) => me.Remove(removed), ConsoleApp.Current);
-        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(this, static me => me.CheckForKeyboardInput(), this, 1000);
+        ConsoleApp.Current.EndOfCycle.SubscribeThrottled(this, static me => me.CheckForKeyboardInput(), this, 100);
     }
 
     private void CheckForKeyboardInput()
