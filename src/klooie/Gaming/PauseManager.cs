@@ -7,6 +7,9 @@ public sealed class PauseManager : IPausable
 
     public SyncronousScheduler Scheduler => Game.Current.PausableScheduler;
 
+
+    public bool PauseSoundWithPhysics { get; set; } = true;
+
     public bool IsPaused
     {
         get => Game.Current.PausableScheduler.IsPaused;
@@ -17,14 +20,14 @@ public sealed class PauseManager : IPausable
             if (value)
             {
                 Game.Current.PausableScheduler.Pause();
-                Game.Current.Sound?.Pause();
+                if(PauseSoundWithPhysics) Game.Current.Sound?.Pause();
                 pauseLifetime = DefaultRecyclablePool.Instance.Rent();
                 OnPaused.Fire(pauseLifetime);
             }
             else
             {
                 Game.Current.PausableScheduler.Resume();
-                Game.Current.Sound?.Resume();
+                Game.Current.Sound?.Resume(); // safe to call even if we didn't pause
                 pauseLifetime?.Dispose();
                 pauseLifetime = null;
             }
