@@ -86,8 +86,18 @@ public class AudioPlaybackEngine : ISoundProvider
         sfxMixer?.AddMixerInput(sample);
     }
 
-    public void Pause() => outputDevice?.Pause(); 
-    public void Resume() => outputDevice?.Play();
+    public void Pause()
+    {
+        if(outputDevice == null) return;
+        if(outputDevice.PlaybackState != PlaybackState.Playing) return;
+        outputDevice.Pause();
+    }
+    public void Resume()
+    {
+        if(outputDevice == null) return;
+        if (outputDevice.PlaybackState != PlaybackState.Paused) return;
+        outputDevice.Play();
+    }
     public void ClearCache() => soundCache.Clear();
 
     /// <summary>
