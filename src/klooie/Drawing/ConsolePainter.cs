@@ -8,9 +8,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
-internal static class ConsolePainter
+public static class ConsolePainter
 { 
-    public static readonly FrameRateMeter SkipRateMeter = new FrameRateMeter();
+    public static int AvgWriteLength => FastConsoleWriter.AvgWriteLength;
+    internal static readonly FrameRateMeter SkipRateMeter = new FrameRateMeter();
     private static readonly FastConsoleWriter fastConsoleWriter = new FastConsoleWriter();
     private static readonly ChunkAwarePaintBuffer paintBuilder = new ChunkAwarePaintBuffer();
     private static readonly List<Run> runsOnLine = new List<Run>(512);
@@ -22,17 +23,19 @@ internal static class ConsolePainter
     public static void EnterAltScreen() => fastConsoleWriter.Write("\x1b[?1049h".ToCharArray(), "\x1b[?1049h".Length);
     public static void ExitAltScreen() => fastConsoleWriter.Write("\x1b[?1049l".ToCharArray(), "\x1b[?1049l".Length);
 
-    public static void Paint(ConsoleBitmap bitmap)
+    public static bool Paint(ConsoleBitmap bitmap)
     {
-        if (Console.WindowHeight == 0) return;
+        if (Console.WindowHeight == 0) return false;
 
         if (PaintQoS.CanPaint()  == false)
         {
             SkipRateMeter.Increment();
             ConsoleApp.Current?.WriteLine(SkipRateMeter.CurrentFPS+" Frames Dropped/S");
-            return;
+            return false;
         }
         _ansi = default;
+        int colorThresholdSq = ComputeColorThresholdSq();
+        BuildPerFrameThresholds(colorThresholdSq);
         if (lastBufferWidth != Console.BufferWidth)
         {
             lastBufferWidth = Console.BufferWidth;
@@ -50,7 +53,7 @@ internal static class ConsolePainter
                     PaintQoS.BeginWrite();
                     fastConsoleWriter.Write(paintBuilder.Buffer, paintBuilder.Length);
                     PaintQoS.EndWrite(0);
-                    return;
+                    return false;
                 }
 
                 paintBuilder.Clear();
@@ -71,9 +74,62 @@ internal static class ConsolePainter
                         while (x < bitmap.Width)
                         {
                             ref var q = ref bitmap.Pixels[bitmap.IndexOf(x, y)];
-                            if (q.ForegroundColor != fg || q.BackgroundColor != bg || q.IsUnderlined != under) break;
+
+                            if (q.IsUnderlined != under) break;
+
+                            bool fgOk, bgOk;
+
+                            if (colorThresholdSq == 0)
+                            {
+                                fgOk = (q.ForegroundColor == fg);
+                                bgOk = (q.BackgroundColor == bg);
+                            }
+                            else
+                            {
+                                int offset = x - start;
+                                if (offset >= MaxSoftenedRun)
+                                {
+                                    // tolerance fully decayed -> strict equality
+                                    fgOk = (q.ForegroundColor == fg);
+                                    bgOk = (q.BackgroundColor == bg);
+                                }
+                                else
+                                {
+                                    int thrSq = s_ThrSqByOffset[offset];
+                                    byte cap = s_ChannelCapByOffset[offset];
+
+                                    // --- Space-aware: ignore FG when glyph is space (only BG is visible) ---
+                                    if (q.Value == ' ')
+                                    {
+                                        // fast channel guard on BG before d² compare
+                                        int dBr = q.BackgroundColor.R - bg.R; if ((dBr ^ (dBr >> 31)) > cap) break;
+                                        int dBg = q.BackgroundColor.G - bg.G; if ((dBg ^ (dBg >> 31)) > cap) break;
+                                        int dBb = q.BackgroundColor.B - bg.B; if ((dBb ^ (dBb >> 31)) > cap) break;
+
+                                        bgOk = ColorsCloseEnough(q.BackgroundColor, bg, thrSq);
+                                        fgOk = true; // ignored for spaces
+                                    }
+                                    else
+                                    {
+                                        // fast channel guards (FG + BG)
+                                        int dFr = q.ForegroundColor.R - fg.R; if ((dFr ^ (dFr >> 31)) > cap) break;
+                                        int dFg = q.ForegroundColor.G - fg.G; if ((dFg ^ (dFg >> 31)) > cap) break;
+                                        int dFb = q.ForegroundColor.B - fg.B; if ((dFb ^ (dFb >> 31)) > cap) break;
+
+                                        int dBr = q.BackgroundColor.R - bg.R; if ((dBr ^ (dBr >> 31)) > cap) break;
+                                        int dBg = q.BackgroundColor.G - bg.G; if ((dBg ^ (dBg >> 31)) > cap) break;
+                                        int dBb = q.BackgroundColor.B - bg.B; if ((dBb ^ (dBb >> 31)) > cap) break;
+
+                                        fgOk = ColorsCloseEnough(q.ForegroundColor, fg, thrSq);
+                                        bgOk = ColorsCloseEnough(q.BackgroundColor, bg, thrSq);
+                                    }
+                                }
+                            }
+
+                            if (!fgOk || !bgOk) break;
                             x++;
                         }
+
                         runsOnLine.Add(new Run(start, x - start, fg, bg, under));
                     }
 
@@ -93,6 +149,104 @@ internal static class ConsolePainter
             catch (IOException) when (attempts++ < 2) { continue; }
             catch (ArgumentOutOfRangeException) when (attempts++ < 2) { continue; }
         }
+        return true;
+    }
+
+    // --- Tolerance decay ---
+    // Q12 fixed-point multipliers (1.0 -> 4096). Shape ~exp decay to ~5% by step 24, ~2% by step 32.
+    // You can tweak these 33 numbers; they’re intentionally conservative.
+    private static readonly ushort[] s_ToleranceFalloffQ12 =
+    {
+    4096, 3600, 3162, 2779, 2440, 2144, 1887, 1659, 1460, 1286, 1134,
+    1000,  882,  778,  686,  606,  535,  472,  416,  366,  322,
+     284,  250,  221,  195,  172,  151,  133,  117,  102,   89,   77,   66, // ~1.6% at 32
+};
+
+    // Precomputed per-frame thresholds (squared) and per-channel caps (sqrt) for offsets 0..MaxSoftenedRun-1
+    private static readonly int[] s_ThrSqByOffset = new int[MaxSoftenedRun];
+    private static readonly byte[] s_ChannelCapByOffset = new byte[MaxSoftenedRun];
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int IntSqrt(int x)
+    {
+        // Tiny, branchy integer sqrt for small ranges; good enough for caps (0..~112)
+        if (x <= 0) return 0;
+        int r = (int)Math.Sqrt(x); // if you want, replace with a branchless int-sqrt; this is fine once per frame*32
+        return r;
+    }
+
+    private static void BuildPerFrameThresholds(int baseSq)
+    {
+        for (int i = 0; i < MaxSoftenedRun; i++)
+        {
+            int m = s_ToleranceFalloffQ12[i];                  // Q12
+            int thrSq = baseSq <= 0 ? 0 : (int)(((long)baseSq * m) >> 12);
+            s_ThrSqByOffset[i] = thrSq;
+
+            // per-channel guard: if any |d| > cap then d² > thrSq → early fail
+            int cap = IntSqrt(thrSq);
+            if (cap > 255) cap = 255;
+            s_ChannelCapByOffset[i] = (byte)cap;
+        }
+    }
+
+    // After this many characters in the SAME run, treat tolerance as zero (exact equality only).
+    private const int MaxSoftenedRun = 32;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int DecayedThresholdSq(int baseSq, int offsetInRun)
+    {
+        if (baseSq <= 0) return 0;
+        if (offsetInRun >= MaxSoftenedRun) return 0;
+        // Fixed-point multiply: (baseSq * falloffQ12) >> 12
+        int m = s_ToleranceFalloffQ12[offsetInRun]; // 0..4096
+        return (int)(((long)baseSq * m) >> 12);
+    }
+
+    private const int MaxRgbDistSq = 255 * 255 * 3;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ColorsCloseEnough(in RGB a, in RGB b, int maxDistSq)
+    {
+        // Avoids sqrt/pow. Assumes RGB channels are bytes/ints 0..255.
+        int dr = a.R - b.R;
+        int dg = a.G - b.G;
+        int db = a.B - b.B;
+        // unchecked to avoid overflow checks; values are within safe range here.
+        unchecked
+        {
+            int d2 = dr * dr + dg * dg + db * db;
+            return d2 <= maxDistSq;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ComputeColorThresholdSq()
+    {
+        double backPressure = PaintQoS.BackpressureRatio;
+        var minTolerance = 0.01; // always have a tiny tolerance since we really don't need the full RGB space
+        var maxTolerance = 0.0225; // at extreme backpressure we can loosen things up, but not to the point of being ugly 
+        var lowestBackPressureBeforeIncreasingTolerance = 0f;
+        var highestBackPressureBeforeMaxingTolerance = 0.9f;
+
+        // compute tolerance from min to max based on backpressure
+        double tolerance;
+        if (backPressure <= lowestBackPressureBeforeIncreasingTolerance) tolerance = minTolerance;
+        else if (backPressure >= highestBackPressureBeforeMaxingTolerance) tolerance = maxTolerance;
+        else
+        {
+            var range = highestBackPressureBeforeMaxingTolerance - lowestBackPressureBeforeIncreasingTolerance;
+            var adj = backPressure - lowestBackPressureBeforeIncreasingTolerance;
+            var fract = adj / range;
+            tolerance = minTolerance + (fract * (maxTolerance - minTolerance));
+        }
+
+
+        double sq = (tolerance * tolerance) * MaxRgbDistSq;
+        // Clamp just in case of FP noise
+        if (sq < 0) sq = 0;
+        if (sq > MaxRgbDistSq) sq = MaxRgbDistSq;
+        return (int)sq;
     }
 
     private static class PaintQoS
@@ -107,9 +261,8 @@ internal static class ConsolePainter
         // Don’t skip so long that UX feels broken
         private static double MaxSkipMs = 180.0; // ~5.5 FPS floor
 
-        // Optional “almost at budget” margin to start shedding work
-        // e.g., start shedding if the smoothed write cost consistently exceeds 90% of budget
-        private static double SheddingThresholdFactor = 0.90;
+        // e.g., start shedding if the smoothed write cost consistently exceeds SheddingThresholdFactor % of budget
+        private static double SheddingThresholdFactor = 0.50;
 
         // ---- Live state ----
         private static long _tsBegin;           // write start ticks
@@ -121,16 +274,31 @@ internal static class ConsolePainter
         private static long _lastCheckTicks;
         public static double EstimatedCharsPerMs => (_emaWriteMs > 0) ? (_emaChars / _emaWriteMs) : 0.0;
 
-       // How many chars we can afford this frame (with a small headroom factor)
-       public static int BudgetedCharsThisFrame(double headroom = 1.10)
-       {
-           var cpm = EstimatedCharsPerMs;
-           if (cpm <= 0) return int.MaxValue; // no data yet, don’t cap early
-           var maxChars = cpm * FrameBudgetMs * headroom;
-           // never go to zero; allow a tiny minimum so the screen isn't frozen at start
-           return (int) Math.Max(256, Math.Min(maxChars, int.MaxValue));
-       }
+        // How many chars we can afford this frame (with a small headroom factor)
+        public static int BudgetedCharsThisFrame()
+        {
+            var cpm = EstimatedCharsPerMs;
+            if (cpm <= 0) return int.MaxValue;
 
+            // shrink headroom as we approach/exceed budget
+            double r = BackpressureRatio;
+            double headroom = (r <= 0.9) ? 1.12 : (r <= 1.2) ? 1.06 : 1.02;
+
+            var maxChars = cpm * FrameBudgetMs * headroom;
+            return (int)Math.Max(256, Math.Min(maxChars, int.MaxValue));
+        }
+
+        // How "busy" we are vs the budget. 1.0 == on budget; >1 == over budget.
+        public static double BackpressureRatio
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                // If we have no samples yet, pretend everything's fine.
+                if (_emaWriteMs <= 0 || FrameBudgetMs <= 0) return 0.0;
+                return _emaWriteMs / FrameBudgetMs;
+            }
+        }
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         public static void BeginWrite() => _tsBegin = Stopwatch.GetTimestamp();
@@ -221,6 +389,34 @@ internal static class ConsolePainter
         private readonly int _maxCharCount;
         private int _bufferPosition;
 
+        private const int Window = 30;
+        private static readonly int[] _ring = new int[Window];
+        private static int _idx = 0;      // next slot to overwrite
+        private static int _count = 0;    // how many valid samples (<= Window)
+        private static long _sum = 0;     // running sum (fits comfortably)
+
+        public static int AvgWriteLength => _count == 0 ? 0 : (int)(_sum / _count);
+
+        private static void RecordWriteLength(int length)
+        {
+            // subtract old value at slot (0 if not yet filled)
+            if (_count == Window)
+            {
+                _sum -= _ring[_idx];
+            }
+            else
+            {
+                _count++; // growing phase until full
+            }
+
+            _ring[_idx] = length;
+            _sum += length;
+
+            _idx++;
+            if (_idx == Window) _idx = 0;
+        }
+
+   
         public FastConsoleWriter(int bufferSize = 8192)
         {
             _outputStream = Console.OpenStandardOutput();
@@ -232,6 +428,7 @@ internal static class ConsolePainter
 
         public void Write(char[] buffer, int length)
         {
+            RecordWriteLength(length);
             int charsProcessed = 0;
             while (charsProcessed < length)
             {

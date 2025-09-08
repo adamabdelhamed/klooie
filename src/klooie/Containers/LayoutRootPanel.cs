@@ -77,24 +77,16 @@ public partial class LayoutRootPanel : ConsolePanel
     {
         DebounceResize();
         Bitmap.Fill(defaultPen);
-        Paint();// ConsoleControl.Paint() is called here
-
-        if (PaintEnabled)
-        {
-            ConsolePainter.Paint(Bitmap);
-        }
+        if(!PaintEnabled) return;
+        Paint(); // Visual tree updates the bitmap here
+        if (!ConsolePainter.Paint(Bitmap)) return; // this frame was skipped due to back pressure from the console
         paintRateMeter.Increment();
         _afterPaint?.Fire();
         if (paintRequests.Count == 0) return;
-
         TaskCompletionSource[] paintRequestsCopy;
         paintRequestsCopy = paintRequests.ToArray();
         paintRequests.Clear();
-
-        for (var i = 0; i < paintRequestsCopy.Length; i++)
-        {
-            paintRequestsCopy[i].SetResult();
-        }
+        for (var i = 0; i < paintRequestsCopy.Length; i++) paintRequestsCopy[i].SetResult();
     }
 
     private void DebounceResize()
