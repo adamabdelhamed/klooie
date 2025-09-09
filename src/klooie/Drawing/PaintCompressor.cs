@@ -81,7 +81,7 @@ internal static class PaintCompressor
     public static int ComputeColorThresholdSq()
     {
         double backPressure = PaintQoS.BackpressureRatio;
-        var minTolerance = 0.01; // always have a tiny tolerance since we really don't need the full RGB space
+        var minTolerance = 0.005; // always have a tiny tolerance since we really don't need the full RGB space
         var maxTolerance = 0.0225; // at extreme backpressure we can loosen things up, but not to the point of being ugly 
         var lowestBackPressureBeforeIncreasingTolerance = 0f;
         var highestBackPressureBeforeMaxingTolerance = 0.9f;
