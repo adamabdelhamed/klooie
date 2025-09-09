@@ -218,7 +218,7 @@ public sealed class AudioPreRenderer
     {
         _waves[key] = wave;
         cacheCount++;
-        SoundProvider.Debug($"Added note to cache: Cache Count {cacheCount}, Job Count: {jobCount}, Cache Size MB: {MathF.Round(_bytes / (1024 * 1024))}".ToBlue());
+        //SoundProvider.Debug($"Added note to cache: Cache Count {cacheCount}, Job Count: {jobCount}, Cache Size MB: {MathF.Round(_bytes / (1024 * 1024))}".ToBlue());
         lock (_lruLock)
         {
             _lru.AddFirst(key);

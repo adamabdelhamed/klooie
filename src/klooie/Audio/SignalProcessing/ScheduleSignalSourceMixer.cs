@@ -280,7 +280,7 @@ public class ScheduledSignalSourceMixer
                 continue;
             }
 
-            SoundProvider.Debug($"Scheduled note {scheduledNoteEvent.Note.MidiNote} from {scheduledNoteEvent.Note.Instrument?.Name ?? "Patch"} with live spawning.".ToOrange());
+            //SoundProvider.Debug($"Scheduled note {scheduledNoteEvent.Note.MidiNote} from {scheduledNoteEvent.Note.Instrument?.Name ?? "Patch"} with live spawning.".ToOrange());
             var patch = scheduledNoteEvent.Note.Instrument?.PatchFunc(scheduledNoteEvent.Note) ?? SynthLead.Create(scheduledNoteEvent.Note);
             if (!patch.IsNotePlayable(scheduledNoteEvent.Note.MidiNote))
             {
