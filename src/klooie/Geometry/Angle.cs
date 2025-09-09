@@ -285,6 +285,11 @@ public readonly struct Angle
     public bool IsGridAligned => Value == Right || Value == Left || Value == Up || Value == Down;
 
     /// <summary>
+    /// Returns true if the angle is within .001f of 0,90,180, or 270
+    /// </summary>
+    public bool IsGridAlignedClose => Math.Abs(RoundAngleToNearest(90f).Value - Value) < .001f;
+
+    /// <summary>
     /// Converts an angle to radians
     /// </summary>
     /// <param name="degrees">the angle in degrees</param>
