@@ -181,6 +181,8 @@ public sealed partial class Camera : ConsolePanel
 
     public Rect Translate(RectF rect) =>new Rect(ConsoleMath.Round(rect.Left - cameraLocation.Left), ConsoleMath.Round(rect.Top - cameraLocation.Top), ConsoleMath.Round(rect.Width), ConsoleMath.Round(rect.Height));
 
+    public LocF Translate(LocF rect) => new LocF(ConsoleMath.Round(rect.Left - cameraLocation.Left), ConsoleMath.Round(rect.Top - cameraLocation.Top));
+
     /// <summary>
     /// Returns true if the control is within the camera bounds
     /// </summary>
