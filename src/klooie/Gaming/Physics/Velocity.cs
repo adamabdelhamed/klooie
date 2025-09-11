@@ -105,6 +105,8 @@ public sealed class Velocity : Recyclable
         _onSpeedChanged = null;
         _beforeEvaluate?.TryDispose();
         _beforeEvaluate = null;
+        _afterEvaluate?.TryDispose();
+        _afterEvaluate = null;
         _onCollision?.TryDispose();
         _onCollision = null;
         influenceSubscriptionLifetime?.TryDispose("Velocity Disposal");
