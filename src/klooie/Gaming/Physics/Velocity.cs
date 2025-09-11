@@ -92,6 +92,7 @@ public sealed class Velocity : Recyclable
         base.OnInit();
         speed = 0;
         angle = 0;
+        SpeedRatio = 1;
     }
 
     protected override void OnReturn()
@@ -108,6 +109,7 @@ public sealed class Velocity : Recyclable
         _onCollision = null;
         influenceSubscriptionLifetime?.TryDispose("Velocity Disposal");
         influenceSubscriptionLifetime = null;
+        SpeedRatio = 1;
     }
 
 
