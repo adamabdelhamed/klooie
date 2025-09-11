@@ -29,9 +29,9 @@ public sealed class ColliderGroup
     private ILifetime? lt;
     private TimeSpan lastExecuteTime;
     private float now;
-    
+    private double scaledNowSeconds;
 
-  
+
     public float SpeedRatio { get; set; } = 1;
 
 
@@ -44,6 +44,7 @@ public sealed class ColliderGroup
         colliderBuffer = ObstacleBufferPool.Instance.Rent();
         lastExecuteTime = TimeSpan.Zero;
         spatialIndex = new UniformGrid();
+        scaledNowSeconds = 0; // start scaled timeline at zero
         this.stopwatch.Start();
         pauseManager?.OnPaused.Subscribe(this, static (me,pauseLt) => me.HandlePause(pauseLt), lt);
         Game.Current?.AfterPaint?.SubscribePaused(pauseManager, Tick, lt);
@@ -75,7 +76,8 @@ public sealed class ColliderGroup
     }
 
 
-    public TimeSpan Now => stopwatch.Elapsed;
+    public TimeSpan WallClockNow => stopwatch.Elapsed; 
+    public TimeSpan ScaledNow => TimeSpan.FromSeconds(scaledNowSeconds);
     private IStopwatch stopwatch;
 
     public void Tick()
@@ -94,11 +96,17 @@ public sealed class ColliderGroup
 
     private void UpdateTime()
     {
-        var nowTime = Now;
+        var nowTime = WallClockNow; // always sample the real stopwatch here
         now = (float)nowTime.TotalSeconds;
-        var stopwatchDt = (float)(nowTime - lastExecuteTime).TotalMilliseconds;
-        LatestDT = stopwatch.SupportsMaxDT ? Math.Min(MaxDTMilliseconds, stopwatchDt) : stopwatchDt;
+
+        var dtMs = (float)(nowTime - lastExecuteTime).TotalMilliseconds;
+        LatestDT = stopwatch.SupportsMaxDT ? Math.Min(MaxDTMilliseconds, dtMs) : dtMs;
         lastExecuteTime = nowTime;
+
+        // --- New: advance scaled timeline using clamped dt and group SpeedRatio ---
+        // Keep visuals in lockstep with physics by using the same clamp.
+        double dtSecondsForScale = LatestDT / 1000.0;
+        scaledNowSeconds += dtSecondsForScale * SpeedRatio;
     }
 
     private void Tick(GameCollider item)

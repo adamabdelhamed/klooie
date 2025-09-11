@@ -58,7 +58,7 @@ public class FrameTaskScheduler : Recyclable
 
     private void Process()
     {
-        var now = Game.Current.MainColliderGroup.Now;
+        var now = Game.Current.MainColliderGroup.WallClockNow;
 
         // Only proceed if it's the start of a new frequency period
         if (!currentPassStartTime.HasValue || now - currentPassStartTime.Value >= Frequency)

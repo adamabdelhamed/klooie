@@ -194,7 +194,7 @@ public class Vision : Recyclable, IFrameTask
         {
             if (target != null)
             {
-                target.LastSeenTime = Game.Current.MainColliderGroup.Now;
+                target.LastSeenTime = Game.Current.MainColliderGroup.ScaledNow;
                 target.Distance = Eye.CalculateNormalizedDistanceTo(potentialTarget);
             }
             singleRay.TryDispose();
@@ -313,7 +313,7 @@ public class VisuallyTrackedObject : Recyclable
     public float Distance { get; set; }
     public Angle Angle { get; set; }
 
-    public TimeSpan TimeSinceLastSeen => Game.Current.MainColliderGroup.Now - LastSeenTime;
+    public TimeSpan TimeSinceLastSeen => Game.Current.MainColliderGroup.ScaledNow - LastSeenTime;
 
     public bool IsTargetStillValid => Target != null && Target.IsStillValid(targetLease);
 
@@ -324,7 +324,7 @@ public class VisuallyTrackedObject : Recyclable
         var trackedObject = VisuallyTrackedObjectPool.Instance.Rent();
         trackedObject.targetLease = target.Lease;
         trackedObject.Target = target;
-        trackedObject.LastSeenTime = Game.Current.MainColliderGroup.Now;
+        trackedObject.LastSeenTime = Game.Current.MainColliderGroup.ScaledNow;
         trackedObject.RayCastResult = rayCastResult;
         trackedObject.Distance = distance;
         trackedObject.Angle = angle;

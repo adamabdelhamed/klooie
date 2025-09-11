@@ -154,12 +154,12 @@ public class VelocityTests
                         var touching = buffer.WriteableBuffer.Where(c => c != collider && c.NumberOfPixelsThatOverlap(collider) > 0).ToArray();
                         if (touching.Any())
                         {
-                            Assert.Fail("Colliders touching at time " + group.Now.TotalSeconds);
+                            Assert.Fail("Colliders touching at time " + group.ScaledNow.TotalSeconds);
                         }
 
                         if (collider.NumberOfPixelsThatOverlap(left) > 0 || collider.NumberOfPixelsThatOverlap(top) > 0 || collider.NumberOfPixelsThatOverlap(right) > 0 || collider.NumberOfPixelsThatOverlap(bottom) > 0)
                         {
-                            Assert.Fail("Collider overlapping wall at time " + group.Now.TotalSeconds);
+                            Assert.Fail("Collider overlapping wall at time " + group.ScaledNow.TotalSeconds);
                         }
                     }
                     finally

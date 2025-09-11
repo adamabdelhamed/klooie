@@ -47,10 +47,10 @@ public partial class Weapon : Recyclable, IObservableObject
     public void TryFire(bool alt)
     {
         if (Debouncer != null && Debouncer.AllowFire() == false) return;
-        if (lastFireTime.HasValue && Game.Current.MainColliderGroup.Now - lastFireTime < MinTimeBetweenShots) return;
+        if (lastFireTime.HasValue && Game.Current.MainColliderGroup.WallClockNow - lastFireTime < MinTimeBetweenShots) return;
         if (AmmoAmount == 0 || Source == null) return;
 
-        lastFireTime = Game.Current.MainColliderGroup.Now;
+        lastFireTime = Game.Current.MainColliderGroup.WallClockNow;
         FrameDebugger.RegisterTask("FireWeapon");
         FireInternal(alt);
         AmmoAmount--;
@@ -78,7 +78,7 @@ public partial class Weapon : Recyclable, IObservableObject
             Prune();
             if (minShotsBeforeEnforced > burstRecord.Count || burstRecord.Count < maxShotsInBurstWindow)
             {
-                burstRecord.AddLast(Game.Current.MainColliderGroup.Now);
+                burstRecord.AddLast(Game.Current.MainColliderGroup.WallClockNow);
                 return true;
             }
             else
@@ -90,7 +90,7 @@ public partial class Weapon : Recyclable, IObservableObject
         private void Prune()
         {
             var current = burstRecord.First;
-            while (current != null && Game.Current.MainColliderGroup.Now - current.Value > TimeSpan.FromMilliseconds(burstWindow))
+            while (current != null && Game.Current.MainColliderGroup.WallClockNow - current.Value > TimeSpan.FromMilliseconds(burstWindow))
             {
                 burstRecord.RemoveFirst();
                 current = burstRecord.First;

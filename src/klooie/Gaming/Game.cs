@@ -46,7 +46,7 @@ public class Game : ConsoleApp
     /// <summary>
     /// Gets the time that has been elapsed in the MainColliderGroup
     /// </summary>
-    public static TimeSpan Now => Current != null ? Current.MainColliderGroup.Now : TimeSpan.Zero;
+    public static TimeSpan Now => Current != null ? Current.MainColliderGroup.ScaledNow : TimeSpan.Zero;
 
     /// <summary>
     /// Pauses the game

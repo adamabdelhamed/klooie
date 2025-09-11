@@ -58,7 +58,7 @@ public class GameCollider : ConsoleControl
     {
         if (collider.lastSpeed == 0 && collider.Velocity.Speed > 0)
         {
-            collider.lastEvalTime = (float)collider.ColliderGroup.Now.TotalSeconds;
+            collider.lastEvalTime = (float)collider.ColliderGroup.WallClockNow.TotalSeconds;
         }
         collider.lastSpeed = collider.Velocity.Speed;
     }
