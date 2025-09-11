@@ -17,6 +17,8 @@ public class Targeting : Recyclable
     public Vision Vision { get; set; }
     public string[]? TargetTags { get; private set; }
 
+    public Angle TargetAngle => Target != null ? Vision.Eye.Center().CalculateAngleTo(Target.Center()) : Vision.Eye.Velocity.Angle;
+
     public void Bind(Vision v, string[] targetTags, bool highlightTargets)
     {
         Vision = v ?? throw new ArgumentNullException(nameof(v));
@@ -48,7 +50,7 @@ public class Targeting : Recyclable
         OnTargetChanged(best?.Target);
     }
 
-    public bool IsPotentialTarget(GameCollider candidate)
+    public bool IsPotentialTarget(GameCollider? candidate)
     {
         if (candidate == null) return false;
         if (candidate.Velocity == this.Vision.Eye.Velocity) return false; // Don't target self

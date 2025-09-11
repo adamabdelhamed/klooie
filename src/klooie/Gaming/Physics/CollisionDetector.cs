@@ -19,7 +19,7 @@ public class Collision : Recyclable
 
     protected override void OnInit() => Reset();
 
-    public void Bind(float speed, Angle angle, ICollidable movingObject, ICollidable colliderHit, CollisionPrediction prediction)
+    public Collision Bind(float speed, Angle angle, ICollidable movingObject, ICollidable colliderHit, CollisionPrediction prediction)
     {
         MovingObjectSpeed = speed;
         Angle = angle;
@@ -29,6 +29,7 @@ public class Collision : Recyclable
 
         if (movingObject is GameCollider gc) MovingObjectLeaseState = LeaseHelper.Track(gc);
         if (colliderHit is GameCollider ch) ColliderHitLeaseState = LeaseHelper.Track(ch);
+        return this;
     }
 
     public void Reset()

@@ -153,7 +153,7 @@ public sealed class UniformGrid
         membershipState.PreviousBounds = obj.Bounds;
     }
 
-    public void Query(in RectF area, ObstacleBuffer outputBuffer)
+    public ObstacleBuffer Query(in RectF area, ObstacleBuffer outputBuffer)
     {
         _stamp++;
         LoadCells(area);
@@ -172,6 +172,7 @@ public sealed class UniformGrid
                 }
             }
         }
+        return outputBuffer;
     }
 
    
