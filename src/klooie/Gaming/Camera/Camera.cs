@@ -179,9 +179,14 @@ public sealed partial class Camera : ConsolePanel
         (ConsoleMath.Round(c.Bounds.Left - cameraLocation.Left), ConsoleMath.Round(c.Bounds.Top - cameraLocation.Top));
 
 
-    public Rect Translate(RectF rect) =>new Rect(ConsoleMath.Round(rect.Left - cameraLocation.Left), ConsoleMath.Round(rect.Top - cameraLocation.Top), ConsoleMath.Round(rect.Width), ConsoleMath.Round(rect.Height));
+    public Rect TranslateToBitmapSpace(RectF rect) =>new Rect(ConsoleMath.Round(rect.Left - cameraLocation.Left), ConsoleMath.Round(rect.Top - cameraLocation.Top), ConsoleMath.Round(rect.Width), ConsoleMath.Round(rect.Height));
 
-    public LocF Translate(LocF rect) => new LocF(ConsoleMath.Round(rect.Left - cameraLocation.Left), ConsoleMath.Round(rect.Top - cameraLocation.Top));
+    public LocF TranslateToBitmapSpace(LocF rect) => new LocF(ConsoleMath.Round(rect.Left - cameraLocation.Left), ConsoleMath.Round(rect.Top - cameraLocation.Top));
+
+
+    public RectF TranslateToCameraSpace(RectF rect) => new RectF(rect.Left + cameraLocation.Left, rect.Top + cameraLocation.Top, rect.Width, rect.Height);
+
+    public LocF TranslateToCameraSpace(LocF loc) => new LocF(loc.Left + cameraLocation.Left, loc.Top + cameraLocation.Top);
 
     /// <summary>
     /// Returns true if the control is within the camera bounds

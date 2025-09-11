@@ -42,6 +42,9 @@ public static class ConsoleMath
     /// <returns>the rounded number</returns>
     public static int Round(float f) => (int)MathF.Round(f, MidpointRounding.AwayFromZero);
 
+    public static int Ceiling(float f) => (int)MathF.Ceiling(f);
+    public static int Floor(float f) => (int)MathF.Floor(f);
+
     /// <summary>
     /// Rounds to an int using normal rounding, not banker's rounding
     /// </summary>
