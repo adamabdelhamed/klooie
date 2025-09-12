@@ -18,9 +18,9 @@ public class DebuggableWalk : Walk
     private TimeSpan lastMoveTime;
     private TimeSpan lastCollisionTime;
     private TimeSpan lastVelocityEvaluationTime;
-    public bool HasMovedInPastSecond => Game.Current.MainColliderGroup.Now - lastMoveTime < TimeSpan.FromSeconds(1);
-    public bool HasCollidedInPastSecond => Game.Current.MainColliderGroup.Now - lastCollisionTime < TimeSpan.FromSeconds(1);
-    public bool HasBeenEvaluatedInPastSecond => Game.Current.MainColliderGroup.Now - lastVelocityEvaluationTime < TimeSpan.FromSeconds(1);
+    public bool HasMovedInPastSecond => Game.Current.MainColliderGroup.WallClockNow - lastMoveTime < TimeSpan.FromSeconds(1);
+    public bool HasCollidedInPastSecond => Game.Current.MainColliderGroup.WallClockNow - lastCollisionTime < TimeSpan.FromSeconds(1);
+    public bool HasBeenEvaluatedInPastSecond => Game.Current.MainColliderGroup.WallClockNow - lastVelocityEvaluationTime < TimeSpan.FromSeconds(1);
 
     protected void Construct(Vision vision, float speed, bool autoBindToVision)
     {
@@ -37,9 +37,9 @@ public class DebuggableWalk : Walk
 
     private void OnAfterEvaluateVelocity(Velocity.MoveEval eval)
     {
-        lastVelocityEvaluationTime = Game.Current.MainColliderGroup.Now;
-        lastMoveTime = eval.Result == Velocity.MoveEvalResult.Moved ? Game.Current.MainColliderGroup.Now : lastMoveTime;
-        lastCollisionTime = eval.Result == Velocity.MoveEvalResult.Collision ? Game.Current.MainColliderGroup.Now : lastCollisionTime;
+        lastVelocityEvaluationTime = Game.Current.MainColliderGroup.WallClockNow;
+        lastMoveTime = eval.Result == Velocity.MoveEvalResult.Moved ? Game.Current.MainColliderGroup.WallClockNow : lastMoveTime;
+        lastCollisionTime = eval.Result == Velocity.MoveEvalResult.Collision ? Game.Current.MainColliderGroup.WallClockNow : lastCollisionTime;
         UpdateAngleHighlights();
     }
 

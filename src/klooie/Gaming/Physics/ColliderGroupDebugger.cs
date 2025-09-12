@@ -29,7 +29,7 @@ public static class ColliderGroupDebugger
 
     private static void HandleEvent(VelocityEvent ev)
     {
-        var cycleDir = Path.Combine(OutputDir, group.Now.TotalSeconds.ToString().Replace(".","_"), ev.MovingObject.GetHashCode().ToString());
+        var cycleDir = Path.Combine(OutputDir, group.WallClockNow.TotalSeconds.ToString().Replace(".","_"), ev.MovingObject.GetHashCode().ToString());
         if (Directory.Exists(cycleDir) == false)
         {
             Directory.CreateDirectory(cycleDir);
