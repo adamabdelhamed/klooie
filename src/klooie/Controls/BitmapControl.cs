@@ -35,6 +35,7 @@ public partial class BitmapControl : ConsoleControl
         OffsetXChanged.Subscribe(BitmapOrAutoSizeChanged, this);
         OffsetYChanged.Subscribe(BitmapOrAutoSizeChanged, this);
         Bitmap = initialValue;
+        CanFocus = false;
     }
 
     private void BitmapOrAutoSizeChanged()
