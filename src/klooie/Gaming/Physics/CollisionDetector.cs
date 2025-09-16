@@ -225,7 +225,6 @@ public static class CollisionDetector
         return prediction;
     }
 
-    // --- Helper: O(1) continuous collision detection for axis-aligned rectangles ---
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool SweptAabbFirstHit(
         in RectF a,          // moving rect (start pose)
@@ -233,19 +232,18 @@ public static class CollisionDetector
         float dx, float dy,  // movement vector over the "visibility" path
         out float t,         // normalized time of impact in [0,1]
         out Edge hitEdge,    // which physical edge on 'b' we touched
-        out float ix, out float iy) // a representative contact point on that edge
+        out float ix, out float iy) // contact point
     {
         // Defaults
         t = 0f; ix = 0f; iy = 0f; hitEdge = default;
-
         const float eps = 1e-8f;
 
         // Compute entry/exit times for X
         float xEntry, xExit;
         if (MathF.Abs(dx) <= eps)
         {
-            // No horizontal motion: must already overlap on X to ever collide
-            if (a.Right <= b.Left + VerySmallNumber || a.Left >= b.Right - VerySmallNumber) return false;
+            // No horizontal motion: must *already* overlap in X to collide
+            if (a.Right <= b.Left || a.Left >= b.Right) return false; // <-- no epsilon here
             xEntry = float.NegativeInfinity;
             xExit = float.PositiveInfinity;
         }
@@ -264,7 +262,7 @@ public static class CollisionDetector
         float yEntry, yExit;
         if (MathF.Abs(dy) <= eps)
         {
-            if (a.Bottom <= b.Top + VerySmallNumber || a.Top >= b.Bottom - VerySmallNumber) return false;
+            if (a.Bottom <= b.Top || a.Top >= b.Bottom) return false; // <-- no epsilon here
             yEntry = float.NegativeInfinity;
             yExit = float.PositiveInfinity;
         }
@@ -279,44 +277,34 @@ public static class CollisionDetector
             yExit = (b.Top - a.Bottom) / dy;
         }
 
-        // Earliest/latest times we are overlapping on both axes
         float tEntry = MathF.Max(xEntry, yEntry);
         float tExit = MathF.Min(xExit, yExit);
 
-        // No overlap during [0,1]
+        // Bail if no overlap during [0,1]
         if (tEntry > tExit) return false;
-        if (tExit < -VerySmallNumber) return false;       // completely behind start
-        if (tEntry > 1f + VerySmallNumber) return false;  // beyond our path
+        if (tExit < -VerySmallNumber) return false;
+        if (tEntry > 1f + VerySmallNumber) return false;
 
-        // Clamp for robustness (allow grazing/touching at 0/1)
+        // Clamp for grazing forgiveness
         if (tEntry < 0f) tEntry = 0f;
         if (tEntry > 1f) tEntry = 1f;
-
         t = tEntry;
 
-        // Decide which face we hit (the axis that governed entry)
+        // Pick edge
         bool hitVerticalFace = xEntry > yEntry;
-
         if (hitVerticalFace)
         {
-            // We struck a vertical face on B (Left/Right)
-            bool fromLeft = dx > 0f; // moving right -> hit B.Left
+            bool fromLeft = dx > 0f;
             hitEdge = fromLeft ? b.LeftEdge : b.RightEdge;
-
             ix = fromLeft ? b.Left : b.Right;
-
-            // Representative contact Y: use A's center advanced to TOI, clamped to the struck edge span
             float aCy = a.CenterY + dy * t;
             iy = Math.Clamp(aCy, b.Top, b.Bottom);
         }
         else
         {
-            // We struck a horizontal face on B (Top/Bottom)
-            bool fromTop = dy > 0f; // moving down -> hit B.Top
+            bool fromTop = dy > 0f;
             hitEdge = fromTop ? b.TopEdge : b.BottomEdge;
-
             iy = fromTop ? b.Top : b.Bottom;
-
             float aCx = a.CenterX + dx * t;
             ix = Math.Clamp(aCx, b.Left, b.Right);
         }
@@ -325,11 +313,12 @@ public static class CollisionDetector
     }
 
 
-  
 
 
 
-   
+
+
+
 }
 
 public class ArrayPlusOnePool<T> : RecycleablePool<ArrayPlusOne<T>> where T : ICollidable

@@ -588,9 +588,8 @@ public static class WalkCalculation
     private static float DangerClamp(float timeToCollision)
     {
         if (timeToCollision >= MaxCollisionHorizon) return 1f;
-        if (timeToCollision <= DangerClampDanger) return 0f;
-        float t = (timeToCollision - DangerClampDanger) * DangerClampScale;
-        return t < 0f ? 0f : (t > 1f ? 1f : t);
+        if(timeToCollision < 0) return 0f;
+        return timeToCollision / MaxCollisionHorizon;
     }
 
     private struct CoarseTop

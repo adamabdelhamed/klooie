@@ -182,8 +182,6 @@ public sealed class ColliderGroup
     private void ProcessCollision(GameCollider item, float expectedTravelDistance)
     {
         var originalLocation = item.Bounds;
-        var encroachment = GetCloseToColliderWeAreCollidingWith(item);
-
 
         var otherBounds = hitPrediction.ColliderHit.Bounds;
 
@@ -213,7 +211,7 @@ public sealed class ColliderGroup
         if (spatialIndex.IsExpired(item)) return;
         if (item.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
         {
-            BounceMe(item, otherBounds, hitPrediction.ColliderHit, expectedTravelDistance, encroachment);
+            BounceMe(item, otherBounds, hitPrediction.ColliderHit, expectedTravelDistance);
         }
         else if (item.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Stop)
         {
@@ -221,12 +219,12 @@ public sealed class ColliderGroup
         }
     }
      
-    private void BounceMe(GameCollider item, RectF otherBounds, ICollidable other, float expectedTravelDistance, float encroachment)
+    private void BounceMe(GameCollider item, RectF otherBounds, ICollidable other, float expectedTravelDistance)
     {
         Angle newAngleDegrees = ComputeBounceAngle(item.Velocity, otherBounds, hitPrediction);
         item.Velocity.Angle = newAngleDegrees;
 
-        var adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, encroachment == 0 ? expectedTravelDistance : encroachment * 2, false);
+        var adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false);
         if (TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange) == false)
         {
             adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
@@ -331,13 +329,6 @@ public sealed class ColliderGroup
         return isReadyToMove;
     }
     
-
-    private float GetCloseToColliderWeAreCollidingWith(GameCollider item)
-    {
-        var proposedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, hitPrediction.LKGD, false);
-        var encroachment = TryMoveIfWouldNotCauseTouching(item, proposedBounds, RGB.Green) ? hitPrediction.LKGD : 0;
-        return encroachment;
-    }
 
     public bool TryMoveIfWouldNotCauseTouching(GameCollider item, RectF proposedBounds, RGB color)
     {
