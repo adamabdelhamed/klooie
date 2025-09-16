@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog.Core;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,6 +23,8 @@ public abstract class Movement : DelayState, IMovement
     public GameCollider Eye => Vision?.Eye;
     protected Movement() { }
 
+    public Logger? Logger { get; set; }
+
     protected virtual void Construct(Vision vision, float baseSpeed)
     {
         AddDependency(this);
@@ -37,5 +40,7 @@ public abstract class Movement : DelayState, IMovement
         base.OnReturn();
         Vision = null;
         BaseSpeed = 0;
+        Logger?.Dispose();
+        Logger = null;
     }
 }

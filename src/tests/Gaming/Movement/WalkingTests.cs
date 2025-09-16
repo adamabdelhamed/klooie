@@ -101,7 +101,7 @@ public class WalkWithCustomPointsOfInterest : Walk
     public static WalkWithCustomPointsOfInterest Create(Vision vision, float speed = 1)
     {
         var state = pool.Value.Rent();
-        state.Construct(vision, speed, true);
+        state.Construct(vision, speed);
         state.CurrentPointOfInterestIndex = 0;
         return state;
     }
