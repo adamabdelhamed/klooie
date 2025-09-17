@@ -154,7 +154,8 @@ public sealed class Velocity : Recyclable
         var removed = _influences.Remove(influence);
         if(removed == false) throw new InvalidOperationException($"Cannot remove influence with name '{influence.Name}' because it does not exist in the list.");
         if (_influences.Count > 0) return;
-        
+
+        Speed = 0; // If there are no influences left, then we should assume the owners would prefer to be stopped.
         influenceSubscriptionLifetime.Dispose("No influences left");
         influenceSubscriptionLifetime = null;
     }
