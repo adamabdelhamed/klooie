@@ -19,6 +19,7 @@ public class AudioPlaybackEngine : ISoundProvider
     public EventLoop EventLoop => eventLoop;
     public ScheduledSignalSourceMixer ScheduledSignalMixer => scheduledSynthProvider;
     public long SamplesRendered => scheduledSynthProvider.SamplesRendered;
+    private bool loadedProperly = false;
 
     public AudioPlaybackEngine()
     {
@@ -38,6 +39,7 @@ public class AudioPlaybackEngine : ISoundProvider
             soundCache = new SoundCache(LoadSounds());
             sw.Stop();
             LogSoundLoaded(sw.ElapsedMilliseconds);  
+            loadedProperly= true;
         }
         catch (Exception ex)
         {
@@ -45,16 +47,23 @@ public class AudioPlaybackEngine : ISoundProvider
         }
     }
 
-    public void Play(string? soundId, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null) 
-        => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, maxDuration, false));
+    public void Play(string? soundId, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null)
+    {
+        if (loadedProperly == false) return;
+        AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, maxDuration, false));
+    }
 
 
-    public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null) 
-        => AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
+    public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null)
+    {
+        if (loadedProperly == false) return;
+        AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Recyclable.Forever, true));
+    }
 
 
     public IReleasableNote? PlaySustainedNote(NoteExpression note)
     {
+        if (loadedProperly == false) return null;
         var ret = SynthVoiceProvider.CreateSustainedNote(note);
         if (ret.Voices != null)
         {
@@ -67,8 +76,14 @@ public class AudioPlaybackEngine : ISoundProvider
         return ret;
     }
 
-    public Task Play(Song song, ILifetime? lifetime = null)
+    public async Task Play(Song song, ILifetime? lifetime = null)
     {
+        if (loadedProperly == false)
+        {
+            await Task.Yield();
+            return;
+        }
+
         CancellationToken? token = null;
         if(lifetime != null)
         {
@@ -76,7 +91,7 @@ public class AudioPlaybackEngine : ISoundProvider
             lifetime.OnDisposed(source, static (source) => source.Cancel());
             token = source.Token;
         }
-        return scheduledSynthProvider.ScheduleSong(song, token);
+        await scheduledSynthProvider.ScheduleSong(song, token);
     }
 
 
@@ -88,17 +103,23 @@ public class AudioPlaybackEngine : ISoundProvider
 
     public void Pause()
     {
+        if (loadedProperly == false) return;
         if(outputDevice == null) return;
         if(outputDevice.PlaybackState != PlaybackState.Playing) return;
         outputDevice.Pause();
     }
     public void Resume()
     {
+        if (loadedProperly == false) return;
         if(outputDevice == null) return;
         if (outputDevice.PlaybackState != PlaybackState.Paused) return;
         outputDevice.Play();
     }
-    public void ClearCache() => soundCache.Clear();
+    public void ClearCache()
+    {
+        if (loadedProperly == false) return;
+        soundCache.Clear();
+    }
 
     /// <summary>
     /// Derived classes should return a dictionary where the keys are the names
