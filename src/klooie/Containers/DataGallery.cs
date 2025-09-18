@@ -116,6 +116,7 @@ public class DataGallery<T> : Gallery
         foreach (var dataItem in page)
         {
             var ui = itemFactory(dataItem, i++);
+            ui.Tag = dataItem;
             ui.AddTag(TileTag);
             ProtectedPanel.Add(ui);
         }
