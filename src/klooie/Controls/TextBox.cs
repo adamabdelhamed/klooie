@@ -5,7 +5,6 @@
 public partial class TextBox : ConsoleControl
 {
     private static readonly TimeSpan BlinkInterval = TimeSpan.FromMilliseconds(500);
-    private int blinkTimerHandleLease;
     private Recyclable blinkTimerHandle;
     private bool isAllSelected;
     private bool isBlinking;
@@ -59,7 +58,6 @@ public partial class TextBox : ConsoleControl
         {
             isAllSelected = true;
             blinkTimerHandle?.Dispose();
-            isBlinking = false;
         }
         else
         {
@@ -69,17 +67,19 @@ public partial class TextBox : ConsoleControl
 
     private void StartBlinking()
     {
-        isBlinking = true;
         blinkTimerHandle?.TryDispose();
+        blinkTimerHandle = this.CreateChildRecyclable(out int blinkTimerHandleLease);
+        blinkTimerHandle.OnDisposed(() => isBlinking = false);
+        isBlinking = true;
         ConsoleApp.Current.Invoke(async () =>
         {
-            blinkTimerHandle = this.CreateChildRecyclable(out blinkTimerHandleLease);
+            var first = true;
             while (blinkTimerHandle?.IsStillValid(blinkTimerHandleLease) == true && HasFocus)
             {
+                if(!first) isBlinking = !isBlinking;
+                first = false;
                 await Task.Delay(BlinkInterval);
-                isBlinking = !isBlinking;
             }
-            isBlinking = false;
         });
     }
 
@@ -127,6 +127,11 @@ public partial class TextBox : ConsoleControl
             StartBlinking();
             return;
         }
+        else if(info.Key == ConsoleKey.A && info.Modifiers.HasFlag(ConsoleModifiers.Control))
+        {
+            isAllSelected = true;
+            return;
+        }
 
         ConsoleCharacter? prototype = this.Value.Length == 0 ? null : this.Value[this.Value.Length - 1];
         Editor.RegisterKeyPress(info, prototype);
@@ -170,7 +175,7 @@ public partial class TextBox : ConsoleControl
 
         context.DrawString(new ConsoleString(bgTransformed), 0, 0);
 
-        if (isBlinking && blinkTimerHandle?.IsStillValid(blinkTimerHandleLease) == true)
+        if (isBlinking)
         {
             char blinkChar = Editor.CursorPosition >= toPaint.Length ? ' ' : toPaint[Editor.CursorPosition].Value;
             var pen = new ConsoleCharacter(blinkChar, DefaultColors.FocusContrastColor, FocusColor);
