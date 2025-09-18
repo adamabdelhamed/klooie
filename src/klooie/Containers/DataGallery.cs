@@ -100,6 +100,9 @@ public class DataGallery<T> : Gallery
         this.itemFactory = itemFactory;
     }
 
+    private const string TileTag = "data gallery item";
+    public IEnumerable<ConsoleControl> Tiles => Descendents.Where(d => d.HasSimpleTag(TileTag));
+
     /// <summary>
     /// Shows the given data
     /// </summary>
@@ -113,6 +116,7 @@ public class DataGallery<T> : Gallery
         foreach (var dataItem in page)
         {
             var ui = itemFactory(dataItem, i++);
+            ui.AddTag(TileTag);
             ProtectedPanel.Add(ui);
         }
         Refresh();
