@@ -62,7 +62,7 @@ public class SongComposer : ProtectedConsolePanel
 
     private void AddBPMDropdown()
     {
-        double[] options = [30, 60, 75, 90, 120, 180, 240];
+        double[] options = [30, 45,  60, 75, 90, 120, 180, 240];
         var dd = commandBar.Add(new Dropdown(options.Select(o => new DialogChoice() { DisplayText = $"{o} BPM".ToWhite(), Id = o.ToString(), Value = o  })));
         var selected = dd.Options.Where(o => (double)o.Value == WorkspaceSession.Current.CurrentSong.BeatsPerMinute).SingleOrDefault();
         if(selected != null)
