@@ -68,11 +68,15 @@ internal sealed class CachedSound
     {
         SoundId = soundId;
 
-        using var stream = provider.Open(soundId);
-        using var reader = new WaveFileReader(stream);
+        using var mp3Stream = provider.Open(soundId);
+        using var mp3Reader = new Mp3FileReader(mp3Stream);
+        using var wavStream = new MemoryStream();
+        WaveFileWriter.WriteWavFileToStream(wavStream, mp3Reader);
+        wavStream.Position = 0;
+        using var wavReader = new WaveFileReader(wavStream);
 
         // Guard: Check format
-        var wf = reader.WaveFormat;
+        var wf = wavReader.WaveFormat;
         if (wf.SampleRate != SoundProvider.SampleRate || wf.Channels != SoundProvider.ChannelCount || wf.BitsPerSample != SoundProvider.BitsPerSample || wf.Encoding != WaveFormatEncoding.Pcm)
         {
             throw new InvalidOperationException( $"WAV format mismatch. Expected {SoundProvider.ChannelCount}ch, {SoundProvider.SampleRate}Hz, {SoundProvider.BitsPerSample}-bit PCM. " + $"Got {wf.Channels}ch, {wf.SampleRate}Hz, {wf.BitsPerSample}-bit {wf.Encoding}.");
@@ -80,9 +84,9 @@ internal sealed class CachedSound
 
         WaveFormat = wf;
 
-        long totalSamples = reader.Length / (SoundProvider.BitsPerSample / 8);
+        long totalSamples = wavReader.Length / (SoundProvider.BitsPerSample / 8);
         int sampleCount = checked((int)totalSamples);
-        var sampleProvider = reader.ToSampleProvider();
+        var sampleProvider = wavReader.ToSampleProvider();
         if(AudioData == null || AudioData.Length < sampleCount) AudioData = new float[sampleCount];
 
         int totalRead = 0;
