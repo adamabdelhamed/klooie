@@ -38,7 +38,6 @@ public class Recyclable : ILifetime
         return !IsExpired && !IsExpiring && leaseVersion == CurrentVersion;
     }
 
-    private TaskCompletionSource? endedTaskCompletionSource;
 
     public Recyclable()
     {
@@ -46,7 +45,6 @@ public class Recyclable : ILifetime
         Rent();
     }
 
-    public Task AsTask() => endedTaskCompletionSource?.Task ?? (endedTaskCompletionSource = new TaskCompletionSource()).Task;
 
     public static void TryDisposeMe(Recyclable me) => me.TryDispose("Recyclable.TryDisposeMe");
 
@@ -79,12 +77,6 @@ public class Recyclable : ILifetime
                 disposalSubscribers = null;
             }
 
-            if (endedTaskCompletionSource != null)
-            {
-                endedTaskCompletionSource.SetResult();
-                endedTaskCompletionSource = null;
-            }
-
             if (Pool != null)
             {
                 Pool.ReturnThatShouldOnlyBeCalledInternally(this);
@@ -107,7 +99,6 @@ public class Recyclable : ILifetime
         CurrentVersion++;
         IsExpiring = false;
         IsExpired = false;
-        endedTaskCompletionSource = null;
         OnInit();
     }
 

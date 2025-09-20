@@ -115,7 +115,7 @@ public static class Dialog
         if (content.IsStillValid(lease))
         {
             // wait for the content to dispose, which indicates that it's time to close
-            await content.AsTask();
+            await content;
         }
 
         // animate out

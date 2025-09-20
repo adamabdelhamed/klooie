@@ -187,7 +187,7 @@ public partial class Dropdown : ProtectedConsolePanel
             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Tab, ConsoleModifiers.Shift, up, popup);
             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Tab, down, popup);
 
-            await popup.AsTask();
+            await popup;
         }
         finally
         {
