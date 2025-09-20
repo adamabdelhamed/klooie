@@ -19,7 +19,7 @@ internal sealed class SoundCache
 
         if (!cached.TryGetValue(soundId, out var cachedSound))
         {
-            cachedSound = new CachedSound(factory);
+            cachedSound = new CachedSound(factory, soundId);
             cached[soundId] = cachedSound;
         }
 
@@ -38,8 +38,11 @@ internal sealed class CachedSound
     public int SampleCount { get; }
     public WaveFormat WaveFormat { get; }
 
-    public CachedSound(Func<Stream> streamFactory)
+    public string SoundId { get; }
+
+    public CachedSound(Func<Stream> streamFactory, string soundId)
     {
+        SoundId = soundId;
         using var stream = streamFactory();
         using var reader = new WaveFileReader(stream);
 
