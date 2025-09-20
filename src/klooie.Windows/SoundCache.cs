@@ -12,7 +12,7 @@ internal sealed class SoundCache
         cached = new Dictionary<string, CachedSound>(StringComparer.OrdinalIgnoreCase);
     }
 
-    public RecyclableSampleProvider? GetSample(EventLoop eventLoop, string? soundId, VolumeKnob masterVolume, VolumeKnob? sampleVolume, ILifetime? maxLifetime, bool loop)
+    public RecyclableSampleProvider? GetSample(EventLoop eventLoop, string? soundId, VolumeKnob masterVolume, VolumeKnob? sampleVolume, ILifetime? maxLifetime, bool loop, bool isMusic)
     {
         if (provider == null) return null;
         if (string.IsNullOrEmpty(soundId)) return null;

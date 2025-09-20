@@ -47,20 +47,20 @@ public class AudioPlaybackEngine : ISoundProvider
         }
     }
 
-    public ILifetime Play(string? soundId, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null)
+    public ILifetime Play(string? soundId, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null, bool isMusic = false)
     {
         if (loadedProperly == false) return Lifetime.Completed;
-        var input = soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, maxDuration, false);
+        var input = soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, maxDuration, false, isMusic);
         if(input == null) return Lifetime.Completed;
         AddMixerInput(input);
         return input;
     }
 
 
-    public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null)
+    public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null, bool isMusic = false)
     {
         if (loadedProperly == false) return;
-        AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Lifetime.Forever, true));
+        AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Lifetime.Forever, true, isMusic));
     }
 
 

@@ -31,8 +31,8 @@ public static class SoundProvider
 public interface ISoundProvider
 {
     VolumeKnob MasterVolume { get;  }
-    ILifetime Play(string? sound, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null);
-    void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null);
+    ILifetime Play(string? sound, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null, bool isMusic = false);
+    void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null, bool isMusic = false);
     void Pause();
     void Resume();
     void ClearCache();
@@ -47,8 +47,8 @@ public class NoOpSoundProvider : ISoundProvider
 {
     public EventLoop EventLoop => ConsoleApp.Current;
     public VolumeKnob MasterVolume { get; set; }
-    public void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null) { }
-    public ILifetime Play(string? sound, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null) => Lifetime.Completed;
+    public void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null, bool isMusic = false) { }
+    public ILifetime Play(string? sound, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null, bool isMusic = false) => Lifetime.Completed;
     public void Pause() { }
     public void Resume() { }
     public void ClearCache() { }
