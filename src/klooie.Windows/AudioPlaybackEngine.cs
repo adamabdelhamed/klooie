@@ -13,7 +13,7 @@ public class AudioPlaybackEngine : ISoundProvider
     private readonly MixingSampleProvider sfxMixer;
     public readonly ScheduledSynthProvider scheduledSynthProvider;
     private readonly MixingSampleProvider mixer; // The master mixer stays
-    private EventLoop eventLoop;
+    protected EventLoop eventLoop;
     private SoundCache soundCache;
     public VolumeKnob MasterVolume { get; set; }
     public EventLoop EventLoop => eventLoop;
