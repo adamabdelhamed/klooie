@@ -9,7 +9,7 @@ public interface IReleasableNote
 
 public interface IBinarySoundProvider
 {
-    public Stream Load(string soundId);
+    public Stream? Load(string soundId);
 }
 
 public static class SoundProvider
