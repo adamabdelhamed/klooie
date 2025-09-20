@@ -19,9 +19,8 @@ internal sealed class SoundCache
 
         if (!cached.TryGetValue(soundId, out var cachedSound))
         {
-            var soundStream = provider.Load(soundId);
-            if (soundStream == null) return null;
-            cachedSound = new CachedSound(soundStream, soundId);
+            if(provider.Contains(soundId) == false)return null;
+            cachedSound = new CachedSound(provider, soundId);
             cached[soundId] = cachedSound;
         }
 
@@ -42,57 +41,132 @@ internal sealed class CachedSound
 
     public string SoundId { get; }
 
-    public CachedSound(Stream stream, string soundId)
+    public CachedSound(IBinarySoundProvider provider, string soundId)
     {
-        try
+        SoundId = soundId;
+        var parser = new PcmWavParser();
+        provider.Load(soundId, (buf, len) => parser.Process(buf.AsSpan(0, len)));
+        AudioData = parser.AudioData;
+        SampleCount = AudioData.Length;
+        WaveFormat = parser.WaveFormat;
+    }
+}
+
+internal sealed class PcmWavParser
+{
+    private enum State { Header, Data }
+    private State state = State.Header;
+
+    private int fmtBytesNeeded = 0;
+    private int dataBytesRemaining = 0;
+
+    public WaveFormat WaveFormat { get; private set; } = null!;
+    public float[] AudioData { get; private set; } = Array.Empty<float>();
+    private int writePos = 0;
+
+    public void Process(ReadOnlySpan<byte> chunk)
+    {
+        var span = chunk;
+
+        while (!span.IsEmpty)
         {
-            SoundId = soundId;
-            using var reader = new WaveFileReader(stream);
-
-            // Guard: Check format
-            var wf = reader.WaveFormat;
-            if (wf.SampleRate != SoundProvider.SampleRate ||
-                wf.Channels != SoundProvider.ChannelCount ||
-                wf.BitsPerSample != SoundProvider.BitsPerSample ||
-                wf.Encoding != WaveFormatEncoding.Pcm)
+            switch (state)
             {
-                throw new InvalidOperationException(
-                    $"WAV format mismatch. Expected {SoundProvider.ChannelCount}ch, {SoundProvider.SampleRate}Hz, {SoundProvider.BitsPerSample}-bit PCM. " +
-                    $"Got {wf.Channels}ch, {wf.SampleRate}Hz, {wf.BitsPerSample}-bit {wf.Encoding}.");
+                case State.Header:
+                    ParseHeader(ref span);
+                    break;
+                case State.Data:
+                    ParseData(ref span);
+                    break;
             }
-
-            WaveFormat = wf;
-
-            // Calculate total sample count (bytes / 2 bytes per sample / channels)
-            long totalSamples = reader.Length / (SoundProvider.BitsPerSample / 8);
-            int sampleCount = checked((int)totalSamples);
-
-            // NAudio provides ToSampleProvider() for float conversion
-            var sampleProvider = reader.ToSampleProvider();
-
-            // Pre-allocate float[]: NAudio's sample provider gives floats per channel
-            float[] audioData = new float[sampleCount];
-
-            int totalRead = 0;
-            while (totalRead < sampleCount)
-            {
-                int read = sampleProvider.Read(audioData, totalRead, sampleCount - totalRead);
-                if (read == 0) break;
-                totalRead += read;
-            }
-            if (totalRead != sampleCount)
-            {
-                throw new InvalidOperationException(
-                    $"Expected to read {sampleCount} samples, but only read {totalRead}. " +
-                    "This may indicate an issue with the WAV file or its format.");
-            }
-
-            AudioData = audioData;
-            SampleCount = totalRead;
         }
-        finally
+    }
+
+    private void ParseHeader(ref ReadOnlySpan<byte> span)
+    {
+        // For simplicity, assume the header fits in the first buffer.
+        // You can extend this to be fully incremental if needed.
+
+        var br = new BinaryReader(new MemoryStream(span.ToArray())); // temp: decode header from first chunk
+
+        string riff = new string(br.ReadChars(4));
+        if (riff != "RIFF") throw new InvalidDataException("Not RIFF");
+
+        br.ReadInt32(); // riff size
+        string wave = new string(br.ReadChars(4));
+        if (wave != "WAVE") throw new InvalidDataException("Not WAVE");
+
+        // fmt chunk
+        string fmt = new string(br.ReadChars(4));
+        int fmtSize = br.ReadInt32();
+        short audioFormat = br.ReadInt16();
+        short channels = br.ReadInt16();
+        int sampleRate = br.ReadInt32();
+        int byteRate = br.ReadInt32();
+        short blockAlign = br.ReadInt16();
+        short bitsPerSample = br.ReadInt16();
+
+        if (audioFormat != 1) throw new NotSupportedException("Only PCM supported");
+        if (bitsPerSample != 16 && bitsPerSample != 8)
+            throw new NotSupportedException($"Unsupported bits per sample: {bitsPerSample}");
+
+        if (fmtSize > 16)
+            br.ReadBytes(fmtSize - 16);
+
+        // Find "data" chunk
+        string dataId;
+        int dataSize;
+        do
         {
-            stream.Dispose();
+            dataId = new string(br.ReadChars(4));
+            dataSize = br.ReadInt32();
+            if (dataId != "data")
+                br.BaseStream.Seek(dataSize, SeekOrigin.Current);
+        } while (dataId != "data");
+
+        dataBytesRemaining = dataSize;
+        AudioData = new float[dataSize / (bitsPerSample / 8)];
+        writePos = 0;
+
+        WaveFormat = WaveFormat.CreateCustomFormat(
+            WaveFormatEncoding.Pcm, sampleRate, channels, byteRate, blockAlign, bitsPerSample);
+
+        // Jump parser to data state
+        state = State.Data;
+
+        // Consume the bytes used
+        span = span.Slice((int)br.BaseStream.Position);
+    }
+
+    private void ParseData(ref ReadOnlySpan<byte> span)
+    {
+        int bytesPerSample = WaveFormat.BitsPerSample / 8;
+        int samplesThisChunk = Math.Min(span.Length / bytesPerSample, dataBytesRemaining / bytesPerSample);
+
+        if (WaveFormat.BitsPerSample == 16)
+        {
+            for (int i = 0; i < samplesThisChunk; i++)
+            {
+                short sample = BitConverter.ToInt16(span.Slice(i * 2, 2));
+                AudioData[writePos++] = sample / 32768f;
+            }
+        }
+        else if (WaveFormat.BitsPerSample == 8)
+        {
+            for (int i = 0; i < samplesThisChunk; i++)
+            {
+                byte sample = span[i];
+                AudioData[writePos++] = (sample - 128) / 128f;
+            }
+        }
+
+        int bytesConsumed = samplesThisChunk * bytesPerSample;
+        span = span.Slice(bytesConsumed);
+        dataBytesRemaining -= bytesConsumed;
+
+        if (dataBytesRemaining == 0)
+        {
+            state = State.Header; // finished
         }
     }
 }
