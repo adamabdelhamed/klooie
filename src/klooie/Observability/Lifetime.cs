@@ -2,14 +2,20 @@
 
 namespace klooie;
 
- 
-
 /// <summary>
 /// Extension methods for lifetime
 /// </summary>
-public static class ILifetimeEx
+public static class Lifetime
 {
+    public static readonly ILifetime Completed = CreateCompleted();
 
+    public static readonly ILifetime Forever = new Recyclable(); // Intentionally not from the pool
+    private static ILifetime CreateCompleted()
+    {
+        var lt = new Recyclable(); // Intentionally not from the pool
+        lt.Dispose();
+        return lt;
+    }
 }
  
 public interface ILifetime

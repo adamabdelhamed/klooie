@@ -6,8 +6,6 @@ public class Recyclable : ILifetime
     public string DisposalReason { get; set; } 
     public static bool PoolingEnabled { get; set; } = true;
     public static StackHunterMode StackHunterMode { get; set; } = StackHunterMode.Off;
-    private static readonly Recyclable forever = new Recyclable();
-    public static Recyclable Forever => forever;
 
     private SubscriberCollection? disposalSubscribers;
     private SubscriberCollection DisposalSubscribers
