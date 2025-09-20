@@ -6,11 +6,10 @@ public interface IReleasableNote
 {
     void ReleaseNote();
 }
-public delegate void ChunkProcessor(byte[] buffer, int bytesRead);
 public interface IBinarySoundProvider
 {
     bool Contains(string assetName);
-    void Load(string assetName, ChunkProcessor processor);
+    Stream Open(string assetName);
 }
 
 public static class SoundProvider
