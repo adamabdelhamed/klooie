@@ -7,6 +7,11 @@ public interface IReleasableNote
     void ReleaseNote();
 }
 
+public interface IBinarySoundProvider
+{
+    public Stream Load(string soundId);
+}
+
 public static class SoundProvider
 {
     public const int SampleRate = 44100;

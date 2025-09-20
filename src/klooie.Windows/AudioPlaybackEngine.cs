@@ -21,7 +21,7 @@ public class AudioPlaybackEngine : ISoundProvider
     public long SamplesRendered => scheduledSynthProvider.SamplesRendered;
     private bool loadedProperly = false;
 
-    public AudioPlaybackEngine()
+    public AudioPlaybackEngine(IBinarySoundProvider provider = null)
     {
         try
         {
@@ -36,7 +36,7 @@ public class AudioPlaybackEngine : ISoundProvider
             outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 60);
             outputDevice.Init(mixer);
             outputDevice.Play();
-            soundCache = new SoundCache(LoadSounds());
+            soundCache = new SoundCache(provider);
             sw.Stop();
             LogSoundLoaded(sw.ElapsedMilliseconds);  
             loadedProperly= true;
@@ -124,12 +124,6 @@ public class AudioPlaybackEngine : ISoundProvider
         soundCache.Clear();
     }
 
-    /// <summary>
-    /// Derived classes should return a dictionary where the keys are the names
-    /// of the sound effects and the values are the bytes of WAV files.
-    /// </summary>
-    /// <returns></returns>
-    protected virtual Dictionary<string, Func<Stream>> LoadSounds() => new Dictionary<string, Func<Stream>>();
 
     /// <summary>
     /// By defaults this class does not throw when sounds fail to load.

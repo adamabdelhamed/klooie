@@ -3,23 +3,25 @@
 namespace klooie;
 internal sealed class SoundCache
 {
-    private readonly Dictionary<string, Func<Stream>> factories;
+    private readonly IBinarySoundProvider? provider;
     private readonly Dictionary<string, CachedSound> cached;
 
-    public SoundCache(Dictionary<string, Func<Stream>> factories)
+    public SoundCache(IBinarySoundProvider? provider)
     {
-        this.factories = factories;
+        this.provider = provider;
         cached = new Dictionary<string, CachedSound>(StringComparer.OrdinalIgnoreCase);
     }
 
     public RecyclableSampleProvider? GetSample(EventLoop eventLoop, string? soundId, VolumeKnob masterVolume, VolumeKnob? sampleVolume, ILifetime? maxLifetime, bool loop)
     {
+        if (provider == null) return null;
         if (string.IsNullOrEmpty(soundId)) return null;
-        if (!factories.TryGetValue(soundId, out var factory)) return null;
 
         if (!cached.TryGetValue(soundId, out var cachedSound))
         {
-            cachedSound = new CachedSound(factory, soundId);
+            var soundStream = provider.Load(soundId);
+            if (soundStream == null) return null;
+            cachedSound = new CachedSound(soundStream, soundId);
             cached[soundId] = cachedSound;
         }
 
@@ -40,51 +42,57 @@ internal sealed class CachedSound
 
     public string SoundId { get; }
 
-    public CachedSound(Func<Stream> streamFactory, string soundId)
+    public CachedSound(Stream stream, string soundId)
     {
-        SoundId = soundId;
-        using var stream = streamFactory();
-        using var reader = new WaveFileReader(stream);
-
-        // Guard: Check format
-        var wf = reader.WaveFormat;
-        if (wf.SampleRate != SoundProvider.SampleRate ||
-            wf.Channels != SoundProvider.ChannelCount ||
-            wf.BitsPerSample != SoundProvider.BitsPerSample ||
-            wf.Encoding != WaveFormatEncoding.Pcm)
+        try
         {
-            throw new InvalidOperationException(
-                $"WAV format mismatch. Expected {SoundProvider.ChannelCount}ch, {SoundProvider.SampleRate}Hz, {SoundProvider.BitsPerSample}-bit PCM. " +
-                $"Got {wf.Channels}ch, {wf.SampleRate}Hz, {wf.BitsPerSample}-bit {wf.Encoding}.");
+            SoundId = soundId;
+            using var reader = new WaveFileReader(stream);
+
+            // Guard: Check format
+            var wf = reader.WaveFormat;
+            if (wf.SampleRate != SoundProvider.SampleRate ||
+                wf.Channels != SoundProvider.ChannelCount ||
+                wf.BitsPerSample != SoundProvider.BitsPerSample ||
+                wf.Encoding != WaveFormatEncoding.Pcm)
+            {
+                throw new InvalidOperationException(
+                    $"WAV format mismatch. Expected {SoundProvider.ChannelCount}ch, {SoundProvider.SampleRate}Hz, {SoundProvider.BitsPerSample}-bit PCM. " +
+                    $"Got {wf.Channels}ch, {wf.SampleRate}Hz, {wf.BitsPerSample}-bit {wf.Encoding}.");
+            }
+
+            WaveFormat = wf;
+
+            // Calculate total sample count (bytes / 2 bytes per sample / channels)
+            long totalSamples = reader.Length / (SoundProvider.BitsPerSample / 8);
+            int sampleCount = checked((int)totalSamples);
+
+            // NAudio provides ToSampleProvider() for float conversion
+            var sampleProvider = reader.ToSampleProvider();
+
+            // Pre-allocate float[]: NAudio's sample provider gives floats per channel
+            float[] audioData = new float[sampleCount];
+
+            int totalRead = 0;
+            while (totalRead < sampleCount)
+            {
+                int read = sampleProvider.Read(audioData, totalRead, sampleCount - totalRead);
+                if (read == 0) break;
+                totalRead += read;
+            }
+            if (totalRead != sampleCount)
+            {
+                throw new InvalidOperationException(
+                    $"Expected to read {sampleCount} samples, but only read {totalRead}. " +
+                    "This may indicate an issue with the WAV file or its format.");
+            }
+
+            AudioData = audioData;
+            SampleCount = totalRead;
         }
-
-        WaveFormat = wf;
-
-        // Calculate total sample count (bytes / 2 bytes per sample / channels)
-        long totalSamples = reader.Length / (SoundProvider.BitsPerSample / 8);
-        int sampleCount = checked((int)totalSamples);
-
-        // NAudio provides ToSampleProvider() for float conversion
-        var sampleProvider = reader.ToSampleProvider();
-
-        // Pre-allocate float[]: NAudio's sample provider gives floats per channel
-        float[] audioData = new float[sampleCount];
-
-        int totalRead = 0;
-        while (totalRead < sampleCount)
+        finally
         {
-            int read = sampleProvider.Read(audioData, totalRead, sampleCount - totalRead);
-            if (read == 0) break;
-            totalRead += read;
+            stream.Dispose();
         }
-        if (totalRead != sampleCount)
-        {
-            throw new InvalidOperationException(
-                $"Expected to read {sampleCount} samples, but only read {totalRead}. " +
-                "This may indicate an issue with the WAV file or its format.");
-        }
-
-        AudioData = audioData;
-        SampleCount = totalRead;
     }
 }
