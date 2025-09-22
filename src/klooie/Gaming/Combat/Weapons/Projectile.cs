@@ -55,7 +55,7 @@ public class ProjectileRule : IRule
         prediction.Dispose();
     }
 
-    private static ConsoleString pen = ".".ToYellow();
+   
     private static Random random = new Random();
     private static void SpawnShrapnel(Projectile p, Angle angle)
     {
@@ -63,7 +63,7 @@ public class ProjectileRule : IRule
         shrapnel.CompositionMode = CompositionMode.BlendBackground;
         shrapnel.ConnectToGroup(shrapnelGroup);
         shrapnel.MoveTo(p.TopLeft());
-        shrapnel.Content = pen;
+        shrapnel.Content = new ConsoleCharacter('.', p.Pen.ForegroundColor);
         shrapnel.Velocity.Speed = 50;
         shrapnel.Velocity.Angle = angle;
         Game.Current.GamePanel.Add(shrapnel);
@@ -86,7 +86,7 @@ public class ProjectileRule : IRule
     }
 }
 
-public partial class Shrapnel : TextCollider
+public partial class Shrapnel : CharCollider
 {
     public override bool CanCollideWith(ICollidable other) => false;
 }
