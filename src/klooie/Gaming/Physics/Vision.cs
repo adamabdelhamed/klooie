@@ -3,7 +3,7 @@
 namespace klooie.Gaming;
 public class Vision : Recyclable, IFrameTask
 {
-    public const float DefaultRange = 20;
+    public const float DefaultVisibility = 20;
     public const float DefaultAngularVisibility = 60;
     private static Event<Vision>? _visionInitiated;
     public static Event<Vision> VisionInitiated => _visionInitiated ??= Event<Vision>.Create();
@@ -18,7 +18,7 @@ public class Vision : Recyclable, IFrameTask
     public Dictionary<GameCollider, VisuallyTrackedObject> TrackedObjectsDictionary { get; private set; } = new Dictionary<GameCollider, VisuallyTrackedObject>(199);
     public Event<VisionFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = Event<VisionFilterContext>.Create());
     public GameCollider Eye { get; private set; } = null!;
-    public float Range { get; set; } 
+    public float Visibility { get; set; } 
     public float AngularVisibility { get; set; } 
     public CastingMode CastingMode { get; set; }
     public float AngleStep {get;set;}
@@ -41,7 +41,7 @@ public class Vision : Recyclable, IFrameTask
     protected override void OnInit()
     {
         base.OnInit();
-        Range = DefaultRange;
+        Visibility = DefaultVisibility;
         AngularVisibility = DefaultAngularVisibility;
     }
 
@@ -54,7 +54,7 @@ public class Vision : Recyclable, IFrameTask
         RemoveStaleTrackedObjects();
         if (Eye.IsVisible == false) return;
         var buffer = ObstacleBufferPool.Instance.Rent();
-        Eye.ColliderGroup.SpacialIndex.Query(Eye.Bounds.SweptAABB(Eye.Bounds.Grow(.5f).RadialOffset(Eye.Velocity.Angle, Range*1.2f)), buffer);
+        Eye.ColliderGroup.SpacialIndex.Query(Eye.Bounds.SweptAABB(Eye.Bounds.Grow(.5f).RadialOffset(Eye.Velocity.Angle, Visibility*1.2f)), buffer);
         FilterObstacles(buffer);
         try
         {
@@ -81,7 +81,7 @@ public class Vision : Recyclable, IFrameTask
             var candidate = buffer.WriteableBuffer[i];
             if (candidate == Eye) continue; 
             var distance = Eye.CalculateNormalizedDistanceTo(candidate);
-            if (distance > Range) continue;
+            if (distance > Visibility) continue;
 
             if (distance > 2f)
             {
@@ -156,7 +156,7 @@ public class Vision : Recyclable, IFrameTask
                 continue;
             }
 
-            if(trackedObject.Target.CalculateNormalizedDistanceTo(Eye) > Range)
+            if(trackedObject.Target.CalculateNormalizedDistanceTo(Eye) > Visibility)
             {
                 UnTrackAtIndex(i);
                 continue;
@@ -187,7 +187,7 @@ public class Vision : Recyclable, IFrameTask
     private VisuallyTrackedObject? Cast(Angle angle, ObstacleBuffer buffer)
     {
         var singleRay = CollisionPredictionPool.Instance.Rent();
-        CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Range, CastingMode, buffer.WriteableBuffer.Count, singleRay);
+        CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Visibility, CastingMode, buffer.WriteableBuffer.Count, singleRay);
         var potentialTarget = singleRay.ColliderHit as GameCollider;
 
         if (TryIgnorePotentialTargetIgnorable(potentialTarget, out var target))
@@ -253,7 +253,7 @@ public class Vision : Recyclable, IFrameTask
     {
         base.OnReturn();
         Eye = null!;
-        Range = DefaultRange;
+        Visibility = DefaultVisibility;
         AngularVisibility = DefaultAngularVisibility;
         _targetBeingEvaluated?.TryDispose();
         _targetBeingEvaluated = null;

@@ -78,7 +78,7 @@ public class WalkCalculationState
     public float BaseSpeed;
     public Angle CurrentAngle;
     public float CloseEnough;
-    public float VisionRange;
+    public float Visibility;
 
     public bool IsCurrentlyCloseEnoughToPointOfInterest =>
         PointOfInterest.HasValue &&
@@ -102,7 +102,7 @@ public class WalkCalculationState
     {
         EyeBounds = walk.Eye.Bounds;
         CurrentAngle = walk.Velocity.Angle;
-        VisionRange = walk.Vision.Range;
+        Visibility = walk.Vision.Visibility;
         BaseSpeed = walk.BaseSpeed;
         PointOfInterest = walk.GetPointOfInterest();
         Hazard = walk.GetHazard();
@@ -494,7 +494,7 @@ public static class WalkCalculation
     {
         if (sharedColliderBox == null) sharedColliderBox = new ColliderBox(input.EyeBounds);
         else  sharedColliderBox.Bounds = input.EyeBounds;
-        CollisionDetector.Predict(sharedColliderBox, angleDeg, input.Obstacles.WriteableBuffer, input.VisionRange, CastingMode.Precise, input.Obstacles.WriteableBuffer.Count, prediction);
+        CollisionDetector.Predict(sharedColliderBox, angleDeg, input.Obstacles.WriteableBuffer, input.Visibility, CastingMode.Precise, input.Obstacles.WriteableBuffer.Count, prediction);
         if (!prediction.CollisionPredicted) return MaxCollisionHorizon;
         if (input.BaseSpeed <= 0f) throw new Exception("Base speed can't be 0");
         return prediction.LKGD / input.BaseSpeed;
@@ -565,7 +565,7 @@ public static class WalkCalculation
             var toTarget = input.EyeBounds.CalculateAngleTo(target);
             if(sharedColliderBox == null) sharedColliderBox = new ColliderBox(input.EyeBounds);
             else sharedColliderBox.Bounds = input.EyeBounds;
-            CollisionDetector.Predict(sharedColliderBox, toTarget, input.Obstacles.WriteableBuffer, input.VisionRange, CastingMode.Precise, input.Obstacles.WriteableBuffer.Count, prediction);
+            CollisionDetector.Predict(sharedColliderBox, toTarget, input.Obstacles.WriteableBuffer, input.Visibility, CastingMode.Precise, input.Obstacles.WriteableBuffer.Count, prediction);
 
             if (!prediction.CollisionPredicted) return true;
 

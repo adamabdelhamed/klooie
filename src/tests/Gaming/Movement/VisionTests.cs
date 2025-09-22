@@ -43,7 +43,7 @@ public class VisionTests
         {
             vision.AngleFuzz = 0;// remove randomness for testing
         }
-        vision.Range = 15;
+        vision.Visibility = 15;
    
         var visionFilter = new VisionFilter(vision);
         mover.MoveTo(moverPosition.Left, moverPosition.Top, int.MaxValue);
@@ -52,7 +52,7 @@ public class VisionTests
 
         foreach (var angle in new Angle[] {0,45,90, 135, 180, 225, 270, 315 })
         {
-            var obstaclePosition = mover.Center().RadialOffset(angle, vision.Range * .9f).ToRect(6,3);
+            var obstaclePosition = mover.Center().RadialOffset(angle, vision.Visibility * .9f).ToRect(6,3);
             var obstacle = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
             obstacle.MoveTo(obstaclePosition.Left, obstaclePosition.Top, int.MaxValue);
             obstacle.ResizeTo(obstaclePosition.Width, obstaclePosition.Height);
@@ -70,8 +70,8 @@ public class VisionTests
             var coneLifetime = DefaultRecyclablePool.Instance.Rent();
 
             var lineStart = mover.Center();
-            var leftLineEnd = lineStart.RadialOffset(vision.FieldOfViewStart, vision.Range);
-            var rightLineEnd = lineStart.RadialOffset(vision.FieldOfViewEnd, vision.Range);
+            var leftLineEnd = lineStart.RadialOffset(vision.FieldOfViewStart, vision.Visibility);
+            var rightLineEnd = lineStart.RadialOffset(vision.FieldOfViewEnd, vision.Visibility);
             DrawLine(lineStart, leftLineEnd, RGB.Yellow, -1, coneLifetime);
             DrawLine(lineStart, rightLineEnd, RGB.Orange, -1, coneLifetime);
 
