@@ -110,6 +110,14 @@ public class WalkCalculationState
         Logger = walk.Logger;
         Obstacles.WriteableBuffer.Clear();
         walk.Eye.GetObstacles(Obstacles);
+        for(var i = Obstacles.WriteableBuffer.Count - 1; i >= 0; i--)
+        {
+            var c = Obstacles.WriteableBuffer[i];
+            if (walk.FearCollision(c) == false)
+            {
+                Obstacles.WriteableBuffer.RemoveAt(i);
+            }
+        }
     }
 
     public void Dehydrate()
