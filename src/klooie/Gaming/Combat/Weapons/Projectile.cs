@@ -96,6 +96,9 @@ public class Projectile : WeaponElement
     private static readonly ConsoleCharacter DefaultPen = new ConsoleCharacter('*', RGB.Red);
     public ConsoleCharacter Pen { get; set; } = DefaultPen;
     public float Range { get; set; } = 150;
+
+    public int PenetrationPower { get; set; }
+
     private RectF startLocation;
     public void Bind(Weapon w, float speed, Angle angle, float? x = null, float? y = null)
     {
@@ -110,6 +113,12 @@ public class Projectile : WeaponElement
             Velocity.OnCollision.Subscribe(this, OnCollision, this);
             BoundsChanged.Subscribe(this, EnforceRangeStatic, this);
         }
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
+        PenetrationPower = 0;
     }
  
     private static void EnforceRangeStatic(object me)
@@ -160,7 +169,22 @@ public class Projectile : WeaponElement
         }
     }
     private static void OnCollision(Projectile me, Collision collision)
-        => Game.Current.InvokeNextCycle(DisposeMe, ProjectileDelayedDisposalState.Create(me));
+    {
+        Game.Current.InvokeNextCycle(DisposeMe, ProjectileDelayedDisposalState.Create(me));
+        if (me.PenetrationPower == 0 || me.CanPenetrate == false) return;
+        var remainingRange = me.Range - me.startLocation.TopLeft.CalculateNormalizedDistanceTo(me.TopLeft());
+        if (remainingRange <= 2) return;
+
+        var penetrationLocation = me.TopLeft().RadialOffset(me.Velocity.Angle, 2);
+        me.Penetrate(penetrationLocation, me.Velocity.angle, remainingRange, me.PenetrationPower - 1);
+    }
+
+    protected virtual void Penetrate(LocF penetrationLocation, Angle a, float remainingRange, int remainingPenetrationPower)
+    {
+        throw new NotImplementedException("You must override Penetrate if you override CanPenetrate and make it return true");
+    }
+
+    protected virtual bool CanPenetrate => false;
 
 
     private static void DisposeMe(object me)
