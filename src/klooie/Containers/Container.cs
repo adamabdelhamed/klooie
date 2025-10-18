@@ -22,6 +22,11 @@ public enum CompositionMode
     /// is always used.
     /// </summary>
     BlendForeground = 3,
+    /// <summary>
+    /// Treat pixels that are a space ' ' AND have the default background color as transparent
+    /// (i.e., do not draw them; let the bottom pixel show through). All other pixels paint over.
+    /// </summary>
+    TransparentSpaceDefaultBG = 4,
 }
 public abstract class Container : ConsoleControl
 {
@@ -146,6 +151,10 @@ public abstract class Container : ConsoleControl
         {
             ComposeBlendForeground(control);
         }
+        else if (control.CompositionMode == CompositionMode.TransparentSpaceDefaultBG)
+        {
+            ComposeTransparentSpaceDefaultBG(control);
+        }
         else
         {
             ComposeBlendVisible(control);
@@ -235,6 +244,33 @@ public abstract class Container : ConsoleControl
                     // Top is space: keep bottom entirely
                     Bitmap.SetPixel(x, y, bottomPixel);
                 }
+            }
+        }
+    }
+
+    private void ComposeTransparentSpaceDefaultBG(ConsoleControl control)
+    {
+        var position = Transform(control);
+        var minX = Math.Max(position.X, 0);
+        var minY = Math.Max(position.Y, 0);
+        var maxX = Math.Min(Width, position.X + control.Width);
+        var maxY = Math.Min(Height, position.Y + control.Height);
+
+        for (var x = minX; x < maxX; x++)
+        {
+            for (var y = minY; y < maxY; y++)
+            {
+                var top = control.Bitmap.GetPixel(x - position.X, y - position.Y);
+
+                // If top is a space AND uses the default background color, skip drawing (transparent)
+                if (top.Value == ' ' && top.BackgroundColor == ConsoleString.DefaultBackgroundColor)
+                {
+                    // no-op: leave bottom pixel as-is
+                    continue;
+                }
+
+                // Otherwise, paint over like the default PaintOver mode
+                Bitmap.SetPixel(x, y, top);
             }
         }
     }
