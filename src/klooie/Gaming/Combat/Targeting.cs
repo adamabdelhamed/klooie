@@ -3,7 +3,6 @@
 
 public class Targeting : Recyclable
 {
-    private static readonly TargetFilter targetFilter = new TargetFilter();
     public Recyclable? CurrentTargetLifetime { get; private set; }
 
     private Event<GameCollider?>? _targetChanged;
@@ -77,40 +76,16 @@ public class Targeting : Recyclable
     {
         if (newTarget == Target) return;
 
-        // Remove highlight filter from old target if needed
-        ClearHighlightFilterFromCurrentTarget();
-
         // Clean up previous
         CurrentTargetLifetime?.TryDispose();
 
         Target = newTarget;
         CurrentTargetLifetime = newTarget == null ? null : DefaultRecyclablePool.Instance.Rent();
 
-        // Add highlight filter to new target if needed
-        if (HighlightTargets && newTarget != null)
-        {
-            if (!newTarget.HasFilters || !newTarget.Filters.Contains(targetFilter))
-                newTarget.Filters.Add(targetFilter);
-        }
 
         _targetChanged?.Fire(newTarget);
         if (newTarget != null)
             _targetAcquired?.Fire(newTarget);
-    }
-
-    private void ClearHighlightFilterFromCurrentTarget()
-    {
-        if (Target != null && Target.HasFilters)
-        {
-            for (int i = 0; i < Target.Filters.Count; i++)
-            {
-                if (ReferenceEquals(targetFilter, Target.Filters[i]))
-                {
-                    Target.Filters.RemoveAt(i);
-                    break;
-                }
-            }
-        }
     }
 
     public void RemoveNonTargets(ObstacleBuffer buffer)
@@ -126,7 +101,6 @@ public class Targeting : Recyclable
 
     protected override void OnReturn()
     {
-        ClearHighlightFilterFromCurrentTarget();
         _targetChanged?.TryDispose();
         _targetAcquired?.TryDispose();
         _targetChanged = null;
@@ -138,23 +112,5 @@ public class Targeting : Recyclable
         CurrentTargetLifetime?.TryDispose();
         CurrentTargetLifetime = null;
         base.OnReturn();
-    }
-}
-
-
-public class TargetFilter : IConsoleControlFilter
-{
-    public ConsoleControl Control { get; set; }
-
-    public void Filter(ConsoleBitmap bitmap)
-    {
-        for (var x = 0; x < bitmap.Width; x++)
-        {
-            for (var y = 0; y < bitmap.Height; y++)
-            {
-                var pix = bitmap.GetPixel(x, y);
-                bitmap.SetPixel(x, y, new ConsoleCharacter(pix.Value, pix.ForegroundColor, pix.ForegroundColor.Darker));
-            }
-        }
     }
 }
