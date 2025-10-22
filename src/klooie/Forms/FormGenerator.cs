@@ -25,6 +25,7 @@ public static class FormGenerator
             if (field.SupportsDynamicWidth == false) continue;
             
             field.ValueControl.Width = property.HasAttr<FormWidth>() ? property.Attr<FormWidth>().Width : 20;
+            field.ValueControl.Tag = property;
             field.SupportsDynamicWidth = !property.HasAttr<FormWidth>();
         }
 

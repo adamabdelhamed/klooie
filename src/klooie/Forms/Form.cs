@@ -70,6 +70,14 @@ public sealed class Form : ProtectedConsolePanel
         this.Ready.Subscribe(InitializeForm, this);
     }
 
+    public T FindValueControl<T>(string elementLabel) where T : ConsoleControl
+    {
+        var matches = Options.Elements.Where(e => e.Label.StringValue == elementLabel && e.ValueControl is T).Select(e => e.ValueControl as T).ToArray();
+        if (matches.Length > 1) throw new ArgumentException("More than one match");
+        if (matches.Length == 0) throw new ArgumentException("No matching control");
+        return matches[0];
+    }
+
     private void InitializeForm()
     {
         CreateGridLayout();
