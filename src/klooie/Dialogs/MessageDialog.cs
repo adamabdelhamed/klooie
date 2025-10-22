@@ -63,6 +63,14 @@ public static class MessageDialog
         var ret = await Show(options);
         return ret?.Id.Equals("Yes", StringComparison.OrdinalIgnoreCase) == true;
     }
+
+    public static async Task<bool> ShowYesOrNo(ShowMessageOptions options)
+    {
+        options.UserChoices = DialogChoice.YesNo;
+        var ret = await Show(options);
+        return ret?.Id.Equals("Yes", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
     /// <summary>
     /// Shows the given message and lets the user choose from yes and no
     /// </summary>
