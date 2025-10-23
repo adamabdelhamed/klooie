@@ -180,4 +180,16 @@ public readonly struct LocF
         var dy = a.Top - b.Top;
         return MathF.Sqrt((dx * dx) + (dy * dy));
     }
+
+    public LocF Lerp(LocF target, float progress)
+    {
+        // Clamp progress to [0,1] to avoid overshoot
+        if (progress < 0f) progress = 0f;
+        else if (progress > 1f) progress = 1f;
+
+        float newLeft = Left + (target.Left - Left) * progress;
+        float newTop = Top + (target.Top - Top) * progress;
+
+        return new LocF(newLeft, newTop);
+    }
 }
