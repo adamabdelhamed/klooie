@@ -26,6 +26,8 @@ public partial class Weapon : Recyclable, IObservableObject
     private TimeSpan? lastFireTime;
     protected TimeSpan MinTimeBetweenShots { get; set; } = TimeSpan.FromSeconds(.1);
 
+    public string? Display { get; set; } 
+
     protected override void OnInit()
     {
         base.OnInit();
