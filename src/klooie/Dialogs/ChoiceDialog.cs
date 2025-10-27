@@ -101,6 +101,14 @@ public static class ChoiceDialog
                 {
                     buttonStack.Children.LastOrDefault()?.Ready.SubscribeOnce(() => buttonStack.Children.Last().Focus());
                 }
+
+                layout.Ready.SubscribeOnce(() =>
+                {
+                    ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, () => ConsoleApp.Current.MoveFocus(forward: false), buttonStack);
+                    ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, () => ConsoleApp.Current.MoveFocus(forward: true), buttonStack);
+                    ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.A, () => ConsoleApp.Current.MoveFocus(forward: false), buttonStack);
+                    ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.D, () => ConsoleApp.Current.MoveFocus(forward: true), buttonStack);
+                });
             }
 
             options.MaxLifetime?.OnDisposed(() => layout.TryDispose());
