@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace tests;
 
 [TestClass]
+[TestCategory(Categories.ConsoleApp)]
 public class ProtectedConsolePanelTests
 {
     public TestContext TestContext { get; set; }
