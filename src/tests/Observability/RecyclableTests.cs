@@ -2,6 +2,7 @@
 
 namespace klooie.tests;
 [TestClass]
+[TestCategory(Categories.Observability)]
 public class RecyclableTests
 {
     [TestMethod]
