@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0-windows7.0</TargetFramework>
+        <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <PackageReference Include="ImageProcessor" Version="2.9.1" />
-    <ProjectReference Include="..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,21 +19,17 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" GeneratePathProperty="true" PrivateAssets="all" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <!-- Prefer PowerArgs from super-repo if present, otherwise use klooie's own submodule -->
+    <Klooie_PowerArgs_Path Condition="Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+    <Klooie_PowerArgs_Path Condition="!Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+  </PropertyGroup>
 
   <ItemGroup>
-    <Compile Update="Sound\SoundEffects.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>SoundEffects.resx</DependentUpon>
-    </Compile>
+    <ProjectReference Include="$(Klooie_PowerArgs_Path)" />
   </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Update="Sound\SoundEffects.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>SoundEffects.Designer.cs</LastGenOutput>
-      <CustomToolNamespace>klooie.Samples</CustomToolNamespace>
-    </EmbeddedResource>
-  </ItemGroup>
-  
 </Project>
