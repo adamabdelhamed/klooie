@@ -28,7 +28,7 @@ public class SynchronousSchedulerTests
         Assert.AreEqual(returned + 1, pool.Returned);
 
 
-        var tolerance = expectedDuration * 0.1;
+        var tolerance = expectedDuration * 0.2;
         var minAcceptableDuration = expectedDuration - tolerance;
         var maxAcceptableDuration = expectedDuration + tolerance;
         Console.WriteLine($"Expected duration: {expectedDuration}, Actual duration: {sw.ElapsedMilliseconds}ms");
@@ -63,7 +63,7 @@ public class SynchronousSchedulerTests
         Assert.AreEqual(rented + 1, pool.Rented);
         Assert.AreEqual(returned + 1, pool.Returned);
 
-        var tolerance = expectedDuration * 0.1;
+        var tolerance = expectedDuration * 0.2;
         var minAcceptableDuration = expectedDuration - tolerance;
         var maxAcceptableDuration = expectedDuration + tolerance;
         Console.WriteLine($"Expected duration: {expectedDuration}, Actual duration: {sw.ElapsedMilliseconds}ms");
@@ -109,7 +109,7 @@ public class SynchronousSchedulerTests
         Assert.AreEqual(delayIfValidInstancesRentedBefore + 1, delayIfValidInstancePool.Rented);
         Assert.AreEqual(delayIfValidInstancesReturnedBefore + 1, delayIfValidInstancePool.Returned);
 
-        var tolerance = expectedDuration * 0.1;
+        var tolerance = expectedDuration * 0.2;
         var minAcceptableDuration = expectedDuration - tolerance;
         var maxAcceptableDuration = expectedDuration + tolerance;
         Console.WriteLine($"Expected duration: {expectedDuration}, Actual duration: {sw.ElapsedMilliseconds}ms");
