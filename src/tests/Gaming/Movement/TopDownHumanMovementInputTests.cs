@@ -7,6 +7,7 @@ using System;
 
 namespace tests.Gaming;
 [TestClass]
+[TestCategory(Categories.Gaming)]
 public class TopDownHumanMovementInputTests
 {
     public TestContext TestContext { get; set; }
