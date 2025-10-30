@@ -31,7 +31,7 @@ public partial class LayoutRootPanel : ConsolePanel
         paintRequests = new List<TaskCompletionSource>();
         paintRateMeter = new FrameRateMeter();
         lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
-        lastConsoleHeight = ConsoleProvider.Current.WindowHeight - 1;
+        lastConsoleHeight = ConsoleProvider.Current.WindowHeight;
         ResizeTo(lastConsoleWidth, lastConsoleHeight);
         ConsoleApp.Current.EndOfCycle.SubscribeThrottled(this, static me => me.DrainPaints(), this, MaxPaintRate);
         DescendentAdded.Subscribe(this, static (me,added) => me.OnDescendentAdded(added), this);
