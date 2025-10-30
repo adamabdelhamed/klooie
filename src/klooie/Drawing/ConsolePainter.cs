@@ -32,7 +32,7 @@ public static class ConsolePainter
 
     public static bool Paint(ConsoleBitmap bitmap)
     {
-        if (Console.WindowHeight == 0) return false;
+        if (ConsoleProvider.Current.WindowHeight == 0) return false;
 
         if (PaintQoS.CanPaint()  == false)
         {
@@ -43,10 +43,10 @@ public static class ConsolePainter
         _ansi = default;
         int colorThresholdSq = PaintCompressor.ComputeColorThresholdSq();
         PaintCompressor.BuildPerFrameThresholds(colorThresholdSq);
-        if (lastBufferWidth != Console.BufferWidth)
+        if (lastBufferWidth != ConsoleProvider.Current.BufferWidth)
         {
-            lastBufferWidth = Console.BufferWidth;
-            Console.Clear();
+            lastBufferWidth = ConsoleProvider.Current.BufferWidth;
+            ConsoleProvider.Current.Clear();
         }
 
         int attempts = 0;
