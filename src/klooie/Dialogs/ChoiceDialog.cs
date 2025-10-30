@@ -106,8 +106,6 @@ public static class ChoiceDialog
                 {
                     ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, () => ConsoleApp.Current.MoveFocus(forward: false), buttonStack);
                     ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, () => ConsoleApp.Current.MoveFocus(forward: true), buttonStack);
-                    ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.A, () => ConsoleApp.Current.MoveFocus(forward: false), buttonStack);
-                    ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.D, () => ConsoleApp.Current.MoveFocus(forward: true), buttonStack);
                 });
             }
 
