@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.15.0" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.4" />
     <PackageReference Include="NAudio" Version="2.2.1" />
  
  
@@ -21,8 +21,8 @@
     <ProjectReference Include="..\tests\tests.csproj" />
     <ProjectReference Include="..\klooie.Windows\klooie.Windows.csproj" />
     <ProjectReference Include="..\klooie.Analyzers\klooie.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.13.0" GeneratePathProperty="true" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" GeneratePathProperty="true" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" GeneratePathProperty="true" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" GeneratePathProperty="true" PrivateAssets="all" />
   </ItemGroup>
   <PropertyGroup>
     <!-- Prefer PowerArgs from super-repo if present, otherwise use klooie's own submodule -->
