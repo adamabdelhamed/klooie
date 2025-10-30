@@ -543,7 +543,12 @@ public static class WalkCalculation
     private static float EvaluateSpeed(WalkCalculationState input, Angle chosenAngle, float confidence)
     {
         if (input.BaseSpeed == 0) throw new Exception("Zero Speed Yo");
-        if (input.IsCurrentlyCloseEnoughToPointOfInterest) return 0;
+        if (input.IsCurrentlyCloseEnoughToPointOfInterest)
+        {
+            input.Logger?.Debug($"Close enough to POI; stopping movement.");
+            return 0;
+        }
+
         const float minFactor = 0.2f;
         float factor = Smoothstep01(confidence);
         if (input.IsStuck) factor = MathF.Max(factor, 0.6f);
