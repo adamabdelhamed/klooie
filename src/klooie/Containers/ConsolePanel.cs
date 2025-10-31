@@ -95,7 +95,7 @@ public class ConsolePanel : Container
         // Common case: same or higher Z than the tail → append O(1)
         if (sortedControls.Count == 0 ||
             c.ZIndex > sortedControls[^1].ZIndex ||
-            (c.ZIndex == sortedControls[^1].ZIndex /* tie goes to newer due to larger ParentIndex */))
+            (c.ZIndex == sortedControls[^1].ZIndex && c.ParentIndex > sortedControls[^1].ParentIndex /* tie goes to newer due to larger ParentIndex */))
         {
             sortedControls.Add(c);
             return;
