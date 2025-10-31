@@ -103,7 +103,9 @@ public class ConsolePanel : Container
         }
 
         // Find first index with Z > c.ZIndex (upper bound for Z)
-        int lo = 0, hi = sortedControls.Count - 1, insertAt = sortedControls.Count;
+        int lo = 0;
+        int hi = sortedControls.Count - 1;
+        int insertAt = sortedControls.Count;
         while (lo <= hi)
         {
             int mid = (lo + hi) >> 1;
