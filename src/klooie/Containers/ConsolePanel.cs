@@ -7,10 +7,10 @@ namespace klooie;
 /// </summary>
 public class ConsolePanel : Container
 {
-    private static readonly Comparison<ConsoleControl> CompareZ = new Comparison<ConsoleControl>((a, b) =>
-        a.ZIndex == b.ZIndex ? a.ParentIndex.CompareTo(b.ParentIndex) : a.ZIndex.CompareTo(b.ZIndex));
+ 
 
-    private List<ConsoleControl> sortedControls = new List<ConsoleControl>();
+    private readonly List<ConsoleControl> sortedControls = new();
+    private int _nextParentIndex; // stable, monotonic
 
     /// <summary>
     /// Gets the nested controls
@@ -39,14 +39,8 @@ public class ConsolePanel : Container
         var buffer = ArrayPool<ConsoleControl>.Shared.Rent(count);
         try
         {
-            for (var i = 0; i < count; i++)
-            {
-                buffer[i] = Controls[i];
-            }
-            for (var i = 0; i < count; i++)
-            {
-                buffer[i].TryDispose();
-            }
+            for (var i = 0; i < count; i++) buffer[i] = Controls[i];
+            for (var i = 0; i < count; i++) buffer[i].TryDispose();
         }
         finally
         {
@@ -61,29 +55,67 @@ public class ConsolePanel : Container
     private void OnControlRemovedInternal(ConsoleControl c)
     {
         NotifyDescendentRemoved(c);
-        sortedControls.Remove(c);
+        // Remove without re-sorting
+        var idx = sortedControls.IndexOf(c);
+        if (idx >= 0) sortedControls.RemoveAt(idx);
         c.Parent = null;
         c.TryDispose();
     }
-    private Action _sortZDelegate;
-    private void OnControlAddedInternal(ConsoleControl controlAddedDirectlyToThisConsolePanel)
+
+    private void OnControlAddedInternal(ConsoleControl control)
     {
-        if(controlAddedDirectlyToThisConsolePanel.IsStillValid(controlAddedDirectlyToThisConsolePanel.Lease) == false)
-        {
-            throw new InvalidOperationException("The control being added is no longer valid. It has been disposed or its lifetime has ended.");
-        }
+        if (!control.IsStillValid(control.Lease))
+            throw new InvalidOperationException("The control being added is no longer valid.");
 
-        if(controlAddedDirectlyToThisConsolePanel.Parent != null || controlAddedDirectlyToThisConsolePanel.HasBeenAddedToVisualTree)
-        {
+        if (control.Parent != null || control.HasBeenAddedToVisualTree)
             throw new InvalidOperationException("The control has already been added to a visual tree");
-        }
-        controlAddedDirectlyToThisConsolePanel.Parent = this;
-        sortedControls.Add(controlAddedDirectlyToThisConsolePanel);
-        SortZ();
-        _sortZDelegate = _sortZDelegate ?? SortZ;
-        controlAddedDirectlyToThisConsolePanel.ZIndexChanged.Subscribe(_sortZDelegate, Controls.GetMembershipLifetime(controlAddedDirectlyToThisConsolePanel));
 
-        NotifyDescendentsAdded(controlAddedDirectlyToThisConsolePanel);
+        control.Parent = this;
+
+        // Assign a stable ParentIndex exactly once for this panel
+        control.ParentIndex = ++_nextParentIndex;
+
+        // Incremental insert keeps list sorted by (ZIndex, ParentIndex)
+        InsertByZIndex(control);
+
+        // Reinsert on Z changes
+        control.ZIndexChanged.Subscribe(() =>
+        {
+            // Remove from current position (linear scan; Z changes are rare)
+            var i = sortedControls.IndexOf(control);
+            if (i >= 0) sortedControls.RemoveAt(i);
+            InsertByZIndex(control);
+        }, Controls.GetMembershipLifetime(control));
+
+        NotifyDescendentsAdded(control);
+    }
+
+    private void InsertByZIndex(ConsoleControl c)
+    {
+        // Common case: same or higher Z than the tail → append O(1)
+        if (sortedControls.Count == 0 ||
+            c.ZIndex > sortedControls[^1].ZIndex ||
+            (c.ZIndex == sortedControls[^1].ZIndex && c.ParentIndex > sortedControls[^1].ParentIndex /* tie goes to newer due to larger ParentIndex */))
+        {
+            sortedControls.Add(c);
+            return;
+        }
+
+        // Find first index with Z > c.ZIndex (upper bound for Z)
+        int lo = 0;
+        int hi = sortedControls.Count - 1;
+        int insertAt = sortedControls.Count;
+        while (lo <= hi)
+        {
+            int mid = (lo + hi) >> 1;
+            var z = sortedControls[mid].ZIndex;
+            if (z <= c.ZIndex) lo = mid + 1;   // move right on equal; we want after equals
+            else { insertAt = mid; hi = mid - 1; }
+        }
+
+        // insertAt now points to first element with Z > c.ZIndex (or Count if none)
+        // For equal Z, we insert after the block of equals; ParentIndex already makes us last among equals.
+        sortedControls.Insert(insertAt, c);
     }
 
     private void NotifyDescendentsAdded(ConsoleControl controlAddedDirectlyToThisConsolePanel)
@@ -165,7 +197,7 @@ public class ConsolePanel : Container
     {
         for (int i = 0; i < sortedControls.Count; i++)
         {
-            ConsoleControl? control = sortedControls[i];
+            var control = sortedControls[i];
             if (control.Width > 0 && control.Height > 0 && control.IsVisible && IsInView(control))
             {
                 Compose(control);
@@ -174,18 +206,9 @@ public class ConsolePanel : Container
 
         for (int i = 0; i < Filters.Count; i++)
         {
-            IConsoleControlFilter? filter = Filters[i];
+            var filter = Filters[i];
             filter.Control = this;
             filter.Filter(Bitmap);
         }
-    }
-
-    private void SortZ()
-    {
-        for (var i = 0; i < sortedControls.Count; i++)
-        {
-            sortedControls[i].ParentIndex = i;
-        }
-        sortedControls.Sort(CompareZ);
     }
 }
