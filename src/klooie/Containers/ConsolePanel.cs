@@ -62,7 +62,6 @@ public class ConsolePanel : Container
         c.TryDispose();
     }
 
-    private Action _sortZDelegate;
     private void OnControlAddedInternal(ConsoleControl control)
     {
         if (!control.IsStillValid(control.Lease))
