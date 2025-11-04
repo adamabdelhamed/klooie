@@ -14,8 +14,7 @@ public class Vision : Recyclable, IFrameTask
 
     private VisionFilterContext targetFilterContext = new VisionFilterContext();
     private Event<VisionFilterContext>? _targetBeingEvaluated;
-    public List<VisuallyTrackedObject> TrackedObjectsList { get; private set; } = new List<VisuallyTrackedObject>(200);
-    public Dictionary<GameCollider, VisuallyTrackedObject> TrackedObjectsDictionary { get; private set; } = new Dictionary<GameCollider, VisuallyTrackedObject>(199);
+    public List<VisuallyTrackedObject> TrackedObjectsList { get; private set; } = new List<VisuallyTrackedObject>(10);
     public Event<VisionFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = Event<VisionFilterContext>.Create());
     public GameCollider Eye { get; private set; } = null!;
     public float Visibility { get; set; } 
@@ -101,7 +100,6 @@ public class Vision : Recyclable, IFrameTask
             }
 
             var newItem =  VisuallyTrackedObject.Create(candidate, prediction, prediction.LKGD, distance);
-            TrackedObjectsDictionary.Add(newItem.Target, newItem);
             TrackedObjectsList.Add(newItem);
         }
         return true;
@@ -112,7 +110,6 @@ public class Vision : Recyclable, IFrameTask
         var directlyAheadResult = Cast(Eye.Velocity.Angle, buffer);
         if (directlyAheadResult != null)
         {
-            TrackedObjectsDictionary.Add(directlyAheadResult.Target, directlyAheadResult);
             TrackedObjectsList.Add(directlyAheadResult);
         }
 
@@ -124,7 +121,6 @@ public class Vision : Recyclable, IFrameTask
             var visibleObject = Cast(currentAngle.Add(AngleFuzz == 0 ? 0 : Random.Shared.Next(-AngleFuzz, AngleFuzz)), buffer);
             if (visibleObject != null)
             {
-                TrackedObjectsDictionary.Add(visibleObject.Target, visibleObject);
                 TrackedObjectsList.Add(visibleObject);
             }
             totalTravel += AngleStep;
@@ -168,7 +164,6 @@ public class Vision : Recyclable, IFrameTask
     private void UnTrackAtIndex(int index)
     {
         var trackedObject = TrackedObjectsList[index];
-        TrackedObjectsDictionary.Remove(trackedObject.Target);
         TrackedObjectsList.RemoveAt(index);
         trackedObject.TryDispose();
     }
@@ -180,7 +175,6 @@ public class Vision : Recyclable, IFrameTask
             TrackedObjectsList [i].TryDispose();
         }
         TrackedObjectsList.Clear();
-        TrackedObjectsDictionary.Clear();
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
@@ -207,10 +201,24 @@ public class Vision : Recyclable, IFrameTask
     private bool TryIgnorePotentialTargetIgnorable(GameCollider? potentialTarget, out VisuallyTrackedObject existing)
     {
         VisuallyTrackedObject existingTarget = null;
-        var alreadyTracked = potentialTarget != null && TrackedObjectsDictionary.TryGetValue(potentialTarget, out existingTarget);
+        var alreadyTracked = potentialTarget != null && TryGetValue(potentialTarget, out existingTarget);
         var shouldBeIgnored = alreadyTracked || potentialTarget == null || potentialTarget?.Velocity == null || potentialTarget.IsVisible == false || potentialTarget.CanCollideWith(Eye) == false || Eye.CanCollideWith(potentialTarget) == false;
         existing = existingTarget;
         return shouldBeIgnored;
+    }
+
+    public bool TryGetValue(GameCollider key, out VisuallyTrackedObject ret)
+    {
+        for(var i = 0; i < TrackedObjectsList.Count; i++)
+        {
+            if(TrackedObjectsList[i].Target == key)
+            {
+                ret = TrackedObjectsList[i];
+                return true;
+            }
+        }
+        ret = null!;
+        return false;
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
@@ -257,7 +265,6 @@ public class Vision : Recyclable, IFrameTask
         AngularVisibility = DefaultAngularVisibility;
         _targetBeingEvaluated?.TryDispose();
         _targetBeingEvaluated = null;
-        TrackedObjectsDictionary.Clear();
 
         for (var i = TrackedObjectsList.Count - 1; i >= 0; i--)
         {
@@ -358,7 +365,7 @@ public class VisionFilter : IConsoleControlFilter
 
     public void Filter(ConsoleBitmap bitmap)
     {
-        if(Control is GameCollider collider == false || Vision.TrackedObjectsDictionary.TryGetValue(collider, out VisuallyTrackedObject vto) == false)
+        if(Control is GameCollider collider == false || Vision.TryGetValue(collider, out VisuallyTrackedObject vto) == false)
         {
             bitmap.Fill(NotSeen);
             return;

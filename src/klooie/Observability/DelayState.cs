@@ -2,47 +2,87 @@
 
 public class DelayState : Recyclable
 {
-    // Tracks the lease of each dependency so that validity checks and
-    // disposals use the captured lease instead of the current one
-    protected RecyclableList<LeaseState<Recyclable>> Dependencies;
+    private static readonly LazyPool<DelayState> pool = new(() => new DelayState());
+    internal static LazyPool<DelayState> Pool => pool;
+
+    // Fast path: single dependency
+    private LeaseState<Recyclable>? singleDependency;
+
+    // Slow path: multiple dependencies
+    private RecyclableList<LeaseState<Recyclable>>? multipleDependencies;
 
     private Event<Recyclable>? _beforeDisposeDependency;
     public Event<Recyclable> BeforeDisposeDependency => _beforeDisposeDependency ??= Event<Recyclable>.Create();
-    public Recyclable MainDependency => Dependencies.Count > 0 && Dependencies.Items[0].IsRecyclableValid ? Dependencies.Items[0].Recyclable : null;
 
-    public int DependencyCount => Dependencies?.Count ?? 0;
+    public Recyclable? MainDependency
+    {
+        get
+        {
+            if (singleDependency != null && singleDependency.IsRecyclableValid) return singleDependency.Recyclable;
+            if (multipleDependencies != null && multipleDependencies.Count > 0 && multipleDependencies.Items[0].IsRecyclableValid)
+                return multipleDependencies.Items[0].Recyclable;
+            return null;
+        }
+    }
+
+    public int DependencyCount
+    {
+        get
+        {
+            if (multipleDependencies != null) return multipleDependencies.Count;
+            return singleDependency != null ? 1 : 0;
+        }
+    }
 
     public bool AreAllDependenciesValid
     {
         get
         {
-            if (Dependencies == null || Dependencies.Count == 0) return false;
-            for (int i = 0; i < Dependencies.Count; i++)
+            if (multipleDependencies != null)
             {
-                if (Dependencies[i].IsRecyclableValid == false)
+                for (int i = 0; i < multipleDependencies.Count; i++)
                 {
-                    return false;
+                    if (!multipleDependencies[i].IsRecyclableValid) return false;
                 }
+                return multipleDependencies.Count > 0;
             }
-            return true;
+            return singleDependency != null && singleDependency.IsRecyclableValid;
         }
     }
 
-    public LeaseState<Recyclable> DependencyAt(int index) => Dependencies[index];
+    public LeaseState<Recyclable> DependencyAt(int index)
+    {
+        if (multipleDependencies != null) return multipleDependencies[index];
+        if (index == 0 && singleDependency != null) return singleDependency;
+        throw new IndexOutOfRangeException();
+    }
 
-    public ILifetime[] ValidDependencies =>
-        Dependencies?.Items
-            .Where(d => d.IsRecyclableValid && d.Recyclable != null)
-            .Select(d => (ILifetime)d.Recyclable!)
-            .ToArray() ?? Array.Empty<Recyclable>();
+    public ILifetime[] ValidDependencies
+    {
+        get
+        {
+            if (multipleDependencies != null)
+            {
+                return multipleDependencies.Items
+                    .Where(d => d.IsRecyclableValid && d.Recyclable != null)
+                    .Select(d => (ILifetime)d.Recyclable!)
+                    .ToArray();
+            }
+            if (singleDependency != null && singleDependency.IsRecyclableValid && singleDependency.Recyclable != null)
+            {
+                return new ILifetime[] { singleDependency.Recyclable };
+            }
+            return Array.Empty<ILifetime>();
+        }
+    }
 
     protected override void OnInit()
     {
         base.OnInit();
-        Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent(10);
+        singleDependency = null;
+        multipleDependencies = null;
     }
 
-    internal static LazyPool<DelayState> pool = new LazyPool<DelayState>(() => new DelayState());
     protected DelayState() { }
 
     public static DelayState Create(ILifetime dependency)
@@ -52,55 +92,94 @@ public class DelayState : Recyclable
         return ret;
     }
 
-    public void AddDependency(ILifetime dependency)
-    {
-        if(dependency == null) throw new ArgumentNullException(nameof(dependency), "Dependency cannot be null");
-        if (Dependencies == null)
-        {
-            Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent();
-        }
-        Dependencies.Items.Add(LeaseHelper.Track((Recyclable)dependency));
-    }
-
     public static DelayState Create(RecyclableList<ILifetime> dependencies)
     {
         var ret = pool.Value.Rent();
-        ret.Dependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent(dependencies.Count);
-        for (int i = 0; i < dependencies.Count; i++)
+        if (dependencies.Count == 1)
         {
-            ret.Dependencies.Items.Add(LeaseHelper.Track((Recyclable)dependencies[i]));
+            ret.singleDependency = LeaseHelper.Track((Recyclable)dependencies[0]);
+        }
+        else
+        {
+            ret.multipleDependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent(dependencies.Count);
+            for (int i = 0; i < dependencies.Count; i++)
+            {
+                ret.multipleDependencies.Items.Add(LeaseHelper.Track((Recyclable)dependencies[i]));
+            }
         }
         dependencies.Dispose();
         return ret;
     }
 
+    public void AddDependency(ILifetime dependency)
+    {
+        if (dependency == null)
+            throw new ArgumentNullException(nameof(dependency));
+
+        var newLease = LeaseHelper.Track((Recyclable)dependency);
+
+        if (multipleDependencies != null)
+        {
+            multipleDependencies.Items.Add(newLease);
+            return;
+        }
+
+        if (singleDependency == null)
+        {
+            singleDependency = newLease;
+            return;
+        }
+
+        // Escalate to list
+        multipleDependencies = RecyclableListPool<LeaseState<Recyclable>>.Instance.Rent(4);
+        multipleDependencies.Items.Add(singleDependency);
+        multipleDependencies.Items.Add(newLease);
+        singleDependency = null;
+    }
+
     internal void DisposeAllValidDependencies()
     {
-        if (Dependencies == null) return;
-        for (int i = 0; i < Dependencies.Count; i++)
+        if (multipleDependencies != null)
         {
-            var tracker = Dependencies[i];
-            var dep = tracker.Recyclable;
-            if (dep != null)
+            for (int i = 0; i < multipleDependencies.Count; i++)
             {
-                _beforeDisposeDependency?.Fire(dep);
-                tracker.TryDisposeRecyclable();
+                var tracker = multipleDependencies[i];
+                if (tracker.Recyclable != null)
+                {
+                    _beforeDisposeDependency?.Fire(tracker.Recyclable);
+                    tracker.TryDisposeRecyclable();
+                }
             }
+            return;
+        }
+
+        if (singleDependency != null && singleDependency.Recyclable != null)
+        {
+            _beforeDisposeDependency?.Fire(singleDependency.Recyclable);
+            singleDependency.TryDisposeRecyclable();
         }
     }
 
     protected override void OnReturn()
     {
         base.OnReturn();
-        if (Dependencies != null)
+
+        if (multipleDependencies != null)
         {
-            for (int i = 0; i < Dependencies.Count; i++)
+            for (int i = 0; i < multipleDependencies.Count; i++)
             {
-                Dependencies[i]?.TryDispose();
+                multipleDependencies[i]?.TryDispose();
             }
-            Dependencies.Dispose();
-            Dependencies = null;
+            multipleDependencies.Dispose();
+            multipleDependencies = null;
         }
+
+        if (singleDependency != null)
+        {
+            singleDependency.TryDispose();
+            singleDependency = null;
+        }
+
         _beforeDisposeDependency?.TryDispose();
         _beforeDisposeDependency = null;
     }

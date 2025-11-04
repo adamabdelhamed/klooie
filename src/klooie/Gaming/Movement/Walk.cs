@@ -10,12 +10,17 @@ public class Walk : Movement
     private WalkCalculationState state = new WalkCalculationState();
     private MotionInfluence influence;
 
+    // Persistent per-movement histories (moved off of state so we don’t nuke them each tick)
+    private RecyclableList<float> lastGoalDistances;
+    private RecyclableList<Angle> lastFewAngles;
+    private RecyclableList<RectF> lastFewRoundedBounds;
+
+
     public float CloseEnough { get; protected set; }
 
     public virtual RectF? GetPointOfInterest() => null;
     public virtual RectF? GetHazard() => null;
     public virtual bool FearCollision(GameCollider collider) => true;
-
 
     public static Walk Create(Vision vision, float baseSpeed)
     {
@@ -30,10 +35,14 @@ public class Walk : Movement
         influence = MotionInfluence.Create("Wander Influence", true);
         CloseEnough = 1;
         Velocity.AddInfluence(influence);
-        state.Hydrate(this);
+
+        // Init persistent histories for this movement
+        lastGoalDistances = RecyclableListPool<float>.Instance.Rent(20);
+        lastFewAngles = RecyclableListPool<Angle>.Instance.Rent(20);
+        lastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent(20);
         Vision.VisibleObjectsChanged.Subscribe(this, static (me) => me.Tick(), this);
     }
- 
+
     private void Tick()
     {
         if (AreAllDependenciesValid == false)
@@ -42,8 +51,10 @@ public class Walk : Movement
             return;
         }
         FrameDebugger.RegisterTask(nameof(Walk));
+        state.Hydrate(this);
         state.Sync(this);
         WalkCalculation.AdjustSpeedAndVelocity(state, ref influence.DeltaSpeed, ref influence.Angle);
+        state.Dehydrate();
     }
 
     protected override void OnReturn()
@@ -57,9 +68,22 @@ public class Walk : Movement
         influence.Dispose();
         influence = null!;
         CloseEnough = 0;
-        state.Dehydrate();
+
+        // Return persistent histories
+        lastGoalDistances?.Dispose();
+        lastGoalDistances = null!;
+        lastFewAngles?.Dispose();
+        lastFewAngles = null!;
+        lastFewRoundedBounds?.Dispose();
+        lastFewRoundedBounds = null!;
+
         base.OnReturn();
     }
+
+    // Expose persistent histories to the state
+    internal RecyclableList<float> Hist_LastGoalDistances => lastGoalDistances;
+    internal RecyclableList<Angle> Hist_LastFewAngles => lastFewAngles;
+    internal RecyclableList<RectF> Hist_LastFewRoundedBounds => lastFewRoundedBounds;
 }
 
 public class WalkCalculationState
@@ -67,12 +91,19 @@ public class WalkCalculationState
     public RectF EyeBounds;
     public RectF? PointOfInterest;
     public RectF? Hazard;
+
+    // NOTE: These now reference the Walk’s persistent lists; do NOT dispose in Dehydrate().
     public RecyclableList<float> LastGoalDistances;
     public RecyclableList<Angle> LastFewAngles;
     public RecyclableList<RectF> LastFewRoundedBounds;
+
+    // Per-tick scratch
     public RecyclableList<AngleScore> AngleScores;
     public ObstacleBuffer Obstacles;
+
+    // Weights are now provided by Walk and can be adapted; we will write back after tick.
     public WanderWeights Weights;
+
     public Logger? Logger;
     public bool IsStuck;
     public float BaseSpeed;
@@ -87,19 +118,22 @@ public class WalkCalculationState
 
     public void Hydrate(Walk walk)
     {
-        Weights = WanderWeights.Default;
+        // Per-tick scratch allocations/rents only
         AngleScores = RecyclableListPool<AngleScore>.Instance.Rent(100);
-        LastFewAngles = RecyclableListPool<Angle>.Instance.Rent(20);
-        LastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent(20);
         Obstacles = ObstacleBufferPool.Instance.Rent();
-        LastGoalDistances = RecyclableListPool<float>.Instance.Rent(20);
-        CloseEnough = 1;
-        BaseSpeed = walk.BaseSpeed;
+
+        // Per-tick reset
         IsStuck = false;
     }
 
     public void Sync(Walk walk)
     {
+        // Persistent histories: borrow references from Walk (do not allocate here)
+        LastFewAngles = walk.Hist_LastFewAngles;
+        LastFewRoundedBounds = walk.Hist_LastFewRoundedBounds;
+        LastGoalDistances = walk.Hist_LastGoalDistances;
+
+        // Other live fields
         EyeBounds = walk.Eye.Bounds;
         CurrentAngle = walk.Velocity.Angle;
         Visibility = walk.Vision.Visibility;
@@ -107,10 +141,16 @@ public class WalkCalculationState
         PointOfInterest = walk.GetPointOfInterest();
         Hazard = walk.GetHazard();
         CloseEnough = walk.CloseEnough;
+
+        // Borrowed logger; DO NOT DISPOSE
         Logger = walk.Logger;
+
+        // Adaptive weights start from movement’s current weights
+        Weights = WanderWeights.Default;
+
         Obstacles.WriteableBuffer.Clear();
         walk.Eye.GetObstacles(Obstacles);
-        for(var i = Obstacles.WriteableBuffer.Count - 1; i >= 0; i--)
+        for (var i = Obstacles.WriteableBuffer.Count - 1; i >= 0; i--)
         {
             var c = Obstacles.WriteableBuffer[i];
             if (walk.FearCollision(c) == false)
@@ -122,21 +162,21 @@ public class WalkCalculationState
 
     public void Dehydrate()
     {
-        LastFewAngles.Dispose();
-        LastFewAngles = null!;
-        LastFewRoundedBounds.Dispose();
-        LastFewRoundedBounds = null!;
-        AngleScores.Dispose();
+        // Only dispose per-tick scratch
+        AngleScores?.Dispose();
         AngleScores = null!;
-        LastGoalDistances.Dispose();
-        LastGoalDistances = null!;
         Obstacles?.Dispose();
         Obstacles = null!;
-        Logger?.Dispose();
+
+        // Do NOT dispose persistent histories (owned by Walk)
+        LastFewAngles = null!;
+        LastFewRoundedBounds = null!;
+        LastGoalDistances = null!;
+
+        // Do NOT dispose the borrowed logger
         Logger = null;
     }
 }
-
 
 /// <summary>
 /// Normalised component-by-component score for a single candidate steering angle.
@@ -195,11 +235,6 @@ public struct WanderWeights
     };
 }
 
-
-
-
-
-
 public static class WalkCalculation
 {
     // -------------------- Tunables / Perf knobs --------------------
@@ -221,9 +256,9 @@ public static class WalkCalculation
     private const float Inv180 = 1f / 180f;
     private const float Inv090 = 1f / 90f;
 
-
     private static HashSet<RectF> sharedUniqueModeHashSet = new HashSet<RectF>();
     private static ColliderBox sharedColliderBox;
+
     public static void AdjustSpeedAndVelocity(WalkCalculationState input, ref float newSpeed, ref Angle newAngle)
     {
         UpdateGoalDistanceHistory(input);
@@ -241,7 +276,7 @@ public static class WalkCalculation
     private static void LogAngleScoreDetails(WalkCalculationState input, float newSpeed, Angle newAngle, int bestIndex)
     {
         if (input.Logger == null) return;
-        
+
         for (var i = 0; i < input.AngleScores.Count; i++)
         {
             input.Logger.Debug("[{index}]: Angle Score for angle {angle} is {score}. Components: {components}", i, input.AngleScores[i].Angle.Value, input.AngleScores[i].GetTotal(input.Weights), input.AngleScores[i].ToString());
@@ -309,7 +344,6 @@ public static class WalkCalculation
 
     private static void OptimizeWeights(WalkCalculationState input)
     {
-
         float minC = float.MaxValue, maxC = float.MinValue, sumC = 0f;
         for (int i = 0, n = input.AngleScores.Count; i < n; i++)
         {
@@ -360,8 +394,7 @@ public static class WalkCalculation
         bool closeToPoi = input.IsCurrentlyCloseEnoughToPointOfInterest;
 
         if (poiDeg.HasValue && !closeToPoi) baseDeg = poiDeg.Value;
-        else if (hazardDeg.HasValue)  baseDeg = hazardDeg.Value.Add(180);
-
+        else if (hazardDeg.HasValue) baseDeg = hazardDeg.Value.Add(180);
 
         // Reuse one CollisionPrediction object across all candidates (overwrite each time)
         var prediction = CollisionPredictionPool.Instance.Rent();
@@ -377,7 +410,6 @@ public static class WalkCalculation
             float fineStep = input.IsStuck ? 1f : FineStepDeg;
             int refineTopK = input.IsStuck ? Math.Min(4, CoarseRefineTopK + 2) : CoarseRefineTopK;
 
-
             // 2) Coarse sweep around base; keep top-K coarse picks
             Span<CoarseTop> topAngles = stackalloc CoarseTop[GetTopSize(CoarseRefineTopK)];
             float travelCompleted = 0f;
@@ -390,7 +422,7 @@ public static class WalkCalculation
                 var leftDeg = baseDeg.Add(-delta);
                 var rightDeg = baseDeg.Add(delta);
 
-                float leftScore = ScoreAngle_NoRepulsion(input, inertiaDeg, poiDeg, hazardDeg, leftDeg,  prediction);
+                float leftScore = ScoreAngle_NoRepulsion(input, inertiaDeg, poiDeg, hazardDeg, leftDeg, prediction);
                 float rightScore = ScoreAngle_NoRepulsion(input, inertiaDeg, poiDeg, hazardDeg, rightDeg, prediction);
 
                 TryPushTop(topAngles, leftDeg, leftScore);
@@ -501,7 +533,7 @@ public static class WalkCalculation
     private static float PredictCollision(WalkCalculationState input, Angle angleDeg, CollisionPrediction prediction)
     {
         if (sharedColliderBox == null) sharedColliderBox = new ColliderBox(input.EyeBounds);
-        else  sharedColliderBox.Bounds = input.EyeBounds;
+        else sharedColliderBox.Bounds = input.EyeBounds;
         CollisionDetector.Predict(sharedColliderBox, angleDeg, input.Obstacles.WriteableBuffer, input.Visibility, CastingMode.Precise, input.Obstacles.WriteableBuffer.Count, prediction);
         if (!prediction.CollisionPredicted) return MaxCollisionHorizon;
         if (input.BaseSpeed <= 0f) throw new Exception("Base speed can't be 0");
@@ -509,7 +541,6 @@ public static class WalkCalculation
     }
 
     private static RectF PredictRoundedPosition(WalkCalculationState input, Angle angle) => input.EyeBounds.RadialOffset(angle, input.EyeBounds.Hypotenous).Round();
-
 
     private static void ConsiderEmergencyMode(WalkCalculationState input)
     {
@@ -524,7 +555,6 @@ public static class WalkCalculation
             input.IsStuck = false;
         }
     }
-
 
     private static bool CalculateIsStuck(WalkCalculationState input, int window = 5, int maxUnique = 3)
     {
@@ -576,7 +606,7 @@ public static class WalkCalculation
         try
         {
             var toTarget = input.EyeBounds.CalculateAngleTo(target);
-            if(sharedColliderBox == null) sharedColliderBox = new ColliderBox(input.EyeBounds);
+            if (sharedColliderBox == null) sharedColliderBox = new ColliderBox(input.EyeBounds);
             else sharedColliderBox.Bounds = input.EyeBounds;
             CollisionDetector.Predict(sharedColliderBox, toTarget, input.Obstacles.WriteableBuffer, input.Visibility, CastingMode.Precise, input.Obstacles.WriteableBuffer.Count, prediction);
 
@@ -601,7 +631,7 @@ public static class WalkCalculation
     private static float DangerClamp(float timeToCollision)
     {
         if (timeToCollision >= MaxCollisionHorizon) return 1f;
-        if(timeToCollision < 0) return 0f;
+        if (timeToCollision < 0) return 0f;
         return timeToCollision / MaxCollisionHorizon;
     }
 
