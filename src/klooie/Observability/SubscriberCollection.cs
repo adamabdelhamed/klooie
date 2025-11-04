@@ -12,8 +12,8 @@ internal sealed class SubscriberCollection
     private static Stack<Subscriber> lightweightSubscriberPool;
 
     internal int ThreadId;
-    private readonly List<Subscriber> subscribers = new List<Subscriber>(100);
-    private readonly List<PendingAdd> newSubscribersForNextNotificationCycle = new List<PendingAdd>(32);
+    private readonly List<Subscriber> subscribers = new List<Subscriber>(4);
+    private readonly List<PendingAdd> newSubscribersForNextNotificationCycle = new List<PendingAdd>(4);
 
     public int Count => EnsureCoherentState();
     private SubscriberCollection() => ThreadId = Thread.CurrentThread.ManagedThreadId;

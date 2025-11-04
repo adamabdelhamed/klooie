@@ -1,4 +1,5 @@
 ﻿using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace klooie;
 internal sealed class SoundCache
@@ -6,8 +7,7 @@ internal sealed class SoundCache
     private readonly IBinarySoundProvider? provider;
     private readonly Dictionary<string, CachedSound> cached;
 
-    // Single, reusable buffer for music (only one song plays at a time).
-    private CachedSound musicReusable = new CachedSound();
+
 
     public SoundCache(IBinarySoundProvider? provider)
     {
@@ -15,7 +15,14 @@ internal sealed class SoundCache
         cached = new Dictionary<string, CachedSound>(StringComparer.OrdinalIgnoreCase);
     }
 
-    public RecyclableSampleProvider? GetSample(EventLoop eventLoop, string? soundId, VolumeKnob masterVolume, VolumeKnob? sampleVolume, ILifetime? maxLifetime, bool loop, bool isMusic)
+    public RecyclableSampleProvider? GetSample(
+     EventLoop eventLoop,
+     string? soundId,
+     VolumeKnob masterVolume,
+     VolumeKnob? sampleVolume,
+     ILifetime? maxLifetime,
+     bool loop,
+     bool isMusic)
     {
         if (provider == null) return null;
         if (string.IsNullOrEmpty(soundId)) return null;
@@ -23,9 +30,12 @@ internal sealed class SoundCache
 
         if (isMusic)
         {
-            musicReusable.LoadFrom(provider, soundId);
-            return RecyclableSampleProvider.Create(eventLoop, musicReusable, masterVolume, sampleVolume, maxLifetime, loop);
+            // Stream: no big float[]; tiny, steady memory
+            var streaming = new StreamingMusicProvider(provider, soundId, loop);
+            return RecyclableSampleProvider.Create(eventLoop, streaming, masterVolume, sampleVolume, maxLifetime);
         }
+
+        // SFX: keep cached in RAM (usually short)
         if (!cached.TryGetValue(soundId, out var cachedSound))
         {
             cachedSound = new CachedSound(provider, soundId);
@@ -38,7 +48,6 @@ internal sealed class SoundCache
     public void Clear()
     {
         cached.Clear();
-        musicReusable = null;
         GC.Collect();
     }
 }
@@ -107,3 +116,64 @@ internal sealed class CachedSound
         SampleCount = totalRead;
     }
 }
+
+static class PcmCache
+{
+    public static string GetOrBuild(string assetId, IBinarySoundProvider provider)
+    {
+        var cachePath = Path.Combine(Path.GetTempPath(), $"ttbs_{assetId}.wav");
+        if (File.Exists(cachePath)) return cachePath;
+
+        // decode once; pick your poison: WMF or Mp3FileReader
+        using var s = provider.Open(assetId);
+        using WaveStream decoder =
+            s is FileStream fs ? new MediaFoundationReader(fs.Name)
+                               : new Mp3FileReader(s); // fallback
+
+        using var outFs = new FileStream(cachePath, FileMode.Create, FileAccess.Write, FileShare.Read);
+        WaveFileWriter.WriteWavFileToStream(outFs, decoder); // streamed, not MemoryStream
+        return cachePath;
+    }
+}
+sealed class StreamingMusicProvider : ISampleProvider, IDisposable
+{
+    private WaveStream pcm;            // WaveFileReader on the cached WAV
+    private ISampleProvider pipe;      // + resample/mono/stereo as needed
+    private readonly bool loop;
+
+    public StreamingMusicProvider(IBinarySoundProvider p, string id, bool loop)
+    {
+        var wavPath = PcmCache.GetOrBuild(id, p);
+        pcm = new WaveFileReader(wavPath);
+        ISampleProvider s = pcm.ToSampleProvider();
+
+        if (pcm.WaveFormat.Channels != SoundProvider.ChannelCount)
+            s = pcm.WaveFormat.Channels == 2 && SoundProvider.ChannelCount == 1
+                ? new StereoToMonoSampleProvider(s) { LeftVolume = .5f, RightVolume = .5f }
+                : new MonoToStereoSampleProvider(s);
+
+        if (pcm.WaveFormat.SampleRate != SoundProvider.SampleRate)
+            s = new WdlResamplingSampleProvider(s, SoundProvider.SampleRate);
+
+        pipe = s;
+        this.loop = loop;
+        WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(SoundProvider.SampleRate, SoundProvider.ChannelCount);
+    }
+
+    public WaveFormat WaveFormat { get; }
+    public int Read(float[] buffer, int offset, int count)
+    {
+        int total = 0;
+        while (total < count)
+        {
+            int n = pipe.Read(buffer, offset + total, count - total);
+            if (n > 0) { total += n; continue; }
+            if (!loop) break;
+            pcm.Position = 0; // loop with no reallocation
+        }
+        return total;
+    }
+
+    public void Dispose() { pipe = null; pcm?.Dispose(); }
+}
+

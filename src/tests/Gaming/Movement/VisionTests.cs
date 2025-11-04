@@ -64,7 +64,7 @@ public class VisionTests
         foreach(var angle in new Angle[] { 0, 45, 90, 135, 180, 225, 270, 315 })
         {
             mover.Velocity.Angle = angle;
-            vision.TrackedObjectsDictionary.Clear();
+       
             vision.TrackedObjectsList.Clear();
             vision.Scan();
             var coneLifetime = DefaultRecyclablePool.Instance.Rent();
