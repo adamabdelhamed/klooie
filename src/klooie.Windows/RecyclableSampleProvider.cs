@@ -93,7 +93,11 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
         if (stream != null)
         {
             int read = stream.Read(buffer, offset, count);
-            if (read <= 0) return 0;
+            if (read <= 0)
+            {
+                ScheduleDisposal();
+                return 0;
+            }
 
             // Apply volume + pan per frame (interleaved stereo)
             int frames = read / channels;

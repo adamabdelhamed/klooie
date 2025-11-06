@@ -167,12 +167,24 @@ sealed class StreamingMusicProvider : ISampleProvider, IDisposable
         while (total < count)
         {
             int n = pipe.Read(buffer, offset + total, count - total);
-            if (n > 0) { total += n; continue; }
-            if (!loop) break;
-            pcm.Position = 0; // loop with no reallocation
+            if (n > 0)
+            {
+                total += n;
+                continue;
+            }
+
+            if (loop)
+            {
+                pcm.Position = 0; // loop with no reallocation
+                continue;
+            }
+
+            // ✅ EOF: explicitly return 0 to tell RecyclableSampleProvider to dispose
+            return 0;
         }
         return total;
     }
+
 
     public void Dispose() { pipe = null; pcm?.Dispose(); }
 }
