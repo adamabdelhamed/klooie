@@ -108,7 +108,16 @@ internal sealed class SubscriberCollection
     public void Dispose()
     {
         if (ThreadId != Thread.CurrentThread.ManagedThreadId) throw new InvalidOperationException("Cannot dispose SubscriberCollection from a different thread");
-        EnsureCoherentState();
+
+        for(var i = newSubscribersForNextNotificationCycle.Count - 1; i >= 0; i--)
+        {
+            var entry = newSubscribersForNextNotificationCycle[i].Entry;
+            entry.Subscription?.TryDispose();
+            entry.Subscription = null;
+            entry.Lease = 0;
+            newSubscribersForNextNotificationCycle.RemoveAt(i);
+            lightweightSubscriberPool.Push(entry);
+        }
 
         for (int i = subscribers.Count - 1; i >= 0; i--)
         {
