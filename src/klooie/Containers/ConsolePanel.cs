@@ -79,12 +79,15 @@ public class ConsolePanel : Container
         InsertByZIndex(control);
 
         // Reinsert on Z changes
-        control.ZIndexChanged.Subscribe(() =>
+        control.ZIndexChanged.Subscribe(control, static (control) =>
         {
+            var parent = control.Parent as ConsolePanel;
+            if (parent == null) return;
+            var sortedControls = parent.sortedControls;
             // Remove from current position (linear scan; Z changes are rare)
             var i = sortedControls.IndexOf(control);
             if (i >= 0) sortedControls.RemoveAt(i);
-            InsertByZIndex(control);
+            parent.InsertByZIndex(control);
         }, Controls.GetMembershipLifetime(control));
 
         NotifyDescendentsAdded(control);
