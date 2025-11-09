@@ -375,6 +375,7 @@ public partial class ConsoleControl : Rectangular
         // Doing it here looks a bit hacky, but that allocation is on a critical path.
         (_this.Parent as ConsolePanel)?.Controls.Remove(_this);
 
+        FocusStackDepthInternal = null;
         base.OnReturn();
     }
 
