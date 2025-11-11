@@ -22,6 +22,7 @@ public readonly struct LocF
     public LocF GetRounded() => new LocF(ConsoleMath.Round(Left), ConsoleMath.Round(Top));
     public Loc ToLoc() => new Loc(ConsoleMath.Round(Left), ConsoleMath.Round(Top));
     public LocF GetFloor() => new LocF((int)Left, (int)Top);
+    public LocF GetCeiling() => new LocF(MathF.Ceiling(Left), MathF.Ceiling(Top));
     public bool Equals(in Loc other) => Left == other.Left && Top == other.Top;
     public bool Equals(in LocF other) => Left == other.Left && Top == other.Top;
     public override bool Equals(object? obj) => (obj is LocF && Equals((LocF)obj)) || (obj is Loc && Equals((Loc)obj));
