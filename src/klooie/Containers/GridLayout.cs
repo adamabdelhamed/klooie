@@ -339,29 +339,44 @@ public class GridLayout : ProtectedConsolePanel
 
     private static List<T> ParseSpec<T>(string theSpec) where T : GridValueDefinition
     {
-        var vals = theSpec.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.RemoveEmptyEntries);
-        var ret = new List<T>();
-        foreach (var spec in vals)
-        {
-            if (string.IsNullOrWhiteSpace(spec)) throw new ArgumentException("null or whitespace definition");
-            var numberStr = spec.Substring(0, spec.Length - 1);
-            if (double.TryParse(numberStr, out double number) == false) throw new ArgumentException($"{numberStr} is not a number");
-            var type = spec.Substring(spec.Length - 1);
+        if (string.IsNullOrWhiteSpace(theSpec))
+            throw new ArgumentException("Spec cannot be null or whitespace", nameof(theSpec));
 
-            var unit = type == "p" ? GridValueType.Pixels :
-                       type == "%" ? GridValueType.Percentage :
-                       type == "r" ? GridValueType.RemainderValue :
-                       throw new ArgumentException($"unsupported grid value type: {type}");
-            number = unit == GridValueType.Percentage ? number / 100.0 : number;
-            if (typeof(T) == typeof(GridColumnDefinition))
+        var separators = new[] { ';', ',', '|' };
+        var vals = theSpec.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+        var ret = new List<T>();
+
+        foreach (var raw in vals)
+        {
+            var spec = raw.Trim();
+            if (spec.Length < 2)
+                throw new ArgumentException($"Invalid grid definition: '{spec}'");
+
+            var numberStr = spec[..^1];
+            if (!double.TryParse(numberStr, out double number))
+                throw new ArgumentException($"{numberStr} is not a valid number");
+
+            var typeChar = spec[^1];
+            var unit = typeChar switch
             {
-                ret.Add(new GridColumnDefinition() { Width = number, Type = unit } as T);
-            }
-            else
-            {
-                ret.Add(new GridRowDefinition() { Height = number, Type = unit } as T);
-            }
+                'p' => GridValueType.Pixels,
+                '%' => GridValueType.Percentage,
+                'r' => GridValueType.RemainderValue,
+                '*' => GridValueType.RemainderValue,
+                _ => throw new ArgumentException($"Unsupported grid value type: {typeChar}")
+            };
+
+            if (unit == GridValueType.Percentage)
+                number /= 100.0;
+
+            var def = typeof(T) == typeof(GridColumnDefinition)
+                ? new GridColumnDefinition { Width = number, Type = unit } as T
+                : new GridRowDefinition { Height = number, Type = unit } as T;
+
+            ret.Add(def!);
         }
+
         return ret;
     }
+
 }
