@@ -9,16 +9,20 @@ public sealed class Friction : Recyclable
     private float decay;
     private GameCollider collider;
     private int evalFrequency;
-    public void Bind(GameCollider collider, int evalFrequency = DefaultFrictionEvalFrequency, float decay = DefaultDecay)
+
+    private static LazyPool<Friction> pool = new LazyPool<Friction>(() => new Friction());
+
+    public static void Bind(GameCollider collider, int evalFrequency = DefaultFrictionEvalFrequency, float decay = DefaultDecay)
     {
-        this.collider = collider;
-        this.evalFrequency = evalFrequency;
-        this.decay = decay;
-        collider.OnDisposed(this, DisposeMe);
-        var state = DelayState.Create(this);
+        var me = pool.Value.Rent();
+        me.collider = collider;
+        me.evalFrequency = evalFrequency;
+        me.decay = decay;
+        collider.OnDisposed(me, DisposeMe);
+        var state = DelayState.Create(me);
         state.AddDependency(collider);
         state.AddDependency(collider.Velocity);
-        Game.Current.PausableScheduler.DelayIfValid(this.evalFrequency, state, Execute);
+        Game.Current.PausableScheduler.DelayIfValid(me.evalFrequency, state, static state => ((Friction)(state.MainDependency)).Execute(state));
     }
 
     private static void DisposeMe(object obj) => (obj as Friction).TryDispose();
