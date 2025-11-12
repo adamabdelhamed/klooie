@@ -58,7 +58,12 @@ public sealed partial class Camera : ConsolePanel
     /// <summary>
     /// Gets the current camera boundaries
     /// </summary>
-    public partial RectF CameraBounds { get; set; }
+    public RectF CameraBounds { get => field; set
+        {
+            field = value;
+            cameraLocation = new LocF(value.Left, value.Top);
+        }
+    }
 
     /// <summary>
     /// Optionally set this property to constrain the camera's movement to an arbitrary rectangle
