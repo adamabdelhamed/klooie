@@ -101,20 +101,28 @@ public static partial class Animator
             return;
         }
 
-        if (frameState.I == frameState.NumberOfFrames - 1)
-        {
-            frameState.Dispose();
-            return;
-        }
         frameState.I++;
+
+        var numberOfFrames = frameState.NumberOfFrames;
+        var isLastFrame = frameState.I >= numberOfFrames - 1;
 
         FrameDebugger.RegisterTask(nameof(ProcessAnimationFrame));
 
-        var percentageDone = frameState.I / frameState.NumberOfFrames;
-        percentageDone = frameState.AnimationState.EasingFunction != null ? frameState.AnimationState.EasingFunction(percentageDone) : percentageDone;
+        var percentageDone = frameState.I / numberOfFrames;
+        percentageDone = frameState.AnimationState.EasingFunction != null
+            ? frameState.AnimationState.EasingFunction(percentageDone)
+            : percentageDone;
+
+        if (isLastFrame) percentageDone = 1f; // ensure setter hits final value
 
         var newValue = frameState.InitialValue + (frameState.Delta * percentageDone);
         frameState.AnimationState.Set(newValue);
+
+        if (isLastFrame)
+        {
+            frameState.Dispose();
+        }
     }
+
 }
 
