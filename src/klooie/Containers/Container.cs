@@ -131,7 +131,9 @@ public abstract class Container : ConsoleControl
             {
                 var filter = control.Filters[i];
                 filter.Control = control;
+                filter.ParentBitmap = this.Bitmap;
                 filter.Filter(control.Bitmap);
+                filter.ParentBitmap = null;
             }
         }
 

@@ -22,6 +22,7 @@ public sealed class AnimationFilter : IConsoleControlFilter
     /// The control to filter
     /// </summary>
     public ConsoleControl Control { get; set; }
+    public ConsoleBitmap ParentBitmap { get; set; }
 
     public void Filter(ConsoleBitmap bitmap)
     {

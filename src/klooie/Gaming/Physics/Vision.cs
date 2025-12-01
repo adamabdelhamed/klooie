@@ -356,6 +356,7 @@ public class VisionFilter : IConsoleControlFilter
     private static readonly RGB NotSeen = new RGB(30, 30, 30);
     private static readonly RGB SeenNow = RGB.Green;
     public ConsoleControl Control { get; set; }
+    public ConsoleBitmap ParentBitmap { get; set; }
 
     public Vision Vision { get; set; } 
     public VisionFilter(Vision vision)

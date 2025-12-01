@@ -16,4 +16,6 @@ public interface IConsoleControlFilter
     /// </summary>
     /// <param name="bitmap">The bitmap you can modify</param>
     void Filter(ConsoleBitmap bitmap);
+
+    ConsoleBitmap ParentBitmap { get; set; }
 }

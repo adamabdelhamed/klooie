@@ -9,6 +9,9 @@ public class ConsoleControlFilter : IConsoleControlFilter
     /// The control that was just painted
     /// </summary>
     public ConsoleControl Control { get; set; }
+
+    public ConsoleBitmap ParentBitmap { get; set; }
+
     private Action<ConsoleBitmap> impl;
 
     /// <summary>

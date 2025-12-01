@@ -2,7 +2,7 @@
 public sealed class ForegroundColorFilter : IConsoleControlFilter
 {
     public RGB Color { get; set; }
-
+    public ConsoleBitmap ParentBitmap { get; set; }
     public ForegroundColorFilter(in RGB color)
     {
         this.Color = color;

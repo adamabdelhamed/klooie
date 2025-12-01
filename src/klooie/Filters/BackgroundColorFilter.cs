@@ -1,6 +1,7 @@
 ﻿namespace klooie;
 public sealed class BackgroundColorFilter : IConsoleControlFilter
 {
+    public ConsoleBitmap ParentBitmap { get; set; }
     public RGB Color { get; set; }
 
     public BackgroundColorFilter(in RGB color)
