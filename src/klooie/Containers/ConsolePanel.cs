@@ -211,7 +211,10 @@ public class ConsolePanel : Container
         {
             var filter = Filters[i];
             filter.Control = this;
+            filter.ParentBitmap = Parent?.Bitmap;
             filter.Filter(Bitmap);
+            filter.ParentBitmap = null;
+            filter.Control = null;
         }
     }
 }

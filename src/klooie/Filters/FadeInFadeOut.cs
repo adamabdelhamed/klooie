@@ -66,8 +66,6 @@ internal sealed class FadeOutFilter : Recyclable, IConsoleControlFilter
     /// </summary>
     public ConsoleControl Control { get; set; }
 
-    private int controlLease;
-
     private static LazyPool<FadeOutFilter> pool = new LazyPool<FadeOutFilter>(() => new FadeOutFilter());
 
     private FadeOutFilter() { }
@@ -75,19 +73,15 @@ internal sealed class FadeOutFilter : Recyclable, IConsoleControlFilter
     private void Construct(ConsoleControl control)
     {
         Control = control ?? throw new ArgumentNullException(nameof(control));
-        controlLease = Control.Lease;
-    }
-
-    protected override void OnReturn()
-    {
-        base.OnReturn();
-        if (Control.IsStillValid(controlLease))
+        this.OnDisposed(LeaseHelper.TrackOwnerRelationship(this, Control), static lease =>
         {
-            Control.IsVisible = false;
-            Control.Filters.Remove(this);
-        }
-        Control = null;
-        controlLease = 0;
+            if(lease.IsRecyclableValid)
+            {
+                lease.Recyclable.IsVisible = false;
+                lease.Recyclable.Filters.Remove(lease.Owner);
+            }
+            lease.Dispose();
+        });
     }
 
     public static FadeOutFilter Create(ConsoleControl control)
@@ -109,15 +103,12 @@ internal sealed class FadeOutFilter : Recyclable, IConsoleControlFilter
 
                 if (ParentBitmap != null)
                 {
-                    int px = Control.AbsoluteX + x;
-                    int py = Control.AbsoluteY + y;
-
-                    if (ParentBitmap.IsInBounds(px, py))
-                        effectiveBg = ParentBitmap.GetPixel(px, py).BackgroundColor;
+                    var loc = Control.Parent.Transform(Control);
+                    int px = loc.X;
+                    int py = loc.Y;
+                    effectiveBg = ParentBitmap.IsInBounds(px, py) ? ParentBitmap.GetPixel(px, py).BackgroundColor : effectiveBg;
                 }
-                bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, pixel.ForegroundColor.ToOther(effectiveBg, Percentage),
-                    (blendBackgroundFade && pixel.BackgroundColor == ConsoleString.DefaultBackgroundColor) ? ConsoleString.DefaultBackgroundColor : pixel.BackgroundColor.ToOther(effectiveBg, Percentage)));
-
+                bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, pixel.ForegroundColor.ToOther(effectiveBg, Percentage), (blendBackgroundFade && pixel.BackgroundColor == ConsoleString.DefaultBackgroundColor) ? ConsoleString.DefaultBackgroundColor : pixel.BackgroundColor.ToOther(effectiveBg, Percentage)));
             }
         }
     }
@@ -172,11 +163,10 @@ internal sealed class FadeInFilter : Recyclable, IConsoleControlFilter
 
                 if (ParentBitmap != null)
                 {
-                    int px = Control.AbsoluteX + x;
-                    int py = Control.AbsoluteY + y;
-
-                    if (ParentBitmap.IsInBounds(px, py))
-                        effectiveBg = ParentBitmap.GetPixel(px, py).BackgroundColor;
+                    var loc = Control.Parent.Transform(Control);
+                    int px = loc.X;
+                    int py = loc.Y;
+                    effectiveBg = ParentBitmap.IsInBounds(px, py) ? ParentBitmap.GetPixel(px, py).BackgroundColor : effectiveBg;
                 }
                 bitmap.SetPixel(x, y, new ConsoleCharacter(pixel.Value, effectiveBg.ToOther(pixel.ForegroundColor, Percentage),
                     (blendBackgroundFade && pixel.BackgroundColor == ConsoleString.DefaultBackgroundColor) ? ConsoleString.DefaultBackgroundColor : effectiveBg.ToOther(pixel.BackgroundColor, Percentage)));
