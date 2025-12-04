@@ -48,6 +48,20 @@ public readonly struct Angle
     /// </summary>
     public readonly float Value;
 
+    /// <summary>
+    /// Gets the cosine of this angle.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public float Cos() => MathF.Cos(Value * (MathF.PI / 180f));
+
+    /// <summary>
+    /// Gets the sine of this angle.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public float Sin() => MathF.Sin(Value * (MathF.PI / 180f));
+ 
+
+
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static float Normalize360(float x)
