@@ -22,6 +22,7 @@ public static class FadeEx
         easingFunction = easingFunction ?? EasingFunctions.Linear;
         var filter = FadeInFilter.Create(c);
         c.Filters.Add(filter);
+        c.IsVisible = true;
         Animator.Animate(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, pauseManager);
         if (percentage == 1)
         {
