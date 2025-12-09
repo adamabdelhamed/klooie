@@ -37,6 +37,7 @@ public class InstrumentPicker
         yield return new InstrumentExpression() { Name = "Snare", PatchFunc = DrumKit.Snare };
         yield return new InstrumentExpression() { Name = "Clap", PatchFunc = DrumKit.Clap };
         yield return new InstrumentExpression() { Name = "Pad", PatchFunc = SoftPad.Create};
+        yield return new InstrumentExpression() { Name = "Toy Box", PatchFunc = ToyBox.Create };
     }
  
 }
