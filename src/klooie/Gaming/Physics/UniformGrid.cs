@@ -76,7 +76,7 @@ public sealed class UniformGrid
         // If that ever changes then we will need to unsubscribe in
         // a different way, possibly by using an observable collection.
         obj.UniformGrid = this; // Set the grid reference on the collider
-        obj.BoundsChanged.Subscribe(obj, static objParam => objParam.UniformGrid.Update(objParam), obj);
+        obj.BoundsChanged.SubscribeWithPriority(obj, static objParam => objParam.UniformGrid.Update(objParam), obj);
 
         LoadCells(obj.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)

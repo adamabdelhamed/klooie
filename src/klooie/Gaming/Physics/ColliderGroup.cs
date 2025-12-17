@@ -364,7 +364,7 @@ public sealed class ColliderGroup
 
     private bool WouldCauseTouching(GameCollider item, RectF proposed, out GameCollider preventer)
     {
-        var swept = item.Bounds.SweptAABB(proposed).Grow(.01f);
+        var swept = item.Bounds.SweptAABB(proposed).Grow(2f);
         queryBuffer.WriteableBuffer.Clear();
         spatialIndex.Query(swept, queryBuffer);
         var list = queryBuffer.WriteableBuffer;
