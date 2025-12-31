@@ -139,7 +139,7 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
     /// <summary>
     /// The recyclable instance being tracked.
     /// </summary>
-    public TRecyclable? Recyclable { get => IsRecyclableValid ? field : null; private set; }
+    public TRecyclable? Recyclable { get => field != null && field.IsStillValid(RecyclableLease) ? field : null; private set; }
 
     /// <summary>
     /// The lease value captured when tracking started.
