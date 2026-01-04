@@ -9,6 +9,9 @@ public class LogTail : ProtectedConsolePanel
 {
     private StackPanel logRendererStack;
     private static LazyPool<LogTail> pool = new LazyPool<LogTail>(() => new LogTail());
+
+    public float MaxHeightFractionOfParent { get; set; } = 0.5f;
+
     private LogTail()
     {
         this.CompositionMode = CompositionMode.BlendBackground;
@@ -34,7 +37,7 @@ public class LogTail : ProtectedConsolePanel
         lineRenderer.CompositionMode = CompositionMode.BlendBackground;
         logRendererStack.Controls.Add(lineRenderer);
 
-        while (Height > Parent.Height * .5f)
+        while (Height > Parent.Height * MaxHeightFractionOfParent)
         {
             logRendererStack.Controls.RemoveAt(0);
         }
