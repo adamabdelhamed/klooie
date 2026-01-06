@@ -9,6 +9,10 @@ public readonly struct LocF
     public readonly float Left;
     public readonly float Top;
 
+    // I made a terrible mistake naming these properties Left and Top instead of X and Y. Now LLMs always assume X and Y are present so I might as well add them as aliases.
+    public float X => Left;
+    public float Y => Top;
+
     public LocF(float x, float y)
     {
       //  GeometryGuard.ValidateFloats(x, y);
