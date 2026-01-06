@@ -30,6 +30,14 @@ public sealed class Services : Recyclable
         return instance;
     }
 
+    public bool Unregister<T>() where T : class => mutable.Remove(typeof(T));
+
+    public bool Unregister(Type t)
+    {
+        if (t == null) throw new ArgumentNullException(nameof(t));
+        return mutable.Remove(t);
+    }
+
     public T GetRequiredService<T>() where T : class
     {
         if (mutable!.TryGetValue(typeof(T), out var obj)) return (T)obj;
