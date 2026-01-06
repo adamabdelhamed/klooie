@@ -31,15 +31,19 @@ public class LogTail : ProtectedConsolePanel
     public void WriteLine(string s) => WriteLine(s.ToWhite());
     public void WriteLine(ConsoleString s)
     {
-        var lineRenderer = ConsoleStringRendererPool.Instance.Rent();
-        lineRenderer.CanFocus = false;
-        lineRenderer.Content = s;
-        lineRenderer.CompositionMode = CompositionMode.BlendBackground;
-        logRendererStack.Controls.Add(lineRenderer);
-
-        while (Height > Parent.Height * MaxHeightFractionOfParent)
+        var clean = s.Replace("\r\n", "\n").Replace("\r", "\n").Split("\n");
+        foreach (var line in clean)
         {
-            logRendererStack.Controls.RemoveAt(0);
+            var lineRenderer = ConsoleStringRendererPool.Instance.Rent();
+            lineRenderer.CanFocus = false;
+            lineRenderer.Content = line;
+            lineRenderer.CompositionMode = CompositionMode.BlendBackground;
+            logRendererStack.Controls.Add(lineRenderer);
+
+            while (Height > Parent.Height * MaxHeightFractionOfParent)
+            {
+                logRendererStack.Controls.RemoveAt(0);
+            }
         }
     }
 
