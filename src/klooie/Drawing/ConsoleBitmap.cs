@@ -179,10 +179,20 @@ public sealed class ConsoleBitmap : Recyclable
     /// </summary>
     public ref ConsoleCharacter GetPixel(int x, int y) => ref Pixels[IndexOf(x, y)];
 
+    public ref ConsoleCharacter GetPixel(float x, float y)
+    {
+        return ref GetPixel(ConsoleMath.Round(x), ConsoleMath.Round(y));
+    }
+
     /// <summary>
     /// Sets the value of the desired pixel
     /// </summary>
     public void SetPixel(int x, int y, in ConsoleCharacter c) => Pixels[IndexOf(x, y)] = c;
+
+    public void SetPixel(float x, float y, in ConsoleCharacter c)
+    {
+        SetPixel(ConsoleMath.Round(x), ConsoleMath.Round(y), c);
+    }
 
     /// <summary>
     /// tests to see if the given coordinates are within the boundaries
