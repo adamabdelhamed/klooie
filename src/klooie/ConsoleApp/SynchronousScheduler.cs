@@ -2,7 +2,7 @@
 using klooie.Gaming;
 namespace klooie;
 
-public sealed class SyncronousScheduler
+public sealed class SynchronousScheduler
 {
     public enum ExecutionMode
     {
@@ -16,7 +16,7 @@ public sealed class SyncronousScheduler
     private List<DelayState>? delayStates;
     public bool IsPaused => pausedTime.HasValue;
 
-    public ExecutionMode Mode { get; set; } = SyncronousScheduler.ExecutionMode.AfterPaint;
+    public ExecutionMode Mode { get; set; } = SynchronousScheduler.ExecutionMode.AfterPaint;
 
     // NEW: opt-in collider time dilation per scheduler
     public bool UseColliderTimeDilation { get; set; } = false;
@@ -29,7 +29,7 @@ public sealed class SyncronousScheduler
         ? (Game.Current?.MainColliderGroup?.SpeedRatio ?? 1.0)
         : 1.0;
 
-    public SyncronousScheduler(ConsoleApp parent)
+    public SynchronousScheduler(ConsoleApp parent)
     {
         this.parent = parent;
         parent.OnDisposed(Cleanup);
@@ -126,7 +126,7 @@ public sealed class SyncronousScheduler
 
     private static void DisposeStates(object innerLoopObs)
     {
-        var _this = (SyncronousScheduler)innerLoopObs;
+        var _this = (SynchronousScheduler)innerLoopObs;
         if (_this.delayStates == null) return;
         foreach (var ds in _this.delayStates)
         {
@@ -160,7 +160,7 @@ public sealed class SyncronousScheduler
         }
         else
         {
-            throw new ArgumentException("Invalid ExecutionMode specified for SyncronousScheduler", nameof(Mode));
+            throw new ArgumentException("Invalid ExecutionMode specified for SynchronousScheduler", nameof(Mode));
         }
     }
 

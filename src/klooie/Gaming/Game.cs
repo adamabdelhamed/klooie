@@ -18,7 +18,7 @@ public class Game : ConsoleApp
 
     public PauseManager PauseManager => pauseManager;
 
-    public SyncronousScheduler PausableScheduler { get; private set; }
+    public SynchronousScheduler PausableScheduler { get; private set; }
     private ColliderGroup mainColliderGroup;
  
 
@@ -129,7 +129,7 @@ public class Game : ConsoleApp
     {
         this.eventBroadcaster = new EventBroadcaster();
         this.pauseManager = new PauseManager();
-        this.PausableScheduler = new SyncronousScheduler(this);
+        this.PausableScheduler = new SynchronousScheduler(this);
         RuleVariables = new SpecialReverseDictionary();
     }
 

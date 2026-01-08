@@ -19,7 +19,7 @@ public class ConsoleApp : EventLoop
 
     public Event AfterPaint => layoutRoot.AfterPaint;
 
-    public SyncronousScheduler Scheduler { get; private init; }
+    public SynchronousScheduler Scheduler { get; private init; }
 
     /// <summary>
     /// True by default. When true, discards key presses that come in too fast
@@ -116,7 +116,7 @@ public class ConsoleApp : EventLoop
 
     public ConsoleApp()
     {
-        Scheduler = new SyncronousScheduler(this);
+        Scheduler = new SynchronousScheduler(this);
         Invoke(Startup);
     }
 

@@ -5,7 +5,7 @@ public sealed class PauseManager : IPausable
     public Event<ILifetime> OnPaused { get; private set; } = Event<ILifetime>.Create();
     public Recyclable? PauseLifetime => pauseLifetime;
 
-    public SyncronousScheduler Scheduler => Game.Current.PausableScheduler;
+    public SynchronousScheduler Scheduler => Game.Current.PausableScheduler;
 
 
     public bool PauseSoundWithPhysics { get; set; } = true;

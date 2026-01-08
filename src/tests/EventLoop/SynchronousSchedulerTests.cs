@@ -14,7 +14,7 @@ public class SynchronousSchedulerTests
         TestContextHelper.GlobalSetup();
         var loop = new ConsoleApp();
         var expectedDuration = 5f * 1000 / LayoutRootPanel.MaxPaintRate;
-        var pool = SyncronousScheduler.StatelessWorkItem.pool.Value;
+        var pool = SynchronousScheduler.StatelessWorkItem.pool.Value;
         var created = pool.Created;
         var rented = pool.Rented;
         var returned = pool.Returned;
@@ -44,7 +44,7 @@ public class SynchronousSchedulerTests
         var obj = new object();
         var expectedDuration = 5f * 1000 / LayoutRootPanel.MaxPaintRate;
 
-        var pool = SyncronousScheduler.StatefulWorkItem<object>.pool.Value;
+        var pool = SynchronousScheduler.StatefulWorkItem<object>.pool.Value;
         var created = pool.Created;
         var rented = pool.Rented;
         var returned = pool.Returned;
@@ -79,12 +79,12 @@ public class SynchronousSchedulerTests
         var state = DelayState.Create(loop);
         var expectedDuration = 5f * 1000 / LayoutRootPanel.MaxPaintRate;
 
-        var workItemPool = SyncronousScheduler.StatefulWorkItem<SyncronousScheduler.DelayIfValidInstance<DelayState>>.pool.Value;
+        var workItemPool = SynchronousScheduler.StatefulWorkItem<SynchronousScheduler.DelayIfValidInstance<DelayState>>.pool.Value;
         var workItemsCreatedBefore = workItemPool.Created;
         var workItemsRentedBefore = workItemPool.Rented;
         var workItemsReturnedBefore = workItemPool.Returned;
 
-        var delayIfValidInstancePool = SyncronousScheduler.DelayIfValidInstance<DelayState>.pool.Value;
+        var delayIfValidInstancePool = SynchronousScheduler.DelayIfValidInstance<DelayState>.pool.Value;
         var delayIfValidInstancesCreatedBefore = delayIfValidInstancePool.Created;
         var delayIfValidInstancesRentedBefore = delayIfValidInstancePool.Rented;
         var delayIfValidInstancesReturnedBefore = delayIfValidInstancePool.Returned;
@@ -124,12 +124,12 @@ public class SynchronousSchedulerTests
         var loop = new ConsoleApp();
         var state = DelayState.Create(loop);
 
-        var workItemPool = SyncronousScheduler.StatefulWorkItem<SyncronousScheduler.DelayIfValidInstance<DelayState>>.pool.Value;
+        var workItemPool = SynchronousScheduler.StatefulWorkItem<SynchronousScheduler.DelayIfValidInstance<DelayState>>.pool.Value;
         var workItemsCreatedBefore = workItemPool.Created;
         var workItemsRentedBefore = workItemPool.Rented;
         var workItemsReturnedBefore = workItemPool.Returned;
 
-        var delayIfValidInstancePool = SyncronousScheduler.DelayIfValidInstance<DelayState>.pool.Value;
+        var delayIfValidInstancePool = SynchronousScheduler.DelayIfValidInstance<DelayState>.pool.Value;
         var delayIfValidInstancesCreatedBefore = delayIfValidInstancePool.Created;
         var delayIfValidInstancesRentedBefore = delayIfValidInstancePool.Rented;
         var delayIfValidInstancesReturnedBefore = delayIfValidInstancePool.Returned;
