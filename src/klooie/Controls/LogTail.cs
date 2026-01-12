@@ -22,7 +22,8 @@ public class LogTail : ProtectedConsolePanel
     {
         var ret = pool.Value.Rent();
         ret.logRendererStack = StackPanelPool.Instance.Rent();
-        ret.logRendererStack.AutoSize = StackPanel.AutoSizeMode.Both;
+        ret.logRendererStack.AutoSize = StackPanel.AutoSizeMode.None;
+        ret.logRendererStack.CompositionMode = CompositionMode.BlendBackground;
         ret.ProtectedPanel.Add(ret.logRendererStack).Fill();
         ret.logRendererStack.BoundsChanged.Sync(ret, static me => me.SyncBounds(), ret);
         return ret;
