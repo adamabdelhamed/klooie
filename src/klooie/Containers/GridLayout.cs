@@ -118,7 +118,7 @@ public class GridLayout : ProtectedConsolePanel
         public int RowSpan { get; set; }
     }
 
-    private GridLayoutOptions options;
+    public GridLayoutOptions Options { get; private set; }
     private List<GridLayoutAssignment> layoutAssignments = new List<GridLayoutAssignment>();
     private int[] columnWidths;
     private int[] rowHeights;
@@ -126,12 +126,12 @@ public class GridLayout : ProtectedConsolePanel
     /// <summary>
     /// The number of columns in this grid
     /// </summary>
-    public int NumColumns => options.Columns.Count;
+    public int NumColumns => Options.Columns.Count;
 
     /// <summary>
     /// The number of rows in this grid
     /// </summary>
-    public int NumRows => options.Rows.Count;
+    public int NumRows => Options.Rows.Count;
 
     /// <summary>
     /// Creates a layout using the given rowSpec and columnSpec. A spec
@@ -144,7 +144,7 @@ public class GridLayout : ProtectedConsolePanel
     /// <param name="columnSpec">a column spec</param>
     public GridLayout(string rowSpec, string columnSpec)
     {
-        this.options = new GridLayoutOptions()
+        this.Options = new GridLayoutOptions()
         {
             Rows = ParseSpec<GridRowDefinition>(rowSpec),
             Columns = ParseSpec<GridColumnDefinition>(columnSpec),
@@ -217,10 +217,10 @@ public class GridLayout : ProtectedConsolePanel
         }
     }
 
-    private void RefreshLayout()
+    public void RefreshLayout()
     {
-        this.columnWidths = ConvertDefinitionsIntoAbsolutePixelSizes(options.Columns.Select(c => c as GridValueDefinition).ToList(), this.Width);
-        this.rowHeights = ConvertDefinitionsIntoAbsolutePixelSizes(options.Rows.Select(c => c as GridValueDefinition).ToList(), this.Height);
+        this.columnWidths = ConvertDefinitionsIntoAbsolutePixelSizes(Options.Columns.Select(c => c as GridValueDefinition).ToList(), this.Width);
+        this.rowHeights = ConvertDefinitionsIntoAbsolutePixelSizes(Options.Rows.Select(c => c as GridValueDefinition).ToList(), this.Height);
 
         foreach (var assignment in layoutAssignments)
         {
