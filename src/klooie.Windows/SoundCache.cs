@@ -117,7 +117,7 @@ internal sealed class CachedSound
     }
 }
 
-static class PcmCache
+public static class PcmCache
 {
     public static string GetOrBuild(string assetId, IBinarySoundProvider provider)
     {
@@ -136,75 +136,66 @@ static class PcmCache
     }
 }
 
-public readonly struct MusicVizFrame
-{
-    public readonly float Rms;      // 0..1-ish (normalized)
-    public readonly float Peak;     // 0..1-ish
-    public readonly float BeatHint; // 0..1-ish (optional, cheap)
-    public MusicVizFrame(float rms, float peak, float beatHint) { Rms = rms; Peak = peak; BeatHint = beatHint; }
 
-    public static float GateAndCurve(float x, float noiseFloor, float power)
+
+
+
+public readonly struct AudioReadChunk
+{
+    public readonly string TrackId;
+    public readonly float[] Buffer;
+    public readonly int Offset;
+    public readonly int Count;              // float samples (interleaved)
+    public readonly int SampleRate;
+    public readonly int Channels;
+    public readonly long FramePosition;     // in sample-frames (not float samples)
+    public readonly long FramesInChunk;     // Count / Channels
+
+    public AudioReadChunk(string trackId, float[] buffer, int offset, int count, int sampleRate, int channels, long framePosition)
     {
-        float g = MathF.Max(0f, x - noiseFloor);
-        float n = g / MathF.Max(0.001f, 1f - noiseFloor);
-        return MathF.Pow(Math.Clamp(n, 0f, 1f), power);
+        TrackId = trackId;
+        Buffer = buffer;
+        Offset = offset;
+        Count = count;
+        SampleRate = sampleRate;
+        Channels = channels;
+        FramePosition = framePosition;
+        FramesInChunk = channels <= 0 ? 0 : (count / channels);
     }
 }
 
 public sealed class StreamingMusicProvider : ISampleProvider, IDisposable
 {
-    public static Event<MusicVizFrame>? MusicVizEvent { get; private set; }
+    private static Event<AudioReadChunk>? _audioRead;
+    public static Event<AudioReadChunk>? AudioRead => _audioRead;
 
     // Call from sound event loop thread
-    public static void InitializeMusicVizEvent(ILifetime lt)
+    public static void InitializeAudioReadEvent(ILifetime lt)
     {
         if (Thread.CurrentThread.ManagedThreadId != SoundProvider.Current.EventLoop.ThreadId) throw new InvalidOperationException("Must be called from the sound event loop thread.");
-        if (MusicVizEvent != null) throw new NotSupportedException("Already initialized");
+        if (AudioRead != null) throw new NotSupportedException("Already initialized");
 
-        MusicVizEvent = Event<MusicVizFrame>.Create();
+        _audioRead = Event<AudioReadChunk>.Create();
         lt.OnDisposed(() =>
         {
-            MusicVizEvent.Dispose();
-            MusicVizEvent = null;
+            _audioRead.Dispose();
+            _audioRead = null;
         });
     }
 
     private WaveStream pcm;
     private ISampleProvider pipe;
     private readonly bool loop;
+    private string trackId;
+    private int framePosition;
 
-    // viz state
-    private float envFast;          // fast RMS follower
-    private float envSlow;          // slow RMS follower (baseline)
-    private float peakEnv;          // peak follower
-    private float beatHold;         // impulse + decay
-    private int samplesSinceLastPublish;
 
-    // tune these
-    private const int PublishHz = 60;
 
-    // RMS normalization (quick calibration knobs)
-    private const float RmsGain = 4.0f;
-    private const float PeakGain = 2.2f;
-
-    // envelope coefficients (lerp factors per AccumulateViz call)
-    private const float FastAttack = 0.35f;
-    private const float FastRelease = 0.08f;
-
-    private const float SlowAttack = 0.02f;
-    private const float SlowRelease = 0.01f;
-
-    private const float PeakAttack = 0.20f;
-    private const float PeakRelease = 0.02f;
-
-    // beat detection tuning
-    private const float BeatDiffThreshold = 0.03f; // envFast - envSlow
-    private const float BeatPeakThreshold = 0.12f; // transient presence
-    private const float BeatDecay = 0.90f;         // higher = longer hold
 
     public StreamingMusicProvider(IBinarySoundProvider p, string id, bool loop)
     {
         var wavPath = PcmCache.GetOrBuild(id, p);
+        trackId = id;
         pcm = new WaveFileReader(wavPath);
 
         ISampleProvider s = pcm.ToSampleProvider();
@@ -231,86 +222,37 @@ public sealed class StreamingMusicProvider : ISampleProvider, IDisposable
 
     public int Read(float[] buffer, int offset, int count)
     {
-        int total = 0;
-        while (total < count)
+        int read = pipe.Read(buffer, offset, count);
+
+        if (read == 0 && loop)
         {
-            int n = pipe.Read(buffer, offset + total, count - total);
-            if (n > 0)
+            pcm.Position = 0;
+            pipe = pcm.ToSampleProvider();
+
+            if (pcm.WaveFormat.Channels != SoundProvider.ChannelCount)
             {
-                AccumulateViz(buffer, offset + total, n);
-                total += n;
-                continue;
+                pipe = pcm.WaveFormat.Channels == 2 && SoundProvider.ChannelCount == 1
+                    ? new StereoToMonoSampleProvider(pipe) { LeftVolume = .5f, RightVolume = .5f }
+                    : new MonoToStereoSampleProvider(pipe);
             }
 
-            if (loop)
+            if (pcm.WaveFormat.SampleRate != SoundProvider.SampleRate)
             {
-                pcm.Position = 0;
-                continue;
+                pipe = new WdlResamplingSampleProvider(pipe, SoundProvider.SampleRate);
             }
 
-            return 0;
+            framePosition = 0;
+            read = pipe.Read(buffer, offset, count);
         }
 
-        return total;
+        if (read > 0 && _audioRead != null)
+        {
+            var chunk = new AudioReadChunk(trackId, buffer, offset, read, WaveFormat.SampleRate, WaveFormat.Channels, framePosition);
+            SoundProvider.Current.EventLoop.Invoke(chunk, static v => _audioRead?.Fire(v));
+        }
+
+        return read;
     }
-
-    private void AccumulateViz(float[] buffer, int offset, int n)
-    {
-        // RMS + peak over the block
-        double sumSq = 0;
-        float peak = 0f;
-
-        int end = offset + n;
-        for (int i = offset; i < end; i++)
-        {
-            float x = buffer[i];
-            float ax = x < 0 ? -x : x;
-            if (ax > peak) peak = ax;
-            sumSq += (double)x * x;
-        }
-
-        float rms = (float)Math.Sqrt(sumSq / n);
-
-        // normalize-ish (simple gain knobs)
-        rms = Math.Clamp(rms * RmsGain, 0f, 1f);
-        peak = Math.Clamp(peak * PeakGain, 0f, 1f);
-
-        // envelope followers
-        envFast = Lerp(envFast, rms, rms > envFast ? FastAttack : FastRelease);
-        envSlow = Lerp(envSlow, rms, rms > envSlow ? SlowAttack : SlowRelease);
-        peakEnv = Lerp(peakEnv, peak, peak > peakEnv ? PeakAttack : PeakRelease);
-
-        // cheap beat hint: "spectral-ish" without FFT
-        // when the fast envelope rises above the slow baseline (relative change) and there are transients, trigger an impulse
-        float diff = envFast - envSlow;
-        if (diff > BeatDiffThreshold && peak > BeatPeakThreshold)
-        {
-            beatHold = 1f;
-        }
-        else
-        {
-            beatHold *= BeatDecay;
-        }
-
-        float beat = beatHold;
-
-        // publish at ~60Hz on the sound event loop thread (required by InitializeMusicVizEvent contract)
-        samplesSinceLastPublish += n;
-        int samplesPerPublish = SoundProvider.SampleRate / PublishHz;
-        if (samplesSinceLastPublish >= samplesPerPublish)
-        {
-            samplesSinceLastPublish -= samplesPerPublish;
-
-            var viz = new MusicVizFrame(envFast, peakEnv, beat);
-
-            if (MusicVizEvent != null)
-            {
-                SoundProvider.Current.EventLoop.Invoke(viz, static v => MusicVizEvent?.Fire(v));
-            }
-        }
-    }
-
-    private static float Lerp(float a, float b, float t) => a + (b - a) * Math.Clamp(t, 0f, 1f);
 
     public void Dispose()
     {
