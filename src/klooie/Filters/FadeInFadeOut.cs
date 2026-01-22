@@ -43,13 +43,13 @@ public static class FadeEx
         }
         return filter;
     }
-    public static IConsoleControlFilter FadeOutSync(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, PauseManager pauseManager = null)
+    public static IConsoleControlFilter FadeOutSync(this ConsoleControl c, float duration = 500, EasingFunction easingFunction = null, float percentage = 1, PauseManager pauseManager = null, bool autoReverse = false, ILifetime loopLifetime = null)
     {
         easingFunction = easingFunction ?? EasingFunctions.Linear;
         var filter = FadeOutFilter.Create(c);
         c.Filters.Add(filter);
-        Animator.Animate(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, pauseManager);
-        if (percentage == 1)
+        Animator.Animate(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, pauseManager, autoReverse: autoReverse, loop: loopLifetime);
+        if (percentage == 1 && autoReverse == false && loopLifetime == null)
         {
             (pauseManager?.Scheduler ?? ConsoleApp.Current.Scheduler).DelayThenDisposeAllDependencies(duration, DelayState.Create(filter));
         }
