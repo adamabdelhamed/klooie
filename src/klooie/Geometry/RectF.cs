@@ -249,6 +249,8 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
     public bool Touches(float x2, float y2, float w2, float h2) => Touches(Left, Top, Width, Height, x2, y2, w2, h2);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains(RectF other) => Contains(Left, Top, Width, Height, other.Left, other.Top, other.Width, other.Height);
+
+    public bool Contains(LocF other) => Contains(other.ToRect(.0001f, .0001f));
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains(float x2, float y2, float w2, float h2) => Contains(Left, Top, Width, Height, x2, y2, w2, h2);
 
