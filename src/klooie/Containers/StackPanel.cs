@@ -54,6 +54,15 @@ public partial class StackPanel : ConsolePanel
     /// </summary>
     public StackPanel()
     {
+
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
+        Orientation = Orientation.Vertical;
+        AutoSize = AutoSizeMode.None;
+        Margin = 0;
         BoundsChanged.Subscribe(RedoLayout, this);
         MarginChanged.Subscribe(RedoLayout, this);
         Controls.Added.Subscribe(Controls_Added, this);
@@ -64,7 +73,6 @@ public partial class StackPanel : ConsolePanel
     
     private void RedoLayout()
     {
-        // if (this.IsExpired || this.IsExpiring) return; // Should not be needed
         if (Orientation == Orientation.Vertical)
         {
             int h = Layout.StackVertically(Margin, Controls);
