@@ -25,6 +25,17 @@ public class Event<T> : Recyclable
     /// </summary>
     public void Fire(T arg) => subscribers?.Notify(arg);
 
+    public void Sync(Action<T> handler, ILifetime lifetimeManager, T val)
+    {
+        Subscribe(handler, lifetimeManager);
+        handler(val);
+
+    }
+    public void Sync<TScope>(TScope scope, Action<TScope, T> handler, ILifetime lifetimeManager, T val)
+    {
+        Subscribe(scope, handler, lifetimeManager);
+        handler(scope, val);
+    }
 
 
     public void Subscribe(Action<T> handler, ILifetime lifetimeManager)
