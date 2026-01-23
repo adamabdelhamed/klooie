@@ -37,6 +37,11 @@ public abstract class DialogWithChoicesOptions : DialogOptions
     public ILifetime? MaxLifetime { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether navigation using the 'A' and 'D' keys is enabled.
+    /// </summary>
+    public bool EnableAAndDNavigation { get; set; } = false;
+
+    /// <summary>
     /// Derived options classes should use this to create their content. The content
     /// will be sized automatically to fit into the dialog.
     /// </summary>
@@ -106,6 +111,11 @@ public static class ChoiceDialog
                 {
                     ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.LeftArrow, () => ConsoleApp.Current.MoveFocus(forward: false), buttonStack);
                     ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, () => ConsoleApp.Current.MoveFocus(forward: true), buttonStack);
+                    if (options.EnableAAndDNavigation)
+                    {
+                        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.A, () => ConsoleApp.Current.MoveFocus(forward: false), buttonStack);
+                        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.D, () => ConsoleApp.Current.MoveFocus(forward: true), buttonStack);
+                    }
                 });
             }
 
