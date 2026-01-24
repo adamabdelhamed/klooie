@@ -251,6 +251,8 @@ public partial class ConsoleControl : Rectangular
         }
     }
 
+    public RectF AbsoluteBounds => new RectF(AbsoluteX, AbsoluteY, Width, Height);
+
     /// <summary>
     /// Gets all parents of this control
     /// </summary>
