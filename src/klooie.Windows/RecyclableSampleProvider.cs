@@ -111,6 +111,11 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
                 idx += 2;
                 i++;
             }
+
+            // Streaming can end on a non zero read. If that happens then we need to
+            // detect it. Otherwise playback will continue indefinitely with silence.
+            if (read < count) ScheduleDisposal(); 
+
             return read;
         }
 
@@ -160,9 +165,9 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
         return totalSamplesWritten;
     }
 
-    private void ScheduleDisposal() =>
+    private void ScheduleDisposal() => 
         SoundProvider.Current.EventLoop.Invoke(this, static me => me.Dispose());
-
+      
     protected override void OnReturn()
     {
         base.OnReturn();
