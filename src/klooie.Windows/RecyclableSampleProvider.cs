@@ -171,6 +171,7 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
     protected override void OnReturn()
     {
         base.OnReturn();
+        try { (stream as IDisposable)?.Dispose(); } catch { }
         sound = null;
         stream = null;
         eventLoop = null;
