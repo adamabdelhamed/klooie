@@ -343,8 +343,9 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Draws the given string onto the bitmap
     /// </summary>
-    public void DrawString(ConsoleString str, int x, int y, bool vert = false)
+    public void DrawString(ConsoleString? str, int x, int y, bool vert = false)
     {
+        if (str == null) return;
         var xStart = x;
         var span = str.AsSpan();
         for (var i = 0; i < span.Length; i++)
