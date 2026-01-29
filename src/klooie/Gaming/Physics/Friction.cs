@@ -31,6 +31,6 @@ public sealed class Friction : Recyclable
     {
         this.collider.Velocity.Speed *= this.decay;
         if (this.collider.Velocity.Speed < .1f) this.collider.Velocity.Speed = 0;
-        Game.Current.PausableScheduler.DelayIfValid(this.evalFrequency, DelayState.Create(this), Execute);
+        Game.Current.PausableScheduler.DelayIfValid(this.evalFrequency, state, static s => ((Friction)s.MainDependency).Execute(s));
     }
 }
