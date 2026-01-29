@@ -13,14 +13,17 @@ public class AudioPlaybackEngine : ISoundProvider
     private readonly MixingSampleProvider sfxMixer;
     public readonly ScheduledSynthProvider scheduledSynthProvider;
     private readonly MixingSampleProvider mixer; // The master mixer stays
-    protected EventLoop eventLoop;
+    private EventLoop eventLoop;
     private SoundCache soundCache;
     public VolumeKnob MasterVolume { get; set; }
     public EventLoop EventLoop => eventLoop;
     public ScheduledSignalSourceMixer ScheduledSignalMixer => scheduledSynthProvider;
     public long SamplesRendered => scheduledSynthProvider.SamplesRendered;
-    private bool loadedProperly = false;
+    public bool FailedToInitializeOrRun { get; private set; }
 
+    private ReadWatchdogSampleProvider? readWatchdog;
+    private int audioFailed; // 0/1
+    private const int StallMs = 500;
     public AudioPlaybackEngine(IBinarySoundProvider provider = null)
     {
         try
@@ -33,23 +36,61 @@ public class AudioPlaybackEngine : ISoundProvider
             sfxMixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
             mixer = new MixingSampleProvider([sfxMixer, scheduledSynthProvider]) { ReadFully = true };
+            readWatchdog = new ReadWatchdogSampleProvider(mixer);
             outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 60);
-            outputDevice.Init(mixer);
+            outputDevice.PlaybackStopped += (_, __) => eventLoop.Invoke(()=> FailAudio());
+            outputDevice.Init(readWatchdog);
             outputDevice.Play();
+            StartAudioStallMonitor(); // add this call
             soundCache = new SoundCache(provider);
             sw.Stop();
             LogSoundLoaded(sw.ElapsedMilliseconds);  
-            loadedProperly= true;
         }
         catch (Exception ex)
         {
-            OnSoundFailedToLoad(ex);
+            FailAudio(ex);
         }
+    }
+
+    protected void RebindEventLoop(EventLoop loop)
+    {
+        eventLoop = loop;
+        StartAudioStallMonitor();
+    }
+
+    private void StartAudioStallMonitor()
+    {
+        eventLoop.Invoke(async () =>
+        {
+            while (true)
+            {
+                await Task.Delay(250);
+                if (FailedToInitializeOrRun || Volatile.Read(ref audioFailed) == 1) break;
+                if (readWatchdog == null) continue;
+                if (outputDevice == null) continue;
+                if (outputDevice.PlaybackState != PlaybackState.Playing) continue;
+
+                var now = Stopwatch.GetTimestamp();
+                var lastRead = readWatchdog.LastReadTimestamp;
+                var elapsedMs = (now - lastRead) * 1000 / Stopwatch.Frequency;
+                if (elapsedMs > StallMs) FailAudio();
+            }
+        });
+    }
+
+    protected void FailAudio(Exception? ex = null)
+    {
+        if (Interlocked.Exchange(ref audioFailed, 1) == 1) return;
+        if (FailedToInitializeOrRun) return;
+        FailedToInitializeOrRun = true;
+        try { outputDevice?.Stop(); } catch { }
+        try { outputDevice?.Dispose(); } catch { }
+        OnSoundFailedToLoad(ex ?? new Exception("Audio engine failed or stalled"));
     }
 
     public ILifetime Play(string? soundId, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null, bool isMusic = false)
     {
-        if (loadedProperly == false) return Lifetime.Completed;
+        if (FailedToInitializeOrRun) return Lifetime.Completed;
         var input = soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, maxDuration, false, isMusic);
         if(input == null) return Lifetime.Completed;
         AddMixerInput(input);
@@ -59,14 +100,14 @@ public class AudioPlaybackEngine : ISoundProvider
 
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null, bool isMusic = false)
     {
-        if (loadedProperly == false) return;
+        if (FailedToInitializeOrRun) return;
         AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Lifetime.Forever, true, isMusic));
     }
 
 
     public IReleasableNote? PlaySustainedNote(NoteExpression note)
     {
-        if (loadedProperly == false) return null;
+        if (FailedToInitializeOrRun) return null;
         var ret = SynthVoiceProvider.CreateSustainedNote(note);
         if (ret.Voices != null)
         {
@@ -81,7 +122,7 @@ public class AudioPlaybackEngine : ISoundProvider
 
     public async Task Play(Song song, ILifetime? lifetime = null)
     {
-        if (loadedProperly == false)
+        if (FailedToInitializeOrRun)
         {
             await Task.Yield();
             return;
@@ -106,21 +147,21 @@ public class AudioPlaybackEngine : ISoundProvider
 
     public void Pause()
     {
-        if (loadedProperly == false) return;
+        if (FailedToInitializeOrRun) return;
         if(outputDevice == null) return;
         if(outputDevice.PlaybackState != PlaybackState.Playing) return;
         outputDevice.Pause();
     }
     public void Resume()
     {
-        if (loadedProperly == false) return;
+        if (FailedToInitializeOrRun) return;
         if(outputDevice == null) return;
         if (outputDevice.PlaybackState != PlaybackState.Paused) return;
         outputDevice.Play();
     }
     public void ClearCache()
     {
-        if (loadedProperly == false) return;
+        if (FailedToInitializeOrRun) return;
         soundCache.Clear();
     }
 
@@ -144,4 +185,25 @@ public class ScheduledSynthProvider : ScheduledSignalSourceMixer, ISampleProvide
     private readonly WaveFormat waveFormat;
     public ScheduledSynthProvider() => waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(SoundProvider.SampleRate, SoundProvider.ChannelCount);
     public WaveFormat WaveFormat => waveFormat;
+}
+
+internal sealed class ReadWatchdogSampleProvider : ISampleProvider
+{
+    private readonly ISampleProvider inner;
+    private long lastReadTimestamp;
+
+    public ReadWatchdogSampleProvider(ISampleProvider inner)
+    {
+        this.inner = inner ?? throw new ArgumentNullException(nameof(inner));
+        lastReadTimestamp = Stopwatch.GetTimestamp();
+    }
+
+    public WaveFormat WaveFormat => inner.WaveFormat;
+    public long LastReadTimestamp => Interlocked.Read(ref lastReadTimestamp);
+
+    public int Read(float[] buffer, int offset, int count)
+    {
+        Interlocked.Exchange(ref lastReadTimestamp, Stopwatch.GetTimestamp());
+        return inner.Read(buffer, offset, count);
+    }
 }
