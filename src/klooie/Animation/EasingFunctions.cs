@@ -40,6 +40,10 @@ public static class EasingFunctions
     /// <returns>the eased percentage</returns>
     public static float EaseInOut(float percentage) => percentage < .5 ? 4 * percentage * percentage * percentage : (percentage - 1) * (2 * percentage - 2) * (2 * percentage - 2) + 1;
 
+    public static float EaseInOutCubic(float t)
+    {
+        return t < 0.5f ? 4f * t * t * t : 1f - MathF.Pow(-2f * t + 2f, 3f) / 2f;
+    }
 
     /// <summary>
     /// An easing function that overshoots its target then bounces back
