@@ -39,7 +39,16 @@ public sealed class UniformGrid
     private readonly Dictionary<UniformGridCell, RecyclableList<GameCollider>> _buckets = new Dictionary<UniformGridCell, RecyclableList<GameCollider>>(199);
     private readonly Dictionary<GameCollider, UniformGridMembershipState> membershipStates = new Dictionary<GameCollider, UniformGridMembershipState>(199);
 
-    public IEnumerable<KeyValuePair<UniformGridCell, RecyclableList<GameCollider>>> Buckets => _buckets;
+    public readonly struct BucketEnumerable
+    {
+        private readonly Dictionary<UniformGridCell, RecyclableList<GameCollider>> _d;
+
+        public BucketEnumerable(Dictionary<UniformGridCell, RecyclableList<GameCollider>> d) => _d = d;
+
+        public Dictionary<UniformGridCell, RecyclableList<GameCollider>>.Enumerator GetEnumerator() => _d.GetEnumerator();
+    }
+
+    public BucketEnumerable Buckets => new BucketEnumerable(_buckets);
     public int Count { get; private set; }
     private uint _stamp;
     private void LoadCells(RectF b)
