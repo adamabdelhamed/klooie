@@ -19,8 +19,6 @@ public class ConsoleApp : EventLoop
 
     public Event AfterPaint => layoutRoot.AfterPaint;
 
-    public SynchronousScheduler Scheduler { get; private init; }
-
     /// <summary>
     /// True by default. When true, discards key presses that come in too fast
     /// likely because the user is holding the key down. You can set the
@@ -116,7 +114,6 @@ public class ConsoleApp : EventLoop
 
     public ConsoleApp()
     {
-        Scheduler = new SynchronousScheduler(this);
         Invoke(Startup);
     }
 

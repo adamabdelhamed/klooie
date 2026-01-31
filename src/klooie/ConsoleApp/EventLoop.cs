@@ -2,6 +2,7 @@
 namespace klooie;
 public class EventLoop : Recyclable
 {
+    public SynchronousScheduler Scheduler { get; private init; }
     private class SynchronizedEventPool
     {
         private Lock lockObject = new Lock();
@@ -208,7 +209,10 @@ public class EventLoop : Recyclable
     private bool runMode;
     private Task runTask;
 
-    public EventLoop() { }
+    public EventLoop() 
+    {
+        Scheduler = new SynchronousScheduler(this);
+    }
 
     /// <summary>
     /// Runs the event loop using the current thread

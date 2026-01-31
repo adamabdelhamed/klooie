@@ -10,7 +10,8 @@ public sealed class SynchronousScheduler
         EndOfCycle
     }
 
-    private ConsoleApp parent;
+    private EventLoop parent;
+    private ConsoleApp? parentApp;
     private LeaseState<SchedulerLoopLifetime> schedulerLoopLease;
     private long? pausedTime;
     private List<DelayState>? delayStates;
@@ -29,9 +30,18 @@ public sealed class SynchronousScheduler
         ? (Game.Current?.MainColliderGroup?.SpeedRatio ?? 1.0)
         : 1.0;
 
-    public SynchronousScheduler(ConsoleApp parent)
+    public SynchronousScheduler(EventLoop parent)
     {
         this.parent = parent;
+        if (parent is ConsoleApp app)
+        {
+            Mode = ExecutionMode.AfterPaint;
+            parentApp = app;
+        }
+        else
+        {
+            Mode = ExecutionMode.EndOfCycle;
+        }
         parent.OnDisposed(Cleanup);
     }
 
@@ -150,9 +160,13 @@ public sealed class SynchronousScheduler
         // Initialize integration anchor for scaled time
         lastProcessTimestamp = Stopwatch.GetTimestamp();
 
-        if (Mode == ExecutionMode.AfterPaint)
+        if (Mode == ExecutionMode.AfterPaint && parentApp != null)
         {
-            parent.AfterPaint.Subscribe(loopLifetime, Process, loopLifetime);
+            parentApp.AfterPaint.Subscribe(loopLifetime, Process, loopLifetime);
+        }
+        else if(Mode == ExecutionMode.AfterPaint)
+        {
+            throw new InvalidOperationException("SynchronousScheduler with AfterPaint mode can only be used with ConsoleApp instances.");
         }
         else if (Mode == ExecutionMode.EndOfCycle)
         {
