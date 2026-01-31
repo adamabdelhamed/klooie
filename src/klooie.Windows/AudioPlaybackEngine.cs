@@ -60,16 +60,34 @@ public class AudioPlaybackEngine : ISoundProvider
 
     private static void StartAudioStallMonitor(StallMonitorDelayState state)
     {
-        if (state.Engine.FailedToInitializeOrRun || Volatile.Read(ref state.Engine.audioFailed) == 1) return;
-        if (state.Engine.readWatchdog == null) state.Engine.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
-        if (state.Engine.outputDevice == null) state.Engine.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
-        if (state.Engine.outputDevice.PlaybackState != PlaybackState.Playing) state.Engine.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
+        var e = state.Engine;
+        if (e.FailedToInitializeOrRun || Volatile.Read(ref e.audioFailed) == 1) return;
+
+        if (e.readWatchdog == null)
+        {
+            e.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
+            return;
+        }
+
+        if (e.outputDevice == null)
+        {
+            e.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
+            return;
+        }
+
+        if (e.outputDevice.PlaybackState != PlaybackState.Playing)
+        {
+            e.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
+            return;
+        }
 
         var now = Stopwatch.GetTimestamp();
-        var lastRead = state.Engine.readWatchdog.LastReadTimestamp;
+        var lastRead = e.readWatchdog.LastReadTimestamp;
         var elapsedMs = (now - lastRead) * 1000 / Stopwatch.Frequency;
-        if (elapsedMs > StallMs) state.Engine.FailAudio();
-        state.Engine.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
+
+        if (elapsedMs > StallMs) e.FailAudio();
+
+        e.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
     }
 
     private class StallMonitorDelayState : DelayState
