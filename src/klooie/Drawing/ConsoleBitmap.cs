@@ -199,6 +199,12 @@ public sealed class ConsoleBitmap : Recyclable
     /// of the image
     /// </summary>
     public bool IsInBounds(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
+    public bool IsInBounds(float x, float y)
+    {
+        var xi = ConsoleMath.Round(x);
+        var yi = ConsoleMath.Round(y);
+        return IsInBounds(xi, yi);
+    }
 
     /// <summary>
     /// Draws the given string onto the bitmap
@@ -460,6 +466,13 @@ public sealed class ConsoleBitmap : Recyclable
         {
             Pixels[IndexOf(x, y)] = pen;
         }
+    }
+
+    public void DrawPoint(in ConsoleCharacter pen, float xf, float yf)
+    {
+        var x = ConsoleMath.Round(xf);
+        var y = ConsoleMath.Round(yf);
+        DrawPoint(pen, x, y);
     }
 
     public void DrawPoint(in RGB pen, int x, int y)
