@@ -25,6 +25,17 @@ public class GameCollider : ConsoleControl
     
     }
 
+    public bool HasLineOfSight(GameCollider other)
+    {
+        var buffer = ObstacleBufferPool.Instance.Rent();
+        try
+        {
+            GetObstacles(buffer);
+            return this.HasLineOfSight(other, buffer.WriteableBuffer);
+        }
+        finally { buffer.Dispose(); }
+    }
+
     public GameCollider(bool connectToMainColliderGroup)
     {
         this.connectToMainColliderGroup = connectToMainColliderGroup;
