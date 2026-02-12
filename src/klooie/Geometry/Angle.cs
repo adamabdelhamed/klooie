@@ -187,25 +187,18 @@ public readonly struct Angle
     /// </summary>
     /// <param name="other">the other angle</param>
     /// <returns>the # of degrees between this angle and a given other angle</returns>
-    public float DiffClockwise(Angle other)
-    {
-        var diff = DiffShortest(other);
-        var clock = Add(diff); // 1
-        return clock == other ? diff : 360f - diff;
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public float DiffClockwise(Angle other) => Normalize360(other.Value - Value);
 
     /// <summary>
     /// Goes counter-clockwise to measure the # of degrees between this angle and another one.
     /// </summary>
     /// <param name="other">the other angle</param>
     /// <returns>the # of degrees between this angle and a given other angle</returns>
-    public float DiffCounterClockwise(Angle other)
-    {
-        var diff = DiffShortest(other);
-        var clock = Add(diff);
-        return clock == other ? 360f - diff : diff;
-    }
+    ///     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public float DiffCounterClockwise(Angle other) => Normalize360(Value - other.Value);
 
+   
     /// <summary>
     /// Gets a new angle that is the current angle rounded to the nearest angle.
     /// </summary>
@@ -371,4 +364,101 @@ public readonly struct Angle
         }
         yield return initialAngle.Add(180f); // 180°
     }
+}
+ 
+public readonly struct AngleArc
+{
+    public readonly Angle Start;
+    public readonly float SweepDegrees;
+
+    public Angle Midpoint => Start.Add(SweepDegrees * 0.5f);
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public AngleArc(Angle start, float sweepDegrees)
+    {
+        Start = start;
+        SweepDegrees = sweepDegrees;
+    }
+
+    public Angle End
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => Start.Add(SweepDegrees);
+    }
+
+    public float AbsSweep
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => MathF.Abs(SweepDegrees);
+    }
+
+    public bool IsClockwise
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => SweepDegrees >= 0f;
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="angle"/> lies within this arc's directed sweep.
+    /// Positive sweep = clockwise, negative sweep = counter-clockwise. Endpoints inclusive.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Contains(Angle angle)
+    {
+        if (SweepDegrees == 0f) return angle == Start;
+
+        var abs = AbsSweep;
+
+        // Treat full/overfull sweeps as covering everything.
+        // (If you ever want "exactly 360 means everything", keep >=.
+        //  If you want "360 acts like 0", change to >.)
+        if (abs >= 360f) return true;
+
+        return SweepDegrees > 0f
+            ? Start.DiffClockwise(angle) <= abs
+            : Start.DiffCounterClockwise(angle) <= abs;
+    }
+
+    /// <summary>
+    /// Attempts to compute how far <paramref name="angle"/> lies along this arc,
+    /// expressed as a normalized value in the range [0,1].
+    ///
+    /// 0   = exactly at <see cref="Start"/>  
+    /// 1   = exactly at <see cref="End"/>  
+    /// 0.5 = halfway along the directed sweep
+    ///
+    /// Returns false if:
+    /// - The sweep is zero degrees.
+    /// - The sweep magnitude is >= 360° (progress is ambiguous).
+    /// - The angle does not lie within this arc.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryGetNormalizedProgress(Angle angle, out float progress)
+    {
+        progress = 0f;
+
+        if (SweepDegrees == 0f)
+            return false;
+
+        var sweepMagnitude = MathF.Abs(SweepDegrees);
+
+        // Full or overfull sweeps are ambiguous (multiple wraps).
+        if (sweepMagnitude >= 360f)
+            return false;
+
+        // Measure how far we have traveled from Start toward angle
+        // in the direction of the arc.
+        var traveledDegrees = SweepDegrees > 0f
+            ? Start.DiffClockwise(angle)
+            : Start.DiffCounterClockwise(angle);
+
+        // If angle lies outside the arc, bail.
+        if (traveledDegrees > sweepMagnitude)
+            return false;
+
+        progress = traveledDegrees / sweepMagnitude;
+        return true;
+    }
+
 }
