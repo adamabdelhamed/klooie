@@ -1,4 +1,8 @@
-﻿namespace klooie;
+﻿using klooie.Gaming;
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+
+namespace klooie;
 
 public partial class LayoutRootPanel : ConsolePanel
 {
@@ -19,6 +23,8 @@ public partial class LayoutRootPanel : ConsolePanel
     internal bool PaintEnabled { get; set; } = true;
     internal bool ClearOnExit { get; set; } = true;
 
+    public ITerminalHost TerminalHost { get; set; } 
+
     public LayoutRootPanel()
     {
     }
@@ -27,6 +33,7 @@ public partial class LayoutRootPanel : ConsolePanel
     {
         base.OnInit();
         ConsoleApp.AssertAppThread();
+        TerminalHost = new AnsiTerminalHost();
         defaultPen = new ConsoleCharacter(' ', null, DefaultColors.BackgroundColor);
         paintRequests = new List<TaskCompletionSource>();
         paintRateMeter = new FrameRateMeter();
@@ -75,43 +82,41 @@ public partial class LayoutRootPanel : ConsolePanel
 
     private void DrainPaints()
     {
-        DebounceResize();
+        var resized = TerminalHost.SyncSize(this);
+        if (resized) OnWindowResized.Fire();
+
         Bitmap.Fill(defaultPen);
-        if(!PaintEnabled) return;
-        Paint(); // Visual tree updates the bitmap here
-        if (!ConsolePainter.Paint(Bitmap)) return; // this frame was skipped due to back pressure from the console
+        if (!PaintEnabled) return;
+
+        using var scope = TerminalHost.BeginFrame(this);
+
+        Paint();
+
+        // If host skipped (e.g. ConsolePainter throttling), skip rest of frame work.
+        if (!TerminalHost.Present(this, Bitmap)) return;
+
         paintRateMeter.Increment();
         _afterPaint?.Fire();
+
         if (paintRequests.Count == 0) return;
-        TaskCompletionSource[] paintRequestsCopy;
-        paintRequestsCopy = paintRequests.ToArray();
+
+        var paintRequestsCopy = paintRequests.ToArray();
         paintRequests.Clear();
         for (var i = 0; i < paintRequestsCopy.Length; i++) paintRequestsCopy[i].SetResult();
     }
 
-    private void DebounceResize()
+    private static int NextControlId;
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ConsoleControl, Box<int>> Ids = new();
+    private sealed class Box<T> { public T Value; public Box(T v) { Value = v; } }
+    public static int GetIdForPresentation(ConsoleControl c)
     {
-        if (lastConsoleWidth == ConsoleProvider.Current.BufferWidth && lastConsoleHeight == ConsoleProvider.Current.WindowHeight) return;
-        ConsoleProvider.Current.Clear();
-
-        var lastSyncTime = DateTime.UtcNow;
-        while (DateTime.UtcNow - lastSyncTime > TimeSpan.FromSeconds(.25f) == false)
-        {
-            if (ConsoleProvider.Current.BufferWidth != lastConsoleWidth || ConsoleProvider.Current.WindowHeight != lastConsoleHeight)
-            {
-                lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
-                lastConsoleHeight = ConsoleProvider.Current.WindowHeight;
-                lastSyncTime = DateTime.UtcNow;
-            }
-        }
-
-        if (Bitmap.Console.BufferWidth < 1 || Bitmap.Console.WindowHeight < 1)
-        {
-            return;
-        }
-
-        Width = Bitmap.Console.BufferWidth;
-        Height = Bitmap.Console.WindowHeight;
-        OnWindowResized.Fire();
+        if (Ids.TryGetValue(c, out var box)) return box.Value;
+        var id = System.Threading.Interlocked.Increment(ref NextControlId);
+        Ids.Add(c, new Box<int>(id));
+        return id;
     }
 }
+
+
+
+

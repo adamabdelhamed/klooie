@@ -1,4 +1,6 @@
-﻿namespace klooie;
+﻿using System.Runtime.CompilerServices;
+
+namespace klooie;
 
 public enum CompositionMode
 {
@@ -30,6 +32,8 @@ public enum CompositionMode
 }
 public abstract class Container : ConsoleControl
 {
+    public static ICompositionObserver? CompositionObserver { get; set; }
+
     private Event<ConsoleControl> _descendentAdded, _descendentRemoved;
     public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = Event<ConsoleControl>.Create()); }
     public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = Event<ConsoleControl>.Create()); }
@@ -168,6 +172,8 @@ public abstract class Container : ConsoleControl
 
     private void ComposePaintOver(ConsoleControl control)
     {
+        var obs = CompositionObserver;
+        var ownerId = obs == null ? 0 : obs.GetId(control);
         var position = Transform(control);
 
         var minX = Math.Max(position.X, 0);
@@ -180,12 +186,15 @@ public abstract class Container : ConsoleControl
             for (var y = minY; y < maxY; y++)
             {
                 Bitmap.SetPixel(x, y, control.Bitmap.GetPixel(x - position.X, y - position.Y));
+                obs?.OnPixelWritten(x, y, ownerId);
             }
         }
     }
 
     private void ComposeBlendBackground(ConsoleControl control)
     {
+        var obs = CompositionObserver;
+        var ownerId = obs == null ? 0 : obs.GetId(control);
         var position = Transform(control);
         var minX = Math.Max(position.X, 0);
         var minY = Math.Max(position.Y, 0);
@@ -200,12 +209,15 @@ public abstract class Container : ConsoleControl
                 var controlIsDefaultBg = controlPixel.BackgroundColor == ConsoleString.DefaultBackgroundColor;
                 var blend = controlIsDefaultBg;
                 Bitmap.SetPixel(x, y, blend ? new ConsoleCharacter(controlPixel.Value, controlPixel.ForegroundColor, myPixel.BackgroundColor) : controlPixel);
+                obs?.OnPixelWritten(x, y, ownerId);
             }
         }
     }
 
     private void ComposeBlendVisible(ConsoleControl control)
     {
+        var obs = CompositionObserver;
+        var ownerId = obs == null ? 0 : obs.GetId(control);
         var position = Transform(control);
         var minX = Math.Max(position.X, 0);
         var minY = Math.Max(position.Y, 0);
@@ -218,12 +230,15 @@ public abstract class Container : ConsoleControl
                 var controlPixel = control.Bitmap.GetPixel(x - position.X, y - position.Y);
                 var vis = controlPixel.Value == ' ' ? controlPixel.BackgroundColor != Background : controlPixel.ForegroundColor != Background || controlPixel.BackgroundColor != Background;
                 Bitmap.SetPixel(x, y, vis ? controlPixel : Bitmap.GetPixel(x, y));
+                if(vis) obs?.OnPixelWritten(x, y, ownerId);
             }
         }
     }
 
     private void ComposeBlendForeground(ConsoleControl control)
     {
+        var obs = CompositionObserver;
+        var ownerId = obs == null ? 0 : obs.GetId(control);
         var position = Transform(control);
         var minX = Math.Max(position.X, 0);
         var minY = Math.Max(position.Y, 0);
@@ -240,6 +255,7 @@ public abstract class Container : ConsoleControl
                 {
                     // Use top char and its FG, but always bottom BG
                     Bitmap.SetPixel(x, y, new ConsoleCharacter(topPixel.Value, topPixel.ForegroundColor, bottomPixel.BackgroundColor));
+                    obs?.OnPixelWritten(x, y, ownerId);
                 }
                 else
                 {
@@ -252,6 +268,8 @@ public abstract class Container : ConsoleControl
 
     private void ComposeTransparentSpaceDefaultBG(ConsoleControl control)
     {
+        var obs = CompositionObserver;
+        var ownerId = obs == null ? 0 : obs.GetId(control);
         var position = Transform(control);
         var minX = Math.Max(position.X, 0);
         var minY = Math.Max(position.Y, 0);
@@ -273,6 +291,7 @@ public abstract class Container : ConsoleControl
 
                 // Otherwise, paint over like the default PaintOver mode
                 Bitmap.SetPixel(x, y, top);
+                obs?.OnPixelWritten(x, y, ownerId);
             }
         }
     }
@@ -284,5 +303,46 @@ public abstract class Container : ConsoleControl
         _descendentAdded = null;
         _descendentRemoved?.TryDispose();
         _descendentRemoved = null;
+    }
+}
+
+public interface ICompositionObserver
+{
+    int GetId(ConsoleControl control);
+
+    // called only when the parent bitmap pixel is actually changed by the composition
+    void OnPixelWritten(int x, int y, int ownerId);
+}
+
+public sealed class CompositionOwnerCapture : ICompositionObserver
+{
+    private int[] ownerIds = Array.Empty<int>();
+    private int width;
+    private int height;
+
+    public Func<ConsoleControl, int> IdProvider { get; set; }
+
+    public void Begin(int w, int h)
+    {
+        width = w;
+        height = h;
+        var needed = w * h;
+        if (ownerIds.Length != needed) ownerIds = new int[needed];
+        Array.Fill(ownerIds, 0);
+    }
+
+    public int[] SnapshotOwners()
+    {
+        var copy = new int[ownerIds.Length];
+        Array.Copy(ownerIds, copy, ownerIds.Length);
+        return copy;
+    }
+
+    public int GetId(ConsoleControl control) => IdProvider(control);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void OnPixelWritten(int x, int y, int ownerId)
+    {
+        ownerIds[(y * width) + x] = ownerId;
     }
 }
