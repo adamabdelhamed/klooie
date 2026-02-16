@@ -88,8 +88,6 @@ public partial class LayoutRootPanel : ConsolePanel
         Bitmap.Fill(defaultPen);
         if (!PaintEnabled) return;
 
-        using var scope = TerminalHost.BeginFrame(this);
-
         Paint();
 
         // If host skipped (e.g. ConsolePainter throttling), skip rest of frame work.

@@ -42,7 +42,7 @@ public sealed class ConsoleBitmap : Recyclable
     /// you can break the object.
     /// </summary>
     internal ConsoleCharacter[] Pixels; // flattened [y * Width + x]
-
+    public ReadOnlySpan<ConsoleCharacter> GetPixelsSpan() => Pixels.AsSpan(0, Width * Height);
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     internal int IndexOf(int x, int y) => y * Width + x;

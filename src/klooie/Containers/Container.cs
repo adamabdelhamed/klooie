@@ -343,6 +343,8 @@ public sealed class CompositionOwnerCapture : ICompositionObserver
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnPixelWritten(int x, int y, int ownerId)
     {
-        ownerIds[(y * width) + x] = ownerId;
+        var index = (y * width) + x;
+        if (index < 0 || index >= ownerIds.Length) return;
+        ownerIds[index] = ownerId;
     }
 }
