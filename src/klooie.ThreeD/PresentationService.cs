@@ -196,21 +196,13 @@ public sealed class VeldridTerminalHost : ITerminalHost
             var gdOptions = new GraphicsDeviceOptions(false, PixelFormat.D24_UNorm_S8_UInt, false, ResourceBindingModel.Improved, true, true);
             VeldridStartup.CreateWindowAndGraphicsDevice(windowCI, gdOptions, GraphicsBackend.Vulkan, out window, out gd);
 
-            window.Resized += () =>
-            {
-                swapchainDirty = true;
-                rendererDirty = true;
-                lastResizeTimestamp = Stopwatch.GetTimestamp();
-            };
+            window.Resized += () => swapchainDirty = true;
 
             cl = gd.ResourceFactory.CreateCommandList();
             renderer = new CellInstancedRenderer(gd);
 
             swapchainDirty = true;
-            rendererDirty = true;
-            lastResizeTimestamp = Stopwatch.GetTimestamp();
         }
-
 
         private void PresentBlack()
         {
@@ -223,26 +215,6 @@ public sealed class VeldridTerminalHost : ITerminalHost
             cl.End();
             gd.SubmitCommands(cl);
             gd.SwapBuffers(gd.MainSwapchain);
-        }
-
-        private void ProcessResizeAndRendererReset()
-        {
-            if (gd == null || window == null) return;
-
-            gd.WaitForIdle();
-
-            if (swapchainDirty)
-            {
-                swapchainDirty = false;
-                gd.MainSwapchain.Resize((uint)Math.Max(1, window.Width), (uint)Math.Max(1, window.Height));
-            }
-
-            if (rendererDirty && renderer != null)
-            {
-                rendererDirty = false;
-                renderer.Dispose();
-                renderer = new CellInstancedRenderer(gd);
-            }
         }
 
         public void Render(LayoutRootPanel root, ConsoleBitmap bitmap, int[] ownersSnapshot, CompositionOwnerCapture ownerCapture)
@@ -259,17 +231,27 @@ public sealed class VeldridTerminalHost : ITerminalHost
 
             if (window.Width == 0 || window.Height == 0) return;
 
-            if (swapchainDirty || rendererDirty)
+            if (swapchainDirty)
             {
-                var elapsedMs = Stopwatch.GetElapsedTime(lastResizeTimestamp).TotalMilliseconds;
-                if (elapsedMs < ResizeSettleMs)
+                swapchainDirty = false;
+                gd.WaitForIdle();
+                gd.MainSwapchain.Resize((uint)Math.Max(1, window.Width), (uint)Math.Max(1, window.Height));
+                rendererDirty = true;
+                lastResizeTimestamp = Stopwatch.GetTimestamp();
+            }
+
+            if (rendererDirty)
+            {
+                if (Stopwatch.GetElapsedTime(lastResizeTimestamp).TotalMilliseconds < ResizeSettleMs)
                 {
                     PresentBlack();
                     return;
                 }
 
-                ProcessResizeAndRendererReset();
-                if (renderer == null) return;
+                rendererDirty = false;
+                gd.WaitForIdle();
+                renderer.Dispose();
+                renderer = new CellInstancedRenderer(gd);
             }
 
             var fb = gd.MainSwapchain.Framebuffer;

@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using VdTexture = Veldrid.Texture;
 using VdTextureView = Veldrid.TextureView;
@@ -21,35 +22,72 @@ public sealed class GlyphAtlasTex : IDisposable
     public readonly VdTexture Tex;
     public readonly VdTextureView View;
 
-    private readonly Veldrid.GraphicsDevice gd;
+
+    private static readonly ConditionalWeakTable<Veldrid.GraphicsDevice, Dictionary<AtlasKey, CachedAtlas>> cacheByDevice = new();
+
+    private readonly record struct AtlasKey(int CellW, int Supersample);
+
+    private sealed class CachedAtlas
+    {
+        public required int CellW { get; init; }
+        public required int CellH { get; init; }
+        public required int AtlasW { get; init; }
+        public required int AtlasH { get; init; }
+        public required VdTexture Tex { get; init; }
+        public required VdTextureView View { get; init; }
+    }
 
     public GlyphAtlasTex(Veldrid.GraphicsDevice gd, Veldrid.ResourceFactory factory, int cellW, int supersample)
     {
-        this.gd = gd;
-
         supersample = Math.Max(1, supersample);
+        cellW = Math.Max(4, cellW);
 
-        // IMPORTANT: Internal atlas cell size is supersampled
-        CellW = Math.Max(4, cellW) * supersample;
-        CellH = CellW * 2;
+        var key = new AtlasKey(cellW, supersample);
+        var perDevice = cacheByDevice.GetOrCreateValue(gd);
 
-        AtlasW = CellW * Cols;
-        AtlasH = CellH * Rows;
+        lock (perDevice)
+        {
+            if (!perDevice.TryGetValue(key, out var cached))
+            {
+                var atlasCellW = cellW * supersample;
+                var atlasCellH = atlasCellW * 2;
+                var atlasW = atlasCellW * Cols;
+                var atlasH = atlasCellH * Rows;
 
-        Tex = factory.CreateTexture(Veldrid.TextureDescription.Texture2D(
-            (uint)AtlasW, (uint)AtlasH, 1, 1,
-            Veldrid.PixelFormat.R8_G8_B8_A8_UNorm,
-            Veldrid.TextureUsage.Sampled));
+                var tex = factory.CreateTexture(Veldrid.TextureDescription.Texture2D(
+                    (uint)atlasW, (uint)atlasH, 1, 1,
+                    Veldrid.PixelFormat.R8_G8_B8_A8_UNorm,
+                    Veldrid.TextureUsage.Sampled));
 
-        View = factory.CreateTextureView(Tex);
+                var view = factory.CreateTextureView(tex);
 
-        var rgba = BuildAtlasRgba();
-        gd.UpdateTexture(Tex, rgba, 0, 0, 0, (uint)AtlasW, (uint)AtlasH, 1, 0, 0);
+                var rgba = BuildAtlasRgba(atlasCellW, atlasCellH, atlasW, atlasH);
+                gd.UpdateTexture(tex, rgba, 0, 0, 0, (uint)atlasW, (uint)atlasH, 1, 0, 0);
+
+                cached = new CachedAtlas
+                {
+                    CellW = atlasCellW,
+                    CellH = atlasCellH,
+                    AtlasW = atlasW,
+                    AtlasH = atlasH,
+                    Tex = tex,
+                    View = view,
+                };
+                perDevice[key] = cached;
+            }
+
+            CellW = cached.CellW;
+            CellH = cached.CellH;
+            AtlasW = cached.AtlasW;
+            AtlasH = cached.AtlasH;
+            Tex = cached.Tex;
+            View = cached.View;
+        }
     }
 
-    private byte[] BuildAtlasRgba()
+    private static byte[] BuildAtlasRgba(int cellW, int cellH, int atlasW, int atlasH)
     {
-        using var bmp = new Bitmap(AtlasW, AtlasH, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using var bmp = new Bitmap(atlasW, atlasH, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         using var g = Graphics.FromImage(bmp);
 
         g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
@@ -68,14 +106,14 @@ public sealed class GlyphAtlasTex : IDisposable
             FormatFlags = StringFormatFlags.NoWrap
         };
 
-        var fontPx = (int)(CellH * 0.75f);
+        var fontPx = (int)(cellH * 0.75f);
         using var font = new Font("Consolas", fontPx, FontStyle.Regular, GraphicsUnit.Pixel);
 
 
         using var brush = new SolidBrush(Color.White);
-        var padX = Math.Max(1, CellW / 16);
-        var padTop = Math.Max(1, CellH / 24);
-        var padBottom = Math.Max(4, CellH / 12);
+        var padX = Math.Max(1, cellW / 16);
+        var padTop = Math.Max(1, cellH / 24);
+        var padBottom = Math.Max(4, cellH / 12);
 
 
         for (var i = 0; i < 256; i++)
@@ -88,7 +126,7 @@ public sealed class GlyphAtlasTex : IDisposable
             var gx = i % Cols;
             var gy = i / Cols;
 
-            var cellRect = new System.Drawing.Rectangle(gx * CellW, gy * CellH, CellW, CellH);
+            var cellRect = new System.Drawing.Rectangle(gx * cellW, gy * cellH, cellW, cellH);
 
             var innerRect = new System.Drawing.Rectangle(
                 cellRect.X + padX,
@@ -96,7 +134,7 @@ public sealed class GlyphAtlasTex : IDisposable
                 cellRect.Width - padX * 2,
                 cellRect.Height - padTop - padBottom);
 
-     
+
             System.Windows.Forms.TextRenderer.DrawText(
                 g,
                 ch.ToString(),
@@ -110,22 +148,22 @@ public sealed class GlyphAtlasTex : IDisposable
 
         }
 
-        var lockRect = new System.Drawing.Rectangle(0, 0, AtlasW, AtlasH);
+        var lockRect = new System.Drawing.Rectangle(0, 0, atlasW, atlasH);
         var data = bmp.LockBits(lockRect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
         try
         {
-            var bytes = new byte[AtlasW * AtlasH * 4];
+            var bytes = new byte[atlasW * atlasH * 4];
             unsafe
             {
                 var srcBase = (byte*)data.Scan0;
                 var di = 0;
 
-                for (var y = 0; y < AtlasH; y++)
+                for (var y = 0; y < atlasH; y++)
                 {
                     var row = srcBase + (y * data.Stride);
 
-                    for (var x = 0; x < AtlasW; x++)
+                    for (var x = 0; x < atlasW; x++)
                     {
                         // Format32bppArgb = BGRA in memory
                         var bi = x * 4;
@@ -151,10 +189,11 @@ public sealed class GlyphAtlasTex : IDisposable
         }
     }
 
-     
+
     public void Dispose()
     {
-        View.Dispose();
-        Tex.Dispose();
+        // Shared atlas resources are cached per GraphicsDevice and intentionally kept alive
+        // for the process lifetime to avoid expensive glyph atlas regeneration during resize-driven
+        // renderer reinitialization.
     }
 }
