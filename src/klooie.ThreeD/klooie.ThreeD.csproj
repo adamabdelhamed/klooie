@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-Windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Authors>Adam Abdelhamed</Authors>
+    <Description>A 3d presentation layer for klooie.</Description>
+    <Copyright>Adam Abdelhamed</Copyright>
+    <PackageProjectUrl>https://github.com/adamabdelhamed/klooie</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/adamabdelhamed/klooie</RepositoryUrl>
+    <PackageTags>cli;command line;text UI, TUI;GUI;UX Framework</PackageTags>
+    <Version>1.0</Version>
+    <AssemblyVersion>1.0</AssemblyVersion>
+    <FileVersion>1.0</FileVersion>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IncludeSymbols>True</IncludeSymbols>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Veldrid" Version="4.9.0" />
+    <PackageReference Include="Veldrid.Sdl2" Version="4.9.0" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0" />
+    <PackageReference Include="Veldrid.SPIRV" Version="1.0.15" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <ProjectReference Include="..\klooie\klooie.csproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Prefer PowerArgs from super-repo if present, otherwise use klooie's own submodule -->
+    <Klooie_PowerArgs_Path Condition="Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+    <Klooie_PowerArgs_Path Condition="!Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(Klooie_PowerArgs_Path)" />
+  </ItemGroup>
+</Project>
