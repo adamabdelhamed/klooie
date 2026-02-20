@@ -18,8 +18,14 @@ public static class ConsolePainter
 
     private static int lastBufferWidth;
     private static AnsiState _ansi;
+
+    private static RGB? fgAtStartup;
+    private static RGB? bgAtStartup;
+
     public static void Initialize()
     {
+        fgAtStartup = ConsoleProvider.Current?.ForegroundColor;
+        bgAtStartup = ConsoleProvider.Current?.BackgroundColor;
         fastConsoleWriter.Write("\x1b[?25l".ToCharArray(), "\x1b[?25l".Length);
         fastConsoleWriter.Write("\x1b[?1049h".ToCharArray(), "\x1b[?1049h".Length);
     }
@@ -28,6 +34,11 @@ public static class ConsolePainter
     {
         fastConsoleWriter.Write("\x1b[?25h".ToCharArray(), "\x1b[?25h".Length);
         fastConsoleWriter.Write("\x1b[?1049l".ToCharArray(), "\x1b[?1049l".Length);
+        if (fgAtStartup.HasValue && bgAtStartup.HasValue)
+        {
+            ConsoleProvider.Current?.ForegroundColor = fgAtStartup.Value;
+            ConsoleProvider.Current?.BackgroundColor = bgAtStartup.Value;
+        }
     }
 
     public static bool Paint(ConsoleBitmap bitmap)
