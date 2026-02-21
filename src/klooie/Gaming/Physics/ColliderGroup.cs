@@ -209,13 +209,15 @@ public sealed class ColliderGroup
 
         if (spatialIndex.IsExpired(item)) return 0f;
 
-        // NEW: move to contact point (last-known-good distance) before applying behavior
-        var distanceToContact = Math.Max(0f, Math.Min(hitPrediction.LKGD, expectedTravelDistance) - .1f); // .1 is large enough to be bigger than any epsilon used elsewhere, but small enough to not cross a cell boundary that typically rounds at .5
+        // .1 is large enough to be bigger than any epsilon used elsewhere, but small enough to not cross a cell boundary that typically rounds at .5
+        var distanceToContact = Math.Max(0f, Math.Min(hitPrediction.LKGD, expectedTravelDistance) - .1f); 
         if (distanceToContact > 0f)
         {
             var contactBounds = originalLocation.RadialOffset(item.Velocity.angle, distanceToContact, normalized: false);
             item.MoveTo(contactBounds.Left, contactBounds.Top);
         }
+
+        if (spatialIndex.IsExpired(item)) return 0f;
 
         if (item.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
         {
