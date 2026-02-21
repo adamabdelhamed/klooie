@@ -115,15 +115,15 @@ public sealed class ColliderGroup
         if (IsReadyToMove(item) == false) return;
 
         var expectedTravelDistance = CalculateExpectedTravelDistance(item);
-        if(TryDetectCollision(item, expectedTravelDistance))
+        if (TryDetectCollision(item, expectedTravelDistance))
         {
-            ProcessCollision(item, expectedTravelDistance);
-            item.Velocity?._afterEvaluate?.Fire(new Velocity.MoveEval(Velocity.MoveEvalResult.Collision, 0));
+            var moved = ProcessCollision(item, expectedTravelDistance);
+            item.Velocity?._afterEvaluate?.Fire(new Velocity.MoveEval(Velocity.MoveEvalResult.Collision, moved));
         }
         else
         {
             MoveColliderWithoutCollision(item, expectedTravelDistance);
-            item.Velocity?._afterEvaluate?.Fire(new Velocity.MoveEval(Velocity.MoveEvalResult.Moved, expectedTravelDistance)); // could have expired during move
+            item.Velocity?._afterEvaluate?.Fire(new Velocity.MoveEval(Velocity.MoveEvalResult.Moved, expectedTravelDistance));
         }
     }
 
@@ -179,36 +179,44 @@ public sealed class ColliderGroup
         item.MoveTo(newLocation.Left, newLocation.Top);
     }
 
-    private void ProcessCollision(GameCollider item, float expectedTravelDistance)
+    private float ProcessCollision(GameCollider item, float expectedTravelDistance)
     {
         var originalLocation = item.Bounds;
-
         var otherBounds = hitPrediction.ColliderHit.Bounds;
 
-        if (spatialIndex.IsExpired(item)) return;
+        if (spatialIndex.IsExpired(item)) return 0f;
+
         var collision = CollisionPool.Instance.Rent();
         try
         {
             collision.Bind(item.Velocity.speed, item.Velocity.angle, item, hitPrediction.ColliderHit, hitPrediction);
             OnCollision.Fire(collision);
             item.Velocity?._onCollision?.Fire(collision);
-            if (spatialIndex.IsExpired(item)) return;
+            if (spatialIndex.IsExpired(item)) return 0f;
 
-            // If the item that got hit is no longer alive then we can try to move this item
-            // as if they never touched.
             if (item.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.DoNothing &&
-                collision.ColliderHitLeaseState.IsRecyclableValid == false && 
-                collision.MovingObjectLeaseState.IsRecyclableValid == true && 
+                collision.ColliderHitLeaseState.IsRecyclableValid == false &&
+                collision.MovingObjectLeaseState.IsRecyclableValid == true &&
                 TryMoveIfWouldNotCauseTouching(item, originalLocation.RadialOffset(item.Velocity.angle, expectedTravelDistance, normalized: false), RGB.Red))
             {
-                    return;
+                return expectedTravelDistance;
             }
         }
         finally
         {
             collision.Dispose();
         }
-        if (spatialIndex.IsExpired(item)) return;
+
+        if (spatialIndex.IsExpired(item)) return 0f;
+
+        // NEW: move to contact point (last-known-good distance) before applying behavior
+        var distanceToContact = Math.Max(0f, Math.Min(hitPrediction.LKGD, expectedTravelDistance) - .1f); // .1 is large enough to be bigger than any epsilon used elsewhere, but small enough to not cross a cell boundary that typically rounds at .5
+        if (distanceToContact > 0f)
+        {
+            var contactBounds = originalLocation.RadialOffset(item.Velocity.angle, distanceToContact, normalized: false);
+            item.MoveTo(contactBounds.Left, contactBounds.Top);
+        }
+
         if (item.Velocity.CollisionBehavior == Velocity.CollisionBehaviorMode.Bounce)
         {
             BounceMe(item, otherBounds, hitPrediction.ColliderHit, expectedTravelDistance);
@@ -217,50 +225,52 @@ public sealed class ColliderGroup
         {
             item.Velocity.Stop();
         }
+
+        return distanceToContact;
     }
-     
+
     private void BounceMe(GameCollider item, RectF otherBounds, ICollidable other, float expectedTravelDistance)
     {
-        Angle newAngleDegrees = ComputeBounceAngle(item.Velocity, otherBounds, hitPrediction);
-        item.Velocity.Angle = newAngleDegrees;
-
-        var adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false);
-        if (TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange) == false)
+        // We should already be at the "contact" position if ProcessCollision moved us.
+        // But compute remaining defensively in case this is called from elsewhere.
+        var distanceToContact = Math.Max(0f, Math.Min(hitPrediction.LKGD, expectedTravelDistance) - .1f);
+        var remaining = expectedTravelDistance - distanceToContact;
+        if (remaining <= 0f)
         {
-            adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
-            if (TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange.Darker) == false)
-            {
-                var saveMeAngle = item.Bounds.Center.CalculateAngleTo(hitPrediction.Intersection).Opposite();
-
-#if DEBUG
-                ColliderGroupDebugger.VelocityEventOccurred?.Fire(new AngleChange()
-                {
-                    MovingObject = item,
-                    From = item.Velocity.Angle,
-                    To = saveMeAngle,
-                    NowSeconds = now,
-                });
-#endif
-
-                item.Velocity.Angle = FindFreeAngle(item, saveMeAngle);
-                if (other is GameCollider collider2)
-                {
-                    var otherAngle = collider2.CalculateAngleTo(item.Bounds).Opposite();
-#if DEBUG
-                    ColliderGroupDebugger.VelocityEventOccurred?.Fire(new AngleChange()
-                    {
-                        MovingObject = collider2,
-                        From = collider2.Velocity.Angle,
-                        To = otherAngle,
-                        NowSeconds = now,
-                    });
-#endif
-                    collider2.Velocity.Angle = otherAngle;
-                }
-                adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
-                TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange.Darker);
-            }
+            // Still update angle so next tick goes the reflected direction.
+            item.Velocity.Angle = ComputeBounceAngle(item.Velocity, otherBounds, hitPrediction);
+            return;
         }
+
+        var newAngle = ComputeBounceAngle(item.Velocity, otherBounds, hitPrediction);
+        item.Velocity.Angle = newAngle;
+
+        // Spend the remaining distance along the new angle.
+        var adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, remaining, false);
+        if (TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange)) return;
+
+        // Fallback: try a tiny nudge to get unstuck (also based on remaining travel)
+        adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, Math.Min(remaining, CollisionDetector.VerySmallNumber), false);
+        if (TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange.Darker)) return;
+
+        // Last resort: pick a nearby angle and try a tiny move
+        var saveMeAngle = item.Bounds.Center.CalculateAngleTo(hitPrediction.Intersection).Opposite();
+#if DEBUG
+    ColliderGroupDebugger.VelocityEventOccurred?.Fire(new AngleChange() { MovingObject = item, From = item.Velocity.Angle, To = saveMeAngle, NowSeconds = now, });
+#endif
+        item.Velocity.Angle = FindFreeAngle(item, saveMeAngle);
+
+        if (other is GameCollider collider2)
+        {
+            var otherAngle = collider2.CalculateAngleTo(item.Bounds).Opposite();
+#if DEBUG
+        ColliderGroupDebugger.VelocityEventOccurred?.Fire(new AngleChange() { MovingObject = collider2, From = collider2.Velocity.Angle, To = otherAngle, NowSeconds = now, });
+#endif
+            collider2.Velocity.Angle = otherAngle;
+        }
+
+        adjustedBounds = item.Bounds.RadialOffset(item.Velocity.Angle, CollisionDetector.VerySmallNumber, false);
+        TryMoveIfWouldNotCauseTouching(item, adjustedBounds, RGB.Orange.Darker);
     }
 
     public static Angle ComputeBounceAngle(Velocity v, RectF otherBounds, CollisionPrediction hitPrediction)
