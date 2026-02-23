@@ -317,21 +317,15 @@ public partial class ConsoleControl : Rectangular
         CompositionMode = CompositionMode.PaintOver;
         
         BoundsChanged.Subscribe(this, static me =>  me.ResizeBitmapOnBoundsChanged(), this);
-    }
-     
-
-    protected virtual void OnAnyPropertyChanged() { }
+    }     
 
     private void HandleCanFocusChanged()
     {
         if (HasFocus && CanFocus == false) ConsoleApp.Current?.MoveFocus();
     }
 
-
     protected override void OnReturn()
     {
-
-    
         var _this = this;
         if (_this._focused != null)
         {

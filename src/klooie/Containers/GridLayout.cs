@@ -337,7 +337,7 @@ public class GridLayout : ProtectedConsolePanel
         return ret;
     }
 
-    private static List<T> ParseSpec<T>(string theSpec) where T : GridValueDefinition
+    public static List<T> ParseSpec<T>(string theSpec) where T : GridValueDefinition
     {
         if (string.IsNullOrWhiteSpace(theSpec))
             throw new ArgumentException("Spec cannot be null or whitespace", nameof(theSpec));
