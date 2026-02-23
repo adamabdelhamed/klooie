@@ -300,7 +300,11 @@ public sealed class SynchronousScheduler
     {
         private TScope State;
         private Action<TScope>? Callback;
-        public override void InvokeCallback() => Callback?.Invoke(State);
+        public override void InvokeCallback()
+        {
+            if (State == null) return;
+            Callback?.Invoke(State);
+        }
         private StatefulWorkItem() { }
 
         internal static LazyPool<StatefulWorkItem<TScope>> pool = new LazyPool<StatefulWorkItem<TScope>>(() => new StatefulWorkItem<TScope>());
