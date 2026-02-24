@@ -149,8 +149,21 @@ public class GridLayout : ProtectedConsolePanel
             Rows = ParseSpec<GridRowDefinition>(rowSpec),
             Columns = ParseSpec<GridColumnDefinition>(columnSpec),
         };
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
         BoundsChanged.Sync(RefreshLayout, this);
         ProtectedPanel.Controls.Removed.Subscribe(HandleControlRemoved, this);
+    }
+
+    protected override void OnReturn()
+    {
+        layoutAssignments.Clear();
+        columnWidths = null;
+        rowHeights = null;
+        base.OnReturn();
     }
 
     /// <summary>
