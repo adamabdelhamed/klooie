@@ -149,6 +149,7 @@ public class GridLayout : ProtectedConsolePanel
             Rows = ParseSpec<GridRowDefinition>(rowSpec),
             Columns = ParseSpec<GridColumnDefinition>(columnSpec),
         };
+        RefreshLayout();
     }
 
     protected override void OnInit()
@@ -232,6 +233,7 @@ public class GridLayout : ProtectedConsolePanel
 
     public void RefreshLayout()
     {
+        if (Options == null) return;
         this.columnWidths = ConvertDefinitionsIntoAbsolutePixelSizes(Options.Columns.Select(c => c as GridValueDefinition).ToList(), this.Width);
         this.rowHeights = ConvertDefinitionsIntoAbsolutePixelSizes(Options.Rows.Select(c => c as GridValueDefinition).ToList(), this.Height);
 
