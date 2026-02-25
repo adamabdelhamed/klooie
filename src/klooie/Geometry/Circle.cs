@@ -1,5 +1,10 @@
 ﻿namespace klooie;
 
+public interface ICircular
+{
+    Circle Circle { get; }
+}
+
 /// <summary>
 /// A type that represents a circle and has geometric properties that are
 /// useful when working with circles. Full disclosure this is not fully built
@@ -188,5 +193,33 @@ public readonly struct Circle
             oy2 = y1 + t * dy;
             return 2;
         }
+    }
+
+    public bool Touches(RectF window) => TouchesInternal(window, aspectRatio: 1.0f);
+    public bool TouchesNormalized(RectF window) => TouchesInternal(window, aspectRatio: 2.0f);
+    private  bool TouchesInternal(RectF window, float aspectRatio)
+    {
+        // Treat as axis-aligned rectangle. Touches == intersects OR is contained (including tangency).
+        if (Radius <= 0) return window.Contains(new LocF(CX, CY));
+
+        var left = window.Left;
+        var top = window.Top;
+        var right = window.Left + window.Width;
+        var bottom = window.Top + window.Height;
+
+        if (right < left) (left, right) = (right, left);
+        if (bottom < top) (top, bottom) = (bottom, top);
+
+        if (right == left || bottom == top) return false;
+
+        // Closest point on/in the rectangle to the circle center (in *raw* coords)
+        var closestX = CX < left ? left : (CX > right ? right : CX);
+        var closestY = CY < top ? top : (CY > bottom ? bottom : CY);
+
+        // Distance in the *normalized* metric (same idea as CalculateNormalizedDistanceTo)
+        var dx = CX - closestX;
+        var dy = (CY - closestY) * aspectRatio;
+
+        return (dx * dx + dy * dy) <= (Radius * Radius);
     }
 }
