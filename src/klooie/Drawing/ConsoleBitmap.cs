@@ -56,12 +56,13 @@ public sealed class ConsoleBitmap : Recyclable
     public static ConsoleBitmap Create(int w, int h)
     {
         var ret = pool.Value.Rent();
+        int pixelCount = checked(w * h);
+        ret.Console = ConsoleProvider.Current;
+        ret.Pixels = ArrayPool<ConsoleCharacter>.Shared.Rent(pixelCount);
         ret.Width = w;
         ret.Height = h;
-        ret.Console = ConsoleProvider.Current;
-        ret.Pixels = ArrayPool<ConsoleCharacter>.Shared.Rent(w * h);
-        // Fill with EmptySpace
-        var span = ret.Pixels.AsSpan(0, w * h);
+
+        var span = ret.Pixels.AsSpan(0, pixelCount);
         for (int i = 0; i < span.Length; i++) span[i] = EmptySpace;
         return ret;
     }
@@ -146,8 +147,8 @@ public sealed class ConsoleBitmap : Recyclable
     public void Resize(int w, int h)
     {
         if (w == Width && h == Height) return;
-
-        var newPixels = ArrayPool<ConsoleCharacter>.Shared.Rent(w * h);
+        int newCount = checked(w * h);
+        var newPixels = ArrayPool<ConsoleCharacter>.Shared.Rent(newCount);
 
         // copy overlap
         int minW = Math.Min(w, Width);
