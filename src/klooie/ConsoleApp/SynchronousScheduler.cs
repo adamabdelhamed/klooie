@@ -302,8 +302,8 @@ public sealed class SynchronousScheduler
         private Action<TScope>? Callback;
         public override void InvokeCallback()
         {
-            if (State == null) return;
-            Callback?.Invoke(State);
+            if (State == null || Callback == null) return;
+            Callback(State);
         }
         private StatefulWorkItem() { }
 

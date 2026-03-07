@@ -36,13 +36,9 @@ public sealed class ConsoleBitmap : Recyclable
     /// </summary>
     public IConsoleProvider Console { get; set; }
 
-    /// <summary>
-    /// Gets raw access to the pixels. May improve performance, but is more dangerous than
-    /// using the built in methods. If you modify the values to an inconsistent state then
-    /// you can break the object.
-    /// </summary>
-    internal ConsoleCharacter[] Pixels; // flattened [y * Width + x]
-    public ReadOnlySpan<ConsoleCharacter> GetPixelsSpan() => Pixels.AsSpan(0, Width * Height);
+ 
+    private ConsoleCharacter[] pixels; // flattened [y * Width + x]
+    public ReadOnlySpan<ConsoleCharacter> Pixels => pixels.AsSpan(0, Math.Min(Math.Max(0,Width * Height), pixels.Length));
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     internal int IndexOf(int x, int y) => y * Width + x;
@@ -55,14 +51,15 @@ public sealed class ConsoleBitmap : Recyclable
     private ConsoleBitmap() { }
     public static ConsoleBitmap Create(int w, int h)
     {
+        if (w < 0 || h < 0) throw new ArgumentOutOfRangeException();
         var ret = pool.Value.Rent();
         int pixelCount = checked(w * h);
         ret.Console = ConsoleProvider.Current;
-        ret.Pixels = ArrayPool<ConsoleCharacter>.Shared.Rent(pixelCount);
+        ret.pixels = ArrayPool<ConsoleCharacter>.Shared.Rent(pixelCount);
         ret.Width = w;
         ret.Height = h;
 
-        var span = ret.Pixels.AsSpan(0, pixelCount);
+        var span = ret.pixels.AsSpan(0, pixelCount);
         for (int i = 0; i < span.Length; i++) span[i] = EmptySpace;
         return ret;
     }
@@ -72,8 +69,8 @@ public sealed class ConsoleBitmap : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        ArrayPool<ConsoleCharacter>.Shared.Return(Pixels);
-        Pixels = Array.Empty<ConsoleCharacter>();
+        ArrayPool<ConsoleCharacter>.Shared.Return(pixels);
+        pixels = Array.Empty<ConsoleCharacter>();
         Width = 0;
         Height = 0;
     }
@@ -146,6 +143,7 @@ public sealed class ConsoleBitmap : Recyclable
     /// <param name="h">the new height</param>
     public void Resize(int w, int h)
     {
+        if (w < 0 || h < 0) throw new ArgumentOutOfRangeException();
         if (w == Width && h == Height) return;
         int newCount = checked(w * h);
         var newPixels = ArrayPool<ConsoleCharacter>.Shared.Rent(newCount);
@@ -159,18 +157,21 @@ public sealed class ConsoleBitmap : Recyclable
             int dstRow = yy * w;
             for (int xx = 0; xx < minW; xx++)
             {
-                newPixels[dstRow + xx] = Pixels[srcRow + xx];
+                newPixels[dstRow + xx] = pixels[srcRow + xx];
             }
         }
-        // fill the rest with EmptySpace
-        for (int i = 0; i < newPixels.Length; i++)
+        if (w != 0 && h != 0)
         {
-            if (i >= (minH * w) || (i % w) >= minW) newPixels[i] = EmptySpace;
+            // fill the rest with EmptySpace
+            for (int i = 0; i < newPixels.Length; i++)
+            {
+                if (i >= (minH * w) || (i % w) >= minW) newPixels[i] = EmptySpace;
+            }
         }
 
-        ArrayPool<ConsoleCharacter>.Shared.Return(Pixels);
+        ArrayPool<ConsoleCharacter>.Shared.Return(pixels);
 
-        Pixels = newPixels;
+        pixels = newPixels;
         Width = w;
         Height = h;
     }
@@ -178,7 +179,7 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Gets the pixel at the given location
     /// </summary>
-    public ref ConsoleCharacter GetPixel(int x, int y) => ref Pixels[IndexOf(x, y)];
+    public ref ConsoleCharacter GetPixel(int x, int y) => ref pixels[IndexOf(x, y)];
 
     public ref ConsoleCharacter GetPixel(float x, float y)
     {
@@ -188,7 +189,7 @@ public sealed class ConsoleBitmap : Recyclable
     /// <summary>
     /// Sets the value of the desired pixel
     /// </summary>
-    public void SetPixel(int x, int y, in ConsoleCharacter c) => Pixels[IndexOf(x, y)] = c;
+    public void SetPixel(int x, int y, in ConsoleCharacter c) => pixels[IndexOf(x, y)] = c;
 
     public void SetPixel(float x, float y, in ConsoleCharacter c)
     {
@@ -229,7 +230,7 @@ public sealed class ConsoleBitmap : Recyclable
             int row = yy * Width;
             for (int xx = minX; xx < maxX; xx++)
             {
-                Pixels[row + xx] = pen;
+                pixels[row + xx] = pen;
             }
         }
     }
@@ -254,7 +255,7 @@ public sealed class ConsoleBitmap : Recyclable
             int row = yy * Width;
             for (int xx = minX; xx < maxX; xx++)
             {
-                Pixels[row + xx] = pen;
+                pixels[row + xx] = pen;
             }
         }
     }
@@ -278,7 +279,7 @@ public sealed class ConsoleBitmap : Recyclable
     /// </summary>
     public void Fill(in ConsoleCharacter pen)
     {
-        var span = Pixels.AsSpan(0, Width * Height);
+        var span = pixels.AsSpan(0, Width * Height);
         for (int i = 0; i < span.Length; i++) span[i] = pen;
     }
 
@@ -296,7 +297,7 @@ public sealed class ConsoleBitmap : Recyclable
             int row = yy * Width;
             for (int xx = x; xx < maxX; xx++)
             {
-                Pixels[row + xx] = pen;
+                pixels[row + xx] = pen;
             }
         }
     }
@@ -323,27 +324,27 @@ public sealed class ConsoleBitmap : Recyclable
         // left vertical line
         for (var yd = minY; yd < maxY; yd++)
         {
-            Pixels[yd * Width + minX] = pen;
+            pixels[yd * Width + minX] = pen;
         }
 
         // right vertical line
         for (var yd = minY; yd < maxY; yd++)
         {
-            Pixels[yd * Width + xEndIndex] = pen;
+            pixels[yd * Width + xEndIndex] = pen;
         }
 
         // top horizontal line
         int topRow = minY * Width;
         for (int xd = minX; xd < maxX; xd++)
         {
-            Pixels[topRow + xd] = pen;
+            pixels[topRow + xd] = pen;
         }
 
         // bottom horizontal line
         int bottomRow = yEndIndex * Width;
         for (int xd = minX; xd < maxX; xd++)
         {
-            Pixels[bottomRow + xd] = pen;
+            pixels[bottomRow + xd] = pen;
         }
     }
 
@@ -370,7 +371,7 @@ public sealed class ConsoleBitmap : Recyclable
             }
             else if (IsInBounds(x, y))
             {
-                Pixels[IndexOf(x, y)] = character;
+                pixels[IndexOf(x, y)] = character;
             }
 
             if (vert) y++;
@@ -397,7 +398,7 @@ public sealed class ConsoleBitmap : Recyclable
             }
             else if (IsInBounds(x, y))
             {
-                Pixels[IndexOf(x, y)] = new ConsoleCharacter(character.Value, fg, bg);
+                pixels[IndexOf(x, y)] = new ConsoleCharacter(character.Value, fg, bg);
             }
 
             if (vert) y++;
@@ -424,7 +425,7 @@ public sealed class ConsoleBitmap : Recyclable
             }
             else if (IsInBounds(x, y))
             {
-                Pixels[IndexOf(x, y)] = new ConsoleCharacter(character, fg, bg);
+                pixels[IndexOf(x, y)] = new ConsoleCharacter(character, fg, bg);
             }
 
             if (vert) y++;
@@ -450,7 +451,7 @@ public sealed class ConsoleBitmap : Recyclable
             }
             else if (IsInBounds(x, y))
             {
-                Pixels[IndexOf(x, y)] = character;
+                pixels[IndexOf(x, y)] = character;
             }
 
             if (vert) y++;
@@ -465,7 +466,7 @@ public sealed class ConsoleBitmap : Recyclable
     {
         if (IsInBounds(x, y))
         {
-            Pixels[IndexOf(x, y)] = pen;
+            pixels[IndexOf(x, y)] = pen;
         }
     }
 
@@ -494,7 +495,7 @@ public sealed class ConsoleBitmap : Recyclable
             point = LineBuffer[i];
             if (IsInBounds(point.Left, point.Top))
             {
-                Pixels[IndexOf(point.Left, point.Top)] = pen;
+                pixels[IndexOf(point.Left, point.Top)] = pen;
             }
         }
     }
@@ -583,8 +584,8 @@ public sealed class ConsoleBitmap : Recyclable
     public ConsoleBitmap Clone()
     {
         var clone = ConsoleBitmap.Create(Width, Height);
-        var src = Pixels.AsSpan(0, Width * Height);
-        var dst = clone.Pixels.AsSpan(0, Width * Height);
+        var src = pixels.AsSpan(0, Width * Height);
+        var dst = clone.pixels.AsSpan(0, Width * Height);
         src.CopyTo(dst);
         return clone;
     }

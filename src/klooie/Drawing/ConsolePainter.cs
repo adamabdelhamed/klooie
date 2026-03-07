@@ -76,6 +76,7 @@ public static class ConsolePainter
 
                 paintBuilder.Clear();
                 int charBudget = PaintQoS.BudgetedCharsThisFrame();
+                var pix = bitmap.Pixels;
                 for (int y = 0; y < bitmap.Height; y++)
                 {
                     if (paintBuilder.Length >= charBudget) break; // <-- hard cap per frame
@@ -83,7 +84,7 @@ public static class ConsolePainter
                     int x = 0;
                     while (x < bitmap.Width)
                     {
-                        ref var p = ref bitmap.Pixels[bitmap.IndexOf(x, y)];
+                        var p = pix[bitmap.IndexOf(x, y)];
                         var fg = p.ForegroundColor;
                         var bg = p.BackgroundColor;
                         bool under = p.IsUnderlined;
@@ -91,7 +92,7 @@ public static class ConsolePainter
                         x++;
                         while (x < bitmap.Width)
                         {
-                            ref var q = ref bitmap.Pixels[bitmap.IndexOf(x, y)];
+                            var q = pix[bitmap.IndexOf(x, y)];
 
                             if (q.IsUnderlined != under) break;
 
