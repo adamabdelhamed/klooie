@@ -576,6 +576,13 @@ public partial class ConsoleControl : Rectangular
         _ready?.Fire();
     }
  
+    public void EnsurePainted()
+    {
+        if (IsVisible == false || Height <= 0 || Width <= 0) return;
+        Bitmap.Fill(new ConsoleCharacter(' ', null, Background));
+
+        OnPaint(Bitmap);
+    }
 
     internal void Paint()
     {
@@ -583,9 +590,7 @@ public partial class ConsoleControl : Rectangular
         {
             return;
         }
-        Bitmap.Fill(new ConsoleCharacter(' ', null, Background));
-
-        OnPaint(Bitmap);
+        EnsurePainted();
         if (Recorder != null && Recorder.IsFinished == false)
         {
             Recorder.Window = new RectF(0, 0, Width, Height);
