@@ -9,6 +9,8 @@ public readonly struct Rect
     public int Right => Left + Width;
     public int Bottom => Top + Height;
 
+    public int Area => Width * Height;
+
     public int CenterX => Left + Width / 2;
     public int CenterY => Top + Height / 2;
     public LocF Center => new LocF(CenterX, CenterY);
