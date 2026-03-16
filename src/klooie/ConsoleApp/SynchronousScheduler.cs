@@ -302,8 +302,25 @@ public sealed class SynchronousScheduler
         private Action<TScope>? Callback;
         public override void InvokeCallback()
         {
-            if (State == null || Callback == null) return;
-            Callback(State);
+            var state = State;
+            var callback = Callback;
+
+            if (state == null || callback == null) return;
+
+            try
+            {
+                callback(state);
+            }
+            catch (Exception ex)
+            {
+                var method = callback.Method;
+                var targetType = callback.Target?.GetType().FullName ?? "<static>";
+                var stateType = state?.GetType().FullName ?? typeof(TScope).FullName ?? "<unknown>";
+
+                throw new InvalidOperationException(
+                    $"Scheduled callback failed. Callback={method.DeclaringType?.FullName}.{method.Name}, Target={targetType}, StateType={stateType}",
+                    ex);
+            }
         }
         private StatefulWorkItem() { }
 
