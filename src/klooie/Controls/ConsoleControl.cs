@@ -375,6 +375,7 @@ public partial class ConsoleControl : Rectangular
         (_this.Parent as ConsolePanel)?.Controls.Remove(_this);
 
         FocusStackDepthInternal = null;
+        HasBeenAddedToVisualTree = false;
         base.OnReturn();
     }
 
