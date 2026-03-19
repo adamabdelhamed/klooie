@@ -53,6 +53,32 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         PoolManager.Instance.Add(this);
     }
 
+    public void Use(Action<T> action)
+    {
+        var inst = Rent();
+        try
+        {
+            action(inst);
+        }
+        finally
+        {
+            inst.Dispose();
+        }
+    }
+
+    public Task Use(Func<T,Task> action)
+    {
+        var inst = Rent();
+        try
+        {
+            return action(inst);
+        }
+        finally
+        {
+            inst.Dispose();
+        }
+    }
+
     public override string ToString()
     {
         var typeName = GetFriendlyName(typeof(T));
