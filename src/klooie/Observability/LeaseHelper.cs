@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace klooie;
+
 /// <summary>
 /// Helper methods for tracking lifetimes of <see cref="Recyclable"/> objects.
 /// </summary>
@@ -14,29 +11,32 @@ public static class LeaseHelper
     /// Creates a <see cref="LeaseState{TOwner, TRecyclable}"/> that tracks the
     /// lease of both an owner and a recyclable object.
     /// </summary>
-    /// <typeparam name="TOwner">The type of the owner.</typeparam>
-    /// <typeparam name="TRecyclable">The type being tracked.</typeparam>
-    /// <param name="owner">The owning object.</param>
-    /// <param name="recyclable">The recyclable object whose lifetime is being tracked.</param>
-    /// <returns>A lease state representing the owner/recyclable relationship.</returns>
     public static LeaseState<TOwner, TRecyclable> TrackOwnerRelationship<TOwner, TRecyclable>(TOwner owner, TRecyclable recyclable) where TOwner : Recyclable where TRecyclable : Recyclable
         => LeaseState<TOwner, TRecyclable>.Create(owner, recyclable);
 
     /// <summary>
+    /// Creates a <see cref="LeaseStateWithStash{TOwner, TRecyclable, TStash}"/> that tracks the
+    /// lease of both an owner and a recyclable object plus a strongly typed stash value.
+    /// </summary>
+    public static LeaseStateWithStash<TOwner, TRecyclable, TStash> TrackOwnerRelationship<TOwner, TRecyclable, TStash>(TOwner owner, TRecyclable recyclable, TStash stash) where TOwner : Recyclable where TRecyclable : Recyclable
+        => LeaseStateWithStash<TOwner, TRecyclable, TStash>.Create(owner, recyclable, stash);
+
+    /// <summary>
     /// Creates a <see cref="LeaseState{TRecyclable}"/> that tracks the lease of a single object.
     /// </summary>
-    /// <typeparam name="TRecyclable">The type being tracked.</typeparam>
-    /// <param name="recyclable">The recyclable object to track.</param>
-    /// <returns>A lease state representing the object and its current lease.</returns>
     public static LeaseState<TRecyclable> Track<TRecyclable>(TRecyclable recyclable) where TRecyclable : Recyclable
         => LeaseState<TRecyclable>.Create(recyclable);
 
     /// <summary>
+    /// Creates a <see cref="LeaseStateWithStash{TRecyclable, TStash}"/> that tracks the lease of a single
+    /// object plus a strongly typed stash value.
+    /// </summary>
+    public static LeaseStateWithStash<TRecyclable, TStash> Track<TRecyclable, TStash>(TRecyclable recyclable, TStash stash) where TRecyclable : Recyclable
+        => LeaseStateWithStash<TRecyclable, TStash>.Create(recyclable, stash);
+
+    /// <summary>
     /// Updates the lease state of a recyclable object, recycling the old instance if necessary.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="toTrack"></param>
-    /// <param name="trackerReference"></param>
     public static void Recycle<T>(T toTrack, ref LeaseState<T> trackerReference) where T : Recyclable
     {
         if (trackerReference != null)
@@ -44,18 +44,31 @@ public static class LeaseHelper
             trackerReference.Recycle(toTrack);
             return;
         }
-        trackerReference = LeaseHelper.Track(toTrack);
+
+        trackerReference = Track(toTrack);
+    }
+
+    /// <summary>
+    /// Updates the lease state of a recyclable object with stash data, recycling the old instance if necessary.
+    /// </summary>
+    public static void Recycle<T, TStash>(T toTrack, TStash stash, ref LeaseStateWithStash<T, TStash> trackerReference) where T : Recyclable
+    {
+        if (trackerReference != null)
+        {
+            trackerReference.Recycle(toTrack, stash);
+            return;
+        }
+
+        trackerReference = Track(toTrack, stash);
     }
 }
 
 /// <summary>
 /// Represents a snapshot of the leases for an owner object and a recyclable it owns.
 /// </summary>
-/// <typeparam name="TOwner">Type of the owner.</typeparam>
-/// <typeparam name="TRecyclable">Type of the recyclable being tracked.</typeparam>
-public class LeaseState<TOwner, TRecyclable> : Recyclable where TRecyclable : Recyclable where TOwner : Recyclable
+public class LeaseState<TOwner, TRecyclable> : Recyclable where TOwner : Recyclable where TRecyclable : Recyclable
 {
-    private static LazyPool<LeaseState<TOwner, TRecyclable>> pool = new LazyPool<LeaseState<TOwner, TRecyclable>>(() => new LeaseState<TOwner, TRecyclable>());
+    private static readonly LazyPool<LeaseState<TOwner, TRecyclable>> pool = new(() => new LeaseState<TOwner, TRecyclable>());
 
     /// <summary>
     /// The recyclable instance being tracked.
@@ -87,21 +100,15 @@ public class LeaseState<TOwner, TRecyclable> : Recyclable where TRecyclable : Re
     /// </summary>
     public bool IsRecyclableValid => Recyclable != null && Recyclable.IsStillValid(RecyclableLease);
 
-    private LeaseState() { }
+    protected LeaseState() { }
 
     /// <summary>
     /// Creates and initializes a lease state for the specified owner/recyclable pair.
     /// </summary>
-    /// <param name="owner">The owning object.</param>
-    /// <param name="recyclable">The recyclable instance.</param>
-    /// <returns>The created lease state.</returns>
     public static LeaseState<TOwner, TRecyclable> Create(TOwner owner, TRecyclable recyclable)
     {
         var ret = pool.Value.Rent();
-        ret.Recyclable = recyclable;
-        ret.Owner = owner;
-        ret.RecyclableLease = recyclable.Lease;
-        ret.OwnerLease = owner.Lease;
+        ret.Initialize(owner, recyclable);
         return ret;
     }
 
@@ -113,7 +120,18 @@ public class LeaseState<TOwner, TRecyclable> : Recyclable where TRecyclable : Re
     /// <summary>
     /// Attempts to dispose the tracked owner using the captured lease.
     /// </summary>
-    public bool TryDisposeOwner() => Owner == null ? false : Owner.TryDispose(OwnerLease);
+    public bool TryDisposeOwner() => Owner != null && Owner.TryDispose(OwnerLease);
+
+    /// <summary>
+    /// Initializes this instance with the given owner/recyclable pair.
+    /// </summary>
+    protected void Initialize(TOwner owner, TRecyclable recyclable)
+    {
+        Owner = owner;
+        Recyclable = recyclable;
+        OwnerLease = owner.Lease;
+        RecyclableLease = recyclable.Lease;
+    }
 
     /// <summary>
     /// Clears tracked values when the state object is returned to the pool.
@@ -121,20 +139,55 @@ public class LeaseState<TOwner, TRecyclable> : Recyclable where TRecyclable : Re
     protected override void OnReturn()
     {
         base.OnReturn();
-        Recyclable = default;
-        Owner = default;
-        RecyclableLease = default;
+        Owner = null;
+        Recyclable = null;
         OwnerLease = default;
+        RecyclableLease = default;
+    }
+}
+
+/// <summary>
+/// Represents a snapshot of the leases for an owner object and a recyclable it owns,
+/// plus a strongly typed stash value.
+/// </summary>
+public class LeaseStateWithStash<TOwner, TRecyclable, TStash> : LeaseState<TOwner, TRecyclable> where TOwner : Recyclable where TRecyclable : Recyclable
+{
+    private static readonly LazyPool<LeaseStateWithStash<TOwner, TRecyclable, TStash>> pool = new(() => new LeaseStateWithStash<TOwner, TRecyclable, TStash>());
+
+    /// <summary>
+    /// Additional strongly typed state that can travel with this lease state.
+    /// </summary>
+    public TStash? Stash { get; private set; }
+
+    protected LeaseStateWithStash() { }
+
+    /// <summary>
+    /// Creates and initializes a lease state for the specified owner/recyclable pair and stash value.
+    /// </summary>
+    public static LeaseStateWithStash<TOwner, TRecyclable, TStash> Create(TOwner owner, TRecyclable recyclable, TStash stash)
+    {
+        var ret = pool.Value.Rent();
+        ret.Initialize(owner, recyclable);
+        ret.Stash = stash;
+        return ret;
+    }
+
+    /// <summary>
+    /// Clears tracked values when the state object is returned to the pool.
+    /// </summary>
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Stash = default;
     }
 }
 
 /// <summary>
 /// Represents a snapshot of the lease for a single recyclable object.
 /// </summary>
-/// <typeparam name="TRecyclable">The type being tracked.</typeparam>
 public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
 {
-    private static LazyPool<LeaseState<TRecyclable>> pool = new LazyPool<LeaseState<TRecyclable>>(() => new LeaseState<TRecyclable>());
+    private static readonly LazyPool<LeaseState<TRecyclable>> pool = new(() => new LeaseState<TRecyclable>());
 
     /// <summary>
     /// The recyclable instance being tracked.
@@ -151,18 +204,15 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
     /// </summary>
     public bool IsRecyclableValid => Recyclable != null && Recyclable.IsStillValid(RecyclableLease);
 
-    private LeaseState() { }
+    protected LeaseState() { }
 
     /// <summary>
     /// Creates and initializes a lease state for the given recyclable.
     /// </summary>
-    /// <param name="recyclable">The recyclable to track.</param>
-    /// <returns>The created lease state.</returns>
     public static LeaseState<TRecyclable> Create(TRecyclable recyclable)
     {
         var ret = pool.Value.Rent();
-        ret.Recyclable = recyclable;
-        ret.RecyclableLease = recyclable.Lease;
+        ret.Initialize(recyclable);
         return ret;
     }
 
@@ -172,13 +222,10 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
         TryDispose();
     }
 
-
-
     public void Recycle(TRecyclable replacement)
     {
         TryDisposeRecyclable();
-        RecyclableLease = replacement.Lease;
-        Recyclable = replacement;
+        Initialize(replacement);
     }
 
     /// <summary>
@@ -187,12 +234,66 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
     public void TryDisposeRecyclable() => Recyclable?.TryDispose(RecyclableLease);
 
     /// <summary>
+    /// Initializes this instance with the given recyclable.
+    /// </summary>
+    protected void Initialize(TRecyclable recyclable)
+    {
+        Recyclable = recyclable;
+        RecyclableLease = recyclable.Lease;
+    }
+
+    /// <summary>
     /// Clears tracked values when this state object is returned to the pool.
     /// </summary>
     protected override void OnReturn()
     {
         base.OnReturn();
-        Recyclable = default;
+        Recyclable = null;
         RecyclableLease = default;
+    }
+}
+
+/// <summary>
+/// Represents a snapshot of the lease for a single recyclable object,
+/// plus a strongly typed stash value.
+/// </summary>
+public class LeaseStateWithStash<TRecyclable, TStash> : LeaseState<TRecyclable> where TRecyclable : Recyclable
+{
+    private static readonly LazyPool<LeaseStateWithStash<TRecyclable, TStash>> pool = new(() => new LeaseStateWithStash<TRecyclable, TStash>());
+
+    /// <summary>
+    /// Additional strongly typed state that can travel with this lease state.
+    /// </summary>
+    public TStash? Stash { get; private set; }
+
+    protected LeaseStateWithStash() { }
+
+    /// <summary>
+    /// Creates and initializes a lease state for the given recyclable and stash value.
+    /// </summary>
+    public static LeaseStateWithStash<TRecyclable, TStash> Create(TRecyclable recyclable, TStash stash)
+    {
+        var ret = pool.Value.Rent();
+        ret.Initialize(recyclable);
+        ret.Stash = stash;
+        return ret;
+    }
+
+    /// <summary>
+    /// Recycles the tracked recyclable and updates the stash value.
+    /// </summary>
+    public void Recycle(TRecyclable replacement, TStash stash)
+    {
+        base.Recycle(replacement);
+        Stash = stash;
+    }
+
+    /// <summary>
+    /// Clears tracked values when this state object is returned to the pool.
+    /// </summary>
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        Stash = default;
     }
 }
