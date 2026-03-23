@@ -66,6 +66,19 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         }
     }
 
+    public void Use<TState>(TState state, Action<T,TState> action)
+    {
+        var inst = Rent();
+        try
+        {
+            action(inst, state);
+        }
+        finally
+        {
+            inst.Dispose();
+        }
+    }
+
     public Task Use(Func<T,Task> action)
     {
         var inst = Rent();
