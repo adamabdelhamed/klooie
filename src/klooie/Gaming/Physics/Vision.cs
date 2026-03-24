@@ -53,7 +53,7 @@ public class Vision : Recyclable, IFrameTask
         RemoveStaleTrackedObjects();
         if (Eye.IsVisible == false) return;
         var buffer = ObstacleBufferPool.Instance.Rent();
-        Eye.ColliderGroup.SpacialIndex.Query(Eye.Bounds.SweptAABB(Eye.Bounds.Grow(.5f).RadialOffset(Eye.Velocity.Angle, Visibility*1.2f)), buffer);
+        Eye.ColliderGroup.SpacialIndex.Query(ResolveQueryBounds(), buffer);
         FilterObstacles(buffer);
         try
         {
@@ -67,6 +67,18 @@ public class Vision : Recyclable, IFrameTask
             buffer.Dispose();
         }
         _visibleObjectsChanged?.Fire();
+    }
+
+    [method: MethodImpl(MethodImplOptions.NoInlining)]
+    private RectF ResolveQueryBounds()
+    {
+        if (AngularVisibility >= 180)
+        {
+            var queryDiameter = MathF.Max(Visibility * 2.4f, Eye.Bounds.Hypotenous);
+            return Eye.Bounds.Grow(queryDiameter, queryDiameter);
+        }
+
+        return Eye.Bounds.SweptAABB(Eye.Bounds.Grow(.5f).RadialOffset(Eye.Velocity.Angle, Visibility * 1.2f));
     }
 
     private bool TryPerfestScan(ObstacleBuffer buffer)
@@ -252,6 +264,7 @@ public class Vision : Recyclable, IFrameTask
     private bool IsIgnoredByFilter(GameCollider potentialTarget)
     {
         if(potentialTarget == Eye)return true;
+        if(Eye.CanCollideWith(potentialTarget) == false || potentialTarget.CanCollideWith(Eye) == false)return true;
         targetFilterContext.Reset(potentialTarget);
         _targetBeingEvaluated?.Fire(targetFilterContext);
         return targetFilterContext.Ignored;
