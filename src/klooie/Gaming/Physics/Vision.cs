@@ -214,7 +214,7 @@ public class Vision : Recyclable, IFrameTask
     {
         VisuallyTrackedObject existingTarget = null;
         var alreadyTracked = potentialTarget != null && TryGetValue(potentialTarget, out existingTarget);
-        var shouldBeIgnored = alreadyTracked || potentialTarget == null || potentialTarget?.Velocity == null || potentialTarget.IsVisible == false || potentialTarget.CanCollideWith(Eye) == false || Eye.CanCollideWith(potentialTarget) == false;
+        var shouldBeIgnored = alreadyTracked || potentialTarget == null || potentialTarget?.Velocity == null || potentialTarget.IsVisible == false;
         existing = existingTarget;
         return shouldBeIgnored;
     }
