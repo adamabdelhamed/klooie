@@ -53,7 +53,8 @@ public class Walk : Movement
         FrameDebugger.RegisterTask(nameof(Walk));
         state.Hydrate(this);
         state.Sync(this);
-        WalkCalculation.AdjustSpeedAndVelocity(state, ref influence.DeltaSpeed, ref influence.Angle);
+        var outcome = WalkCalculation.AdjustSpeedAndVelocity(state, ref influence.DeltaSpeed, ref influence.Angle);
+        WalkInspectionHooks.Current?.Capture(this, state, outcome);
         state.Dehydrate();
     }
 
@@ -259,18 +260,22 @@ public static class WalkCalculation
     private static HashSet<RectF> sharedUniqueModeHashSet = new HashSet<RectF>();
     private static ColliderBox sharedColliderBox;
 
-    public static void AdjustSpeedAndVelocity(WalkCalculationState input, ref float newSpeed, ref Angle newAngle)
+    public static WalkDecisionOutcome AdjustSpeedAndVelocity(WalkCalculationState input, ref float newSpeed, ref Angle newAngle)
     {
         UpdateGoalDistanceHistory(input);
         ComputeScores(input);
         ConsiderEmergencyMode(input);
-        if (TryWalkDirectlyTowardsPointOfInterest(input, ref newSpeed, ref newAngle)) return;
+        if (TryWalkDirectlyTowardsPointOfInterest(input, ref newSpeed, ref newAngle))
+        {
+            return new WalkDecisionOutcome(true, newAngle, newSpeed, 1f, -1);
+        }
         OptimizeWeights(input);
         var winner = SelectBestAngleScore(input, out float bestScore, out int bestScoreIndex);
         newAngle = winner.Angle;
         newSpeed = EvaluateSpeed(input, winner.Angle, bestScore);
         LogAngleScoreDetails(input, newSpeed, newAngle, bestScoreIndex);
         UpdateInertiaAndPositionHistory(input, winner);
+        return new WalkDecisionOutcome(false, newAngle, newSpeed, bestScore, bestScoreIndex);
     }
 
     private static void LogAngleScoreDetails(WalkCalculationState input, float newSpeed, Angle newAngle, int bestIndex)
@@ -685,5 +690,23 @@ public static class WalkCalculation
             top[worstIdx].Score = score;
             top[worstIdx].Valid = true;
         }
+    }
+}
+
+public readonly struct WalkDecisionOutcome
+{
+    public bool UsedDirectWalk { get; }
+    public Angle ChosenAngle { get; }
+    public float ChosenSpeed { get; }
+    public float BestScore { get; }
+    public int BestScoreIndex { get; }
+
+    public WalkDecisionOutcome(bool usedDirectWalk, Angle chosenAngle, float chosenSpeed, float bestScore, int bestScoreIndex)
+    {
+        UsedDirectWalk = usedDirectWalk;
+        ChosenAngle = chosenAngle;
+        ChosenSpeed = chosenSpeed;
+        BestScore = bestScore;
+        BestScoreIndex = bestScoreIndex;
     }
 }

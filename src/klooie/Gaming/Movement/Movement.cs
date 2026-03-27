@@ -15,6 +15,16 @@ public interface IMovement
     public float BaseSpeed { get; set; }
 }
 
+public interface IWalkInspectionHook
+{
+    void Capture(Walk walk, WalkCalculationState state, in WalkDecisionOutcome outcome);
+}
+
+public static class WalkInspectionHooks
+{
+    public static IWalkInspectionHook? Current { get; set; }
+}
+
 public abstract class Movement : DelayState, IMovement
 {
     public float BaseSpeed { get; set; }
