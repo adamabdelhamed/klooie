@@ -109,6 +109,20 @@ public readonly struct LocF
         return MathF.Sqrt(dx * dx + dy * dy);
     }
 
+    public static float CalculateNormalizedDistanceSquaredTo(in LocF a, in LocF b, float aspectRatio = 2.0f)
+    {
+        float dx = b.Left - a.Left;
+        float dy = (b.Top - a.Top) * aspectRatio;
+        return dx * dx + dy * dy;
+    }
+
+    public static float CalculateNormalizedDistanceSquaredTo(float ax, float ay, float bx, float by, float aspectRatio = 2.0f)
+    {
+        float dx = bx - ax;
+        float dy = (by - ay) * aspectRatio;
+        return dx * dx + dy * dy;
+    }
+
     public static Angle CalculateAngleTo(in LocF a, in LocF b)
     {
         float dx = b.Left - a.Left;
