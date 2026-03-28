@@ -1,5 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 
+using System.Collections.Generic;
+
 namespace klooie.Gaming;
 public class Vision : Recyclable, IFrameTask
 {
@@ -13,6 +15,9 @@ public class Vision : Recyclable, IFrameTask
 
 
     private VisionFilterContext targetFilterContext = new VisionFilterContext();
+    private readonly Dictionary<GameCollider, VisuallyTrackedObject> trackedObjectsMap = new Dictionary<GameCollider, VisuallyTrackedObject>(10);
+    private readonly Dictionary<GameCollider, bool> obstacleFilterCache = new Dictionary<GameCollider, bool>(32);
+    private readonly List<RayCandidate> rayCandidates = new List<RayCandidate>(32);
     private Event<VisionFilterContext>? _targetBeingEvaluated;
     public List<VisuallyTrackedObject> TrackedObjectsList { get; private set; } = new List<VisuallyTrackedObject>(10);
     public Event<VisionFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = Event<VisionFilterContext>.Create());
@@ -52,6 +57,7 @@ public class Vision : Recyclable, IFrameTask
     {
         RemoveStaleTrackedObjects();
         if (Eye.IsVisible == false) return;
+        obstacleFilterCache.Clear();
         var buffer = ObstacleBufferPool.Instance.Rent();
         Eye.ColliderGroup.SpacialIndex.Query(ResolveQueryBounds(), buffer);
         FilterObstacles(buffer);
@@ -93,12 +99,12 @@ public class Vision : Recyclable, IFrameTask
             if (candidate == Eye) continue; 
             var distance = Eye.CalculateNormalizedDistanceTo(candidate);
             if (distance > Visibility) continue;
+            var angle = Eye.CalculateAngleTo(candidate);
 
             if (distance > 2f)
             {
-                var angle = Eye.CalculateAngleTo(candidate);
                 var angleDiff = Eye.Velocity.Angle.DiffShortest(angle);
-                if (angleDiff > AngularVisibility) continue;
+                if (angleDiff > AngularVisibility / 2f) continue;
             }
 
             var prediction = CollisionPredictionPool.Instance.Rent();
@@ -111,32 +117,45 @@ public class Vision : Recyclable, IFrameTask
                 continue;
             }
 
-            var newItem =  VisuallyTrackedObject.Create(candidate, prediction, prediction.LKGD, distance);
-            TrackedObjectsList.Add(newItem);
+            AddTrackedObject(VisuallyTrackedObject.Create(candidate, prediction, prediction.LKGD, angle));
         }
         return true;
     }
 
     private void ApproximateScan(ObstacleBuffer buffer)
     {
-        var directlyAheadResult = Cast(Eye.Velocity.Angle, buffer);
-        if (directlyAheadResult != null)
+        PopulateRayCandidates(buffer);
+        var castBuffer = ObstacleBufferPool.Instance.Rent();
+        try
         {
-            TrackedObjectsList.Add(directlyAheadResult);
-        }
-
-        var currentAngle = FieldOfViewStart;
-        var totalTravel = 0f;
-
-        while (totalTravel <= AngularVisibility)
-        {
-            var visibleObject = Cast(currentAngle.Add(AngleFuzz == 0 ? 0 : Random.Shared.Next(-AngleFuzz, AngleFuzz)), buffer);
-            if (visibleObject != null)
+            var directlyAheadResult = Cast(Eye.Velocity.Angle, castBuffer);
+            if (directlyAheadResult != null)
             {
-                TrackedObjectsList.Add(visibleObject);
+                AddTrackedObject(directlyAheadResult);
             }
-            totalTravel += AngleStep;
-            currentAngle = currentAngle.Add(AngleStep);
+
+            var currentAngle = FieldOfViewStart;
+            var totalTravel = 0f;
+
+            while (totalTravel <= AngularVisibility)
+            {
+                var castAngle = currentAngle.Add(AngleFuzz == 0 ? 0 : Random.Shared.Next(-AngleFuzz, AngleFuzz));
+                if (castAngle.DiffShortest(Eye.Velocity.Angle) > 0.001f)
+                {
+                    var visibleObject = Cast(castAngle, castBuffer);
+                    if (visibleObject != null)
+                    {
+                        AddTrackedObject(visibleObject);
+                    }
+                }
+
+                totalTravel += AngleStep;
+                currentAngle = currentAngle.Add(AngleStep);
+            }
+        }
+        finally
+        {
+            castBuffer.Dispose();
         }
     }
 
@@ -176,6 +195,7 @@ public class Vision : Recyclable, IFrameTask
     private void UnTrackAtIndex(int index)
     {
         var trackedObject = TrackedObjectsList[index];
+        trackedObjectsMap.Remove(trackedObject.Target);
         TrackedObjectsList.RemoveAt(index);
         trackedObject.TryDispose();
     }
@@ -187,13 +207,15 @@ public class Vision : Recyclable, IFrameTask
             TrackedObjectsList [i].TryDispose();
         }
         TrackedObjectsList.Clear();
+        trackedObjectsMap.Clear();
     }
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
-    private VisuallyTrackedObject? Cast(Angle angle, ObstacleBuffer buffer)
+    private VisuallyTrackedObject? Cast(Angle angle, ObstacleBuffer castBuffer)
     {
+        PopulateCastObstacles(angle, castBuffer);
         var singleRay = CollisionPredictionPool.Instance.Rent();
-        CollisionDetector.Predict(Eye, angle, buffer.WriteableBuffer, Visibility, CastingMode, buffer.WriteableBuffer.Count, singleRay);
+        CollisionDetector.Predict(Eye, angle, castBuffer.WriteableBuffer, Visibility, CastingMode, castBuffer.WriteableBuffer.Count, singleRay);
         var potentialTarget = singleRay.ColliderHit as GameCollider;
 
         if (TryIgnorePotentialTargetIgnorable(potentialTarget, out var target))
@@ -213,25 +235,14 @@ public class Vision : Recyclable, IFrameTask
     private bool TryIgnorePotentialTargetIgnorable(GameCollider? potentialTarget, out VisuallyTrackedObject existing)
     {
         VisuallyTrackedObject existingTarget = null;
-        var alreadyTracked = potentialTarget != null && TryGetValue(potentialTarget, out existingTarget);
+        var alreadyTracked = potentialTarget != null && trackedObjectsMap.TryGetValue(potentialTarget, out existingTarget);
         var shouldBeIgnored = alreadyTracked || potentialTarget == null || potentialTarget?.Velocity == null || potentialTarget.IsVisible == false;
         existing = existingTarget;
         return shouldBeIgnored;
     }
 
     public bool TryGetValue(GameCollider key, out VisuallyTrackedObject ret)
-    {
-        for(var i = 0; i < TrackedObjectsList.Count; i++)
-        {
-            if(TrackedObjectsList[i].Target == key)
-            {
-                ret = TrackedObjectsList[i];
-                return true;
-            }
-        }
-        ret = null!;
-        return false;
-    }
+        => trackedObjectsMap.TryGetValue(key, out ret);
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     public static LocF ClosestPointOnRect(RectF rect, LocF point)
@@ -246,14 +257,19 @@ public class Vision : Recyclable, IFrameTask
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     private void FilterObstacles(ObstacleBuffer buffer)
     {
+        var writeIndex = 0;
         for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
         {
             var obstacle = buffer.WriteableBuffer[i];
-            if (IsIgnoredByFilter(obstacle))
+            if (IsIgnoredByFilterCached(obstacle) == false)
             {
-                buffer.WriteableBuffer.RemoveAt(i);
-                i--;
+                buffer.WriteableBuffer[writeIndex++] = obstacle;
             }
+        }
+
+        if (writeIndex < buffer.WriteableBuffer.Count)
+        {
+            buffer.WriteableBuffer.RemoveRange(writeIndex, buffer.WriteableBuffer.Count - writeIndex);
         }
     }
 
@@ -268,6 +284,69 @@ public class Vision : Recyclable, IFrameTask
         targetFilterContext.Reset(potentialTarget);
         _targetBeingEvaluated?.Fire(targetFilterContext);
         return targetFilterContext.Ignored;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool IsIgnoredByFilterCached(GameCollider potentialTarget)
+    {
+        if (obstacleFilterCache.TryGetValue(potentialTarget, out var ignored))
+        {
+            return ignored;
+        }
+
+        ignored = IsIgnoredByFilter(potentialTarget);
+        obstacleFilterCache[potentialTarget] = ignored;
+        return ignored;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AddTrackedObject(VisuallyTrackedObject trackedObject)
+    {
+        TrackedObjectsList.Add(trackedObject);
+        trackedObjectsMap[trackedObject.Target] = trackedObject;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void PopulateCastObstacles(Angle angle, ObstacleBuffer castBuffer)
+    {
+        castBuffer.WriteableBuffer.Clear();
+        for (var i = 0; i < rayCandidates.Count; i++)
+        {
+            var candidate = rayCandidates[i];
+            if (DiffShortestDegrees(angle.Value, candidate.CenterAngle) > candidate.AngularReach) continue;
+            castBuffer.WriteableBuffer.Add(candidate.Collider);
+        }
+    }
+
+    private void PopulateRayCandidates(ObstacleBuffer buffer)
+    {
+        rayCandidates.Clear();
+        var eyeBounds = Eye.Bounds;
+        var eyeRadius = eyeBounds.Hypotenous * 0.5f;
+        const float angularPadding = 1.5f;
+        const float minDistance = .001f;
+        const float radToDeg = 57.29578f;
+
+        for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
+        {
+            var obstacle = buffer.WriteableBuffer[i];
+            var obstacleBounds = obstacle.Bounds;
+            var centerAngle = eyeBounds.CalculateAngleTo(obstacleBounds).Value;
+            var centerDistance = eyeBounds.CalculateDistanceTo(obstacleBounds);
+            var obstacleRadius = obstacleBounds.Hypotenous * 0.5f;
+            var sweepRadius = eyeRadius + obstacleRadius + .5f;
+            var angularReach = centerDistance <= minDistance
+                ? 180f
+                : MathF.Min(180f, MathF.Atan2(sweepRadius, centerDistance) * radToDeg + angularPadding);
+            rayCandidates.Add(new RayCandidate(obstacle, centerAngle, angularReach));
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float DiffShortestDegrees(float a, float b)
+    {
+        var c = MathF.Abs(a - b);
+        return c <= 180f ? c : 360f - c;
     }
 
     protected override void OnReturn()
@@ -285,8 +364,25 @@ public class Vision : Recyclable, IFrameTask
         }
 
         TrackedObjectsList.Clear();
+        trackedObjectsMap.Clear();
+        obstacleFilterCache.Clear();
+        rayCandidates.Clear();
         _visibleObjectsChanged?.TryDispose();
         _visibleObjectsChanged = null;
+    }
+}
+
+internal readonly struct RayCandidate
+{
+    public readonly GameCollider Collider;
+    public readonly float CenterAngle;
+    public readonly float AngularReach;
+
+    public RayCandidate(GameCollider collider, float centerAngle, float angularReach)
+    {
+        Collider = collider;
+        CenterAngle = centerAngle;
+        AngularReach = angularReach;
     }
 }
 
