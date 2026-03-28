@@ -29,6 +29,15 @@ public enum CompositionMode
     /// (i.e., do not draw them; let the bottom pixel show through). All other pixels paint over.
     /// </summary>
     TransparentSpaceDefaultBG = 4,
+    /// <summary>
+    /// Smart overlay composition:
+    /// - Non-space characters from the top layer replace the bottom character and use the top foreground color.
+    /// - Background comes from the top layer only if it is explicitly set (non-default); otherwise the bottom background is preserved.
+    /// - Space characters do not replace the bottom character, but can still override the background if a non-default background is provided.
+    /// 
+    /// This enables clean overlays (text, effects, highlights) that respect existing content while allowing intentional background painting.
+    /// </summary>
+    SmartOverlay = 5,
 }
 public abstract class Container : ConsoleControl
 {
@@ -161,6 +170,10 @@ public abstract class Container : ConsoleControl
         {
             ComposeTransparentSpaceDefaultBG(control);
         }
+        else if (control.CompositionMode == CompositionMode.SmartOverlay)
+        {
+            ComposePaintForeground(control);
+        }
         else
         {
             ComposeBlendVisible(control);
@@ -169,6 +182,43 @@ public abstract class Container : ConsoleControl
     }
 
     public virtual (int X, int Y) Transform(ConsoleControl c) => (c.X, c.Y);
+
+    private void ComposePaintForeground(ConsoleControl control)
+    {
+        var obs = CompositionObserver;
+        var ownerId = obs == null ? 0 : obs.GetId(control);
+        var position = Transform(control);
+
+        var minX = Math.Max(position.X, 0);
+        var minY = Math.Max(position.Y, 0);
+        var maxX = Math.Min(Width, position.X + control.Width);
+        var maxY = Math.Min(Height, position.Y + control.Height);
+
+        for (var x = minX; x < maxX; x++)
+        {
+            for (var y = minY; y < maxY; y++)
+            {
+                var top = control.Bitmap.GetPixel(x - position.X, y - position.Y);
+                var bottom = Bitmap.GetPixel(x, y);
+                var useTopBackground = top.BackgroundColor != ConsoleString.DefaultBackgroundColor;
+                var background = useTopBackground ? top.BackgroundColor : bottom.BackgroundColor;
+
+                if (top.Value == ' ')
+                {
+                    if (useTopBackground)
+                    {
+                        Bitmap.SetPixel(x, y, new ConsoleCharacter(bottom.Value, bottom.ForegroundColor, background));
+                        obs?.OnPixelWritten(x, y, ownerId);
+                    }
+
+                    continue;
+                }
+
+                Bitmap.SetPixel(x, y, new ConsoleCharacter(top.Value, top.ForegroundColor, background));
+                obs?.OnPixelWritten(x, y, ownerId);
+            }
+        }
+    }
 
     private void ComposePaintOver(ConsoleControl control)
     {
