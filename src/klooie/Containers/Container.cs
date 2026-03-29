@@ -32,10 +32,9 @@ public enum CompositionMode
     /// <summary>
     /// Smart overlay composition:
     /// - Non-space characters from the top layer replace the bottom character and use the top foreground color.
-    /// - Background comes from the top layer only if it is explicitly set (non-default); otherwise the bottom background is preserved.
-    /// - Space characters do not replace the bottom character, but can still override the background if a non-default background is provided.
-    /// 
-    /// This enables clean overlays (text, effects, highlights) that respect existing content while allowing intentional background painting.
+    /// - The top background color is used whenever it is explicitly set (non-default); otherwise the bottom background is preserved.
+    /// - A top pixel that is a space with a default background is treated as transparent.
+    /// - A top pixel that is a space with an explicit background still paints, allowing the overlay to clear underlying text while filling the background.
     /// </summary>
     SmartOverlay = 5,
 }
@@ -172,7 +171,7 @@ public abstract class Container : ConsoleControl
         }
         else if (control.CompositionMode == CompositionMode.SmartOverlay)
         {
-            ComposePaintForeground(control);
+            ComposeSmartOverlay(control);
         }
         else
         {
@@ -183,7 +182,7 @@ public abstract class Container : ConsoleControl
 
     public virtual (int X, int Y) Transform(ConsoleControl c) => (c.X, c.Y);
 
-    private void ComposePaintForeground(ConsoleControl control)
+    private void ComposeSmartOverlay(ConsoleControl control)
     {
         var obs = CompositionObserver;
         var ownerId = obs == null ? 0 : obs.GetId(control);
@@ -200,21 +199,20 @@ public abstract class Container : ConsoleControl
             {
                 var top = control.Bitmap.GetPixel(x - position.X, y - position.Y);
                 var bottom = Bitmap.GetPixel(x, y);
-                var useTopBackground = top.BackgroundColor != ConsoleString.DefaultBackgroundColor;
-                var background = useTopBackground ? top.BackgroundColor : bottom.BackgroundColor;
 
-                if (top.Value == ' ')
+                var hasTopChar = top.Value != ' ';
+                var hasTopBackground = top.BackgroundColor != ConsoleString.DefaultBackgroundColor;
+
+                if (hasTopChar == false && hasTopBackground == false)
                 {
-                    if (useTopBackground)
-                    {
-                        Bitmap.SetPixel(x, y, new ConsoleCharacter(bottom.Value, bottom.ForegroundColor, background));
-                        obs?.OnPixelWritten(x, y, ownerId);
-                    }
-
                     continue;
                 }
 
-                Bitmap.SetPixel(x, y, new ConsoleCharacter(top.Value, top.ForegroundColor, background));
+                var value = hasTopChar || hasTopBackground ? top.Value : bottom.Value;
+                var foreground = hasTopChar ? top.ForegroundColor : bottom.ForegroundColor;
+                var background = hasTopBackground ? top.BackgroundColor : bottom.BackgroundColor;
+
+                Bitmap.SetPixel(x, y, new ConsoleCharacter(value, foreground, background));
                 obs?.OnPixelWritten(x, y, ownerId);
             }
         }
