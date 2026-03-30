@@ -150,7 +150,7 @@ public sealed partial class CellInstancedRenderer : IDisposable
 
         // ConsoleBitmap uses ArrayPool so internal Pixels.Length can be >= cellCount.
         // We just need at least cellCount and we must slice to cellCount.
-        var pixels = bitmap.GetPixelsSpan();
+        var pixels = bitmap.Pixels;
         if (pixels.Length < cellCount) return;
 
         if (ownerIds == null || ownerIds.Length < cellCount) return;
