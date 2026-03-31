@@ -4,7 +4,16 @@ public class GameCollider : ConsoleControl
 {
     internal float lastEvalTime;
     public float MinNextEvalTime => this.lastEvalTime + EvalFrequencySeconds;
-    public float EvalFrequencySeconds => (Velocity.Speed > ColliderGroup.HighestSpeedForEvalCalc ? ColliderGroup.MostFrequentEval : ColliderGroup.EvalFrequencySlope * Velocity.speed + ColliderGroup.LeastFrequentEval);
+    public float EvalFrequencySeconds
+    {
+        get
+        {
+            var speed = Math.Clamp(Velocity.Speed, ColliderGroup.LowestSpeedForEvalCalc, ColliderGroup.HighestSpeedForEvalCalc);
+            var progress = (speed - ColliderGroup.LowestSpeedForEvalCalc) / ColliderGroup.EvalSpeedRange;
+            var hz = ColliderGroup.LowestEvalHz + (ColliderGroup.HighestEvalHz - ColliderGroup.LowestEvalHz) * progress;
+            return 1f / hz;
+        }
+    }
 
     private bool connectToMainColliderGroup; // todo - remove this since I don't think there's any path where it can actually be set in time for OnInit
     public Velocity Velocity { get; private set; }

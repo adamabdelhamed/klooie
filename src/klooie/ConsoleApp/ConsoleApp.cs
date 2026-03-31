@@ -5,6 +5,7 @@
 /// </summary>
 public class ConsoleApp : EventLoop
 {
+    public static readonly Event Starting = Event.Create();
     [ThreadStatic]
     private static ConsoleApp? _current;
 
@@ -144,6 +145,7 @@ public class ConsoleApp : EventLoop
             focus = FocusManagerPool.Instance.Rent();
             OnDisposed(focus, TryDisposeMe);
             ConsolePainter.Initialize();
+            Invoke(static () => Starting.Fire());
             base.Run();
         }
         finally

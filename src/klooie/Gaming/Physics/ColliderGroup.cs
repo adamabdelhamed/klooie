@@ -16,14 +16,13 @@ public sealed class ColliderGroup
     private ObstacleBuffer queryBuffer = ObstacleBufferPool.Instance.Rent();
     public float LatestDT { get; private set; }
 
-    // these properties model a linear progression that determines the appropriate min
-    // evaluation time period for an object given it's current speed
-    public const float LeastFrequentEval = 0.25f;        // 250 ms (4 Hz) for slowest movers
-    public const float LowestSpeedForEvalCalc = 0f;      // x1
-    public const float MostFrequentEval = .006f;        
-    public const float HighestSpeedForEvalCalc = 60f;    // x2 (or higher, if needed)
-    public const float EvalFrequencySlope =
-        (MostFrequentEval - LeastFrequentEval) / (HighestSpeedForEvalCalc - LowestSpeedForEvalCalc);
+    // These properties model a linear progression in Hz, not seconds, so we can
+    // increase evaluation frequency smoothly as speed rises while capping at 30 Hz.
+    public const float LowestEvalHz = 10f;
+    public const float HighestEvalHz = 30f;
+    public const float LowestSpeedForEvalCalc = 1f;
+    public const float HighestSpeedForEvalCalc = 30f;
+    public const float EvalSpeedRange = HighestSpeedForEvalCalc - LowestSpeedForEvalCalc;
     private ObstacleBuffer colliderBuffer;
     private CollisionPrediction hitPrediction;
     private ILifetime? lt;
@@ -337,7 +336,9 @@ public sealed class ColliderGroup
         if (spatialIndex.IsExpired(item)) return false;
         var velocity = item.Velocity;
         velocity.ApplyInfluences();
-        var isReadyToMove = !(spatialIndex.IsExpired(item) || velocity.Speed == 0 || now < item.MinNextEvalTime);
+        var nextPaintDeltaSeconds = LatestDT / 1000f;
+        var willBeDueByNextPaint = now + nextPaintDeltaSeconds >= item.MinNextEvalTime;
+        var isReadyToMove = !(spatialIndex.IsExpired(item) || velocity.Speed == 0 || willBeDueByNextPaint == false);
         return isReadyToMove;
     }
     

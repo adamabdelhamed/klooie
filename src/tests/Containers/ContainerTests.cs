@@ -110,4 +110,37 @@ public class ContainerTests
         });
         app.Run();
     }
+
+    [TestMethod]
+    public void Container_CompositionObserver_PreservesNestedChildOwnership()
+    {
+        var observer = new CompositionOwnerCapture { IdProvider = LayoutRootPanel.GetIdForPresentation };
+        Container.CompositionObserver = observer;
+
+        try
+        {
+            var app = new ConsoleApp();
+            app.Invoke(async () =>
+            {
+                var panel = app.LayoutRoot.Add(new ConsolePanel { X = 1, Y = 0, Width = 5, Height = 1 });
+                var label = panel.Add(new Label("A".ToRed()) { X = 2, Y = 0 });
+
+                await app.RequestPaintAsync();
+
+                var owners = observer.SnapshotOwners(app.LayoutRoot);
+                var rootWidth = app.LayoutRoot.Width;
+                var ownerAtRenderedPixel = owners[(0 * rootWidth) + 3];
+
+                Assert.AreEqual(LayoutRootPanel.GetIdForPresentation(label), ownerAtRenderedPixel);
+
+                app.Stop();
+            });
+
+            app.Run();
+        }
+        finally
+        {
+            Container.CompositionObserver = null;
+        }
+    }
 }

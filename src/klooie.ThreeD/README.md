@@ -51,3 +51,9 @@ Start with this list if we ever pick this project up again.
 
 At the time of writing this document I took a screenshot of what the sample produces so that a reader (or AI agent) can get a deeper understanding of the current state.
 **external\klooie\src\klooie.ThreeD.Sample\klooie.3d.png**
+
+## Update
+
+We made some meaningful improvements to the integer snapping issues above. I did not delete the comments that talk about the limitations.
+
+The 3d object in the sample now moves pretty smoothly, although if you set the background color on the moving object the flat background gets clipped as the item moves.

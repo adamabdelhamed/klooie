@@ -591,7 +591,19 @@ public partial class ConsoleControl : Rectangular
         {
             return;
         }
-        EnsurePainted();
+
+        var observer = this is Container ? Container.CompositionObserver : null;
+        observer?.BeginPainting(this, Width, Height);
+
+        try
+        {
+            EnsurePainted();
+        }
+        finally
+        {
+            observer?.EndPainting(this);
+        }
+
         if (Recorder != null && Recorder.IsFinished == false)
         {
             Recorder.Window = new RectF(0, 0, Width, Height);

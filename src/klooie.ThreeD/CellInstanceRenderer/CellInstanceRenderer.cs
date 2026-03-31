@@ -24,7 +24,10 @@ public sealed partial class CellInstancedRenderer : IDisposable
     private readonly Sampler sampler;
     private readonly Sampler glyphSampler;
     private readonly ResourceLayout layout;
+    private readonly Pipeline backgroundPipeline;
     private readonly Pipeline pipeline;
+    private Pipeline? backgroundPipelineSsaa;
+    private Pipeline? pipelineSsaa;
 
     private DeviceBuffer quadVb;
     private DeviceBuffer quadIb;
@@ -45,17 +48,19 @@ public sealed partial class CellInstancedRenderer : IDisposable
 
     private readonly struct FlatCellInstance
     {
-        public const uint SizeInBytes = 20;
+        public const uint SizeInBytes = 24;
         public readonly Vector2 Cell;
         public readonly uint OwnerId;
         public readonly uint GlyphPacked;
         public readonly uint FgPacked;
-        public FlatCellInstance(Vector2 cell, uint ownerId, uint glyphPacked, uint fgPacked)
+        public readonly uint BgPacked;
+        public FlatCellInstance(Vector2 cell, uint ownerId, uint glyphPacked, uint fgPacked, uint bgPacked)
         {
             Cell = cell;
             OwnerId = ownerId;
             GlyphPacked = glyphPacked;
             FgPacked = fgPacked;
+            BgPacked = bgPacked;
         }
     }
 
@@ -120,7 +125,8 @@ public sealed partial class CellInstancedRenderer : IDisposable
 
 
         glyphAtlas = new GlyphAtlasTex(gd, factory, cellW: 16, supersample: 3);
-        pipeline = CreatePipeline(layout);
+        backgroundPipeline = CreateBackgroundPipeline(layout, gd.MainSwapchain.Framebuffer.OutputDescription);
+        pipeline = CreatePipeline(layout, gd.MainSwapchain.Framebuffer.OutputDescription);
 
         quadVb = factory.CreateBuffer(new BufferDescription(4 * QuadVertex.SizeInBytes, BufferUsage.VertexBuffer));
         quadIb = factory.CreateBuffer(new BufferDescription(6 * sizeof(ushort), BufferUsage.IndexBuffer));
@@ -202,8 +208,6 @@ public sealed partial class CellInstancedRenderer : IDisposable
         EnsureOwnerOffsetBufferSize((uint)(maxOwnerId + 1));
         gd.UpdateBuffer(ownerOffsetBuffer, 0, ownerOffsets);
 
-        DrawBoardPass(cl, alignment);
-
         EnsureFlatCapacity(cellCount);
         EnsureThreeDCapacity(cellCount);
 
@@ -216,16 +220,29 @@ public sealed partial class CellInstancedRenderer : IDisposable
         // EnsureResourceSet requires cameraUbo to exist (created by Ensure3dDebugResources above)
         EnsureResourceSet();
 
-        cl.SetPipeline(pipeline);
+        EnsureThreeDSsaaTargets(vpW, vpH);
+        cl.SetFramebuffer(threeDSsaaFramebuffer);
+        cl.ClearColorTarget(0, RgbaFloat.Clear);
+        cl.ClearDepthStencil(1f);
+        cl.SetViewport(0, new Veldrid.Viewport(0, 0, threeDSsaaW, threeDSsaaH, 0f, 1f));
+        cl.SetScissorRect(0, 0, 0, (uint)threeDSsaaW, (uint)threeDSsaaH);
+
+        DrawBoardPass(cl, alignment);
+
+        cl.SetPipeline(backgroundPipelineSsaa ?? backgroundPipeline);
         cl.SetGraphicsResourceSet(0, resourceSet);
 
         cl.SetVertexBuffer(0, quadVb);
         cl.SetVertexBuffer(1, flatInstanceBuffer);
         cl.SetIndexBuffer(quadIb, IndexFormat.UInt16);
-
         cl.DrawIndexed(6, (uint)flatCount, 0, 0, 0);
 
-        Draw3dLaneShapes(cl, vpX, vpY, vpW, vpH);
+        cl.SetPipeline(pipelineSsaa ?? pipeline);
+        cl.SetGraphicsResourceSet(0, resourceSet);
+        cl.DrawIndexed(6, (uint)flatCount, 0, 0, 0);
+
+        Draw3dLaneShapes(cl);
+        Composite3dSsaa(cl, vpX, vpY, vpW, vpH);
     }
 
 
@@ -260,7 +277,10 @@ public sealed partial class CellInstancedRenderer : IDisposable
         threeDInstanceBuffer?.Dispose();
         ownerOffsetBuffer?.Dispose();
 
+        backgroundPipeline?.Dispose();
         pipeline?.Dispose();
+        backgroundPipelineSsaa?.Dispose();
+        pipelineSsaa?.Dispose();
         layout?.Dispose();
         sampler?.Dispose();
 

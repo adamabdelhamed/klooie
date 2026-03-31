@@ -60,8 +60,7 @@ public sealed class VeldridTerminalHost : ITerminalHost
 
     public bool Present(LayoutRootPanel root, ConsoleBitmap bitmap)
     {
-        ownerCaptureInstance.Begin(root.Width, root.Height);
-        var owners = ownerCaptureInstance.SnapshotOwners();
+        var owners = ownerCaptureInstance.SnapshotOwners(root);
         VeldridWindow.Instance.Render(root, bitmap, owners, ownerCaptureInstance);
         return true;
     }

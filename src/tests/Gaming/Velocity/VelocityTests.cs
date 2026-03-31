@@ -101,6 +101,59 @@ public class VelocityTests
     }
 
     [TestMethod]
+    public void Velocity_MovesEveryPaintAtThirtyFps()
+    {
+        var testLt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            var stopwatch = new TestStopwatch();
+            var group = new ColliderGroup(testLt, null, stopwatch);
+            var collider = new GameCollider(0, 0, 1, 1, connectToMainColliderGroup: false);
+            collider.ConnectToGroup(group);
+            collider.Velocity.Speed = 40;
+            collider.Velocity.Angle = 0;
+
+            float lastLeft = collider.Left;
+            for (var i = 0; i < 5; i++)
+            {
+                stopwatch.Elapsed += TimeSpan.FromSeconds(1f / 30f);
+                group.Tick();
+                Assert.IsTrue(collider.Left > lastLeft, $"Expected movement on frame {i + 1}, but X stayed at {collider.Left}.");
+                lastLeft = collider.Left;
+            }
+        }
+        finally
+        {
+            testLt.Dispose();
+        }
+    }
+
+    [TestMethod]
+    public void Velocity_EvalFrequencyLerpsFromTenToThirtyHz()
+    {
+        var testLt = DefaultRecyclablePool.Instance.Rent();
+        try
+        {
+            var group = new ColliderGroup(testLt, null, new TestStopwatch());
+            var collider = new GameCollider(0, 0, 1, 1, connectToMainColliderGroup: false);
+            collider.ConnectToGroup(group);
+
+            collider.Velocity.Speed = 1;
+            AssertCloseEnough(.1f, collider.EvalFrequencySeconds);
+
+            collider.Velocity.Speed = 30;
+            AssertCloseEnough(1f / 30f, collider.EvalFrequencySeconds);
+
+            collider.Velocity.Speed = 40;
+            AssertCloseEnough(1f / 30f, collider.EvalFrequencySeconds);
+        }
+        finally
+        {
+            testLt.Dispose();
+        }
+    }
+
+    [TestMethod]
     public void Velocity_Colliders()
     {
         var testLt = DefaultRecyclablePool.Instance.Rent();

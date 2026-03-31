@@ -1,5 +1,6 @@
 ﻿using klooie;
 using PowerArgs;
+using klooie.Gaming;
 using System.Numerics;
 using Veldrid;
 
@@ -16,10 +17,6 @@ public sealed partial class CellInstancedRenderer
     private ThreeDCellInstance[] threeDInstances = Array.Empty<ThreeDCellInstance>(); // CPU staging only for now
     private int flatCount;
     private int threeDCount;
-
-
-
-    private static float Frac(float v) => v - MathF.Floor(v);
     private static uint PackRgb(RGB c) => (uint)(c.R | (c.G << 8) | (c.B << 16));
 
     private static int GetMaxOwnerId(int[] ownerIds, int cellCount)
@@ -35,21 +32,43 @@ public sealed partial class CellInstancedRenderer
     private void BuildOwnerOffsets(LayoutRootPanel root, int maxOwnerId)
     {
         Array.Clear(ownerOffsets, 0, maxOwnerId + 1);
+        BuildOwnerOffsetsRecursive(root, maxOwnerId, Vector2.Zero, Vector2.Zero);
+    }
 
-        root.VisitControlTree(c =>
+    private void BuildOwnerOffsetsRecursive(Container parent, int maxOwnerId, Vector2 actualParentOrigin, Vector2 integerParentOrigin)
+    {
+        for (var i = 0; i < parent.Children.Count; i++)
         {
-            var id = LayoutRootPanel.GetIdForPresentation(c);
+            var control = parent.Children[i];
+            var actualComposedOrigin = actualParentOrigin + GetActualRenderedOrigin(parent, control);
+            var integerComposedOrigin = integerParentOrigin + GetIntegerRenderedOrigin(parent, control);
+            var id = LayoutRootPanel.GetIdForPresentation(control);
             if ((uint)id <= (uint)maxOwnerId)
             {
-                // Replace these with your real float positions (or whatever you were using in ControlState).
-                var left = c.Bounds.Left;
-                var top = c.Bounds.Top;
-
-                ownerOffsets[id] = new Vector2(Frac(left), Frac(top));
+                ownerOffsets[id] = actualComposedOrigin - integerComposedOrigin;
             }
 
-            return false; // keep going
-        });
+            if (control is Container childContainer)
+            {
+                BuildOwnerOffsetsRecursive(childContainer, maxOwnerId, actualComposedOrigin, integerComposedOrigin);
+            }
+        }
+    }
+
+    private static Vector2 GetActualRenderedOrigin(Container parent, ConsoleControl control)
+    {
+        if (parent is Camera camera)
+        {
+            return new Vector2(control.Bounds.Left - camera.CameraLocation.Left, control.Bounds.Top - camera.CameraLocation.Top);
+        }
+
+        return new Vector2(control.Bounds.Left, control.Bounds.Top);
+    }
+
+    private static Vector2 GetIntegerRenderedOrigin(Container parent, ConsoleControl control)
+    {
+        var integerPosition = parent.Transform(control);
+        return new Vector2(integerPosition.X, integerPosition.Y);
     }
 
 
@@ -70,6 +89,7 @@ public sealed partial class CellInstancedRenderer
 
                 var lane = laneSelector.Select(p.Value);
                 var fg = PackRgb(p.ForegroundColor);
+                var bg = PackRgb(p.BackgroundColor);
 
                 if (lane == GlyphLane.ThreeD)
                 {
@@ -79,7 +99,7 @@ public sealed partial class CellInstancedRenderer
 
                     // Still draw BG for this cell via flat lane using a transparent glyph.
                     var space = flatMapper.Map(' ');
-                    flatInstances[flatCount++] = new FlatCellInstance(new Vector2(x, y), ownerId, PackGlyph(space), fg);
+                    flatInstances[flatCount++] = new FlatCellInstance(new Vector2(x, y), ownerId, PackGlyph(space), fg, bg);
                     continue;
                 }
 
@@ -87,7 +107,7 @@ public sealed partial class CellInstancedRenderer
                 var g = flatMapper.Map(p.Value);
                 var glyphPacked = PackGlyph(g);
 
-                flatInstances[flatCount++] = new FlatCellInstance(new Vector2(x, y), ownerId, glyphPacked, fg);
+                flatInstances[flatCount++] = new FlatCellInstance(new Vector2(x, y), ownerId, glyphPacked, fg, bg);
             }
         }
     }

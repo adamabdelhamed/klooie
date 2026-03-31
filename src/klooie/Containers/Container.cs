@@ -182,6 +182,14 @@ public abstract class Container : ConsoleControl
 
     public virtual (int X, int Y) Transform(ConsoleControl c) => (c.X, c.Y);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ResolveComposedOwner(ICompositionObserver? observer, ConsoleControl control, int localX, int localY, int fallbackOwnerId)
+    {
+        if (observer == null) return fallbackOwnerId;
+        if (control is not Container || control.HasFilters) return fallbackOwnerId;
+        return observer.ResolveOwner(control, localX, localY, fallbackOwnerId);
+    }
+
     private void ComposeSmartOverlay(ConsoleControl control)
     {
         var obs = CompositionObserver;
@@ -213,7 +221,7 @@ public abstract class Container : ConsoleControl
                 var background = hasTopBackground ? top.BackgroundColor : bottom.BackgroundColor;
 
                 Bitmap.SetPixel(x, y, new ConsoleCharacter(value, foreground, background));
-                obs?.OnPixelWritten(x, y, ownerId);
+                obs?.OnPixelWritten(x, y, ResolveComposedOwner(obs, control, x - position.X, y - position.Y, ownerId));
             }
         }
     }
@@ -234,7 +242,7 @@ public abstract class Container : ConsoleControl
             for (var y = minY; y < maxY; y++)
             {
                 Bitmap.SetPixel(x, y, control.Bitmap.GetPixel(x - position.X, y - position.Y));
-                obs?.OnPixelWritten(x, y, ownerId);
+                obs?.OnPixelWritten(x, y, ResolveComposedOwner(obs, control, x - position.X, y - position.Y, ownerId));
             }
         }
     }
@@ -257,7 +265,7 @@ public abstract class Container : ConsoleControl
                 var controlIsDefaultBg = controlPixel.BackgroundColor == ConsoleString.DefaultBackgroundColor;
                 var blend = controlIsDefaultBg;
                 Bitmap.SetPixel(x, y, blend ? new ConsoleCharacter(controlPixel.Value, controlPixel.ForegroundColor, myPixel.BackgroundColor) : controlPixel);
-                obs?.OnPixelWritten(x, y, ownerId);
+                obs?.OnPixelWritten(x, y, ResolveComposedOwner(obs, control, x - position.X, y - position.Y, ownerId));
             }
         }
     }
@@ -278,7 +286,7 @@ public abstract class Container : ConsoleControl
                 var controlPixel = control.Bitmap.GetPixel(x - position.X, y - position.Y);
                 var vis = controlPixel.Value == ' ' ? controlPixel.BackgroundColor != Background : controlPixel.ForegroundColor != Background || controlPixel.BackgroundColor != Background;
                 Bitmap.SetPixel(x, y, vis ? controlPixel : Bitmap.GetPixel(x, y));
-                if(vis) obs?.OnPixelWritten(x, y, ownerId);
+                if(vis) obs?.OnPixelWritten(x, y, ResolveComposedOwner(obs, control, x - position.X, y - position.Y, ownerId));
             }
         }
     }
@@ -303,7 +311,7 @@ public abstract class Container : ConsoleControl
                 {
                     // Use top char and its FG, but always bottom BG
                     Bitmap.SetPixel(x, y, new ConsoleCharacter(topPixel.Value, topPixel.ForegroundColor, bottomPixel.BackgroundColor));
-                    obs?.OnPixelWritten(x, y, ownerId);
+                    obs?.OnPixelWritten(x, y, ResolveComposedOwner(obs, control, x - position.X, y - position.Y, ownerId));
                 }
                 else
                 {
@@ -339,7 +347,7 @@ public abstract class Container : ConsoleControl
 
                 // Otherwise, paint over like the default PaintOver mode
                 Bitmap.SetPixel(x, y, top);
-                obs?.OnPixelWritten(x, y, ownerId);
+                obs?.OnPixelWritten(x, y, ResolveComposedOwner(obs, control, x - position.X, y - position.Y, ownerId));
             }
         }
     }
@@ -358,41 +366,96 @@ public interface ICompositionObserver
 {
     int GetId(ConsoleControl control);
 
+    void BeginPainting(ConsoleControl control, int width, int height);
+
+    void EndPainting(ConsoleControl control);
+
+    int ResolveOwner(ConsoleControl control, int x, int y, int fallbackOwnerId);
+
     // called only when the parent bitmap pixel is actually changed by the composition
     void OnPixelWritten(int x, int y, int ownerId);
 }
 
 public sealed class CompositionOwnerCapture : ICompositionObserver
 {
-    private int[] ownerIds = Array.Empty<int>();
-    private int width;
-    private int height;
+    private sealed class OwnerBuffer
+    {
+        public int[] OwnerIds = Array.Empty<int>();
+        public int Width { get; private set; }
+        public int Height { get; private set; }
+
+        public void Begin(int width, int height)
+        {
+            Width = width;
+            Height = height;
+            var needed = width * height;
+            if (OwnerIds.Length != needed) OwnerIds = new int[needed];
+            Array.Fill(OwnerIds, 0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetOwner(int x, int y, int ownerId)
+        {
+            var index = (y * Width) + x;
+            if ((uint)index >= (uint)OwnerIds.Length) return;
+            OwnerIds[index] = ownerId;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetOwner(int x, int y)
+        {
+            var index = (y * Width) + x;
+            return (uint)index < (uint)OwnerIds.Length ? OwnerIds[index] : 0;
+        }
+
+        public int[] Snapshot()
+        {
+            var copy = new int[OwnerIds.Length];
+            Array.Copy(OwnerIds, copy, OwnerIds.Length);
+            return copy;
+        }
+    }
+
+    private readonly ConditionalWeakTable<ConsoleControl, OwnerBuffer> ownerBuffers = new();
+    private readonly Stack<(ConsoleControl Control, OwnerBuffer Buffer)> activeBuffers = new();
 
     public Func<ConsoleControl, int> IdProvider { get; set; }
 
-    public void Begin(int w, int h)
+    public void BeginPainting(ConsoleControl control, int width, int height)
     {
-        width = w;
-        height = h;
-        var needed = w * h;
-        if (ownerIds.Length != needed) ownerIds = new int[needed];
-        Array.Fill(ownerIds, 0);
+        var buffer = ownerBuffers.GetValue(control, _ => new OwnerBuffer());
+        buffer.Begin(width, height);
+        activeBuffers.Push((control, buffer));
     }
 
-    public int[] SnapshotOwners()
+    public void EndPainting(ConsoleControl control)
     {
-        var copy = new int[ownerIds.Length];
-        Array.Copy(ownerIds, copy, ownerIds.Length);
-        return copy;
+        if (activeBuffers.Count == 0) return;
+
+        var current = activeBuffers.Pop();
+        if (ReferenceEquals(current.Control, control)) return;
+
+        throw new InvalidOperationException("Composition owner capture lost paint stack alignment.");
     }
+
+    public int[] SnapshotOwners(ConsoleControl control) =>
+        ownerBuffers.TryGetValue(control, out var buffer) ? buffer.Snapshot() : Array.Empty<int>();
 
     public int GetId(ConsoleControl control) => IdProvider(control);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int ResolveOwner(ConsoleControl control, int x, int y, int fallbackOwnerId)
+    {
+        if (!ownerBuffers.TryGetValue(control, out var buffer)) return fallbackOwnerId;
+
+        var ownerId = buffer.GetOwner(x, y);
+        return ownerId == 0 ? fallbackOwnerId : ownerId;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnPixelWritten(int x, int y, int ownerId)
     {
-        var index = (y * width) + x;
-        if (index < 0 || index >= ownerIds.Length) return;
-        ownerIds[index] = ownerId;
+        if (activeBuffers.Count == 0) return;
+        activeBuffers.Peek().Buffer.SetOwner(x, y, ownerId);
     }
 }

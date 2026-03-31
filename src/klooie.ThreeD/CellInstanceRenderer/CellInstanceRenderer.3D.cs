@@ -15,6 +15,7 @@ public sealed partial class CellInstancedRenderer
     private DeviceBuffer cameraUbo;  // Shared camera UBO for both flat and 3D
  
 	private Pipeline boardPipeline3d;
+	private Pipeline? boardPipelineSsaa;
 	private ResourceLayout boardLayout3d;
 	private ResourceSet boardSet3d;
 	private DeviceBuffer boardUbo3d;
@@ -171,7 +172,7 @@ public sealed partial class CellInstancedRenderer
 
 	private static Matrix4x4 GetBoardModelMatrix(in BoardAlignment3D alignment)
 	{
-		var origin = ComputeBoardWorldFromCell(0f, 0f, Vector2.Zero, alignment, BoardPlaneZ);
+		var origin = new Vector3(0f, 0f, BoardPlaneZ);
 		return Matrix4x4.CreateScale(alignment.BoardSize.X, alignment.BoardSize.Y, 1f)
 			* Matrix4x4.CreateTranslation(origin);
 	}
@@ -187,6 +188,9 @@ public sealed partial class CellInstancedRenderer
 
 			boardPipeline3d?.Dispose();
 			boardPipeline3d = null;
+
+			boardPipelineSsaa?.Dispose();
+			boardPipelineSsaa = null;
 
 			boardLayout3d?.Dispose();
 			boardLayout3d = null;
@@ -273,7 +277,7 @@ public sealed partial class CellInstancedRenderer
 				borderColor: SamplerBorderColor.TransparentBlack));
 
 			pipeline3d = Create3dDebugPipeline(layout3d, gd.MainSwapchain.Framebuffer.OutputDescription);
-			boardPipeline3d = CreateBoardPipeline(boardLayout3d);
+			boardPipeline3d = CreateBoardPipeline(boardLayout3d, gd.MainSwapchain.Framebuffer.OutputDescription);
 			threeDSsaaCompositePipeline = Create3dCompositePipeline(threeDSsaaCompositeLayout);
 
 			threeDShaderRevisionBuilt = ThreeDShaderRevision;
@@ -329,6 +333,12 @@ public sealed partial class CellInstancedRenderer
 		threeDSsaaFramebuffer = factory.CreateFramebuffer(new FramebufferDescription(threeDSsaaDepthTex, threeDSsaaColorTex));
 		pipeline3d?.Dispose();
 		pipeline3d = Create3dDebugPipeline(layout3d, threeDSsaaFramebuffer.OutputDescription);
+		backgroundPipelineSsaa?.Dispose();
+		backgroundPipelineSsaa = CreateBackgroundPipeline(layout, threeDSsaaFramebuffer.OutputDescription);
+		pipelineSsaa?.Dispose();
+		pipelineSsaa = CreatePipeline(layout, threeDSsaaFramebuffer.OutputDescription);
+		boardPipelineSsaa?.Dispose();
+		boardPipelineSsaa = CreateBoardPipeline(boardLayout3d, threeDSsaaFramebuffer.OutputDescription);
 
         threeDSsaaCompositeSet = factory.CreateResourceSet(new ResourceSetDescription(
         threeDSsaaCompositeLayout,
@@ -556,7 +566,7 @@ void main()
         return p;
     }
 
-	private Pipeline CreateBoardPipeline(ResourceLayout layout)
+	private Pipeline CreateBoardPipeline(ResourceLayout layout, OutputDescription outputs)
 	{
 		var vertexCode = @"
 #version 450
@@ -639,7 +649,7 @@ void main()
 			PrimitiveTopology = PrimitiveTopology.TriangleList,
 			ResourceLayouts = new[] { layout },
 			ShaderSet = new ShaderSetDescription(new[] { boardLayout }, shaders),
-			Outputs = gd.MainSwapchain.Framebuffer.OutputDescription
+			Outputs = outputs
 		};
 
 		var p = factory.CreateGraphicsPipeline(ref pd);
@@ -799,7 +809,7 @@ if (aM < 0.001)
 		var model = GetBoardModelMatrix(alignment);
 		gd.UpdateBuffer(boardUbo3d, 0, new BoardUniform3D(model, alignment.View, alignment.Proj, alignment.BoardCells, true));
 
-		cl.SetPipeline(boardPipeline3d);
+		cl.SetPipeline(boardPipelineSsaa ?? boardPipeline3d);
 		cl.SetGraphicsResourceSet(0, boardSet3d);
 		cl.SetVertexBuffer(0, boardVb);
 		cl.SetIndexBuffer(boardIb, IndexFormat.UInt16);
@@ -812,40 +822,17 @@ if (aM < 0.001)
 		DrawAlignedBoard(cl, alignment);
 	}
 
-    private void Draw3dLaneShapes(CommandList cl, int vpX, int vpY, int vpW, int vpH)
+    private void Draw3dLaneShapes(CommandList cl)
     {
         Ensure3dDebugResources();
-		EnsureThreeDSsaaTargets(vpW, vpH);
-
-		cl.SetFramebuffer(threeDSsaaFramebuffer);
-		cl.ClearColorTarget(0, RgbaFloat.Clear);
-		cl.ClearDepthStencil(1f);
-		cl.SetViewport(0, new Veldrid.Viewport(0, 0, threeDSsaaW, threeDSsaaH, 0f, 1f));
-		cl.SetScissorRect(0, 0, 0, (uint)threeDSsaaW, (uint)threeDSsaaH);
 
         // Allocate instance buffer for at least 1 instance so the GPU path stays valid.
         var uploadCount = Math.Max(1, threeDCount);
         var bytes = (uint)uploadCount * ThreeDCellInstance.SizeInBytes;
         EnsureThreeDInstanceBufferSize(bytes);
 
-        // Keep a single dummy instance for the "no instances" case.
-        // IMPORTANT: if you've added ShapeId to ThreeDCellInstance, include it here too.
-        var one = new[] { new ThreeDCellInstance(new Vector2(0, 0), 0, 0x00FFFFFFu, shapeId: 0u) };
-
         if (threeDCount == 0)
         {
-            gd.UpdateBuffer(threeDInstanceBuffer, 0, one);
-
-            cl.SetPipeline(pipeline3d);
-            cl.SetGraphicsResourceSet(0, set3d);
-
-            var shape = ShapeRegistry.Instance.GetShape(0); // fallback shape
-            cl.SetVertexBuffer(0, shape.VertexBuffer);
-            cl.SetVertexBuffer(1, threeDInstanceBuffer);
-            cl.SetIndexBuffer(shape.IndexBuffer, shape.IndexFormat);
-            cl.DrawIndexed(indexCount: shape.IndexCount, instanceCount: 1, indexStart: 0, vertexOffset: 0, instanceStart: 0);
-
-			Composite3dSsaa(cl, vpX, vpY, vpW, vpH);
 			return;
         }
 
@@ -885,8 +872,6 @@ if (aM < 0.001)
                 vertexOffset: 0,
                 instanceStart: (uint)start);
         }
-
-		Composite3dSsaa(cl, vpX, vpY, vpW, vpH);
     }
 
 	private void Composite3dSsaa(CommandList cl, int vpX, int vpY, int vpW, int vpH)
@@ -923,6 +908,9 @@ if (aM < 0.001)
 
 		boardPipeline3d?.Dispose();
 		boardPipeline3d = null;
+
+		boardPipelineSsaa?.Dispose();
+		boardPipelineSsaa = null;
 
 		layout3d?.Dispose();
 		layout3d = null;

@@ -8,13 +8,13 @@ VeldridTerminalHost.Init(); // Warms up the infrastructure so that the ConsoleAp
 var app = new Game();
 app.Invoke(() =>
 {
-    VeldridTerminalHost.BoardZoom = 4; // Zoomed in to show the effect more clearly; adjust as needed (1 is normal)
+    VeldridTerminalHost.BoardZoom = 3; // Zoomed in to show the effect more clearly; adjust as needed (1 is normal)
     VeldridTerminalHost.Attach((LayoutRootPanel)app.LayoutRoot);
     // Large 3d letters centered on the screen
     var collider = app.GamePanel.Add(new TextCollider("3D Sample".ToYellow()) { X = 4, Y = 4 });
     collider.Velocity.CollisionBehavior = Velocity.CollisionBehaviorMode.Bounce;
     collider.Velocity.Angle = 30;
-    collider.Velocity.Speed = 40;
+    collider.Velocity.Speed = 15;
     app.GamePanel.Add(new BorderCollider()).DockToRight().FillVertically();
     app.GamePanel.Add(new BorderCollider()).DockToLeft().FillVertically();
     app.GamePanel.Add(new BorderCollider()).DockToTop().FillHorizontally();
