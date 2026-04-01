@@ -59,7 +59,12 @@ public readonly struct Angle
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float Sin() => MathF.Sin(Value * (MathF.PI / 180f));
- 
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public LocF ToUnitVector()
+    {
+        return new LocF(Cos(), Sin());
+    }
 
 
 
