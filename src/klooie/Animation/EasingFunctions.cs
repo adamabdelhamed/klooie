@@ -79,3 +79,35 @@ public static class EasingFunctions
         return (float)ret;
     }
 }
+
+public readonly struct CinematicEase
+{
+    public float TotalSeconds { get; }
+    public float StartStrength { get; }
+    public float EndStrength { get; }
+
+    public float TotalMilliseconds => TotalSeconds * 1000f;
+
+    public CinematicEase(float totalDurationSeconds, float startStrength, float endStrength)
+    {
+        TotalSeconds = totalDurationSeconds;
+        StartStrength = Math.Clamp(startStrength, -1f, 1f);
+        EndStrength = Math.Clamp(endStrength, -1f, 1f);
+    }
+
+    public float Apply(float t)
+    {
+        t = Math.Clamp(t, 0f, 1f);
+
+        // Linear cubic Bézier has y control points at 1/3 and 2/3.
+        // Move them up/down to shape the beginning and end independently.
+        var p1 = (1f / 3f) - (StartStrength / 3f);
+        var p2 = (2f / 3f) + (EndStrength / 3f);
+
+        var u = 1f - t;
+        var tt = t * t;
+        var uu = u * u;
+
+        return (3f * uu * t * p1) + (3f * u * tt * p2) + (tt * t);
+    }
+}
