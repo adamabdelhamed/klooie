@@ -79,12 +79,12 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
         }
     }
 
-    public Task Use(Func<T,Task> action)
+    public async Task Use(Func<T,Task> action)
     {
         var inst = Rent();
         try
         {
-            return action(inst);
+            await action(inst);
         }
         finally
         {
