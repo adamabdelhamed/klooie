@@ -82,15 +82,14 @@ public static class EasingFunctions
 
 public readonly struct CinematicEase
 {
-    public float TotalSeconds { get; }
     public float StartStrength { get; }
     public float EndStrength { get; }
 
-    public float TotalMilliseconds => TotalSeconds * 1000f;
+    public float TotalMilliseconds { get; }
 
-    public CinematicEase(float totalDurationSeconds, float startStrength, float endStrength)
+    public CinematicEase(float totalDurationMilliseconds, float startStrength, float endStrength)
     {
-        TotalSeconds = totalDurationSeconds;
+        TotalMilliseconds = totalDurationMilliseconds;
         StartStrength = Math.Clamp(startStrength, -1f, 1f);
         EndStrength = Math.Clamp(endStrength, -1f, 1f);
     }
