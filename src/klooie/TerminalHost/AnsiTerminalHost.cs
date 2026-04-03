@@ -1,4 +1,6 @@
-﻿namespace klooie;
+﻿using System.Diagnostics;
+
+namespace klooie;
 
 public sealed class AnsiTerminalHost : ITerminalHost
 {
@@ -20,19 +22,20 @@ public sealed class AnsiTerminalHost : ITerminalHost
 
         if (lastConsoleWidth == ConsoleProvider.Current.BufferWidth && lastConsoleHeight == ConsoleProvider.Current.WindowHeight) return false;
 
-        ConsoleProvider.Current.Clear();
+        ConsolePainter.ClearToBlack();
 
-        var lastSyncTime = DateTime.UtcNow;
-        while (DateTime.UtcNow - lastSyncTime <= TimeSpan.FromSeconds(.25f))
+        var lastSyncTime = Stopwatch.GetTimestamp();
+        while (Stopwatch.GetElapsedTime(lastSyncTime) <= TimeSpan.FromSeconds(.05f))
         {
             if (ConsoleProvider.Current.BufferWidth != lastConsoleWidth || ConsoleProvider.Current.WindowHeight != lastConsoleHeight)
             {
                 lastConsoleWidth = ConsoleProvider.Current.BufferWidth;
                 lastConsoleHeight = ConsoleProvider.Current.WindowHeight;
-                lastSyncTime = DateTime.UtcNow;
+                lastSyncTime = Stopwatch.GetTimestamp();
+                ConsolePainter.ClearToBlack();
             }
         }
-
+        
         if (lastConsoleWidth < 1 || lastConsoleHeight < 1) return false;
 
         root.Width = lastConsoleWidth;

@@ -13,6 +13,7 @@ public static class ConsolePainter
     public static int AvgWriteLength => FastConsoleWriter.AvgWriteLength;
     internal static readonly FrameRateMeter SkipRateMeter = new FrameRateMeter();
     private static readonly FastConsoleWriter fastConsoleWriter = new FastConsoleWriter();
+    private static readonly char[] ClearToBlackSequence = "\x1b[0m\x1b[48;2;0;0;0m\x1b[2J\x1b[H".ToCharArray();
     private static readonly PaintBuffer paintBuilder = new PaintBuffer();
     private static readonly List<Run> runsOnLine = new List<Run>(512);
 
@@ -41,6 +42,14 @@ public static class ConsolePainter
         }
     }
 
+    public static void ClearToBlack()
+    {
+        _ansi = default;
+        PaintQoS.BeginWrite();
+        fastConsoleWriter.Write(ClearToBlackSequence, ClearToBlackSequence.Length);
+        PaintQoS.EndWrite(ClearToBlackSequence.Length);
+    }
+
     public static bool Paint(ConsoleBitmap bitmap)
     {
         if (ConsoleProvider.Current.WindowHeight == 0) return false;
@@ -57,7 +66,7 @@ public static class ConsolePainter
         if (lastBufferWidth != ConsoleProvider.Current.BufferWidth)
         {
             lastBufferWidth = ConsoleProvider.Current.BufferWidth;
-            ConsoleProvider.Current.Clear();
+            ClearToBlack();
         }
 
         int attempts = 0;
