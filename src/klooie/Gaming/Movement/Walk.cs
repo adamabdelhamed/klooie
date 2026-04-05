@@ -9,6 +9,7 @@ public class Walk : Movement
     protected Walk() { }
     private WalkCalculationState state = new WalkCalculationState();
     private MotionInfluence influence;
+    private Action<WalkMotionCommand>? externalMotionSink;
 
     // Persistent per-movement histories (moved off of state so we don’t nuke them each tick)
     private RecyclableList<float> lastGoalDistances;
@@ -22,19 +23,23 @@ public class Walk : Movement
     public virtual RectF? GetHazard() => null;
     public virtual bool FearCollision(GameCollider collider) => true;
 
-    public static Walk Create(Vision vision, float baseSpeed)
+    public static Walk Create(Vision vision, float baseSpeed, Action<WalkMotionCommand>? externalMotionSink = null)
     {
         var state = pool.Value.Rent();
-        state.Construct(vision, baseSpeed);
+        state.Construct(vision, baseSpeed, externalMotionSink);
         return state;
     }
 
-    protected void Construct(Vision vision, float baseSpeed)
+    protected void Construct(Vision vision, float baseSpeed, Action<WalkMotionCommand>? externalMotionSink = null)
     {
         base.Construct(vision, baseSpeed);
-        influence = MotionInfluence.Create("Wander Influence", true);
+        this.externalMotionSink = externalMotionSink;
         CloseEnough = 1;
-        Velocity.AddInfluence(influence);
+        influence = MotionInfluence.Create("Wander Influence", true);
+        if (this.externalMotionSink == null)
+        {
+            Velocity.AddInfluence(influence);
+        }
 
         // Init persistent histories for this movement
         lastGoalDistances = RecyclableListPool<float>.Instance.Rent(20);
@@ -42,6 +47,8 @@ public class Walk : Movement
         lastFewRoundedBounds = RecyclableListPool<RectF>.Instance.Rent(20);
         Vision.VisibleObjectsChanged.Subscribe(this, static (me) => me.Tick(), this);
     }
+
+    public void EvaluateNow() => Tick();
 
     private void Tick()
     {
@@ -53,21 +60,36 @@ public class Walk : Movement
         FrameDebugger.RegisterTask(nameof(Walk));
         state.Hydrate(this);
         state.Sync(this);
-        var outcome = WalkCalculation.AdjustSpeedAndVelocity(state, ref influence.DeltaSpeed, ref influence.Angle);
+        var commandedSpeed = influence.DeltaSpeed;
+        var commandedAngle = influence.Angle;
+        var outcome = WalkCalculation.AdjustSpeedAndVelocity(state, ref commandedSpeed, ref commandedAngle);
+        if (externalMotionSink == null)
+        {
+            influence.DeltaSpeed = commandedSpeed;
+            influence.Angle = commandedAngle;
+        }
+        else
+        {
+            externalMotionSink(new WalkMotionCommand(commandedAngle, commandedSpeed, BaseSpeed));
+        }
         WalkInspectionHooks.Current?.Capture(this, state, outcome);
         state.Dehydrate();
     }
 
     protected override void OnReturn()
     {
-        if (Eye != null && Eye.Velocity != null && Eye.Velocity.ContainsInfluence(influence) == false)
+        if (Eye != null && Eye.Velocity != null && externalMotionSink == null && Eye.Velocity.ContainsInfluence(influence) == false)
         {
             throw new InvalidOperationException($"Wander Influence not found in Eye.Velocity influences. This is a bug in the code, please report it.");
         }
 
-        Eye?.Velocity?.RemoveInfluence(influence);
+        if (Eye?.Velocity?.ContainsInfluence(influence) == true)
+        {
+            Eye.Velocity.RemoveInfluence(influence);
+        }
         influence.Dispose();
         influence = null!;
+        externalMotionSink = null;
         CloseEnough = 0;
 
         // Return persistent histories
@@ -709,4 +731,20 @@ public readonly struct WalkDecisionOutcome
         BestScore = bestScore;
         BestScoreIndex = bestScoreIndex;
     }
+}
+
+public readonly struct WalkMotionCommand
+{
+    public Angle Angle { get; }
+    public float Speed { get; }
+    public float BaseSpeed { get; }
+
+    public WalkMotionCommand(Angle angle, float speed, float baseSpeed)
+    {
+        Angle = angle;
+        Speed = speed;
+        BaseSpeed = baseSpeed;
+    }
+
+    public float NormalizedSpeed => BaseSpeed <= 0 ? 0 : Math.Clamp(Speed / BaseSpeed, 0f, 1f);
 }
