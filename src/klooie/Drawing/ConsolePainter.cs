@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace klooie;
 public static class ConsolePainter
-{ 
+{
     public static int AvgWriteLength => FastConsoleWriter.AvgWriteLength;
     internal static readonly FrameRateMeter SkipRateMeter = new FrameRateMeter();
     private static readonly FastConsoleWriter fastConsoleWriter = new FastConsoleWriter();
@@ -23,8 +23,11 @@ public static class ConsolePainter
     private static RGB? fgAtStartup;
     private static RGB? bgAtStartup;
 
+    private static bool hasInitialized = false;
     public static void Initialize()
     {
+        if (hasInitialized) return;
+        hasInitialized = true;
         fgAtStartup = ConsoleProvider.Current?.ForegroundColor;
         bgAtStartup = ConsoleProvider.Current?.BackgroundColor;
         fastConsoleWriter.Write("\x1b[?25l".ToCharArray(), "\x1b[?25l".Length);

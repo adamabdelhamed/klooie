@@ -207,7 +207,7 @@ public class ConsoleApp : EventLoop
     protected override void OnReturn()
     {
         base.OnReturn();
-        ConsolePainter.Reset();
+        if(ClearOnExit) ConsolePainter.Reset();
         logTail = null;
     }
 }

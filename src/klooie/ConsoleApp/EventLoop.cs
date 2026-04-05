@@ -142,8 +142,6 @@ public class EventLoop : Recyclable
         Swallow,
     }
 
-    private class StopLoopException : Exception { }
-
     private class CustomSyncContext : SynchronizationContext
     {
         private EventLoop loop;
@@ -433,10 +431,9 @@ public class EventLoop : Recyclable
             throw new Exception("Not running");
         }
 
-        Invoke(() =>
-        {
-            throw new StopLoopException();
-        });
+        stopRequested = true;
+        pendingWorkItems.Clear();
+        workQueue.Clear();
     }
 
     public void Invoke(Action work) => Invoke(work, static (work)=>
@@ -636,13 +633,7 @@ public class EventLoop : Recyclable
     {
         var cleaned = ex.Clean();
 
-        if(cleaned.Count == 1 && cleaned[0] is StopLoopException)
-        {
-            stopRequested = true;
-            pendingWorkItems.Clear();
-            workQueue.Clear();
-            return EventLoopExceptionHandling.Stop;
-        }
+    
 
         if (IsDrainingOrDrained) return EventLoopExceptionHandling.Swallow;
         return EventLoopExceptionHandling.Throw;

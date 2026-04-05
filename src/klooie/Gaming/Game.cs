@@ -146,7 +146,6 @@ public class Game : ConsoleApp
         await ruleManager.Startup();
         Publish(ReadyEventId);
         PaintEnabled = true;
-        await RequestPaintAsync();
     }
 
 
