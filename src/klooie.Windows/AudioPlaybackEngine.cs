@@ -9,6 +9,7 @@ public class AudioPlaybackEngine : ISoundProvider
 {
     public const int SampleRate = SoundProvider.SampleRate;
     private const int ChannelCount = SoundProvider.ChannelCount;
+    private static readonly string PlaybackDebugLogPath = Path.Combine(Path.GetTempPath(), "ttbs-audio-debug.log");
     private readonly IWavePlayer outputDevice;
     private readonly MixingSampleProvider sfxMixer;
     public readonly ScheduledSynthProvider scheduledSynthProvider;
@@ -21,9 +22,7 @@ public class AudioPlaybackEngine : ISoundProvider
     public long SamplesRendered => scheduledSynthProvider.SamplesRendered;
     public bool FailedToInitializeOrRun { get; private set; }
 
-    private ReadWatchdogSampleProvider? readWatchdog;
     private int audioFailed; // 0/1
-    private const int StallMs = 500;
     public AudioPlaybackEngine(IBinarySoundProvider provider = null)
     {
         try
@@ -36,10 +35,9 @@ public class AudioPlaybackEngine : ISoundProvider
             sfxMixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
             mixer = new MixingSampleProvider([sfxMixer, scheduledSynthProvider]) { ReadFully = true };
-            readWatchdog = new ReadWatchdogSampleProvider(mixer);
             outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 60);
-            outputDevice.PlaybackStopped += (_, __) => eventLoop.Invoke(()=> FailAudio());
-            outputDevice.Init(readWatchdog);
+            outputDevice.PlaybackStopped += (_, args) => HandlePlaybackStopped(args);
+            outputDevice.Init(mixer);
             outputDevice.Play();
             RebindEventLoop(eventLoop);
             soundCache = new SoundCache(provider);
@@ -55,59 +53,40 @@ public class AudioPlaybackEngine : ISoundProvider
     protected void RebindEventLoop(EventLoop loop)
     {
         eventLoop = loop;
-        StartAudioStallMonitor(StallMonitorDelayState.Create(this));
+        DebugLogAudioEvent($"Rebound audio engine to event loop '{loop.GetType().Name}' on thread {loop.Thread?.ManagedThreadId}");
     }
 
-    private static void StartAudioStallMonitor(StallMonitorDelayState state)
+    private void HandlePlaybackStopped(StoppedEventArgs args)
     {
-        var e = state.Engine;
-        if (e.FailedToInitializeOrRun || Volatile.Read(ref e.audioFailed) == 1) return;
+        DebugLogAudioEvent(
+            $"PlaybackStopped fired. State={outputDevice?.PlaybackState}, Failed={FailedToInitializeOrRun}, Draining={eventLoop?.IsDrainingOrDrained}",
+            args.Exception);
 
-        if (e.readWatchdog == null)
+        if (Volatile.Read(ref audioFailed) == 1 || FailedToInitializeOrRun || eventLoop?.IsDrainingOrDrained == true) return;
+
+        if (args.Exception != null)
         {
-            e.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
+            eventLoop.Invoke((engine: this, exception: args.Exception), static state => state.engine.FailAudio(state.exception));
             return;
         }
 
-        if (e.outputDevice == null)
-        {
-            e.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
-            return;
-        }
-
-        if (e.outputDevice.PlaybackState != PlaybackState.Playing)
-        {
-            e.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
-            return;
-        }
-
-        var now = Stopwatch.GetTimestamp();
-        var lastRead = e.readWatchdog.LastReadTimestamp;
-        var elapsedMs = (now - lastRead) * 1000 / Stopwatch.Frequency;
-
-        if (elapsedMs > StallMs) e.FailAudio();
-
-        e.eventLoop.Scheduler.DelayIfValid(250, state, StartAudioStallMonitor);
+        eventLoop.Invoke(this, static engine => engine.TryRecoverFromUnexpectedStop());
     }
 
-    private class StallMonitorDelayState : DelayState
+    private void TryRecoverFromUnexpectedStop()
     {
-        private static LazyPool<StallMonitorDelayState> pool = new LazyPool<StallMonitorDelayState>(() => new StallMonitorDelayState());
-        private StallMonitorDelayState() { }
-        public AudioPlaybackEngine Engine { get; private set; }
+        if (Volatile.Read(ref audioFailed) == 1 || FailedToInitializeOrRun || outputDevice == null) return;
+        if (outputDevice.PlaybackState != PlaybackState.Stopped) return;
 
-        public static StallMonitorDelayState Create(AudioPlaybackEngine engine)
+        try
         {
-            var state = pool.Value.Rent();
-            state.Engine = engine;
-            state.AddDependency(engine.eventLoop);
-            return state;
+            DebugLogAudioEvent("Attempting recovery from PlaybackStopped without an exception");
+            outputDevice.Play();
+            DebugLogAudioEvent($"Recovery play call completed. NewState={outputDevice.PlaybackState}");
         }
-
-        protected override void OnReturn()
+        catch (Exception ex)
         {
-            base.OnReturn();
-            Engine = null!;
+            FailAudio(ex);
         }
     }
 
@@ -116,6 +95,7 @@ public class AudioPlaybackEngine : ISoundProvider
         if (Interlocked.Exchange(ref audioFailed, 1) == 1) return;
         if (FailedToInitializeOrRun) return;
         FailedToInitializeOrRun = true;
+        DebugLogAudioEvent("FailAudio invoked", ex);
         try { outputDevice?.Stop(); } catch { }
         try { outputDevice?.Dispose(); } catch { }
         OnSoundFailedToLoad(ex ?? new Exception("Audio engine failed or stalled"));
@@ -183,6 +163,7 @@ public class AudioPlaybackEngine : ISoundProvider
         if (FailedToInitializeOrRun) return;
         if(outputDevice == null) return;
         if(outputDevice.PlaybackState != PlaybackState.Playing) return;
+        DebugLogAudioEvent("Pause requested");
         outputDevice.Pause();
     }
     public void Resume()
@@ -190,6 +171,7 @@ public class AudioPlaybackEngine : ISoundProvider
         if (FailedToInitializeOrRun) return;
         if(outputDevice == null) return;
         if (outputDevice.PlaybackState != PlaybackState.Paused) return;
+        DebugLogAudioEvent("Resume requested");
         outputDevice.Play();
     }
     public void ClearCache()
@@ -211,6 +193,30 @@ public class AudioPlaybackEngine : ISoundProvider
     /// </summary>
     /// <param name="elapsedMilliseconds"></param>
     protected virtual void LogSoundLoaded(long elapsedMilliseconds) { }
+
+    private static void DebugLogAudioEvent(string message, Exception? ex = null)
+    {
+        return;
+        try
+        {
+            var lines = new List<string>()
+            {
+                $"[{DateTimeOffset.Now:O}] {message}",
+                $"Thread={Environment.CurrentManagedThreadId}",
+                $"Stack={Environment.StackTrace}"
+            };
+
+            if (ex != null)
+            {
+                lines.Add($"Exception={ex}");
+            }
+
+            File.AppendAllText(PlaybackDebugLogPath, string.Join(Environment.NewLine, lines) + Environment.NewLine + Environment.NewLine);
+        }
+        catch
+        {
+        }
+    }
 }
 
 public class ScheduledSynthProvider : ScheduledSignalSourceMixer, ISampleProvider

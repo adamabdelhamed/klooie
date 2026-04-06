@@ -73,6 +73,15 @@ public sealed class SynchronousScheduler
         return tcs.Task;
     }
 
+    public Recyclable DelayLifetime(double delayMs)
+    {
+        var lt = ConsoleApp.Current.CreateChildRecyclable();
+        Delay(delayMs, LeaseHelper.Track(lt), static lease => lease.UnTrackAndDispose());
+        return lt;
+    }
+
+
+
     public void Delay<TScope>(double delayMs, TScope state, Action<TScope> callback) => EnsureDelayLoopIsRunning(StatefulWorkItem<TScope>.Create(state, callback, delayMs));
     public void Delay(double delayMs, Action callback) => EnsureDelayLoopIsRunning(StatelessWorkItem.Create(callback, delayMs));
 
