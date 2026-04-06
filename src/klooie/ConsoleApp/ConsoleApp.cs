@@ -18,6 +18,7 @@ public class ConsoleApp : EventLoop
     private FocusManager focus;
     private LayoutRootPanel layoutRoot;
 
+    public Event BeforePaint => layoutRoot.BeforePaint;
     public Event AfterPaint => layoutRoot.AfterPaint;
 
     /// <summary>

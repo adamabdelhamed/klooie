@@ -7,13 +7,14 @@ namespace klooie;
 public partial class LayoutRootPanel : ConsolePanel
 {
     public const int MaxPaintRate = 30;
-    private Event _onWindowResized, _afterPaint;
+    private Event _onWindowResized, _afterPaint, _beforePaint;
     private int lastConsoleWidth, lastConsoleHeight;
     private List<TaskCompletionSource> paintRequests;
     private FrameRateMeter paintRateMeter;
     private ConsoleCharacter defaultPen;
     internal Event OnWindowResized { get => _onWindowResized ?? (_onWindowResized = Event.Create()); }
 
+    public Event BeforePaint => _beforePaint ?? (_beforePaint = Event.Create());
     public Event AfterPaint => _afterPaint ?? (_afterPaint = Event.Create());
 
     internal int FramesPerSecond => paintRateMeter.CurrentFPS;
@@ -53,6 +54,8 @@ public partial class LayoutRootPanel : ConsolePanel
         _onWindowResized = null;
         _afterPaint?.TryDispose();
         _afterPaint = null;
+        _beforePaint?.TryDispose();
+        _beforePaint = null;
     }
 
     private void OnDescendentAdded(ConsoleControl control) => control.AddedToVisualTreeInternal();
@@ -87,7 +90,7 @@ public partial class LayoutRootPanel : ConsolePanel
 
         Bitmap.Fill(defaultPen);
         if (!PaintEnabled) return;
-
+        _beforePaint?.Fire();
         Paint();
 
         // If host skipped (e.g. ConsolePainter throttling), skip rest of frame work.
