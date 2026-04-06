@@ -30,4 +30,18 @@ public class ProtectedConsolePanelTests
 
         ConsoleApp.Current.Stop();
     });
+
+    [TestMethod]
+    public void ProtectedPanel_DisposeWhileAttached_DoesNotThrow() => AppTest.Run(TestContext.TestId(), UITestMode.Headless, async (context) =>
+    {
+        var host = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel()).Fill();
+        var protectedPanel = host.Add(new ProtectedConsolePanel()).Fill();
+
+        await ConsoleApp.Current.RequestPaintAsync();
+
+        protectedPanel.Dispose();
+
+        Assert.AreEqual(0, host.Controls.Count);
+        ConsoleApp.Current.Stop();
+    });
 }

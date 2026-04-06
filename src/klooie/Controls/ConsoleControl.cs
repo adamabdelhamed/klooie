@@ -327,6 +327,11 @@ public partial class ConsoleControl : Rectangular
     protected override void OnReturn()
     {
         var _this = this;
+
+        // Detach from the parent before we tear down nested state so parent-side
+        // descendant removal notifications still see an intact subtree.
+        (_this.Parent as ConsolePanel)?.Controls.Remove(_this);
+
         if (_this._focused != null)
         {
             _this._focused.Dispose();
@@ -367,12 +372,6 @@ public partial class ConsoleControl : Rectangular
 
         _this.Bitmap?.Dispose();
         _this.Bitmap = null;
-
-        // This is here because controls can either be removed using Dispose() or by calling Remove from a parent's Controls collection.
-        // In the case where Dispose() is called somebody needs to remove this control from its parent.
-        // We could do this from within ConsolePanel, but it would require a lambda with a capture, which causes an allocation.
-        // Doing it here looks a bit hacky, but that allocation is on a critical path.
-        (_this.Parent as ConsolePanel)?.Controls.Remove(_this);
 
         FocusStackDepthInternal = null;
         HasBeenAddedToVisualTree = false;
