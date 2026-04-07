@@ -35,7 +35,7 @@ public class AudioPlaybackEngine : ISoundProvider
             sfxMixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
             mixer = new MixingSampleProvider([sfxMixer, scheduledSynthProvider]) { ReadFully = true };
-            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 60);
+            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 120);
             outputDevice.PlaybackStopped += (_, args) => HandlePlaybackStopped(args);
             outputDevice.Init(mixer);
             outputDevice.Play();
