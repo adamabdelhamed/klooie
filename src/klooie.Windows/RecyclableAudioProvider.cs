@@ -40,7 +40,7 @@ public abstract class RecyclableAudioProvider : Recyclable, ISampleProvider
 
     protected override void OnReturn()
     {
-        sampleKnob?.Dispose();
+        sampleKnob?.TryDispose();
         sampleKnob = null;
         masterKnob = null;
         effectiveVolume = 0f;
