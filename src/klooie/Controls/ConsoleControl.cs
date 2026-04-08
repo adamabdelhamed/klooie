@@ -151,7 +151,24 @@ public partial class ConsoleControl : Rectangular
     /// <summary>
     /// Gets whether or not all parents of this control are visible
     /// </summary>
-    public bool AreAllParentsVisible => Anscestors.All(a => a.IsVisible);
+    public bool AreAllParentsVisible
+    {
+        get
+        {
+            var parent = Parent;
+            while (parent != null)
+            {
+                if (parent.IsVisible == false)
+                {
+                    return false;
+                }
+
+                parent = parent.Parent;
+            }
+
+            return true;
+        }
+    }
 
     /// <summary>
     /// Gets whether or not this control is visible and all parents are visible
