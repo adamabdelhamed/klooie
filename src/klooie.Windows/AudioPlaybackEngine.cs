@@ -9,11 +9,13 @@ public class AudioPlaybackEngine : ISoundProvider
 {
     public const int SampleRate = SoundProvider.SampleRate;
     private const int ChannelCount = SoundProvider.ChannelCount;
+    private const int DeviceLatencyMilliseconds = 120;
     private static readonly string PlaybackDebugLogPath = Path.Combine(Path.GetTempPath(), "ttbs-audio-debug.log");
     private readonly IWavePlayer outputDevice;
     private readonly MixingSampleProvider sfxMixer;
     public readonly ScheduledSynthProvider scheduledSynthProvider;
-    private readonly MixingSampleProvider mixer; // The master mixer stays
+    private readonly MixingSampleProvider masterMixer;
+    private readonly ISampleProvider mixer; // Protected output stage
     private EventLoop eventLoop;
     private SoundCache soundCache;
     public VolumeKnob MasterVolume { get; set; }
@@ -34,8 +36,9 @@ public class AudioPlaybackEngine : ISoundProvider
             MasterVolume = VolumeKnob.Create();
             sfxMixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
             scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
-            mixer = new MixingSampleProvider([sfxMixer, scheduledSynthProvider]) { ReadFully = true };
-            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, 120);
+            masterMixer = new MixingSampleProvider([sfxMixer, scheduledSynthProvider]) { ReadFully = true };
+            mixer = new OutputProtectionSampleProvider(masterMixer);
+            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, DeviceLatencyMilliseconds);
             outputDevice.PlaybackStopped += (_, args) => HandlePlaybackStopped(args);
             outputDevice.Init(mixer);
             outputDevice.Play();
@@ -127,7 +130,7 @@ public class AudioPlaybackEngine : ISoundProvider
             for (var i = 0; i < ret.Voices.Count; i++)
             {
                 var voice = ret.Voices[i];
-                mixer.AddMixerInput(voice);
+                masterMixer.AddMixerInput(voice);
             }
         }
         return ret;
@@ -244,5 +247,39 @@ internal sealed class ReadWatchdogSampleProvider : ISampleProvider
     {
         Interlocked.Exchange(ref lastReadTimestamp, Stopwatch.GetTimestamp());
         return inner.Read(buffer, offset, count);
+    }
+}
+
+internal sealed class OutputProtectionSampleProvider : ISampleProvider
+{
+    private const float HeadroomGain = 0.92f;
+    private const float SoftClipThreshold = 0.85f;
+    private readonly ISampleProvider inner;
+
+    public OutputProtectionSampleProvider(ISampleProvider inner) => this.inner = inner ?? throw new ArgumentNullException(nameof(inner));
+
+    public WaveFormat WaveFormat => inner.WaveFormat;
+
+    public int Read(float[] buffer, int offset, int count)
+    {
+        var read = inner.Read(buffer, offset, count);
+        var end = offset + read;
+        for (var i = offset; i < end; i++)
+        {
+            buffer[i] = ProtectSample(buffer[i] * HeadroomGain);
+        }
+
+        return read;
+    }
+
+    private static float ProtectSample(float sample)
+    {
+        var abs = MathF.Abs(sample);
+        if (abs <= SoftClipThreshold) return sample;
+
+        var sign = MathF.Sign(sample);
+        var excess = (abs - SoftClipThreshold) / (1f - SoftClipThreshold);
+        var shaped = SoftClipThreshold + ((1f - SoftClipThreshold) * MathF.Tanh(excess));
+        return sign * MathF.Min(1f, shaped);
     }
 }

@@ -4,6 +4,9 @@ namespace klooie;
 
 internal class RecyclableSampleProvider : RecyclableAudioProvider
 {
+    private const int EdgeFadeMilliseconds = 4;
+    private static readonly int EdgeFadeFrameCount = Math.Max(1, (SoundProvider.SampleRate * EdgeFadeMilliseconds) / 1000);
+
     // ==== backing source (one of these is set) ====
     private CachedSound? sound;              // cached SFX (float[])
     private ISampleProvider? stream;         // streaming music (decoder pipeline)
@@ -13,6 +16,10 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
     private int maxLifetimeLease;
     private EventLoop eventLoop;
     private bool loop;                       // only used for CachedSound path
+    private long framesRendered;
+    private int releaseFramesRemaining;
+    private float releaseLeft;
+    private float releaseRight;
 
     private static LazyPool<RecyclableSampleProvider> pool = new(() => new RecyclableSampleProvider());
 
@@ -77,9 +84,11 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
     {
         if (maxLifetime != null && !maxLifetime.IsStillValid(maxLifetimeLease))
         {
-            ScheduleDisposal();
-            return 0;
+            BeginRelease();
         }
+
+        var releaseOnly = WriteReleaseTail(buffer, offset, count);
+        if (releaseOnly > 0 || releaseFramesRemaining == 0 && (sound == null && stream == null)) return releaseOnly;
 
         // Equal-power pan coefficients (stereo expected)
         int channels = WaveFormat.Channels;
@@ -95,8 +104,8 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
             int read = stream.Read(buffer, offset, count);
             if (read <= 0)
             {
-                ScheduleDisposal();
-                return 0;
+                BeginRelease();
+                return WriteReleaseTail(buffer, offset, count);
             }
 
             // Apply volume + pan per frame (interleaved stereo)
@@ -106,15 +115,24 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
             float vol = effectiveVolume;
             while (i < frames)
             {
-                buffer[idx] *= vol * leftGain;
-                buffer[idx + 1] *= vol * rightGain;
+                var left = buffer[idx] * vol * leftGain;
+                var right = buffer[idx + 1] * vol * rightGain;
+                ApplyFadeIn(ref left, ref right);
+                buffer[idx] = left;
+                buffer[idx + 1] = right;
+                releaseLeft = left;
+                releaseRight = right;
                 idx += 2;
                 i++;
             }
 
             // Streaming can end on a non zero read. If that happens then we need to
             // detect it. Otherwise playback will continue indefinitely with silence.
-            if (read < count) ScheduleDisposal(); 
+            if (read < count)
+            {
+                BeginRelease();
+                read += WriteReleaseTail(buffer, offset + read, count - read);
+            }
 
             return read;
         }
@@ -134,7 +152,7 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
                     position = 0;
                     continue;
                 }
-                ScheduleDisposal();
+                BeginRelease();
                 break;
             }
 
@@ -147,10 +165,13 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
 
             while (frames-- > 0)
             {
-                float l = src.AudioData[srcIdx];
-                float r = src.AudioData[srcIdx + 1];
-                buffer[dstIdx] = l * vol * leftGain;
-                buffer[dstIdx + 1] = r * vol * rightGain;
+                float l = src.AudioData[srcIdx] * vol * leftGain;
+                float r = src.AudioData[srcIdx + 1] * vol * rightGain;
+                ApplyFadeIn(ref l, ref r);
+                buffer[dstIdx] = l;
+                buffer[dstIdx + 1] = r;
+                releaseLeft = l;
+                releaseRight = r;
                 srcIdx += 2;
                 dstIdx += 2;
             }
@@ -162,7 +183,66 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
             totalSamplesWritten += samplesCopied;
         }
 
+        if (count > 0)
+        {
+            totalSamplesWritten += WriteReleaseTail(buffer, offset, count);
+        }
+
         return totalSamplesWritten;
+    }
+
+    private void ApplyFadeIn(ref float left, ref float right)
+    {
+        if (framesRendered < EdgeFadeFrameCount)
+        {
+            var gain = (framesRendered + 1f) / EdgeFadeFrameCount;
+            left *= gain;
+            right *= gain;
+        }
+
+        framesRendered++;
+    }
+
+    private void BeginRelease()
+    {
+        if (releaseFramesRemaining > 0) return;
+
+        if (MathF.Abs(releaseLeft) < 0.0001f && MathF.Abs(releaseRight) < 0.0001f)
+        {
+            releaseFramesRemaining = 0;
+            sound = null;
+            stream = null;
+            ScheduleDisposal();
+            return;
+        }
+
+        releaseFramesRemaining = EdgeFadeFrameCount;
+    }
+
+    private int WriteReleaseTail(float[] buffer, int offset, int count)
+    {
+        if (releaseFramesRemaining <= 0) return 0;
+
+        var channels = WaveFormat.Channels;
+        var framesToWrite = Math.Min(count / channels, releaseFramesRemaining);
+        var idx = offset;
+        for (var i = 0; i < framesToWrite; i++)
+        {
+            var gain = releaseFramesRemaining / (float)EdgeFadeFrameCount;
+            buffer[idx] = releaseLeft * gain;
+            buffer[idx + 1] = releaseRight * gain;
+            idx += channels;
+            releaseFramesRemaining--;
+        }
+
+        if (releaseFramesRemaining == 0)
+        {
+            ScheduleDisposal();
+            sound = null;
+            stream = null;
+        }
+
+        return framesToWrite * channels;
     }
 
     private void ScheduleDisposal() => 
@@ -179,5 +259,9 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
         maxLifetimeLease = -1;
         loop = false;
         position = 0;
+        framesRendered = 0;
+        releaseFramesRemaining = 0;
+        releaseLeft = 0;
+        releaseRight = 0;
     }
 }
