@@ -1,4 +1,5 @@
-﻿using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System.Diagnostics;
@@ -10,42 +11,55 @@ public class AudioPlaybackEngine : ISoundProvider
     public const int SampleRate = SoundProvider.SampleRate;
     private const int ChannelCount = SoundProvider.ChannelCount;
     private const int DeviceLatencyMilliseconds = 120;
+    private const int RecoveryRetryMilliseconds = 1500;
     private static readonly string PlaybackDebugLogPath = Path.Combine(Path.GetTempPath(), "ttbs-audio-debug.log");
-    private readonly IWavePlayer outputDevice;
+
+    private readonly object outputDeviceLock = new();
     private readonly MixingSampleProvider sfxMixer;
     public readonly ScheduledSynthProvider scheduledSynthProvider;
     private readonly MixingSampleProvider masterMixer;
-    private readonly ISampleProvider mixer; // Protected output stage
+    private readonly ISampleProvider mixer;
+    private readonly MMDeviceEnumerator deviceEnumerator;
+    private readonly AudioDeviceNotificationClient notificationClient;
+    private readonly SoundCache soundCache;
+
     private EventLoop eventLoop;
-    private SoundCache soundCache;
+    private IWavePlayer? outputDevice;
+    private int recoveryAttemptActive;
+    private int recoveryScheduled;
+    private bool shouldBePlaying = true;
+    private bool everInitialized;
+
     public VolumeKnob MasterVolume { get; set; }
     public EventLoop EventLoop => eventLoop;
     public ScheduledSignalSourceMixer ScheduledSignalMixer => scheduledSynthProvider;
     public long SamplesRendered => scheduledSynthProvider.SamplesRendered;
     public bool FailedToInitializeOrRun { get; private set; }
 
-    private int audioFailed; // 0/1
     public AudioPlaybackEngine(IBinarySoundProvider provider = null)
     {
         try
         {
             eventLoop = ConsoleApp.Current;
-            SoundProvider.Current= this;
+            SoundProvider.Current = this;
             if (eventLoop == null) throw new InvalidOperationException("AudioPlaybackEngine requires an event loop to be set. Please set EventLoop.Current before creating an instance of AudioPlaybackEngine.");
+
             var sw = Stopwatch.StartNew();
             MasterVolume = VolumeKnob.Create();
             sfxMixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
-            scheduledSynthProvider = new ScheduledSynthProvider(); // We'll define this class next
+            scheduledSynthProvider = new ScheduledSynthProvider();
             masterMixer = new MixingSampleProvider([sfxMixer, scheduledSynthProvider]) { ReadFully = true };
             mixer = new OutputProtectionSampleProvider(masterMixer);
-            outputDevice = new WasapiOut(AudioClientShareMode.Shared, false, DeviceLatencyMilliseconds);
-            outputDevice.PlaybackStopped += (_, args) => HandlePlaybackStopped(args);
-            outputDevice.Init(mixer);
-            outputDevice.Play();
-            RebindEventLoop(eventLoop);
             soundCache = new SoundCache(provider);
+            deviceEnumerator = new MMDeviceEnumerator();
+            notificationClient = new AudioDeviceNotificationClient(this);
+
+            TryRegisterForDeviceNotifications();
+            RebindEventLoop(eventLoop);
+            AttemptAudioRecovery("initial startup");
+
             sw.Stop();
-            LogSoundLoaded(sw.ElapsedMilliseconds);  
+            LogSoundLoaded(sw.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
@@ -59,80 +73,191 @@ public class AudioPlaybackEngine : ISoundProvider
         DebugLogAudioEvent($"Rebound audio engine to event loop '{loop.GetType().Name}' on thread {loop.Thread?.ManagedThreadId}");
     }
 
-    private void HandlePlaybackStopped(StoppedEventArgs args)
+    private void TryRegisterForDeviceNotifications()
     {
-        DebugLogAudioEvent(
-            $"PlaybackStopped fired. State={outputDevice?.PlaybackState}, Failed={FailedToInitializeOrRun}, Draining={eventLoop?.IsDrainingOrDrained}",
-            args.Exception);
-
-        if (Volatile.Read(ref audioFailed) == 1 || FailedToInitializeOrRun || eventLoop?.IsDrainingOrDrained == true) return;
-
-        if (args.Exception != null)
-        {
-            eventLoop.Invoke((engine: this, exception: args.Exception), static state => state.engine.FailAudio(state.exception));
-            return;
-        }
-
-        eventLoop.Invoke(this, static engine => engine.TryRecoverFromUnexpectedStop());
-    }
-
-    private void TryRecoverFromUnexpectedStop()
-    {
-        if (Volatile.Read(ref audioFailed) == 1 || FailedToInitializeOrRun || outputDevice == null) return;
-        if (outputDevice.PlaybackState != PlaybackState.Stopped) return;
-
         try
         {
-            DebugLogAudioEvent("Attempting recovery from PlaybackStopped without an exception");
-            outputDevice.Play();
-            DebugLogAudioEvent($"Recovery play call completed. NewState={outputDevice.PlaybackState}");
+            deviceEnumerator.RegisterEndpointNotificationCallback(notificationClient);
         }
         catch (Exception ex)
         {
-            FailAudio(ex);
+            DebugLogAudioEvent("Failed to register audio device notifications", ex);
         }
+    }
+
+    private PlaybackState CurrentPlaybackState
+    {
+        get
+        {
+            lock (outputDeviceLock)
+            {
+                return outputDevice?.PlaybackState ?? PlaybackState.Stopped;
+            }
+        }
+    }
+
+    private IWavePlayer? CurrentOutputDevice
+    {
+        get
+        {
+            lock (outputDeviceLock)
+            {
+                return outputDevice;
+            }
+        }
+    }
+
+    private void HandlePlaybackStopped(object? sender, StoppedEventArgs args)
+    {
+        DebugLogAudioEvent(
+            $"PlaybackStopped fired. State={CurrentPlaybackState}, Failed={FailedToInitializeOrRun}, Draining={eventLoop?.IsDrainingOrDrained}",
+            args.Exception);
+
+        if (FailedToInitializeOrRun || eventLoop?.IsDrainingOrDrained == true) return;
+        ScheduleRecovery(args.Exception == null ? "unexpected playback stop" : "playback stopped with exception", args.Exception);
+    }
+
+    internal void NotifyDeviceChanged(string reason)
+    {
+        if (FailedToInitializeOrRun || eventLoop?.IsDrainingOrDrained == true) return;
+        ScheduleRecovery(reason);
+    }
+
+    private void ScheduleRecovery(string reason, Exception? ex = null)
+    {
+        DebugLogAudioEvent($"Scheduling audio recovery: {reason}", ex);
+        if (Interlocked.Exchange(ref recoveryScheduled, 1) == 1) return;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(RecoveryRetryMilliseconds);
+                if (FailedToInitializeOrRun || eventLoop?.IsDrainingOrDrained == true) return;
+                eventLoop.Invoke((engine: this, reason), static state => state.engine.AttemptAudioRecovery(state.reason));
+            }
+            finally
+            {
+                Interlocked.Exchange(ref recoveryScheduled, 0);
+            }
+        });
+    }
+
+    private void AttemptAudioRecovery(string reason)
+    {
+        if (FailedToInitializeOrRun || eventLoop?.IsDrainingOrDrained == true) return;
+        if (Interlocked.Exchange(ref recoveryAttemptActive, 1) == 1) return;
+
+        try
+        {
+            DebugLogAudioEvent($"Attempting audio recovery: {reason}");
+            RecreateOutputDevice();
+            everInitialized = true;
+            DebugLogAudioEvent($"Audio recovery succeeded. PlaybackState={CurrentPlaybackState}");
+        }
+        catch (Exception ex)
+        {
+            DebugLogAudioEvent($"Audio recovery failed: {reason}", ex);
+            DisposeOutputDevice();
+            OnSoundFailedToLoad(ex);
+            ScheduleRecovery($"retry after failure: {reason}", ex);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref recoveryAttemptActive, 0);
+        }
+    }
+
+    private void RecreateOutputDevice()
+    {
+        var newOutputDevice = CreateOutputDevice();
+        IWavePlayer? oldOutputDevice;
+        lock (outputDeviceLock)
+        {
+            oldOutputDevice = outputDevice;
+            outputDevice = newOutputDevice;
+        }
+
+        if (ReferenceEquals(oldOutputDevice, newOutputDevice)) return;
+
+        if (oldOutputDevice != null)
+        {
+            oldOutputDevice.PlaybackStopped -= HandlePlaybackStopped;
+            try { oldOutputDevice.Stop(); } catch { }
+            try { oldOutputDevice.Dispose(); } catch { }
+        }
+    }
+
+    private IWavePlayer CreateOutputDevice()
+    {
+        var newOutputDevice = new WasapiOut(AudioClientShareMode.Shared, false, DeviceLatencyMilliseconds);
+        newOutputDevice.PlaybackStopped += HandlePlaybackStopped;
+        newOutputDevice.Init(mixer);
+        if (shouldBePlaying) newOutputDevice.Play();
+        return newOutputDevice;
+    }
+
+    private void DisposeOutputDevice()
+    {
+        IWavePlayer? oldOutputDevice;
+        lock (outputDeviceLock)
+        {
+            oldOutputDevice = outputDevice;
+            outputDevice = null;
+        }
+
+        if (oldOutputDevice == null) return;
+        oldOutputDevice.PlaybackStopped -= HandlePlaybackStopped;
+        try { oldOutputDevice.Stop(); } catch { }
+        try { oldOutputDevice.Dispose(); } catch { }
     }
 
     protected void FailAudio(Exception? ex = null)
     {
-        if (Interlocked.Exchange(ref audioFailed, 1) == 1) return;
         if (FailedToInitializeOrRun) return;
         FailedToInitializeOrRun = true;
         DebugLogAudioEvent("FailAudio invoked", ex);
-        try { outputDevice?.Stop(); } catch { }
-        try { outputDevice?.Dispose(); } catch { }
+        try { deviceEnumerator?.UnregisterEndpointNotificationCallback(notificationClient); } catch { }
+        try { deviceEnumerator?.Dispose(); } catch { }
+        DisposeOutputDevice();
         OnSoundFailedToLoad(ex ?? new Exception("Audio engine failed or stalled"));
     }
 
     public ILifetime Play(string? soundId, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null, bool isMusic = false)
     {
         if (FailedToInitializeOrRun) return Lifetime.Completed;
+
         var input = soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, maxDuration, false, isMusic);
-        if(input == null) return Lifetime.Completed;
+        if (input == null) return Lifetime.Completed;
+
         AddMixerInput(input);
+        if (!everInitialized || CurrentOutputDevice == null) ScheduleRecovery("play requested while output device unavailable");
         return input;
     }
-
 
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null, bool isMusic = false)
     {
         if (FailedToInitializeOrRun) return;
-        AddMixerInput(soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Lifetime.Forever, true, isMusic));
-    }
 
+        var input = soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Lifetime.Forever, true, isMusic);
+        AddMixerInput(input);
+        if (input != null && (!everInitialized || CurrentOutputDevice == null)) ScheduleRecovery("loop requested while output device unavailable");
+    }
 
     public IReleasableNote? PlaySustainedNote(NoteExpression note)
     {
         if (FailedToInitializeOrRun) return null;
+
         var ret = SynthVoiceProvider.CreateSustainedNote(note);
         if (ret.Voices != null)
         {
             for (var i = 0; i < ret.Voices.Count; i++)
             {
-                var voice = ret.Voices[i];
-                masterMixer.AddMixerInput(voice);
+                masterMixer.AddMixerInput(ret.Voices[i]);
             }
         }
+
+        if (!everInitialized || CurrentOutputDevice == null) ScheduleRecovery("sustained note requested while output device unavailable");
         return ret;
     }
 
@@ -145,44 +270,59 @@ public class AudioPlaybackEngine : ISoundProvider
         }
 
         CancellationToken? token = null;
-        if(lifetime != null)
+        if (lifetime != null)
         {
             var source = new CancellationTokenSource();
-            lifetime.OnDisposed(source, static (source) => source.Cancel());
+            lifetime.OnDisposed(source, static source => source.Cancel());
             token = source.Token;
         }
-        await scheduledSynthProvider.ScheduleSong(song, token);
-    }
 
+        await scheduledSynthProvider.ScheduleSong(song, token);
+        if (!everInitialized || CurrentOutputDevice == null) ScheduleRecovery("song scheduled while output device unavailable");
+    }
 
     private void AddMixerInput(RecyclableSampleProvider? sample)
     {
         if (sample == null) return;
-        sfxMixer?.AddMixerInput(sample);
+        sfxMixer.AddMixerInput(sample);
     }
 
     public void Pause()
     {
         if (FailedToInitializeOrRun) return;
-        if(outputDevice == null) return;
-        if(outputDevice.PlaybackState != PlaybackState.Playing) return;
+
+        shouldBePlaying = false;
+        var currentOutputDevice = CurrentOutputDevice;
+        if (currentOutputDevice == null) return;
+        if (currentOutputDevice.PlaybackState != PlaybackState.Playing) return;
+
         DebugLogAudioEvent("Pause requested");
-        outputDevice.Pause();
+        currentOutputDevice.Pause();
     }
+
     public void Resume()
     {
         if (FailedToInitializeOrRun) return;
-        if(outputDevice == null) return;
-        if (outputDevice.PlaybackState != PlaybackState.Paused) return;
+
+        shouldBePlaying = true;
+        var currentOutputDevice = CurrentOutputDevice;
+        if (currentOutputDevice == null)
+        {
+            ScheduleRecovery("resume requested while output device unavailable");
+            return;
+        }
+
+        if (currentOutputDevice.PlaybackState != PlaybackState.Paused && currentOutputDevice.PlaybackState != PlaybackState.Stopped) return;
+
         DebugLogAudioEvent("Resume requested");
-        outputDevice.Play();
+        currentOutputDevice.Play();
     }
+
     public void ClearCache()
     {
         if (FailedToInitializeOrRun) return;
         soundCache.Clear();
     }
-
 
     /// <summary>
     /// By defaults this class does not throw when sounds fail to load.
@@ -220,6 +360,27 @@ public class AudioPlaybackEngine : ISoundProvider
         {
         }
     }
+}
+
+internal sealed class AudioDeviceNotificationClient : IMMNotificationClient
+{
+    private readonly AudioPlaybackEngine engine;
+
+    public AudioDeviceNotificationClient(AudioPlaybackEngine engine) => this.engine = engine;
+
+    public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
+    {
+        if (flow != DataFlow.Render || role != Role.Multimedia) return;
+        engine.NotifyDeviceChanged($"default render device changed to '{defaultDeviceId}'");
+    }
+
+    public void OnDeviceAdded(string pwstrDeviceId) => engine.NotifyDeviceChanged($"audio device added: {pwstrDeviceId}");
+
+    public void OnDeviceRemoved(string deviceId) => engine.NotifyDeviceChanged($"audio device removed: {deviceId}");
+
+    public void OnDeviceStateChanged(string deviceId, DeviceState newState) => engine.NotifyDeviceChanged($"audio device state changed: {deviceId} -> {newState}");
+
+    public void OnPropertyValueChanged(string pwstrDeviceId, PropertyKey key) => engine.NotifyDeviceChanged($"audio device property changed: {pwstrDeviceId}");
 }
 
 public class ScheduledSynthProvider : ScheduledSignalSourceMixer, ISampleProvider
