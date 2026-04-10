@@ -64,4 +64,17 @@ public class RecyclableListPool<T> : RecycleablePool<RecyclableList<T>>
             list.Dispose();
         }
     }
+
+    public void Use<TState>(TState state, Action<List<T>, TState> action, int requiredCapacity = 0)
+    {
+        var list = Instance.Rent(requiredCapacity);
+        try
+        {
+            action(list.Items, state);
+        }
+        finally
+        {
+            list.Dispose();
+        }
+    }
 }
