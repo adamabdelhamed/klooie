@@ -136,6 +136,7 @@ public abstract class Container : ConsoleControl
 
     protected void Compose(ConsoleControl control)
     {
+        if (control == null) return;
         if (control.IsVisible == false) return;
         control.Paint();
 
