@@ -15,7 +15,7 @@ public class Recyclable : ILifetime
             var ret = disposalSubscribers ??= SubscriberCollection.Create();
             if(ret.ThreadId != this.ThreadId)
             {
-                throw new InvalidOperationException("Cannot access disposal subscribers from a different thread");
+                throw new InvalidOperationException("Cannot access disposal subscribers from a different thread" + GetType().Name);
             }
             return ret;
         }
@@ -61,7 +61,7 @@ public class Recyclable : ILifetime
 
     public void Dispose(string? reason = null)
     {
-        if (IsExpiring || IsExpired) throw new InvalidOperationException("Cannot dispose an object that is already being disposed or has been disposed");
+        if (IsExpiring || IsExpired) throw new InvalidOperationException("Cannot dispose an object that is already being disposed or has been disposed: "+ GetType().Name);
         DisposalReason = reason;
         IsExpiring = true;
         try
@@ -124,14 +124,14 @@ public class Recyclable : ILifetime
 
     public void OnDisposed(Action cleanupCode)
     {
-        if(IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
+        if(IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed" + GetType().Name);
         var subscription = ActionSubscription.Create(cleanupCode);
         DisposalSubscribers.Subscribe(subscription);
     }
 
     public void OnDisposed<T>(T scope, Action<T> cleanupCode)
     {
-        if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed");
+        if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed" + GetType().Name);
         if (scope == null) throw new ArgumentNullException(nameof(scope));
         var subscription = ScopedSubscription<T>.Create(scope, cleanupCode);
         DisposalSubscribers.Subscribe(subscription);
