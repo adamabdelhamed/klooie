@@ -79,9 +79,11 @@ public abstract class Container : ConsoleControl
     public void PopulateDescendentsWithZeroAllocations(List<ConsoleControl> buffer, bool clear = true)
     {
         if (clear) buffer.Clear();
+        if (Children == null) return;
         for (var i = 0; i < Children.Count; i++)
         {
             var child = Children[i];
+            if(child == null) continue;
             buffer.Add(child);
 
             if (child is Container container)
