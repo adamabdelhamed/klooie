@@ -12,6 +12,8 @@ public class AudioPlaybackEngine : ISoundProvider
     private const int ChannelCount = SoundProvider.ChannelCount;
     private const int DeviceLatencyMilliseconds = 120;
     private const int RecoveryRetryMilliseconds = 1500;
+    private const int MaxConcurrentSfxMixerInputs = 896;
+    private const int MaxConcurrentMasterMixerInputs = 192;
     private static readonly string PlaybackDebugLogPath = Path.Combine(Path.GetTempPath(), "ttbs-audio-debug.log");
 
     private readonly object outputDeviceLock = new();
@@ -29,6 +31,8 @@ public class AudioPlaybackEngine : ISoundProvider
     private int recoveryScheduled;
     private bool shouldBePlaying = true;
     private bool everInitialized;
+    private int activeSfxMixerInputs;
+    private int activeMasterMixerInputs;
 
     public VolumeKnob MasterVolume { get; set; }
     public EventLoop EventLoop => eventLoop;
@@ -230,7 +234,7 @@ public class AudioPlaybackEngine : ISoundProvider
         var input = soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, maxDuration, false, isMusic);
         if (input == null) return Lifetime.Completed;
 
-        AddMixerInput(input);
+        AddMixerInput(input, isMusic);
         if (!everInitialized || CurrentOutputDevice == null) ScheduleRecovery("play requested while output device unavailable");
         return input;
     }
@@ -240,7 +244,7 @@ public class AudioPlaybackEngine : ISoundProvider
         if (FailedToInitializeOrRun) return;
 
         var input = soundCache.GetSample(eventLoop, soundId, MasterVolume, volumeKnob, lt ?? Lifetime.Forever, true, isMusic);
-        AddMixerInput(input);
+        AddMixerInput(input, isMusic);
         if (input != null && (!everInitialized || CurrentOutputDevice == null)) ScheduleRecovery("loop requested while output device unavailable");
     }
 
@@ -253,7 +257,7 @@ public class AudioPlaybackEngine : ISoundProvider
         {
             for (var i = 0; i < ret.Voices.Count; i++)
             {
-                masterMixer.AddMixerInput(ret.Voices[i]);
+                TryAddMixerInput(masterMixer, ret.Voices[i], MixerInputKind.Master, MaxConcurrentMasterMixerInputs, "master");
             }
         }
 
@@ -281,10 +285,76 @@ public class AudioPlaybackEngine : ISoundProvider
         if (!everInitialized || CurrentOutputDevice == null) ScheduleRecovery("song scheduled while output device unavailable");
     }
 
-    private void AddMixerInput(RecyclableSampleProvider? sample)
+    private void AddMixerInput(RecyclableSampleProvider? sample, bool isMusic)
     {
         if (sample == null) return;
-        sfxMixer.AddMixerInput(sample);
+        if (isMusic)
+        {
+            TryAddMixerInput(sfxMixer, sample, MixerInputKind.Music, int.MaxValue, "music");
+            return;
+        }
+
+        TryAddMixerInput(sfxMixer, sample, MixerInputKind.Sfx, MaxConcurrentSfxMixerInputs, "sfx");
+    }
+
+    private bool TryAddMixerInput<T>(MixingSampleProvider mixer, T input, MixerInputKind mixerInputKind, int maxInputs, string mixerName) where T : RecyclableAudioProvider
+    {
+        var registration = new MixerInputRegistration(this, mixerInputKind);
+        if (!registration.TryReserve(maxInputs))
+        {
+            RejectMixerInput(input, $"{mixerName} mixer soft cap ({maxInputs}) reached");
+            return false;
+        }
+
+        input.OnDisposed(registration, static registration => registration.Release());
+
+        try
+        {
+            mixer.AddMixerInput(input);
+            return true;
+        }
+        catch (InvalidOperationException ex) when (IsMixerInputLimitException(ex))
+        {
+            registration.Release();
+            RejectMixerInput(input, $"{mixerName} mixer rejected input after reaching its hard limit", ex);
+            return false;
+        }
+        catch
+        {
+            registration.Release();
+            throw;
+        }
+    }
+
+    private void RejectMixerInput(RecyclableAudioProvider input, string reason, Exception? ex = null)
+    {
+        DebugLogAudioEvent($"Dropping audio input: {reason}", ex);
+        try { input.TryDispose(reason); } catch { }
+    }
+
+    private static bool IsMixerInputLimitException(InvalidOperationException ex) =>
+        ex.Message.Contains("Too many mixer inputs", StringComparison.OrdinalIgnoreCase);
+
+    internal bool TryReserveMixerInput(MixerInputKind mixerInputKind, int maxInputs)
+    {
+        if (mixerInputKind == MixerInputKind.Music) return true;
+        ref var activeInputCount = ref GetActiveInputCount(mixerInputKind);
+        if (Interlocked.Increment(ref activeInputCount) <= maxInputs) return true;
+        Interlocked.Decrement(ref activeInputCount);
+        return false;
+    }
+
+    internal void ReleaseMixerInput(MixerInputKind mixerInputKind)
+    {
+        if (mixerInputKind == MixerInputKind.Music) return;
+        ref var activeInputCount = ref GetActiveInputCount(mixerInputKind);
+        Interlocked.Decrement(ref activeInputCount);
+    }
+
+    private ref int GetActiveInputCount(MixerInputKind mixerInputKind)
+    {
+        if (mixerInputKind == MixerInputKind.Master) return ref activeMasterMixerInputs;
+        return ref activeSfxMixerInputs;
     }
 
     public void Pause()
@@ -360,6 +430,34 @@ public class AudioPlaybackEngine : ISoundProvider
         {
         }
     }
+}
+
+internal sealed class MixerInputRegistration
+{
+    private readonly AudioPlaybackEngine engine;
+    private readonly MixerInputKind mixerInputKind;
+    private int released;
+
+    public MixerInputRegistration(AudioPlaybackEngine engine, MixerInputKind mixerInputKind)
+    {
+        this.engine = engine;
+        this.mixerInputKind = mixerInputKind;
+    }
+
+    public bool TryReserve(int maxInputs) => engine.TryReserveMixerInput(mixerInputKind, maxInputs);
+
+    public void Release()
+    {
+        if (Interlocked.Exchange(ref released, 1) == 1) return;
+        engine.ReleaseMixerInput(mixerInputKind);
+    }
+}
+
+internal enum MixerInputKind
+{
+    Sfx,
+    Master,
+    Music
 }
 
 internal sealed class AudioDeviceNotificationClient : IMMNotificationClient
