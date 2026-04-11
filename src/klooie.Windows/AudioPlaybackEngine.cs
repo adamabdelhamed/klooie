@@ -511,24 +511,79 @@ internal sealed class ReadWatchdogSampleProvider : ISampleProvider
 
 internal sealed class OutputProtectionSampleProvider : ISampleProvider
 {
-    private const float HeadroomGain = 0.92f;
-    private const float SoftClipThreshold = 0.85f;
+    private const float HeadroomGain = 0.8f;
+    private const float LimiterThreshold = 0.68f;
+    private const float SoftClipThreshold = 0.78f;
+    private const float EnvelopeAttackMilliseconds = 0.2f;
+    private const float EnvelopeReleaseMilliseconds = 90f;
+    private const float GainRecoveryMilliseconds = 180f;
     private readonly ISampleProvider inner;
+    private readonly float envelopeAttackCoefficient;
+    private readonly float envelopeReleaseCoefficient;
+    private readonly float gainRecoveryCoefficient;
+    private float envelope;
+    private float appliedGain = 1f;
 
-    public OutputProtectionSampleProvider(ISampleProvider inner) => this.inner = inner ?? throw new ArgumentNullException(nameof(inner));
+    public OutputProtectionSampleProvider(ISampleProvider inner)
+    {
+        this.inner = inner ?? throw new ArgumentNullException(nameof(inner));
+
+        var sampleRate = inner.WaveFormat.SampleRate;
+        envelopeAttackCoefficient = CreateTimeConstantCoefficient(sampleRate, EnvelopeAttackMilliseconds);
+        envelopeReleaseCoefficient = CreateTimeConstantCoefficient(sampleRate, EnvelopeReleaseMilliseconds);
+        gainRecoveryCoefficient = CreateTimeConstantCoefficient(sampleRate, GainRecoveryMilliseconds);
+    }
 
     public WaveFormat WaveFormat => inner.WaveFormat;
 
     public int Read(float[] buffer, int offset, int count)
     {
         var read = inner.Read(buffer, offset, count);
+        var channels = WaveFormat.Channels;
         var end = offset + read;
-        for (var i = offset; i < end; i++)
+        for (var i = offset; i < end; i += channels)
         {
-            buffer[i] = ProtectSample(buffer[i] * HeadroomGain);
+            var framePeak = 0f;
+            for (var c = 0; c < channels && i + c < end; c++)
+            {
+                buffer[i + c] *= HeadroomGain;
+                framePeak = MathF.Max(framePeak, MathF.Abs(buffer[i + c]));
+            }
+
+            UpdateEnvelope(framePeak);
+            UpdateAppliedGain();
+
+            for (var c = 0; c < channels && i + c < end; c++)
+            {
+                buffer[i + c] = ProtectSample(buffer[i + c] * appliedGain);
+            }
         }
 
         return read;
+    }
+
+    private void UpdateEnvelope(float framePeak)
+    {
+        var coefficient = framePeak > envelope ? envelopeAttackCoefficient : envelopeReleaseCoefficient;
+        envelope = framePeak + ((envelope - framePeak) * coefficient);
+    }
+
+    private void UpdateAppliedGain()
+    {
+        var targetGain = envelope <= LimiterThreshold ? 1f : LimiterThreshold / envelope;
+        if (targetGain < appliedGain)
+        {
+            appliedGain = targetGain;
+            return;
+        }
+
+        appliedGain = targetGain + ((appliedGain - targetGain) * gainRecoveryCoefficient);
+    }
+
+    private static float CreateTimeConstantCoefficient(int sampleRate, float milliseconds)
+    {
+        var samples = MathF.Max(1f, sampleRate * (milliseconds / 1000f));
+        return MathF.Exp(-1f / samples);
     }
 
     private static float ProtectSample(float sample)
