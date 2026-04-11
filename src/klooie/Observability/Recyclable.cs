@@ -26,7 +26,7 @@ public class Recyclable : ILifetime
     private bool IsExpiring { get; set; }
     private bool IsExpired { get; set; }
 
-
+    internal string RecyclableState => $"Version: {Lease}, IsExpiring: {IsExpiring}, IsExpired: {IsExpired}";
     public int CurrentVersion { get; private set; }
 
     public int Lease => CurrentVersion;

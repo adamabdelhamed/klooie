@@ -1,4 +1,5 @@
 ﻿using klooie.Gaming;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
@@ -91,8 +92,9 @@ public partial class LayoutRootPanel : ConsolePanel
         Bitmap.Fill(defaultPen);
         if (!PaintEnabled) return;
         _beforePaint?.Fire();
+        ConsolePanel.PaintStack.Clear();
         Paint();
-
+      
         // If host skipped (e.g. ConsolePainter throttling), skip rest of frame work.
         if (!TerminalHost.Present(this, Bitmap)) return;
 
@@ -119,5 +121,8 @@ public partial class LayoutRootPanel : ConsolePanel
 }
 
 
-
+public class PaintException : Exception
+{
+    public PaintException(string msg, Exception inner) : base(msg, inner) { }
+}
 

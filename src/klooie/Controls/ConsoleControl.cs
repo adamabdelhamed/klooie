@@ -601,29 +601,46 @@ public partial class ConsoleControl : Rectangular
         OnPaint(Bitmap);
     }
 
+    public static readonly VisualTreeStack PaintStack = new VisualTreeStack();
     internal void Paint()
     {
-        if (IsVisible == false || Height <= 0 || Width <= 0)
-        {
-            return;
-        }
-
-        var observer = this is Container ? Container.CompositionObserver : null;
-        observer?.BeginPainting(this, Width, Height);
-
+        var pushed = false;
         try
         {
-            EnsurePainted();
+            PaintStack.Push(this);
+            pushed = true;
+            if (IsVisible == false || Height <= 0 || Width <= 0)
+            {
+                return;
+            }
+
+            var observer = this is Container ? Container.CompositionObserver : null;
+            observer?.BeginPainting(this, Width, Height);
+
+            try
+            {
+                EnsurePainted();
+            }
+            finally
+            {
+                observer?.EndPainting(this);
+            }
+
+            if (Recorder != null && Recorder.IsFinished == false)
+            {
+                Recorder.Window = new RectF(0, 0, Width, Height);
+                Recorder.WriteFrame(Bitmap, false, RecorderTimestampProvider != null ? new TimeSpan?(RecorderTimestampProvider()) : new TimeSpan?());
+            }
+        }
+        catch (Exception ex) when (ex is not PaintException)
+        {
+            string description = "Failed to walk paint stack";
+            try { description = PaintStack.DescribeCurrentPath(); } catch { }
+            throw new PaintException($"Failed to paint visual tree. Paint stack:\n\n{description}", ex);
         }
         finally
         {
-            observer?.EndPainting(this);
-        }
-
-        if (Recorder != null && Recorder.IsFinished == false)
-        {
-            Recorder.Window = new RectF(0, 0, Width, Height);
-            Recorder.WriteFrame(Bitmap, false, RecorderTimestampProvider != null ? new TimeSpan?(RecorderTimestampProvider()) : new TimeSpan?());
+            if(pushed) PaintStack.Pop();
         }
     }
 
