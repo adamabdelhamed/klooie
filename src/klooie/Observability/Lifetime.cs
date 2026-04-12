@@ -16,6 +16,37 @@ public static class Lifetime
         lt.Dispose();
         return lt;
     }
+
+    public static void OnDisposedOrNow(this ILifetime lifetime, Action cleanupCode)
+    {
+        if (lifetime == null) throw new ArgumentNullException(nameof(lifetime));
+        if (cleanupCode == null) throw new ArgumentNullException(nameof(cleanupCode));
+
+        if (lifetime.IsStillValid(lifetime.Lease))
+        {
+            lifetime.OnDisposed(cleanupCode);
+        }
+        else
+        {
+            cleanupCode();
+        }
+    }
+
+    public static void OnDisposedOrNow<T>(this ILifetime lifetime, T scope, Action<T> cleanupCode)
+    {
+        if (lifetime == null) throw new ArgumentNullException(nameof(lifetime));
+        if (scope == null) throw new ArgumentNullException(nameof(scope));
+        if (cleanupCode == null) throw new ArgumentNullException(nameof(cleanupCode));
+
+        if (lifetime.IsStillValid(lifetime.Lease))
+        {
+            lifetime.OnDisposed(scope, cleanupCode);
+        }
+        else
+        {
+            cleanupCode(scope);
+        }
+    }
 }
  
 public interface ILifetime

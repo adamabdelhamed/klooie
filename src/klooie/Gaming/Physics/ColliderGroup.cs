@@ -53,7 +53,7 @@ public sealed class ColliderGroup
     private void HandlePause(ILifetime pauseLt)
     {
         stopwatch.Stop();
-        pauseLt.OnDisposed(this, static (me) => me.stopwatch.Start());
+        pauseLt.OnDisposedOrNow(this, static (me) => me.stopwatch.Start());
     }
 
     private void Cleanup()

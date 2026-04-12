@@ -111,4 +111,8 @@ Note how the code never stores the tracker as a field or variable. Instead, it i
 
 It is possible to store the tracker as a field or variable if needed, but the lifetime management must be handled carefully to avoid lifetime management issues.
 
+### Late disposal subscribers
+- `ILifetime.OnDisposed(...)` is only valid while the target lifetime is not already expiring. When code is running inside another event notification pass, a lifetime can begin disposing before later subscribers run.
+- Use `OnDisposedOrNow(...)` when the desired behavior is "run this on disposal, or immediately if disposal already started". This is the right pattern for pause/unpause symmetry work that listens to `PauseManager.OnPaused`.
+
 There are likely many places in the codebase where this pattern is not followed. We need to audit the codebase and ensure that all parent/child relationships are using `LeaseHelper` correctly.
