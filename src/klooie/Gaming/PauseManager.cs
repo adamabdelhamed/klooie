@@ -1,35 +1,38 @@
 ﻿namespace klooie.Gaming;
 public sealed class PauseManager : IPausable
 {
-    private Recyclable? pauseLifetime;
+  
+    private LeaseState<Recyclable>? pauseLease;
     public Event<ILifetime> OnPaused { get; private set; } = Event<ILifetime>.Create();
-    public Recyclable? PauseLifetime => pauseLifetime;
+    public Recyclable? PauseLifetime => pauseLease?.Recyclable;
 
-    public SynchronousScheduler Scheduler => Game.Current.PausableScheduler;
+    public SynchronousScheduler Scheduler => Game.Current?.PausableScheduler;
 
 
     public bool PauseSoundWithPhysics { get; set; } = true;
 
     public bool IsPaused
     {
-        get => Game.Current.PausableScheduler.IsPaused;
+        get => Game.Current?.PausableScheduler?.IsPaused == true;
         set
         {
+            if (Game.Current == null || Game.Current.IsDrainingOrDrained == true) return;
             if (value == IsPaused) return;
 
             if (value)
             {
                 Game.Current.PausableScheduler.Pause();
                 if(PauseSoundWithPhysics) Game.Current.Sound?.Pause();
-                pauseLifetime = DefaultRecyclablePool.Instance.Rent();
-                OnPaused.Fire(pauseLifetime);
+                pauseLease?.UnTrackAndDispose();
+                pauseLease = LeaseHelper.Track(DefaultRecyclablePool.Instance.Rent());
+                OnPaused.Fire(pauseLease.Recyclable);
             }
             else
             {
                 Game.Current.PausableScheduler.Resume();
                 Game.Current.Sound?.Resume(); // safe to call even if we didn't pause
-                pauseLifetime?.Dispose();
-                pauseLifetime = null;
+                pauseLease?.UnTrackAndDispose();
+                pauseLease = null;
             }
         }
     }

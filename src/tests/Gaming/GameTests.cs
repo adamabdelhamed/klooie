@@ -224,5 +224,23 @@ public class GameTests
         Assert.AreNotEqual(now,Game.Now);
         Game.Current.Stop();
     }), TestContext.TestId(), UITestMode.Headless);
+
+    [TestMethod]
+    [TestCategory(Categories.ConsoleApp)]
+    public void Pause_ResumeDoesNotThrowIfPauseLifetimeWasAlreadyDisposed() => GamingTest.Run(FuncRule.Create(async () =>
+    {
+        Game.Current.Pause();
+        Assert.IsTrue(Game.Current.IsPaused);
+
+        var pauseLifetime = Game.Current.PauseManager.PauseLifetime;
+        Assert.IsNotNull(pauseLifetime);
+
+        (pauseLifetime as Recyclable)?.Dispose();
+
+        Game.Current.Resume();
+
+        Assert.IsFalse(Game.Current.IsPaused);
+        Game.Current.Stop();
+    }), TestContext.TestId(), UITestMode.Headless);
 }
 
