@@ -1,5 +1,4 @@
-﻿using Serilog.Core;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 namespace klooie.Gaming;
 
@@ -127,7 +126,6 @@ public class WalkCalculationState
     // Weights are now provided by Walk and can be adapted; we will write back after tick.
     public WanderWeights Weights;
 
-    public Logger? Logger;
     public bool IsStuck;
     public float BaseSpeed;
     public Angle CurrentAngle;
@@ -165,9 +163,6 @@ public class WalkCalculationState
         Hazard = walk.GetHazard();
         CloseEnough = walk.CloseEnough;
 
-        // Borrowed logger; DO NOT DISPOSE
-        Logger = walk.Logger;
-
         // Adaptive weights start from movement’s current weights
         Weights = WanderWeights.Default;
 
@@ -195,9 +190,6 @@ public class WalkCalculationState
         LastFewAngles = null!;
         LastFewRoundedBounds = null!;
         LastGoalDistances = null!;
-
-        // Do NOT dispose the borrowed logger
-        Logger = null;
     }
 }
 
@@ -295,21 +287,10 @@ public static class WalkCalculation
         var winner = SelectBestAngleScore(input, out float bestScore, out int bestScoreIndex);
         newAngle = winner.Angle;
         newSpeed = EvaluateSpeed(input, winner.Angle, bestScore);
-        LogAngleScoreDetails(input, newSpeed, newAngle, bestScoreIndex);
         UpdateInertiaAndPositionHistory(input, winner);
         return new WalkDecisionOutcome(false, newAngle, newSpeed, bestScore, bestScoreIndex);
     }
 
-    private static void LogAngleScoreDetails(WalkCalculationState input, float newSpeed, Angle newAngle, int bestIndex)
-    {
-        if (input.Logger == null) return;
-
-        for (var i = 0; i < input.AngleScores.Count; i++)
-        {
-            input.Logger.Debug("[{index}]: Angle Score for angle {angle} is {score}. Components: {components}", i, input.AngleScores[i].Angle.Value, input.AngleScores[i].GetTotal(input.Weights), input.AngleScores[i].ToString());
-        }
-        input.Logger.Debug("Walk Applied Speed = {speed}, Angle = {angle}, Time = {nowSeconds}, Best Index = {bestIndex}", newSpeed, newAngle, Game.Current.MainColliderGroup.WallClockNow.TotalSeconds, bestIndex);
-    }
 
     private static void UpdateInertiaAndPositionHistory(WalkCalculationState input, AngleScore best)
     {
@@ -360,7 +341,6 @@ public static class WalkCalculation
         var s = EvaluateSpeed(input, direct, 1f);
         newAngle = direct;
         newSpeed = s;
-        input.Logger?.Debug("Walking toward point of interest at speed = {speed}, Angle = {angle}, Time = {nowSeconds}", s, direct, Game.Current.MainColliderGroup.WallClockNow.TotalSeconds);
         input.LastFewAngles.Items.Add(direct);
         if (input.LastFewAngles.Count > MaxHistory) input.LastFewAngles.Items.RemoveAt(0);
         var r = input.EyeBounds.Round();
@@ -602,7 +582,6 @@ public static class WalkCalculation
         if (input.BaseSpeed == 0) throw new Exception("Zero Speed Yo");
         if (input.IsCurrentlyCloseEnoughToPointOfInterest)
         {
-            input.Logger?.Debug($"Close enough to POI; stopping movement.");
             return 0;
         }
 

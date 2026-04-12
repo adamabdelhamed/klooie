@@ -4,7 +4,7 @@ public sealed class PauseManager : IPausable
   
     private LeaseState<Recyclable>? pauseLease;
     public Event<ILifetime> OnPaused { get; private set; } = Event<ILifetime>.Create();
-    public Recyclable? PauseLifetime => pauseLease?.Recyclable;
+    public ILifetime? PauseLifetime => pauseLease?.Recyclable;
 
     public SynchronousScheduler Scheduler => Game.Current?.PausableScheduler;
 
