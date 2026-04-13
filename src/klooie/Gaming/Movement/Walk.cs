@@ -75,11 +75,19 @@ public class Walk : Movement
         state.Dehydrate();
     }
 
+    public static readonly Event OnWanderInfluenceNotFoundErrorHandler = Event.Create();
     protected override void OnReturn()
     {
         if (Eye != null && Eye.Velocity != null && externalMotionSink == null && Eye.Velocity.ContainsInfluence(influence) == false)
         {
-            throw new InvalidOperationException($"Wander Influence not found in Eye.Velocity influences. This is a bug in the code, please report it.");
+            if (OnWanderInfluenceNotFoundErrorHandler.HasSubscriptions)
+            {
+                OnWanderInfluenceNotFoundErrorHandler.Fire();
+            }
+            else
+            {
+                throw new InvalidOperationException($"Wander Influence not found in Eye.Velocity influences. This is a bug in the code, please report it.");
+            }
         }
 
         if (Eye?.Velocity?.ContainsInfluence(influence) == true)
