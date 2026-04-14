@@ -46,5 +46,9 @@ public partial class CharCollider : GameCollider
         this.Content = content;
     }
 
+    public CharCollider(bool connectToMainColliderGroup = true) : base(connectToMainColliderGroup)
+    { 
+    }
+
     protected override void OnPaint(ConsoleBitmap context) => context.DrawPoint(Content, 0, 0);
 }
