@@ -392,10 +392,11 @@ public static class WalkCalculation
         // Scale inertia by how much history we have
         input.Weights.InertiaWeight = input.Weights.InertiaWeight * input.LastFewAngles.Count / (float)MaxHistory;
     }
-
+    private static readonly Dictionary<Angle, float> collisionCache = new Dictionary<Angle, float>(32);
     private static void ComputeScores(WalkCalculationState input)
     {
         input.AngleScores.Items.Clear();
+        collisionCache.Clear();
 
         // Precompute inertial, POI, and hazard angles as degrees to avoid Angle ops in inner loops
         float inertiaDeg = AverageAngle(input.LastFewAngles.Items, input.CurrentAngle).Value;
@@ -417,7 +418,7 @@ public static class WalkCalculation
         try
         {
             // 1) Score the base angle first (coarse, no repulsion)
-            ScoreAngle_NoRepulsion(input, inertiaDeg, poiDeg, hazardDeg, baseDeg, prediction);
+            ScoreAngle_NoRepulsion(input, inertiaDeg, poiDeg, hazardDeg, baseDeg, prediction, collisionCache);
 
             float sweepTotal = input.IsStuck ? 360f : TotalAngularTravelDeg;
             float coarseStep = input.IsStuck ? 15f : CoarseStepDeg;
@@ -437,8 +438,8 @@ public static class WalkCalculation
                 var leftDeg = baseDeg.Add(-delta);
                 var rightDeg = baseDeg.Add(delta);
 
-                float leftScore = ScoreAngle_NoRepulsion(input, inertiaDeg, poiDeg, hazardDeg, leftDeg, prediction);
-                float rightScore = ScoreAngle_NoRepulsion(input, inertiaDeg, poiDeg, hazardDeg, rightDeg, prediction);
+                float leftScore = ScoreAngle_NoRepulsion(input, inertiaDeg, poiDeg, hazardDeg, leftDeg, prediction, collisionCache);
+                float rightScore = ScoreAngle_NoRepulsion(input, inertiaDeg, poiDeg, hazardDeg, rightDeg, prediction, collisionCache);
 
                 TryPushTop(topAngles, leftDeg, leftScore);
                 TryPushTop(topAngles, rightDeg, rightScore);
@@ -472,7 +473,7 @@ public static class WalkCalculation
                 for (float d = -halfSpan; d <= halfSpan; d += fineStep)
                 {
                     var cand = center.Add(d);
-                    ScoreAngle_WithRepulsion(input, inertiaDeg, poiDeg, hazardDeg, cand, prediction);
+                    ScoreAngle_WithRepulsion(input, inertiaDeg, poiDeg, hazardDeg, cand, prediction, collisionCache);
                 }
             }
         }
@@ -486,9 +487,9 @@ public static class WalkCalculation
 
     // Coarse: skip repulsion penalty (no RadialOffset call).
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float ScoreAngle_NoRepulsion(WalkCalculationState input, float inertiaDeg, Angle? poiDeg, Angle? hazardDeg, Angle candidateDeg, CollisionPrediction prediction)
+    private static float ScoreAngle_NoRepulsion(WalkCalculationState input, float inertiaDeg, Angle? poiDeg, Angle? hazardDeg, Angle candidateDeg, CollisionPrediction prediction, Dictionary<Angle, float> collisionCache)
     {
-        float normCollision = DangerClamp(PredictCollision(input, candidateDeg, prediction));
+        float normCollision = DangerClamp(PredictCollision(input, candidateDeg, prediction, collisionCache));
         float normInertia = 1f - Clamp01(candidateDeg.DiffShortest(inertiaDeg) * Inv180);
         float normForward = 1f - Clamp01(candidateDeg.DiffShortest(input.CurrentAngle.Value) * Inv090);
         float normPoi = poiDeg.HasValue
@@ -506,9 +507,9 @@ public static class WalkCalculation
 
     // Fine: include repulsion (predict future position, rounded), only for shortlisted angles.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float ScoreAngle_WithRepulsion(WalkCalculationState input, Angle inertiaDeg, Angle? poiDeg, Angle? hazardDeg, Angle candidateDeg, CollisionPrediction prediction)
+    private static float ScoreAngle_WithRepulsion(WalkCalculationState input, Angle inertiaDeg, Angle? poiDeg, Angle? hazardDeg, Angle candidateDeg, CollisionPrediction prediction, Dictionary<Angle, float> collisionCache)
     {
-        float normCollision = DangerClamp(PredictCollision(input, candidateDeg, prediction));
+        float normCollision = DangerClamp(PredictCollision(input, candidateDeg, prediction, collisionCache));
 
         float repulsionPenalty = 1f;
         if (!input.IsStuck)
@@ -545,14 +546,25 @@ public static class WalkCalculation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float PredictCollision(WalkCalculationState input, Angle angleDeg, CollisionPrediction prediction)
+    private static float PredictCollision(WalkCalculationState input, Angle angleDeg, CollisionPrediction prediction, Dictionary<Angle, float> collisionCache)
     {
+        if (collisionCache.TryGetValue(angleDeg, out var cachedTimeToCollision))
+        {
+            return cachedTimeToCollision;
+        }
+
         if (sharedColliderBox == null) sharedColliderBox = new ColliderBox(input.EyeBounds);
         else sharedColliderBox.Bounds = input.EyeBounds;
         CollisionDetector.Predict(sharedColliderBox, angleDeg, input.Obstacles.WriteableBuffer, input.Visibility, CastingMode.Precise, input.Obstacles.WriteableBuffer.Count, prediction);
-        if (!prediction.CollisionPredicted) return MaxCollisionHorizon;
+        if (!prediction.CollisionPredicted)
+        {
+            collisionCache.Add(angleDeg, MaxCollisionHorizon);
+            return MaxCollisionHorizon;
+        }
         if (input.BaseSpeed <= 0f) throw new Exception("Base speed can't be 0");
-        return prediction.LKGD / input.BaseSpeed;
+        var timeToCollision = prediction.LKGD / input.BaseSpeed;
+        collisionCache.Add(angleDeg, timeToCollision);
+        return timeToCollision;
     }
 
     private static RectF PredictRoundedPosition(WalkCalculationState input, Angle angle) => input.EyeBounds.RadialOffset(angle, input.EyeBounds.Hypotenous).Round();
