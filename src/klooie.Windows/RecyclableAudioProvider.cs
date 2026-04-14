@@ -6,6 +6,10 @@ public abstract class RecyclableAudioProvider : Recyclable, ISampleProvider
 {
     protected VolumeKnob masterKnob;
     protected VolumeKnob? sampleKnob;
+    protected bool trackMasterVolumeChanges;
+    protected float fixedMasterVolume;
+    protected float? fixedSampleVolume;
+    protected float fixedSamplePan;
     protected float effectiveVolume;
     protected float effectivePan;
 
@@ -16,6 +20,9 @@ public abstract class RecyclableAudioProvider : Recyclable, ISampleProvider
     {
         masterKnob = master ?? throw new ArgumentNullException(nameof(master));
         sampleKnob = sample;
+        fixedSampleVolume = null;
+        fixedSamplePan = 0f;
+        trackMasterVolumeChanges = true;
 
         master.VolumeChanged.Subscribe(this, static (me, v) => me.OnVolumeChanged(), this);
         sample?.VolumeChanged.Subscribe(this, static (me, v) => me.OnVolumeChanged(), this);
@@ -25,16 +32,28 @@ public abstract class RecyclableAudioProvider : Recyclable, ISampleProvider
         OnPanChanged();
     }
 
+    public void InitFixedVolume(VolumeKnob master, float sampleVolume, float samplePan)
+    {
+        masterKnob = master ?? throw new ArgumentNullException(nameof(master));
+        sampleKnob = null;
+        fixedSampleVolume = Math.Clamp(sampleVolume, 0f, 1f);
+        fixedSamplePan = Math.Clamp(samplePan, -1f, 1f);
+        trackMasterVolumeChanges = false;
+        fixedMasterVolume = master.Volume;
+        OnVolumeChanged();
+        OnPanChanged();
+    }
+
     protected void OnPanChanged()
     {
-        float pan = sampleKnob?.Pan ?? 0f;
+        float pan = sampleKnob?.Pan ?? fixedSamplePan;
         effectivePan = Math.Max(-1f, Math.Min(1f, pan));
     }
 
     protected void OnVolumeChanged()
     {
-        float master = (float)Math.Pow(masterKnob.Volume, 1.2f);
-        float sample = (float)Math.Pow(sampleKnob?.Volume ?? 1, 1.2f);
+        float master = (float)Math.Pow(trackMasterVolumeChanges ? masterKnob.Volume : fixedMasterVolume, 1.2f);
+        float sample = (float)Math.Pow(fixedSampleVolume ?? sampleKnob?.Volume ?? 1, 1.2f);
         effectiveVolume = Math.Clamp(master * sample, 0f, 1f);
     }
 
@@ -43,6 +62,10 @@ public abstract class RecyclableAudioProvider : Recyclable, ISampleProvider
         sampleKnob?.TryDispose();
         sampleKnob = null;
         masterKnob = null;
+        trackMasterVolumeChanges = false;
+        fixedMasterVolume = 0f;
+        fixedSampleVolume = null;
+        fixedSamplePan = 0f;
         effectiveVolume = 0f;
         effectivePan = 0f;
         base.OnReturn();

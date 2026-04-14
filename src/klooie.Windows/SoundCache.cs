@@ -45,6 +45,27 @@ internal sealed class SoundCache
         return RecyclableSampleProvider.Create(eventLoop, cachedSound, masterVolume, sampleVolume, maxLifetime, loop);
     }
 
+    public RecyclableSampleProvider? GetSample(
+     EventLoop eventLoop,
+     string? soundId,
+     VolumeKnob masterVolume,
+     float sampleVolume,
+     float samplePan,
+     ILifetime? maxLifetime)
+    {
+        if (provider == null) return null;
+        if (string.IsNullOrEmpty(soundId)) return null;
+        if (provider.Contains(soundId) == false) return null;
+
+        if (!cached.TryGetValue(soundId, out var cachedSound))
+        {
+            cachedSound = new CachedSound(provider, soundId);
+            cached[soundId] = cachedSound;
+        }
+
+        return RecyclableSampleProvider.Create(eventLoop, cachedSound, masterVolume, sampleVolume, samplePan, maxLifetime, loop: false);
+    }
+
     public void Clear()
     {
         cached.Clear();
@@ -84,11 +105,10 @@ internal sealed class CachedSound
         wavStream.Position = 0;
         using var wavReader = new WaveFileReader(wavStream);
 
-        // Guard: Check format
         var wf = wavReader.WaveFormat;
         if (wf.SampleRate != SoundProvider.SampleRate || wf.Channels != SoundProvider.ChannelCount || wf.BitsPerSample != SoundProvider.BitsPerSample || wf.Encoding != WaveFormatEncoding.Pcm)
         {
-            throw new InvalidOperationException( $"WAV format mismatch. Expected {SoundProvider.ChannelCount}ch, {SoundProvider.SampleRate}Hz, {SoundProvider.BitsPerSample}-bit PCM. " + $"Got {wf.Channels}ch, {wf.SampleRate}Hz, {wf.BitsPerSample}-bit {wf.Encoding}.");
+            throw new InvalidOperationException($"WAV format mismatch. Expected {SoundProvider.ChannelCount}ch, {SoundProvider.SampleRate}Hz, {SoundProvider.BitsPerSample}-bit PCM. " + $"Got {wf.Channels}ch, {wf.SampleRate}Hz, {wf.BitsPerSample}-bit {wf.Encoding}.");
         }
 
         WaveFormat = wf;
@@ -96,7 +116,7 @@ internal sealed class CachedSound
         long totalSamples = wavReader.Length / (SoundProvider.BitsPerSample / 8);
         int sampleCount = checked((int)totalSamples);
         var sampleProvider = wavReader.ToSampleProvider();
-        if(AudioData == null || AudioData.Length < sampleCount) AudioData = new float[sampleCount];
+        if (AudioData == null || AudioData.Length < sampleCount) AudioData = new float[sampleCount];
 
         int totalRead = 0;
         while (totalRead < sampleCount)
@@ -126,10 +146,7 @@ public static class PcmCache
 
         // decode once; pick your poison: WMF or Mp3FileReader
         using var s = provider.Open(assetId);
-        using WaveStream decoder =
-            s is FileStream fs ? new MediaFoundationReader(fs.Name)
-                               : new Mp3FileReader(s); // fallback
-
+        using WaveStream decoder = s is FileStream fs ? new MediaFoundationReader(fs.Name) : new Mp3FileReader(s); // fallback
         using var outFs = new FileStream(cachePath, FileMode.Create, FileAccess.Write, FileShare.Read);
         WaveFileWriter.WriteWavFileToStream(outFs, decoder); // streamed, not MemoryStream
         return cachePath;

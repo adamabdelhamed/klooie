@@ -239,6 +239,18 @@ public class AudioPlaybackEngine : ISoundProvider
         return input;
     }
 
+    protected ILifetime PlayCachedStatic(string? soundId, float volume, float pan, ILifetime? maxDuration = null)
+    {
+        if (FailedToInitializeOrRun) return Lifetime.Completed;
+
+        var input = soundCache.GetSample(eventLoop, soundId, MasterVolume, volume, pan, maxDuration);
+        if (input == null) return Lifetime.Completed;
+
+        AddMixerInput(input, isMusic: false);
+        if (!everInitialized || CurrentOutputDevice == null) ScheduleRecovery("play requested while output device unavailable");
+        return input;
+    }
+
     public void Loop(string? soundId, ILifetime? lt = null, VolumeKnob? volumeKnob = null, bool isMusic = false)
     {
         if (FailedToInitializeOrRun) return;

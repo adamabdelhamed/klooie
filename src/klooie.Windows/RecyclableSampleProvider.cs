@@ -36,6 +36,20 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
         return ret;
     }
 
+    public static RecyclableSampleProvider Create(
+        EventLoop eventLoop,
+        CachedSound sound,
+        VolumeKnob masterKnob,
+        float sampleVolume,
+        float samplePan,
+        ILifetime? loopLifetime,
+        bool loop)
+    {
+        var ret = pool.Value.Rent();
+        ret.Construct(eventLoop, sound, masterKnob, sampleVolume, samplePan, loopLifetime, loop);
+        return ret;
+    }
+
     // NEW: wrapper for streaming sources (music). Looping is handled by the upstream ISampleProvider.
     public static RecyclableSampleProvider Create(
         EventLoop loopCtx,
@@ -60,6 +74,18 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
         this.maxLifetimeLease = loopLifetime?.Lease ?? -1;
         this.position = 0;
         InitVolume(masterKnob, sampleKnob);
+    }
+
+    protected void Construct(EventLoop eventLoop, CachedSound src, VolumeKnob masterKnob, float sampleVolume, float samplePan, ILifetime? loopLifetime, bool loop)
+    {
+        this.eventLoop = eventLoop;
+        this.sound = src;
+        this.stream = null;
+        this.loop = loop;
+        this.maxLifetime = loopLifetime;
+        this.maxLifetimeLease = loopLifetime?.Lease ?? -1;
+        this.position = 0;
+        InitFixedVolume(masterKnob, sampleVolume, samplePan);
     }
 
     // ---- Streaming path ----
