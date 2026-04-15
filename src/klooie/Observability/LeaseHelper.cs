@@ -219,7 +219,7 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
     public void UnTrackAndDispose()
     {
         TryDisposeRecyclable();
-        TryDispose(RecyclableLease, "LeaseState<T>.UnTrackAndDispose");
+        TryDispose(Lease, "LeaseState<T>.UnTrackAndDispose");
     }
 
     public void Recycle(TRecyclable replacement)
@@ -251,6 +251,10 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
         Recyclable = null;
         RecyclableLease = default;
     }
+
+    // Should only be used when the lease never had its reference stored, but instead had it created and passed as a callback scope where the caller
+    // is the only code that ever gets a reference to it.
+    public void FinishedTracking(string reason) => Dispose(Lease, reason);
 }
 
 /// <summary>
