@@ -70,12 +70,17 @@ public partial class Label : ConsoleControl
 public class ConsoleStringRenderer : ConsoleControl
 {
     private ConsoleString content = ConsoleString.Empty;
+    private Event? contentChanged;
+
+    public Event ContentChanged => contentChanged ??= Event.Create();
+
     public ConsoleString Content
     {
         get => content;
         set
         {
             content = value ?? ConsoleString.Empty;
+            contentChanged?.Fire();
             ResizeTo(content?.Length ?? 0, 1);
         }
     }
@@ -83,6 +88,19 @@ public class ConsoleStringRenderer : ConsoleControl
     public ConsoleStringRenderer()
     {
         CanFocus = false;
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
+        CanFocus = false;
+    }
+
+    protected override void OnReturn()
+    {
+        base.OnReturn();
+        contentChanged?.TryDispose();
+        contentChanged = null;
     }
     public ConsoleStringRenderer(ConsoleString? content = null) : this() => this.Content = content ?? ConsoleString.Empty;
 
