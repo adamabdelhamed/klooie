@@ -34,9 +34,8 @@ public class Event : Recyclable
     {
         if(lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ActionSubscription.Create(handler);
+        subscription.BindLifetime(lifetimeManager);
         Subscribers.Subscribe(subscription);
-        // Use a Lease to make sure we don't double dispose the subscription in case the lifetimeManager outlives the event.
-        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     // NEW OR MODIFIED CODE: Overload that accepts a scope object
@@ -51,9 +50,8 @@ public class Event : Recyclable
     {
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
+        subscription.BindLifetime(lifetimeManager);
         Subscribers.Subscribe(subscription);
-        // Use a Lease to make sure we don't double dispose the subscription in case the lifetimeManager outlives the event.
-        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease=> lease.UnTrackAndDispose());
     }
 
     /// <summary>
@@ -66,9 +64,8 @@ public class Event : Recyclable
     {
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ActionSubscription.Create(handler);
+        subscription.BindLifetime(lifetimeManager);
         Subscribers.SubscribeWithPriority(subscription);
-        // Use a Lease to make sure we don't double dispose the subscription in case the lifetimeManager outlives the event.
-        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     /// <summary>
@@ -78,9 +75,8 @@ public class Event : Recyclable
     {
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedSubscription<TScope>.Create(scope, handler);
+        subscription.BindLifetime(lifetimeManager);
         Subscribers.SubscribeWithPriority(subscription);
-        // Use a Lease to make sure we don't double dispose the subscription in case the lifetimeManager outlives the event.
-        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     /// <summary>

@@ -75,6 +75,13 @@ public partial class Rectangular :  Recyclable, IObservableObject, ICollidable
     protected override void OnInit()
     {
         base.OnInit();
+        x = 0;
+        y = 0;
+        w = 0;
+        h = 0;
+        QueryStamp = 0;
+        ZIndex = 0;
+        Bounds = default;
         BoundsChanged.Subscribe(this, SyncBoundsFromExistingBounds, this);
     }
 

@@ -120,4 +120,29 @@ public class ConsoleControlTests
         Assert.AreSame(control, ConsoleApp.Current.LayoutRoot.Controls.Where(c => c.Id == "1234").Single());
         ConsoleApp.Current.Stop();
     });
+
+    [TestMethod]
+    public void ConsoleControl_PooledInstancesResetGeometry()
+    {
+        var control = ConsoleControlPool.Instance.Rent();
+        control.X = 17;
+        control.Y = 23;
+        control.ZIndex = 9;
+        control.Dispose("external/klooie/src/tests/Controls/ConsoleControlTests.cs:1");
+
+        var recycled = ConsoleControlPool.Instance.Rent();
+        try
+        {
+            Assert.AreSame(control, recycled);
+            Assert.AreEqual(0, recycled.X);
+            Assert.AreEqual(0, recycled.Y);
+            Assert.AreEqual(0, recycled.ZIndex);
+            Assert.AreEqual(1, recycled.Width);
+            Assert.AreEqual(1, recycled.Height);
+        }
+        finally
+        {
+            recycled.Dispose("external/klooie/src/tests/Controls/ConsoleControlTests.cs:1");
+        }
+    }
 }

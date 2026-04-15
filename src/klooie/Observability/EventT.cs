@@ -42,16 +42,15 @@ public class Event<T> : Recyclable
     {
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ArgsSubscription<T>.Create(handler);
+        subscription.BindLifetime(lifetimeManager);
         Subscribers.Subscribe(subscription);
-        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
-
     }
     public void Subscribe<TScope>(TScope scope, Action<TScope,T> handler, ILifetime lifetimeManager)
     {
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedArgsSubscription<TScope, T>.Create(scope, handler);
+        subscription.BindLifetime(lifetimeManager);
         Subscribers.Subscribe(subscription);
-        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     /// <summary>
@@ -64,8 +63,8 @@ public class Event<T> : Recyclable
     {
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ArgsSubscription<T>.Create(handler);
+        subscription.BindLifetime(lifetimeManager);
         Subscribers.SubscribeWithPriority(subscription);
-        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
     /// <summary>
@@ -75,8 +74,8 @@ public class Event<T> : Recyclable
     {
         if (lifetimeManager == null) throw new ArgumentNullException(nameof(lifetimeManager), "Lifetime manager cannot be null");
         var subscription = ScopedArgsSubscription<TScope, T>.Create(scope, handler);
+        subscription.BindLifetime(lifetimeManager);
         Subscribers.SubscribeWithPriority(subscription);
-        lifetimeManager.OnDisposed(LeaseHelper.Track(subscription), static lease => lease.UnTrackAndDispose());
     }
 
 

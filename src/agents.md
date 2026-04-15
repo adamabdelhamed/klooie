@@ -1,6 +1,7 @@
 ## Klooie
 Klooie is a .NET framework for building interactive applications that run on a command line. It works by writing ANSI to standard output, which renders a visual image.
 
+- Pooled visual controls must reset geometry state (`X`, `Y`, `Bounds`, `ZIndex`, and related layout-affecting fields) on rent. Many layout helpers only drive one axis, so stale coordinates from a prior lease can surface as seemingly random clipping or misalignment on the next screen.
 - `klooie/Gaming/PauseManager.cs` lease-tracks the pooled pause lifetime instead of holding a raw `Recyclable` reference. Keep pause/unpause cleanup lease-aware so a stale or already-disposed pause token cannot crash resume or target a recycled pool instance.
 - `klooie.Windows/AudioPlaybackEngine.cs` now wraps the final mix in a conservative output-protection stage with fixed headroom and soft clipping before WASAPI. Prefer adjusting those constants before increasing device latency again.
 - `klooie.Windows/AudioPlaybackEngine.cs` keeps the mixer graph alive across endpoint loss and rebuilds only the WASAPI output device. Startup failures, default-device changes, and playback-stop/device-state notifications all funnel into the same delayed recovery path.

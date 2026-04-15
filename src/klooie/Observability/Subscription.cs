@@ -19,11 +19,26 @@ internal interface ISubscription
 internal abstract class Subscription : Recyclable, ISubscription
 {
     internal ILifetime? Lifetime { get; private set; }
+    internal int LifetimeLease { get; private set; }
+
+    internal void BindLifetime(ILifetime lifetime)
+    {
+        Lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
+        LifetimeLease = lifetime.Lease;
+    }
+
+    bool ISubscription.IsStillValid(int lease)
+    {
+        var myLeaseIsValid = base.IsStillValid(lease);
+        if (myLeaseIsValid == false) return false;
+        return Lifetime == null || Lifetime.IsStillValid(LifetimeLease);
+    }
 
     protected override void OnReturn()
     {
         base.OnReturn();
         Lifetime = null;
+        LifetimeLease = default;
     }
 
     public abstract void Notify();
@@ -163,6 +178,7 @@ internal sealed class OnceActionSubscription : Subscription
 
     protected override void OnReturn()
     { 
+        base.OnReturn();
         callback = null;
     }
 }
@@ -192,6 +208,7 @@ internal sealed class OnceScopedSubscription<T> : Subscription
 
     protected override void OnReturn()
     {
+        base.OnReturn();
         callback = null;
         scope = default!;
     }
@@ -220,6 +237,7 @@ internal sealed class OnceArgsSubscription<TArgs> : ArgsSubscription<TArgs>
 
     protected override void OnReturn()
     {
+        base.OnReturn();
         callback = null;
         Args = default!;
     }
@@ -252,6 +270,7 @@ internal sealed class OnceScopedArgsSubscription<TScope, TArgs> : ArgsSubscripti
 
     protected override void OnReturn()
     {
+        base.OnReturn();
         callback = null;
         scope = default!;
         Args = default!;
