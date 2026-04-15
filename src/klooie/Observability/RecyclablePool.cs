@@ -56,39 +56,42 @@ public abstract class RecycleablePool<T> : IObjectPool where T : Recyclable
     public void Use(Action<T> action)
     {
         var inst = Rent();
+        var lease = LeaseHelper.Track(inst);
         try
         {
             action(inst);
         }
         finally
         {
-            inst.Dispose();
+            lease.UnTrackAndDispose();
         }
     }
 
     public void Use<TState>(TState state, Action<T,TState> action)
     {
         var inst = Rent();
+        var lease = LeaseHelper.Track(inst);
         try
         {
             action(inst, state);
         }
         finally
         {
-            inst.Dispose();
+            lease.UnTrackAndDispose();
         }
     }
 
     public async Task Use(Func<T,Task> action)
     {
         var inst = Rent();
+        var lease = LeaseHelper.Track(inst);
         try
         {
             await action(inst);
         }
         finally
         {
-            inst.Dispose();
+            lease.UnTrackAndDispose();
         }
     }
 
