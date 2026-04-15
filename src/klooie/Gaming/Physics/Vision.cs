@@ -92,32 +92,42 @@ public class Vision : Recyclable, IFrameTask
         if (AngleStep > 1) return false;
         if(MaxMemoryTime > TimeSpan.Zero) throw new InvalidOperationException($"When {nameof(AngleStep)} is <= 1 then MaxMemoryTime must be <= TimeSpan.Zero.");
         if(TrackedObjectsList.Count > 0) throw new InvalidOperationException($"When {nameof(AngleStep)} is <= 1 then TrackedObjectsList must be empty."); 
-        
-        for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
+
+        PopulateRayCandidates(buffer);
+        var lineOfSightBuffer = ObstacleBufferPool.Instance.Rent();
+        try
         {
-            var candidate = buffer.WriteableBuffer[i];
-            if (candidate == Eye) continue; 
-            var distance = Eye.CalculateNormalizedDistanceTo(candidate);
-            if (distance > Visibility) continue;
-            var angle = Eye.CalculateAngleTo(candidate);
-
-            if (distance > 2f)
+            for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
             {
-                var angleDiff = Eye.Velocity.Angle.DiffShortest(angle);
-                if (angleDiff > AngularVisibility / 2f) continue;
-            }
+                var candidate = buffer.WriteableBuffer[i];
+                if (candidate == Eye) continue; 
+                var distance = Eye.CalculateNormalizedDistanceTo(candidate);
+                if (distance > Visibility) continue;
+                var angle = Eye.CalculateAngleTo(candidate);
 
-            var prediction = CollisionPredictionPool.Instance.Rent();
-            var obstruction = CollisionDetector.GetLineOfSightObstruction(Eye, candidate, buffer.WriteableBuffer, CastingMode.SingleRay, prediction) as GameCollider;
-            VisuallyTrackedObject? target = null;
-            if (obstruction != null || TryIgnorePotentialTargetIgnorable(candidate, out target))
-            {
-                if (target != null) throw new InvalidOperationException($"Target was present in visible objects, but should have been marked as stale.");
-                prediction.TryDispose();
-                continue;
-            }
+                if (distance > 2f)
+                {
+                    var angleDiff = Eye.Velocity.Angle.DiffShortest(angle);
+                    if (angleDiff > AngularVisibility / 2f) continue;
+                }
 
-            AddTrackedObject(VisuallyTrackedObject.Create(candidate, prediction, prediction.LKGD, angle));
+                PopulatePerfectScanObstacles(angle, distance, candidate, lineOfSightBuffer);
+                var prediction = CollisionPredictionPool.Instance.Rent();
+                var obstruction = CollisionDetector.GetLineOfSightObstruction(Eye, candidate, lineOfSightBuffer.WriteableBuffer, CastingMode.SingleRay, prediction) as GameCollider;
+                VisuallyTrackedObject? target = null;
+                if (obstruction != null || TryIgnorePotentialTargetIgnorable(candidate, out target))
+                {
+                    if (target != null) throw new InvalidOperationException($"Target was present in visible objects, but should have been marked as stale.");
+                    prediction.TryDispose();
+                    continue;
+                }
+
+                AddTrackedObject(VisuallyTrackedObject.Create(candidate, prediction, prediction.LKGD, angle));
+            }
+        }
+        finally
+        {
+            lineOfSightBuffer.Dispose();
         }
         return true;
     }
@@ -338,7 +348,22 @@ public class Vision : Recyclable, IFrameTask
             var angularReach = centerDistance <= minDistance
                 ? 180f
                 : MathF.Min(180f, MathF.Atan2(sweepRadius, centerDistance) * radToDeg + angularPadding);
-            rayCandidates.Add(new RayCandidate(obstacle, centerAngle, angularReach));
+            var minPossibleDistance = MathF.Max(0, centerDistance - sweepRadius);
+            rayCandidates.Add(new RayCandidate(obstacle, centerAngle, angularReach, minPossibleDistance));
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void PopulatePerfectScanObstacles(Angle angle, float targetDistance, GameCollider target, ObstacleBuffer castBuffer)
+    {
+        castBuffer.WriteableBuffer.Clear();
+        for (var i = 0; i < rayCandidates.Count; i++)
+        {
+            var candidate = rayCandidates[i];
+            if (candidate.Collider == target) continue;
+            if (candidate.MinDistance > targetDistance) continue;
+            if (DiffShortestDegrees(angle.Value, candidate.CenterAngle) > candidate.AngularReach) continue;
+            castBuffer.WriteableBuffer.Add(candidate.Collider);
         }
     }
 
@@ -377,12 +402,14 @@ internal readonly struct RayCandidate
     public readonly GameCollider Collider;
     public readonly float CenterAngle;
     public readonly float AngularReach;
+    public readonly float MinDistance;
 
-    public RayCandidate(GameCollider collider, float centerAngle, float angularReach)
+    public RayCandidate(GameCollider collider, float centerAngle, float angularReach, float minDistance)
     {
         Collider = collider;
         CenterAngle = centerAngle;
         AngularReach = angularReach;
+        MinDistance = minDistance;
     }
 }
 

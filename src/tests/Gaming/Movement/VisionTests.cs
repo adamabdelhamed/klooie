@@ -29,6 +29,48 @@ public class VisionTests
         Game.Current.Stop();
     });
 
+    [TestMethod]
+    public void VisionPerfectScan_IgnoresOffAxisCrowdsButKeepsDirectBlockers() => GamingTest.RunCustomSize(TestContext.TestId(), UITestMode.Headless, 80, 40, async (context) =>
+    {
+        var mover = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
+        mover.MoveTo(10, 10, int.MaxValue);
+        mover.ResizeTo(2, 2);
+        mover.Velocity.Angle = Angle.Right;
+
+        var scheduler = FrameTaskScheduler.Create(TimeSpan.FromSeconds(1));
+        var vision = Vision.Create(scheduler, mover, autoScan: false);
+        vision.AngleStep = 1;
+        vision.AngleFuzz = 0;
+        vision.MaxMemoryTime = TimeSpan.Zero;
+        vision.Visibility = 30;
+        vision.AngularVisibility = 90;
+
+        var blockedTarget = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
+        blockedTarget.MoveTo(26, 10, int.MaxValue);
+        blockedTarget.ResizeTo(2, 2);
+
+        var directBlocker = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
+        directBlocker.MoveTo(18, 10, int.MaxValue);
+        directBlocker.ResizeTo(2, 2);
+
+        var visibleTarget = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
+        visibleTarget.MoveTo(24, 16, int.MaxValue);
+        visibleTarget.ResizeTo(2, 2);
+
+        for (var i = 0; i < 40; i++)
+        {
+            var noise = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
+            noise.MoveTo(16 + (i % 10) * 2, 20 + (i / 10) * 2, int.MaxValue);
+            noise.ResizeTo(2, 2);
+        }
+
+        vision.Scan();
+
+        Assert.IsFalse(vision.TryGetValue(blockedTarget, out _), "The direct blocker should still occlude the target.");
+        Assert.IsTrue(vision.TryGetValue(visibleTarget, out _), "Off-axis crowding should not prevent the side target from being seen.");
+        Game.Current.Stop();
+    });
+
     private static async Task SetupVisionTest(UITestManager context, RectF moverPosition, bool perfect)
     {
         var mover = Game.Current.GamePanel.Add(GameColliderPool.Instance.Rent());
