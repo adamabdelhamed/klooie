@@ -219,7 +219,7 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
     public void UnTrackAndDispose()
     {
         TryDisposeRecyclable();
-        TryDispose();
+        TryDispose(RecyclableLease, "LeaseState<T>.UnTrackAndDispose");
     }
 
     public void Recycle(TRecyclable replacement)

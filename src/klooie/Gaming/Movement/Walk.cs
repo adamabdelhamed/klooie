@@ -53,7 +53,7 @@ public class Walk : Movement
     {
         if (AreAllDependenciesValid == false)
         {
-            TryDispose();
+            TryDispose("Walk Tick");
             return;
         }
         FrameDebugger.RegisterTask(nameof(Walk));

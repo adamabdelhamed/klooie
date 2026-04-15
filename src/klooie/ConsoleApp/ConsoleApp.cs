@@ -151,7 +151,7 @@ public class ConsoleApp : EventLoop
         }
         finally
         {
-            TryDispose();
+            TryDispose("ConsoleApp.Run Finally");
             _current = null;
         }
     }

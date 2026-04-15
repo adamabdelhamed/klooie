@@ -13,8 +13,6 @@ internal interface ISubscription
     bool IsStillValid(int lease);
     void Notify();
     [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
-    bool TryDispose();
-    [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
     void Dispose();
     void Dispose(int lease, string reason);
     bool TryDispose(int lease, string reason);
