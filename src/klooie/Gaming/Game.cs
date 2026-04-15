@@ -7,12 +7,6 @@ namespace klooie.Gaming;
 /// </summary>
 public class Game : ConsoleApp
 {
-    /// <summary>
-    /// The id for the Ready event that fires after all initial rules are executed
-    /// </summary>
-    public const string ReadyEventId = "Ready";
-
-    private EventBroadcaster eventBroadcaster;
     private RuleManager ruleManager;
     private PauseManager pauseManager;
 
@@ -89,32 +83,6 @@ public class Game : ConsoleApp
     /// </summary>
     public SpecialReverseDictionary RuleVariables { get; protected set; }
 
-    /// <summary>
-    /// Subscribes to a game event for some amount of time. You can use boolean expressions using and ('&'), or ('|') and
-    /// grouping with parentheses. If an event is published that mathces then your handler will be called.
-    /// </summary>
-    /// <param name="expressionText">the subscription expression</param>
-    /// <param name="handler">the handler to call when a matching event is published</param>
-    /// <param name="lt">the duration of the subscription</param>
-    public void Subscribe(string expressionText, Action<GameEvent> handler, ILifetime lt) =>
-        eventBroadcaster.Subscribe(expressionText, handler, lt);
-
-    /// <summary>
-    /// Subscribes to a game event for up to one occurrance. You can use boolean expressions using and ('&'), or ('|') and
-    /// grouping with parentheses. If an event is published that mathces then your handler will be called.
-    /// </summary>
-    /// <param name="expressionText">the subscription expression</param>
-    /// <param name="handler">the handler to call when a matching event is published</param>
-    public void SubscribeOnce(string expressionText, Action<GameEvent> handler) =>
-        eventBroadcaster.SubscribeOnce(expressionText, handler);
-
-    /// <summary>
-    /// Publishes a game event with optional args.
-    /// </summary>
-    /// <param name="eventName">the event being published</param>
-    /// <param name="args">the data that goes along with the event</param>
-    public void Publish(string eventName, object args = null) =>
-        eventBroadcaster.Publish(eventName, args);
 
     /// <summary>
     /// Adds a rule after startup
@@ -127,7 +95,6 @@ public class Game : ConsoleApp
     /// </summary>
     public Game()
     {
-        this.eventBroadcaster = new EventBroadcaster();
         this.pauseManager = new PauseManager();
         this.PausableScheduler = new SynchronousScheduler(this);
         RuleVariables = new SpecialReverseDictionary();
@@ -144,7 +111,6 @@ public class Game : ConsoleApp
         PausableScheduler.UseColliderTimeDilation = true;
         this.ruleManager = new RuleManager(RuleProvider);
         await ruleManager.Startup();
-        Publish(ReadyEventId);
         PaintEnabled = true;
     }
 
@@ -152,8 +118,6 @@ public class Game : ConsoleApp
     protected override void OnReturn()
     {
         base.OnReturn();
-        eventBroadcaster?.Dispose();
-        eventBroadcaster = null;
         ruleManager = null;
         pauseManager = null;
         mainColliderGroup = null;
