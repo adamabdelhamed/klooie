@@ -1,9 +1,9 @@
 ﻿
 using klooie.Gaming;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PowerArgs;
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace klooie.tests;
@@ -235,7 +235,18 @@ public class GameTests
         var pauseLifetime = Game.Current.PauseManager.PauseLifetime;
         Assert.IsNotNull(pauseLifetime);
 
-        (pauseLifetime as Recyclable)?.Dispose();
+        var pauseLeaseField = typeof(PauseManager).GetField("pauseLease", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(pauseLeaseField);
+
+        var pauseLease = pauseLeaseField.GetValue(Game.Current.PauseManager);
+        Assert.IsNotNull(pauseLease);
+
+        var recyclableProperty = pauseLease.GetType().GetProperty("Recyclable");
+        Assert.IsNotNull(recyclableProperty);
+
+        var backingLifetime = recyclableProperty.GetValue(pauseLease) as Recyclable;
+        Assert.IsNotNull(backingLifetime);
+        backingLifetime.Dispose();
 
         Game.Current.Resume();
 

@@ -3,8 +3,9 @@ public sealed class PauseManager : IPausable
 {
   
     private LeaseState<Recyclable>? pauseLease;
+    private OpaqueLifetime? pauseLifetime;
     public Event<ILifetime> OnPaused { get; private set; } = Event<ILifetime>.Create();
-    public ILifetime? PauseLifetime => pauseLease?.Recyclable;
+    public ILifetime? PauseLifetime => pauseLifetime?.IsStillValid(pauseLifetime.Lease) == true ? pauseLifetime : null;
 
     public SynchronousScheduler Scheduler => Game.Current?.PausableScheduler;
 
@@ -24,8 +25,14 @@ public sealed class PauseManager : IPausable
                 Game.Current.PausableScheduler.Pause();
                 if(PauseSoundWithPhysics) Game.Current.Sound?.Pause();
                 pauseLease?.UnTrackAndDispose();
-                pauseLease = LeaseHelper.Track(DefaultRecyclablePool.Instance.Rent());
-                OnPaused.Fire(pauseLease.Recyclable);
+                var backingLifetime = DefaultRecyclablePool.Instance.Rent();
+                pauseLease = LeaseHelper.Track(backingLifetime);
+                pauseLifetime = new OpaqueLifetime(backingLifetime);
+                OnPaused.Fire(pauseLifetime);
+                if (backingLifetime.IsStillValid(backingLifetime.Lease) == false)
+                {
+                    throw new InvalidOperationException($"Pause lifetime was invalidated during OnPaused notification. DisposalReason: {backingLifetime.DisposalReason ?? "<null>"}");
+                }
             }
             else
             {
@@ -33,6 +40,7 @@ public sealed class PauseManager : IPausable
                 Game.Current.Sound?.Resume(); // safe to call even if we didn't pause
                 pauseLease?.UnTrackAndDispose();
                 pauseLease = null;
+                pauseLifetime = null;
             }
         }
     }
