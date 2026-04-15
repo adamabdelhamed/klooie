@@ -216,10 +216,14 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
         return ret;
     }
 
-    public void UnTrackAndDispose()
+    [Obsolete("Use the version that lets you pass a reason")]
+    public void UnTrackAndDispose() => UnTrackAndDispose("LeaseState<T>.UnTrackAndDispose");
+
+    public void UnTrackAndDispose(string reason)
     {
+        if(reason == null) throw new ArgumentException("Reason cannot be null", nameof(reason));
         TryDisposeRecyclable();
-        TryDispose(Lease, "LeaseState<T>.UnTrackAndDispose");
+        TryDispose(Lease, reason);
     }
 
     public void Recycle(TRecyclable replacement)

@@ -146,8 +146,8 @@ namespace klooie
                 var setterAccessibility = property.SetMethod?.DeclaredAccessibility.ToString().ToLower();
                 var omitGetterAccessibility = getterAccessibility == accessibility;
                 var omitSetterAccessibility = setterAccessibility == accessibility;
-                sb.AppendLine($"{Indent(indent)}private Event _{propertyName}Changed;");
-                sb.AppendLine($"{Indent(indent)}{property.DeclaredAccessibility.ToString().ToLower()} Event {propertyName}Changed => _{propertyName}Changed ?? (_{propertyName}Changed = Rent());");
+                sb.AppendLine($"{Indent(indent)}private LeaseState<Event> _{propertyName}Changed;");
+                sb.AppendLine($"{Indent(indent)}{property.DeclaredAccessibility.ToString().ToLower()} Event {propertyName}Changed => _{propertyName}Changed?.Recyclable ?? (_{propertyName}Changed = LeaseHelper.Track(Rent())).Recyclable;");
                 sb.AppendLine($"{Indent(indent)}private {propertyType} {fieldName};");
                 sb.AppendLine($"{Indent(indent)}{accessibility} partial {propertyType} {propertyName}");
                 sb.AppendLine(Indent(indent) + "{");
@@ -177,7 +177,7 @@ namespace klooie
                 indent += standardIndent;
                 sb.AppendLine($"{Indent(indent)}if (EqualsSafe(value, {fieldName})) return;");
                 sb.AppendLine($"{Indent(indent)}{fieldName} = value;");
-                sb.AppendLine($"{Indent(indent)}_{propertyName}Changed?.Fire();");
+                sb.AppendLine($"{Indent(indent)}_{propertyName}Changed?.Recyclable?.Fire();");
                 indent -= standardIndent;
                 sb.AppendLine(Indent(indent) + "}");
                 indent -= standardIndent;
@@ -247,7 +247,7 @@ namespace klooie
             foreach (var property in classSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.IsPartial() && p.IsAutoProperty()))
             {
                 var propertyName = property.Name;
-                sb.AppendLine($"{Indent(indent)}if(_this._{propertyName}Changed != null) {{_this._{propertyName}Changed.Dispose(\"external/klooie/src/klooie.Analyzers/ObservableGenerator.cs\");_this._{propertyName}Changed = null;}}");
+                sb.AppendLine($"{Indent(indent)}if(_this._{propertyName}Changed != null) {{ _this._{propertyName}Changed.UnTrackAndDispose(\"{classSymbol}._ReturnEventsToPool\"); _this._{propertyName}Changed = null; }}");
             }
             if (isLifetimeManager)
             {
