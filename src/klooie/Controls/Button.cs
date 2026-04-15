@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 namespace klooie;
 /// <summary>
 /// A class that represents a keyboard shortcut that can be activate a control that does not have focus
@@ -152,7 +152,7 @@ public partial class Button : ConsoleControl
     protected override void OnReturn()
     {
         base.OnReturn();
-        pressed?.TryDispose();
+        pressed?.TryDispose("external/klooie/src/klooie/Controls/Button.cs:155");
         pressed = null;
     }
 }

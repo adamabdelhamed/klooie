@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -76,11 +76,11 @@ public class MidiDeviceInterpretor : Recyclable
         noteDetector = null;
 
         engine?.ReleaseAll();
-        engine?.TryDispose();
+        engine?.TryDispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiDeviceInterpreter.cs:79");
         engine = null!;
 
         melodyComposer = null!;
-        midiDropdown?.TryDispose();
+        midiDropdown?.TryDispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiDeviceInterpreter.cs:83");
         midiDropdown = null;
     }
 }

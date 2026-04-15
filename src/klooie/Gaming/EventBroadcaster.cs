@@ -1,4 +1,4 @@
-﻿namespace klooie.Gaming;
+namespace klooie.Gaming;
 
 public sealed class GameEvent
 {
@@ -45,7 +45,7 @@ internal sealed class EventBroadcaster
     {
         foreach (var kv in events)
         {
-            kv.Value.TryDispose();
+            kv.Value.TryDispose("external/klooie/src/klooie/Gaming/EventBroadcaster.cs:48");
         }
         events.Clear();
     }

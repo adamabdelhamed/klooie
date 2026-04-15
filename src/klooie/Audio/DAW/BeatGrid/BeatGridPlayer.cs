@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 
 namespace klooie;
@@ -39,7 +39,7 @@ public class BeatGridPlayer<T>
         Grid.StatusChanged.Fire(ConsoleString.Parse($"[White]Playing... {autoStopSuffix}"));
 
         ConsoleApp.Current.Scheduler.Delay(AudioThreadLatency, StartMovingPlayHeadAfterAudioThreadLatency);
-        playLifetime?.TryDispose();
+        playLifetime?.TryDispose("external/klooie/src/klooie/Audio/DAW/BeatGrid/BeatGridPlayer.cs:42");
         playLifetime = DefaultRecyclablePool.Instance.Rent();
         PlayAudio(CurrentBeat, playLifetime);
     }
@@ -56,7 +56,7 @@ public class BeatGridPlayer<T>
     public void Pause()
     {
         if (!IsPlaying) return;
-        playLifetime?.TryDispose();
+        playLifetime?.TryDispose("external/klooie/src/klooie/Audio/DAW/BeatGrid/BeatGridPlayer.cs:59");
         playLifetime = null;
         UpdateCurrentBeat();
         IsPlaying = false;

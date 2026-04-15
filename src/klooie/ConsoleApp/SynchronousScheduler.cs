@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using klooie.Gaming;
 namespace klooie;
 
@@ -126,7 +126,7 @@ public sealed class SynchronousScheduler
 
             if (delayIfValidInstance.DelayState.AreAllDependenciesValid == false)
             {
-                delayIfValidInstance.DelayState.TryDispose();
+                delayIfValidInstance.DelayState.TryDispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:129");
                 return;
             }
             delayIfValidInstance.Callback.Invoke(delayIfValidInstance.DelayState);
@@ -140,7 +140,7 @@ public sealed class SynchronousScheduler
     private static void DisposeAllDependneciesFromDelayState(DelayState state)
     {
         state.DisposeAllValidDependencies();
-        state.TryDispose();
+        state.TryDispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:143");
     }
 
     private static void DisposeStates(object innerLoopObs)
@@ -149,7 +149,7 @@ public sealed class SynchronousScheduler
         if (_this.delayStates == null) return;
         foreach (var ds in _this.delayStates)
         {
-            ds.TryDispose();
+            ds.TryDispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:152");
         }
         _this.delayStates.Clear();
         _this.delayStates = null;
@@ -370,7 +370,7 @@ public sealed class SynchronousScheduler
             for (int i = 0; i < PendingWorkItems.Count; i++)
             {
                 var state = PendingWorkItems[i];
-                state.TryDispose();
+                state.TryDispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:373");
             }
             PendingWorkItems.Dispose();
         }

@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 
 namespace klooie;
 
@@ -40,7 +40,7 @@ public class ConsolePanel : Container
         try
         {
             for (var i = 0; i < count; i++) buffer[i] = Controls[i];
-            for (var i = 0; i < count; i++) buffer[i].TryDispose();
+            for (var i = 0; i < count; i++) buffer[i].TryDispose("external/klooie/src/klooie/Containers/ConsolePanel.cs:43");
         }
         finally
         {
@@ -59,7 +59,7 @@ public class ConsolePanel : Container
         var idx = sortedControls.IndexOf(c);
         if (idx >= 0) sortedControls.RemoveAt(idx);
         c.Parent = null;
-        c.TryDispose();
+        c.TryDispose("external/klooie/src/klooie/Containers/ConsolePanel.cs:62");
     }
 
     private void OnControlAddedInternal(ConsoleControl control)

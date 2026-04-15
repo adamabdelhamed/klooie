@@ -1,4 +1,4 @@
-﻿
+
 namespace klooie;
 
 public enum TabAlignment
@@ -98,7 +98,7 @@ public partial class TabControl : ProtectedConsolePanel
         }
         else
         {
-            arrowKeyLifetime?.TryDispose();
+            arrowKeyLifetime?.TryDispose("external/klooie/src/klooie/Containers/TabControl.cs:101");
             arrowKeyLifetime = null;
         }
 
@@ -145,7 +145,7 @@ public partial class TabControl : ProtectedConsolePanel
 
     private void SetupArrowKeyNavigation()
     {
-        arrowKeyLifetime?.TryDispose();
+        arrowKeyLifetime?.TryDispose("external/klooie/src/klooie/Containers/TabControl.cs:148");
         var hasFocus = tabStack.Controls.Contains(ConsoleApp.Current.FocusedControl);
         if (hasFocus == false) return;
         arrowKeyLifetime = this.CreateChildRecyclable();

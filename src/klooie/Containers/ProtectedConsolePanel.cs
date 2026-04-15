@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 /// <summary>
 /// A ConsolePanel that can prevent outside influences from
 /// adding to its Controls collection. You must use the internal
@@ -28,7 +28,7 @@ public class ProtectedConsolePanel : Container
         this.ForegroundChanged.Sync(() => ProtectedPanel.Foreground = Foreground, this);
         OnDisposed(() =>
         {
-            ProtectedPanel?.TryDispose();
+            ProtectedPanel?.TryDispose("external/klooie/src/klooie/Containers/ProtectedConsolePanel.cs:31");
             ProtectedPanel = null;
         });
     }

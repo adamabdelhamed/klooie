@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace klooie;
 
@@ -21,9 +21,9 @@ public partial class FocusManager : Recyclable,  IObservableObject
     protected override void OnReturn()
     {
         base.OnReturn();
-        _globalKeyPressed?.TryDispose();
+        _globalKeyPressed?.TryDispose("external/klooie/src/klooie/Focus/FocusManager.cs:24");
         _globalKeyPressed = null;
-        onKeyInputThrottled?.TryDispose();
+        onKeyInputThrottled?.TryDispose("external/klooie/src/klooie/Focus/FocusManager.cs:26");
         onKeyInputThrottled = null;
         sendKeys.Clear();
         FocusedControl = null;

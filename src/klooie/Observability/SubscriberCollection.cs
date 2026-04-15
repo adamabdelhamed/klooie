@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -112,7 +112,7 @@ internal sealed class SubscriberCollection
         for(var i = newSubscribersForNextNotificationCycle.Count - 1; i >= 0; i--)
         {
             var entry = newSubscribersForNextNotificationCycle[i].Entry;
-            entry.Subscription?.TryDispose();
+            entry.Subscription?.TryDispose(entry.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:115");
             entry.Subscription = null;
             entry.Lease = 0;
             newSubscribersForNextNotificationCycle.RemoveAt(i);
@@ -122,7 +122,7 @@ internal sealed class SubscriberCollection
         for (int i = subscribers.Count - 1; i >= 0; i--)
         {
             var entry = subscribers[i];
-            entry.Subscription.TryDispose();
+            entry.Subscription.TryDispose(entry.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:125");
             RemoveEntryAt(i);
         }
         lightweightCollectionPool.Push(this);

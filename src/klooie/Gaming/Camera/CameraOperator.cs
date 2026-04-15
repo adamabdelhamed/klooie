@@ -1,4 +1,4 @@
-﻿namespace klooie.Gaming;
+namespace klooie.Gaming;
 
 /// <summary>
 /// An exception that is thrown when a camera movement needs to be short circuited
@@ -40,7 +40,7 @@ public sealed class CameraOperator : Recyclable
     {
         if (newPri < currentPri)
         {
-            moveLt?.TryDispose();
+            moveLt?.TryDispose("external/klooie/src/klooie/Gaming/Camera/CameraOperator.cs:43");
             currentPri = newPri;
             moveLt = this.CreateChildRecyclable();
             detector.MovementLifetime = moveLt;
@@ -51,7 +51,7 @@ public sealed class CameraOperator : Recyclable
             catch (CameraOperationShortCircuitException) { }
             finally
             {
-                moveLt?.TryDispose();
+                moveLt?.TryDispose("external/klooie/src/klooie/Gaming/Camera/CameraOperator.cs:54");
                 moveLt = null;
                 currentPri = int.MaxValue;
                 detector.MovementLifetime = null;

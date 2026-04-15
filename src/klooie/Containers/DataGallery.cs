@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 /// <summary>
 /// A panel that displays its children as a grid of tiles
 /// </summary>
@@ -127,7 +127,7 @@ public class DataGallery<T> : Gallery
     protected override void OnReturn()
     {
         base.OnReturn();
-        shown?.TryDispose();
+        shown?.TryDispose("external/klooie/src/klooie/Containers/DataGallery.cs:130");
         shown = null;
     }
 }

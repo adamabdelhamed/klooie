@@ -1,4 +1,4 @@
-﻿namespace klooie.Gaming;
+namespace klooie.Gaming;
 
 /// <summary>
 /// A panel that can pan like a camera.
@@ -235,9 +235,9 @@ public sealed partial class Camera : ConsolePanel
     protected override void OnReturn()
     {
         base.OnReturn();
-        cameraLocationChanged?.TryDispose();
+        cameraLocationChanged?.TryDispose("external/klooie/src/klooie/Gaming/Camera/Camera.cs:238");
         cameraLocationChanged = null;
-        beforePaint?.TryDispose();
+        beforePaint?.TryDispose("external/klooie/src/klooie/Gaming/Camera/Camera.cs:240");
         beforePaint = null;
     }
 }

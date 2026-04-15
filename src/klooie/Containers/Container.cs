@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 namespace klooie;
 
@@ -358,9 +358,9 @@ public abstract class Container : ConsoleControl
     protected override void OnReturn()
     {
         base.OnReturn();
-        _descendentAdded?.TryDispose();
+        _descendentAdded?.TryDispose("external/klooie/src/klooie/Containers/Container.cs:361");
         _descendentAdded = null;
-        _descendentRemoved?.TryDispose();
+        _descendentRemoved?.TryDispose("external/klooie/src/klooie/Containers/Container.cs:363");
         _descendentRemoved = null;
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Runtime.ExceptionServices;
+using System.Runtime.ExceptionServices;
 namespace klooie;
 public class EventLoop : Recyclable
 {
@@ -642,13 +642,13 @@ public class EventLoop : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        startOfCycle?.TryDispose();
+        startOfCycle?.TryDispose("external/klooie/src/klooie/ConsoleApp/EventLoop.cs:645");
         startOfCycle = null;
-        endOfCycle?.TryDispose();
+        endOfCycle?.TryDispose("external/klooie/src/klooie/ConsoleApp/EventLoop.cs:647");
         endOfCycle = null;
-        loopStarted?.TryDispose();
+        loopStarted?.TryDispose("external/klooie/src/klooie/ConsoleApp/EventLoop.cs:649");
         loopStarted = null;
-        loopStopped?.TryDispose();
+        loopStopped?.TryDispose("external/klooie/src/klooie/ConsoleApp/EventLoop.cs:651");
         loopStopped = null;
     }
 }

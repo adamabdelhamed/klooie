@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 
 public class DelayState : Recyclable
 {
@@ -168,7 +168,7 @@ public class DelayState : Recyclable
         {
             for (int i = 0; i < multipleDependencies.Count; i++)
             {
-                multipleDependencies[i]?.TryDispose();
+                multipleDependencies[i]?.TryDispose("external/klooie/src/klooie/Observability/DelayState.cs:171");
             }
             multipleDependencies.Dispose();
             multipleDependencies = null;
@@ -176,11 +176,11 @@ public class DelayState : Recyclable
 
         if (singleDependency != null)
         {
-            singleDependency.TryDispose();
+            singleDependency.TryDispose("external/klooie/src/klooie/Observability/DelayState.cs:179");
             singleDependency = null;
         }
 
-        _beforeDisposeDependency?.TryDispose();
+        _beforeDisposeDependency?.TryDispose("external/klooie/src/klooie/Observability/DelayState.cs:183");
         _beforeDisposeDependency = null;
     }
 }

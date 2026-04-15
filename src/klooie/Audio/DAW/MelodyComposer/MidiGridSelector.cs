@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -78,9 +78,9 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
         MelodyComposer.ModeChanging.SubscribeOnce((m) =>
         {
             selectionAnchor = null;
-            selectionRectangle?.TryDispose();
+            selectionRectangle?.TryDispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiGridSelector.cs:81");
             selectionRectangle = null;
-            anchorPreviewControl?.TryDispose();
+            anchorPreviewControl?.TryDispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiGridSelector.cs:83");
             anchorPreviewControl = null;
         });
     }

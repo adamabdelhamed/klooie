@@ -1,4 +1,4 @@
-﻿namespace klooie.Gaming;
+namespace klooie.Gaming;
 
  public class TopDownHumanMovementInput : Recyclable
 {
@@ -71,7 +71,7 @@
     private static void Down(object me, ConsoleKeyInfo info) => (me as TopDownHumanMovementInput)!.OnMove(Angle.Down);
     private static void Left(object me, ConsoleKeyInfo info) => (me as TopDownHumanMovementInput)!.OnMove(Angle.Left);
     private static void Right(object me, ConsoleKeyInfo info) => (me as TopDownHumanMovementInput)!.OnMove(Angle.Right);
-    private static void DisposeMe(object me) => (me as TopDownHumanMovementInput)!.TryDispose();
+    private static void DisposeMe(object me) => (me as TopDownHumanMovementInput)!.TryDispose("external/klooie/src/klooie/Gaming/Movement/TopDownHumanMovementInput.cs:74");
 
     private static void Cleanup(object me)
     {

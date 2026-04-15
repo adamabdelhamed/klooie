@@ -1,4 +1,4 @@
-﻿
+
 using klooie.Gaming;
 
 namespace klooie;
@@ -25,7 +25,7 @@ public sealed class Friction : Recyclable
         Game.Current.PausableScheduler.DelayIfValid(me.evalFrequency, state, static state => ((Friction)(state.MainDependency)).Execute(state));
     }
 
-    private static void DisposeMe(object obj) => (obj as Friction).TryDispose();
+    private static void DisposeMe(object obj) => (obj as Friction).TryDispose("external/klooie/src/klooie/Gaming/Physics/Friction.cs:28");
 
     private void Execute(DelayState state)
     {

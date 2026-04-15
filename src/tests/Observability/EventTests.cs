@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,8 +19,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:22");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:23");
         }
     }
 
@@ -35,8 +35,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:38");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:39");
         }
     }
 
@@ -53,8 +53,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:56");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:57");
         }
     }
 
@@ -70,8 +70,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:73");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:74");
         }
     }
 
@@ -88,8 +88,8 @@ public class EventTests
             }
             finally
             {
-                ev.TryDispose();
-                lt.TryDispose();
+                ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:91");
+                lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:92");
             }
         }
     }
@@ -106,23 +106,23 @@ public class EventTests
             {
                 TestEventMechanics(ev, lt);
 
-                ev.TryDispose();
-                lt.TryDispose();
+                ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:109");
+                lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:110");
                 ev = Event.Create();
                 lt = DefaultRecyclablePool.Instance.Rent();
 
                 TestEventMechanics(ev, lt, scope);
 
-                ev.TryDispose();
-                lt.TryDispose();
+                ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:116");
+                lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:117");
                 ev = Event.Create();
                 lt = DefaultRecyclablePool.Instance.Rent();
             }
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:124");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:125");
         }
     }
 
@@ -196,7 +196,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:199");
         }
     }
 
@@ -216,8 +216,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:219");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:220");
         }
     }
 
@@ -237,8 +237,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:240");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:241");
         }
     }
 
@@ -261,7 +261,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:264");
         }
     }
 
@@ -291,8 +291,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:294");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:295");
         }
     }
 
@@ -321,8 +321,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:324");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:325");
         }
     }
 
@@ -343,8 +343,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:346");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:347");
         }
     }
 
@@ -365,8 +365,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:368");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:369");
         }
     }
 
@@ -393,8 +393,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:396");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:397");
         }
     }
 
@@ -421,8 +421,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:424");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:425");
         }
     }
 
@@ -449,7 +449,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:452");
         }
     }
 
@@ -467,7 +467,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:470");
         }
     }
 
@@ -487,7 +487,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:490");
         }
     }
 
@@ -511,8 +511,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:514");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:515");
         }
     }
 
@@ -532,8 +532,8 @@ public class EventTests
             }
             finally
             {
-                ev.TryDispose();
-                lt.TryDispose();
+                ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:535");
+                lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:536");
             }
 
             // Next iteration: new subscription
@@ -563,8 +563,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:566");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:567");
         }
     }
 
@@ -582,7 +582,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:585");
         }
     }
 
@@ -602,8 +602,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:605");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:606");
         }
     }
 
@@ -623,8 +623,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:626");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:627");
         }
     }
 
@@ -644,7 +644,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:647");
         }
     }
 
@@ -674,8 +674,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:677");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:678");
         }
     }
 
@@ -701,8 +701,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:704");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:705");
         }
     }
 
@@ -728,7 +728,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:731");
         }
     }
 
@@ -746,7 +746,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:749");
         }
     }
 
@@ -766,7 +766,7 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:769");
         }
     }
 
@@ -790,8 +790,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:793");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:794");
         }
     }
 
@@ -811,8 +811,8 @@ public class EventTests
             }
             finally
             {
-                ev.TryDispose();
-                lt.TryDispose();
+                ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:814");
+                lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:815");
             }
         }
     }
@@ -840,8 +840,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:843");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:844");
         }
     }
 
@@ -865,8 +865,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:868");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:869");
         }
     }
 
@@ -888,8 +888,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:891");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:892");
         }
     }
 
@@ -915,8 +915,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:918");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:919");
         }
     }
 
@@ -938,8 +938,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:941");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:942");
         }
     }
  
@@ -965,8 +965,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:968");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:969");
         }
     }
 
@@ -991,8 +991,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:994");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:995");
         }
     }
 
@@ -1020,8 +1020,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:1023");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:1024");
         }
     }
 
@@ -1051,8 +1051,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:1054");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:1055");
         }
     }
 
@@ -1077,8 +1077,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:1080");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:1081");
         }
     }
 
@@ -1103,8 +1103,8 @@ public class EventTests
         }
         finally
         {
-            ev.TryDispose();
-            lt.TryDispose();
+            ev.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:1106");
+            lt.TryDispose("external/klooie/src/tests/Observability/EventTests.cs:1107");
         }
     }
     #endregion

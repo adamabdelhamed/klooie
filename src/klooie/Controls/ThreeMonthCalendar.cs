@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 
 public class ThreeMonthCarouselOptions : MonthCalendarOptions
 {
@@ -134,7 +134,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
         }
         finally
         {
-            seekLt?.TryDispose();
+            seekLt?.TryDispose("external/klooie/src/klooie/Controls/ThreeMonthCalendar.cs:137");
             seekLt = null;
         }
     }
@@ -145,7 +145,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
         if (Width == 0 || Height == 0) return;
 
 
-        seekLt?.TryDispose();
+        seekLt?.TryDispose("external/klooie/src/klooie/Controls/ThreeMonthCalendar.cs:148");
         var leftDest = CalculateLeftDestination();
         var centerDest = CalculateCenterDestination();
         var rightDest = CalculateRightDestination();

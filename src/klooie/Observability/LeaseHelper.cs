@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace klooie;
 
@@ -115,12 +115,12 @@ public class LeaseState<TOwner, TRecyclable> : Recyclable where TOwner : Recycla
     /// <summary>
     /// Attempts to dispose the tracked recyclable using the captured lease.
     /// </summary>
-    public void TryDisposeRecyclable() => Recyclable?.TryDispose(RecyclableLease);
+    public void TryDisposeRecyclable() => Recyclable?.TryDispose(RecyclableLease, "external/klooie/src/klooie/Observability/LeaseHelper.cs:118");
 
     /// <summary>
     /// Attempts to dispose the tracked owner using the captured lease.
     /// </summary>
-    public bool TryDisposeOwner() => Owner != null && Owner.TryDispose(OwnerLease);
+    public bool TryDisposeOwner() => Owner != null && Owner.TryDispose(OwnerLease, "external/klooie/src/klooie/Observability/LeaseHelper.cs:123");
 
     /// <summary>
     /// Initializes this instance with the given owner/recyclable pair.
@@ -231,7 +231,7 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
     /// <summary>
     /// Attempts to dispose the tracked recyclable using the captured lease.
     /// </summary>
-    public void TryDisposeRecyclable() => Recyclable?.TryDispose(RecyclableLease);
+    public void TryDisposeRecyclable() => Recyclable?.TryDispose(RecyclableLease, "external/klooie/src/klooie/Observability/LeaseHelper.cs:234");
 
     /// <summary>
     /// Initializes this instance with the given recyclable.

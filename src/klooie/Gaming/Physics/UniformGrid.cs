@@ -1,4 +1,4 @@
-﻿namespace klooie.Gaming;
+namespace klooie.Gaming;
 
 public readonly struct UniformGridCell : IEquatable<UniformGridCell>
 {
@@ -119,7 +119,7 @@ public sealed class UniformGrid
                 if (list.Items.Count == 0)
                 {
                     _buckets.Remove(cell);
-                    list.TryDispose();
+                    list.TryDispose("external/klooie/src/klooie/Gaming/Physics/UniformGrid.cs:122");
                 }
             }
         }
@@ -142,7 +142,7 @@ public sealed class UniformGrid
                 if (list.Items.Count == 0)
                 {
                     _buckets.Remove(cell);
-                    list.TryDispose();
+                    list.TryDispose("external/klooie/src/klooie/Gaming/Physics/UniformGrid.cs:145");
                 }
             }
         }

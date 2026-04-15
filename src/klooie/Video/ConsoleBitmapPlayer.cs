@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 /// <summary>
 /// All states that the player can be in
 /// </summary>
@@ -490,9 +490,9 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
     protected override void OnReturn()
     {
         base.OnReturn();
-        stopped?.TryDispose();
+        stopped?.TryDispose("external/klooie/src/klooie/Video/ConsoleBitmapPlayer.cs:493");
         stopped = null;
-        onFramePlayed?.TryDispose();
+        onFramePlayed?.TryDispose("external/klooie/src/klooie/Video/ConsoleBitmapPlayer.cs:495");
         onFramePlayed = null;
     }
 }

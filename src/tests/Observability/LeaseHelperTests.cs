@@ -28,8 +28,8 @@ public class LeaseHelperTests
         finally
         {
             state.Dispose();
-            owner.TryDispose();
-            child.TryDispose();
+            owner.TryDispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:31");
+            child.TryDispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:32");
         }
     }
 

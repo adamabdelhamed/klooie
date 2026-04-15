@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 /// <summary>
 /// A control that lets the user provide text input
 /// </summary>
@@ -67,7 +67,7 @@ public partial class TextBox : ConsoleControl
 
     private void StartBlinking()
     {
-        blinkTimerHandle?.TryDispose();
+        blinkTimerHandle?.TryDispose("external/klooie/src/klooie/Controls/TextBox.cs:70");
         blinkTimerHandle = this.CreateChildRecyclable(out int blinkTimerHandleLease);
         blinkTimerHandle.OnDisposed(() => isBlinking = false);
         isBlinking = true;
@@ -85,7 +85,7 @@ public partial class TextBox : ConsoleControl
 
     private void TextBox_Unfocused()
     {
-        blinkTimerHandle?.TryDispose();
+        blinkTimerHandle?.TryDispose("external/klooie/src/klooie/Controls/TextBox.cs:88");
         blinkTimerHandle = null;
         isBlinking = false;
         isAllSelected = false;

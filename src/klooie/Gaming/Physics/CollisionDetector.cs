@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -39,9 +39,9 @@ public class Collision : Recyclable
         MovingObject = null;
         ColliderHit = null;
         Prediction = null;
-        MovingObjectLeaseState?.TryDispose();
+        MovingObjectLeaseState?.TryDispose("external/klooie/src/klooie/Gaming/Physics/CollisionDetector.cs:42");
         MovingObjectLeaseState = null;
-        ColliderHitLeaseState?.TryDispose();
+        ColliderHitLeaseState?.TryDispose("external/klooie/src/klooie/Gaming/Physics/CollisionDetector.cs:44");
         ColliderHitLeaseState = null;
     }
 }

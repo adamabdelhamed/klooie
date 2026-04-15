@@ -1,4 +1,4 @@
-﻿using klooie.Gaming;
+using klooie.Gaming;
 namespace klooie;
 public sealed class Velocity : Recyclable
 {
@@ -97,13 +97,13 @@ public sealed class Velocity : Recyclable
     {
         base.OnReturn();
         _influences.Clear();
-        _onAngleChanged?.TryDispose();
+        _onAngleChanged?.TryDispose("external/klooie/src/klooie/Gaming/Physics/Velocity.cs:100");
         _onAngleChanged = null;
-        _onSpeedChanged?.TryDispose();
+        _onSpeedChanged?.TryDispose("external/klooie/src/klooie/Gaming/Physics/Velocity.cs:102");
         _onSpeedChanged = null;
-        _afterEvaluate?.TryDispose();
+        _afterEvaluate?.TryDispose("external/klooie/src/klooie/Gaming/Physics/Velocity.cs:104");
         _afterEvaluate = null;
-        _onCollision?.TryDispose();
+        _onCollision?.TryDispose("external/klooie/src/klooie/Gaming/Physics/Velocity.cs:106");
         _onCollision = null;
         SpeedRatio = 1;
     }

@@ -109,7 +109,7 @@ public class FrameTaskScheduler : Recyclable
             }
             else
             {
-                lease.TryDispose();
+                lease.TryDispose("external/klooie/src/klooie/Gaming/Helpers/FrameTaskScheduler.cs:112");
             }
             processed++;
         }
@@ -122,12 +122,12 @@ public class FrameTaskScheduler : Recyclable
         {
             for (int i = 0; i < pendingForCurrentFrequencyPeriod.Count; i++)
             {
-                pendingForCurrentFrequencyPeriod[i].TryDispose();
+                pendingForCurrentFrequencyPeriod[i].TryDispose("external/klooie/src/klooie/Gaming/Helpers/FrameTaskScheduler.cs:125");
             }
 
             for (int i = 0; i < readyForNextFrequencyPeriod.Count; i++)
             {
-                readyForNextFrequencyPeriod[i].TryDispose();
+                readyForNextFrequencyPeriod[i].TryDispose("external/klooie/src/klooie/Gaming/Helpers/FrameTaskScheduler.cs:130");
             }
 
             pendingForCurrentFrequencyPeriod.Dispose();

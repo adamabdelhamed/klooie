@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 namespace klooie;
 
 public class Recyclable : ILifetime
@@ -161,7 +161,7 @@ public class Recyclable : ILifetime
             }
         }
 
-        private static void DisposeMe(object me) => ((EarliestOfTracker)me).TryDispose();
+        private static void DisposeMe(object me) => ((EarliestOfTracker)me).TryDispose("external/klooie/src/klooie/Observability/Recyclable.cs:164");
     }
 
     private class WhenAllTracker : Recyclable
@@ -210,7 +210,7 @@ public static class TaskExtensions
         loop.Invoke(async () =>
         {
             await t;
-            lt.TryDispose(lease);
+            lt.TryDispose(lease, "external/klooie/src/klooie/Observability/Recyclable.cs:213");
         });
         return lt;
     }

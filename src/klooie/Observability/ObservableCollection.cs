@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -80,21 +80,21 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     protected override void OnReturn()
     {
         base.OnReturn();
-        _untypedAdded?.TryDispose();
+        _untypedAdded?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:83");
         _untypedAdded = null;
-        _untypedRemove?.TryDispose();
+        _untypedRemove?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:85");
         _untypedRemove = null;
-        _beforeAdded?.TryDispose();
+        _beforeAdded?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:87");
         _beforeAdded = null;
-        added?.TryDispose();
+        added?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:89");
         added = null;
-        beforeRemoved?.TryDispose();
+        beforeRemoved?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:91");
         beforeRemoved = null;
-        removed?.TryDispose();
+        removed?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:93");
         removed = null;
-        changed?.TryDispose();
+        changed?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:95");
         changed = null;
-        wrappedRecyclable?.TryDispose();
+        wrappedRecyclable?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:97");
         wrappedRecyclable = null;
         Clear();
     }
@@ -155,7 +155,7 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
         changed?.Fire();
         var itemLifetime = membershipLifetimes[item];
         membershipLifetimes.Remove(item);
-        itemLifetime.TryDispose();
+        itemLifetime.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:158");
     }
 
     

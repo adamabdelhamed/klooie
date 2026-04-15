@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 
 /// <summary>
 /// A control that displays a single line of text
@@ -99,7 +99,7 @@ public class ConsoleStringRenderer : ConsoleControl
     protected override void OnReturn()
     {
         base.OnReturn();
-        contentChanged?.TryDispose();
+        contentChanged?.TryDispose("external/klooie/src/klooie/Controls/Label.cs:102");
         contentChanged = null;
     }
     public ConsoleStringRenderer(ConsoleString? content = null) : this() => this.Content = content ?? ConsoleString.Empty;

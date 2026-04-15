@@ -1,4 +1,4 @@
-﻿namespace klooie.Gaming;
+namespace klooie.Gaming;
 /// <summary>
 /// A movement that can be performed by a camera operator
 /// </summary>
@@ -62,7 +62,7 @@ public abstract class CameraMovement : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        situationDetected?.TryDispose();
+        situationDetected?.TryDispose("external/klooie/src/klooie/Gaming/Camera/CameraMovement.cs:65");
         situationDetected = null;
         MovementLifetime = null;
         FocalElement = null;

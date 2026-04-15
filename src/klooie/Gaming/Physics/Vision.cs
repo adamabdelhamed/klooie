@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 using System.Collections.Generic;
 
@@ -118,7 +118,7 @@ public class Vision : Recyclable, IFrameTask
                 if (obstruction != null || TryIgnorePotentialTargetIgnorable(candidate, out target))
                 {
                     if (target != null) throw new InvalidOperationException($"Target was present in visible objects, but should have been marked as stale.");
-                    prediction.TryDispose();
+                    prediction.TryDispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:121");
                     continue;
                 }
 
@@ -207,14 +207,14 @@ public class Vision : Recyclable, IFrameTask
         var trackedObject = TrackedObjectsList[index];
         trackedObjectsMap.Remove(trackedObject.Target);
         TrackedObjectsList.RemoveAt(index);
-        trackedObject.TryDispose();
+        trackedObject.TryDispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:210");
     }
 
     private void UntrackAll()
     {
         for(var i = 0; i < TrackedObjectsList.Count; i++)
         {
-            TrackedObjectsList [i].TryDispose();
+            TrackedObjectsList [i].TryDispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:217");
         }
         TrackedObjectsList.Clear();
         trackedObjectsMap.Clear();
@@ -235,7 +235,7 @@ public class Vision : Recyclable, IFrameTask
                 target.LastSeenTime = Game.Current.MainColliderGroup.ScaledNow;
                 target.Distance = Eye.CalculateNormalizedDistanceTo(potentialTarget);
             }
-            singleRay.TryDispose();
+            singleRay.TryDispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:238");
             return null;
         }
 
@@ -380,7 +380,7 @@ public class Vision : Recyclable, IFrameTask
         Eye = null!;
         Visibility = DefaultVisibility;
         AngularVisibility = DefaultAngularVisibility;
-        _targetBeingEvaluated?.TryDispose();
+        _targetBeingEvaluated?.TryDispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:383");
         _targetBeingEvaluated = null;
 
         for (var i = TrackedObjectsList.Count - 1; i >= 0; i--)
@@ -392,7 +392,7 @@ public class Vision : Recyclable, IFrameTask
         trackedObjectsMap.Clear();
         obstacleFilterCache.Clear();
         rayCandidates.Clear();
-        _visibleObjectsChanged?.TryDispose();
+        _visibleObjectsChanged?.TryDispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:395");
         _visibleObjectsChanged = null;
     }
 }
@@ -479,7 +479,7 @@ public class VisuallyTrackedObject : Recyclable
         base.OnReturn();
         Target = null;
         LastSeenTime = TimeSpan.Zero;
-        RayCastResult?.TryDispose();
+        RayCastResult?.TryDispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:482");
         RayCastResult = null!;
         Distance = default;
         Angle = default;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 
 namespace klooie;
@@ -24,7 +24,7 @@ public sealed class MidiJamInterpretor : Recyclable
     private static readonly LazyPool<MidiJamInterpretor> pool = new(() => new MidiJamInterpretor());
 
     /// <param name="midiImpl">MIDI provider/bridge</param>
-    /// <param name="jamInstrumentProvider">Delegate that returns the instrument to use for jamming (e.g., current track’s instrument). Must not return null.</param>
+    /// <param name="jamInstrumentProvider">Delegate that returns the instrument to use for jamming (e.g., current track�s instrument). Must not return null.</param>
     public static MidiJamInterpretor Create(IMidiProvider midiImpl, Func<InstrumentExpression> jamInstrumentProvider)
     {
         var j = pool.Value.Rent();
@@ -92,11 +92,11 @@ public sealed class MidiJamInterpretor : Recyclable
         noteDetector = null;
 
         engine?.ReleaseAll();
-        engine?.TryDispose();
+        engine?.TryDispose("external/klooie/src/klooie/Audio/DAW/Helpers/MidiJamInterpretor.cs:95");
         engine = null!;
 
         jamInstrumentProvider = null!;
-        midiDropdown?.TryDispose();
+        midiDropdown?.TryDispose("external/klooie/src/klooie/Audio/DAW/Helpers/MidiJamInterpretor.cs:99");
         midiDropdown = null;
     }
 }

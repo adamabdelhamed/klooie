@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 public partial class Slider : ConsoleControl
 {
     public partial RGB BarColor { get; set; }
@@ -26,7 +26,7 @@ public partial class Slider : ConsoleControl
 
             this.Focused.Subscribe(() =>
             {
-                focusLt?.TryDispose();
+                focusLt?.TryDispose("external/klooie/src/klooie/Controls/Slider.cs:29");
                 focusLt = DefaultRecyclablePool.Instance.Rent();
                 var focusLease = focusLt.Lease;
                 ConsoleApp.Current.OnDisposed(() =>
@@ -47,7 +47,7 @@ public partial class Slider : ConsoleControl
                 }
             }, this);
 
-            this.Unfocused.Subscribe(() => focusLt?.TryDispose(), this);
+            this.Unfocused.Subscribe(() => focusLt?.TryDispose("external/klooie/src/klooie/Controls/Slider.cs:50"), this);
         });
     }
     private static void OnAnyPropertyChanged(object me)

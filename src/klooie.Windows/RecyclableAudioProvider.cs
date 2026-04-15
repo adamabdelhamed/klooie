@@ -1,4 +1,4 @@
-﻿using NAudio.Wave;
+using NAudio.Wave;
 
 namespace klooie;
 
@@ -59,7 +59,7 @@ public abstract class RecyclableAudioProvider : Recyclable, ISampleProvider
 
     protected override void OnReturn()
     {
-        sampleKnob?.TryDispose();
+        sampleKnob?.TryDispose("external/klooie/src/klooie.Windows/RecyclableAudioProvider.cs:62");
         sampleKnob = null;
         masterKnob = null;
         trackMasterVolumeChanges = false;

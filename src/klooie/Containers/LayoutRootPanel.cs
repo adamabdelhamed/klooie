@@ -1,4 +1,4 @@
-﻿using klooie.Gaming;
+using klooie.Gaming;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
@@ -51,11 +51,11 @@ public partial class LayoutRootPanel : ConsolePanel
     protected override void OnReturn()
     {
         base.OnReturn();
-        _onWindowResized?.TryDispose();
+        _onWindowResized?.TryDispose("external/klooie/src/klooie/Containers/LayoutRootPanel.cs:54");
         _onWindowResized = null;
-        _afterPaint?.TryDispose();
+        _afterPaint?.TryDispose("external/klooie/src/klooie/Containers/LayoutRootPanel.cs:56");
         _afterPaint = null;
-        _beforePaint?.TryDispose();
+        _beforePaint?.TryDispose("external/klooie/src/klooie/Containers/LayoutRootPanel.cs:58");
         _beforePaint = null;
     }
 

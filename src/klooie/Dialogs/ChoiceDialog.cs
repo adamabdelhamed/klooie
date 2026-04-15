@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 
 /// <summary>
 /// Abstract class for dialog options that include choices the user can make, which
@@ -119,7 +119,7 @@ public static class ChoiceDialog
                 });
             }
 
-            options.MaxLifetime?.OnDisposed(() => layout.TryDispose());
+            options.MaxLifetime?.OnDisposed(() => layout.TryDispose("external/klooie/src/klooie/Dialogs/ChoiceDialog.cs:122"));
             return layout;
         };
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -90,9 +90,9 @@ public class TrackGridSelector : BeatGridInputMode<MelodyClip>
         SongComposer.ModeChanging.SubscribeOnce((m) =>
         {
             selectionAnchor = null;
-            selectionRectangle?.TryDispose();
+            selectionRectangle?.TryDispose("external/klooie/src/klooie/Audio/DAW/SongComposer/TrackGridSelector.cs:93");
             selectionRectangle = null;
-            anchorPreviewControl?.TryDispose();
+            anchorPreviewControl?.TryDispose("external/klooie/src/klooie/Audio/DAW/SongComposer/TrackGridSelector.cs:95");
             anchorPreviewControl = null;
         });
     }

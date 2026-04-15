@@ -1,4 +1,4 @@
-﻿namespace klooie;
+namespace klooie;
 
 public class ListViewerOptions<T> where T : class
 {
@@ -209,7 +209,7 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
         {
             var toDispose = highlightLifetimes[0];
             highlightLifetimes.RemoveAt(0);
-            toDispose.TryDispose();
+            toDispose.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:212");
         }
 
         highlightLifetimes.Clear();
@@ -320,15 +320,15 @@ public partial class ListViewer<T> : ProtectedConsolePanel where T : class
     protected override void OnReturn()
     {
         base.OnReturn();
-        selectionChanged?.TryDispose();
+        selectionChanged?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:323");
         selectionChanged = null;
         while (highlightLifetimes.Count > 0)
         {
             var toDispose = highlightLifetimes[0];
             highlightLifetimes.RemoveAt(0);
-            toDispose.TryDispose();
+            toDispose.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:329");
         }
-        presenter?.TryDispose();
+        presenter?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:331");
         presenter = null;
         highlightedControls?.Clear();
     }
@@ -483,23 +483,23 @@ internal class ListViewerPanel : ProtectedConsolePanel
     protected override void OnReturn()
     {
         base.OnReturn();
-        firstPageClicked?.TryDispose();
+        firstPageClicked?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:486");
         firstPageClicked = null;
-        previousPageClicked?.TryDispose();
+        previousPageClicked?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:488");
         previousPageClicked = null;
-        nextPageClicked?.TryDispose();
+        nextPageClicked?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:490");
         nextPageClicked = null;
-        lastPageClicked?.TryDispose();
+        lastPageClicked?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:492");
         lastPageClicked = null;
-        beforeRecompose?.TryDispose();
+        beforeRecompose?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:494");
         beforeRecompose = null;
-        afterRecompose?.TryDispose();
+        afterRecompose?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:496");
         afterRecompose = null;
-        pager?.TryDispose();
+        pager?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:498");
         pager = null;
-        gridLayout?.TryDispose();
+        gridLayout?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:500");
         gridLayout = null;
-        pagerContainer?.TryDispose();
+        pagerContainer?.TryDispose("external/klooie/src/klooie/Controls/ListViewer.cs:502");
         pagerContainer = null;
         ControlsByRow.Clear();
     }

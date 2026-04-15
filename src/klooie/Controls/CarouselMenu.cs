@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -59,7 +59,7 @@ namespace klooie
         public void SetItems(IEnumerable<ConsoleControl> controls, int selectedIndex = 0)
         {
             // dispose old children we own
-            foreach (var kv in live) kv.Value.TryDispose();
+            foreach (var kv in live) kv.Value.TryDispose("external/klooie/src/klooie/Controls/CarouselMenu.cs:62");
             items.Clear();
             live.Clear();
             leftCtrl = centerCtrl = rightCtrl = null;
@@ -216,7 +216,7 @@ namespace klooie
             if (Width == 0 || Height == 0) return;
 
             // kill any running animation for a crisp relayout
-            seekLt?.TryDispose();
+            seekLt?.TryDispose("external/klooie/src/klooie/Controls/CarouselMenu.cs:219");
 
             // hide everything, then show what matters
             foreach (var kvp in live) HideIfNotNull(kvp.Value);
@@ -332,7 +332,7 @@ namespace klooie
             }
             finally
             {
-                seekLt?.TryDispose();
+                seekLt?.TryDispose("external/klooie/src/klooie/Controls/CarouselMenu.cs:335");
                 seekLt = null;
             }
         }
