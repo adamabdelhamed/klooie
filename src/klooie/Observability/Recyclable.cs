@@ -63,8 +63,8 @@ public class Recyclable : ILifetime
     public void Dispose(int lease, string reason)
     {
         if(string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("A reason must be provided when disposing with the lease parameter", nameof(reason));
-        if (lease != Lease) throw new ArgumentException($"Cannot dispose with an invalid lease. Current lease: {Lease}, provided lease: {lease}");
-        if (IsExpiring || IsExpired) throw new InvalidOperationException("Cannot dispose an object that is already being disposed or has been disposed: " + GetType().Name);
+        if (lease != Lease) throw new ArgumentException($"Cannot dispose with an invalid lease. Current lease: {Lease}, provided lease: {lease}, Previous Disposal Reason: {DisposalReason}, Rejected Disposal Reason: {reason}");
+        if (IsExpiring || IsExpired) throw new InvalidOperationException($"Cannot dispose an object that is already being disposed or has been disposed: Type: {GetType().Name}, Previous Disposal Reason: {DisposalReason}, Rejected Disposal Reason: {reason}");
         DisposalReason = reason;
         IsExpiring = true;
         try
