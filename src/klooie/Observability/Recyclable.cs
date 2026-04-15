@@ -51,10 +51,11 @@ public class Recyclable : ILifetime
     [Obsolete("This method is obsolete because it does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
     public bool TryDispose(string reason) => TryDispose(Lease, reason);
 
-    
-    [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
-    public void Dispose(string? reason = null) => Dispose(Lease, reason ?? "Obsolete Path Provided No Reason");
 
+    [Obsolete]
+    public void Dispose() => Dispose(Lease, "Obsolete Path Provided No Reason");
+    [Obsolete]
+    public void Dispose(string reason) => Dispose(Lease, reason);
     public bool TryDispose(int lease, string reason)
     {
         if (Lease != lease || IsExpired || IsExpiring) return false;
