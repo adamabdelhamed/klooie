@@ -21,7 +21,7 @@ public class MidiDeviceInterpretor : Recyclable
         instance.midiInput = input ?? throw new ArgumentNullException(nameof(input));
         instance.engine = MidiLiveNoteEngine.Create((noteNumber, velocity) => NoteExpression.Create(noteNumber, instance.melodyComposer.Grid.Player.CurrentBeat, -1, WorkspaceSession.Current.CurrentSong.BeatsPerMinute, velocity, instance.melodyComposer.Grid.Instrument));
 
-        instance.noteDetector?.Dispose();
+        instance.noteDetector?.Dispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiDeviceInterpreter.cs:1");
         instance.noteDetector = MidiNoteOnOffDetector.Create(input);
         instance.noteDetector.NoteOn.Subscribe(instance.HandleNoteOn, instance.noteDetector);
         instance.noteDetector.NoteOff.Subscribe(instance.HandleNoteOff, instance.noteDetector);
@@ -72,7 +72,7 @@ public class MidiDeviceInterpretor : Recyclable
     {
         base.OnReturn();
         midiInput = null;
-        noteDetector?.Dispose();
+        noteDetector?.Dispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiDeviceInterpreter.cs:1");
         noteDetector = null;
 
         engine?.ReleaseAll();

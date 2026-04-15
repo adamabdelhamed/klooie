@@ -55,7 +55,7 @@ public class WalkingTests
                     {
                         Game.Current.Stop();
                     }
-                    pointOfInterestCollider.Dispose();
+                    pointOfInterestCollider.Dispose("external/klooie/src/tests/Gaming/Movement/WalkingTests.cs:1");
                     pointOfInterestCollider = game.GamePanel.Add(GameColliderPool.Instance.Rent());
                     pointOfInterestCollider.MoveTo(walkFunction.GetPointOfInterest().Value.Left, walkFunction.GetPointOfInterest().Value.Top);
                     pointOfInterestCollider.ResizeTo(walkFunction.GetPointOfInterest().Value.Width, walkFunction.GetPointOfInterest().Value.Height);

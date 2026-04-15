@@ -169,7 +169,7 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
 
     private void RemoveAnchorPreview()
     {
-        anchorPreviewControl?.Dispose();
+        anchorPreviewControl?.Dispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiGridSelector.cs:1");
         anchorPreviewControl = null;
         selectionPreviewCursor = null;
         selectionPreviewCursorBeatMidi = null;
@@ -248,7 +248,7 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
             }
             Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedValues.Count}[White] {noteSingularOrPlural}."));
             MelodyComposer.NextMode();
-            selectionRectangle?.Dispose();
+            selectionRectangle?.Dispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiGridSelector.cs:1");
             selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;
             selectionAnchor = null;
@@ -260,7 +260,7 @@ public class MidiGridSelector : BeatGridInputMode<NoteExpression>
         else if (k.Key == ConsoleKey.Escape)
         {
             MelodyComposer.NextMode();
-            selectionRectangle?.Dispose();
+            selectionRectangle?.Dispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiGridSelector.cs:1");
             selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;
             selectionAnchor = null;

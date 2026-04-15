@@ -466,7 +466,7 @@ public class SynthSignalSource : Recyclable
     {
         if (isDone || IsStillValid(Lease) == false)
         {
-            Dispose();
+            Dispose("external/klooie/src/klooie/Audio/SignalProcessing/SynthSignalSource.cs:1");
             return 0;
         }
 

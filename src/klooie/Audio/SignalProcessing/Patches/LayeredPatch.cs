@@ -89,7 +89,7 @@ public sealed class LayeredPatch : Recyclable, ISynthPatch, ICompositePatch
     {
         if (layers != null)
             foreach (var l in layers)
-                if (l is Recyclable r) r.Dispose();
+                if (l is Recyclable r) r.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/LayeredPatch.cs:1");
 
         layers = null!;
         layerVolumes = null!;

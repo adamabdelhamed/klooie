@@ -47,7 +47,7 @@ public class ConsolePanel : Container
             ArrayPool<ConsoleControl>.Shared.Return(buffer);
         }
         Controls.Clear();
-        Controls.Dispose();
+        Controls.Dispose("external/klooie/src/klooie/Containers/ConsolePanel.cs:1");
         Controls = null;
         sortedControls.Clear();
     }

@@ -18,12 +18,12 @@ public class ThemingSample : ConsoleApp
         
         new OrangeTheme().Apply(lt: themeLifetime);
         await Task.Delay(1000);
-        themeLifetime.Dispose();
+        themeLifetime.Dispose("external/klooie/src/Samples/Theming/ThemingSample.cs:1");
 
         themeLifetime = this.CreateChildRecyclable();
         new DarkTheme().Apply(lt: themeLifetime);
         await Task.Delay(1000);
-        themeLifetime.Dispose();
+        themeLifetime.Dispose("external/klooie/src/Samples/Theming/ThemingSample.cs:1");
 
         // apply for the remainder of the app lifetime
         new LightTheme().Apply();

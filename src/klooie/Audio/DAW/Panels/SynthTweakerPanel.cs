@@ -184,7 +184,7 @@ public class SynthTweakerPanel : ProtectedConsolePanel
         base.OnReturn();
         tweaker?.Dispose();
         tweaker = null;
-        noteDetector?.Dispose();
+        noteDetector?.Dispose("external/klooie/src/klooie/Audio/DAW/Panels/SynthTweakerPanel.cs:1");
         noteDetector = null;
     }
 }

@@ -59,12 +59,12 @@ public sealed class ColliderGroup
     private void Cleanup()
     {
         colliderBuffer.WriteableBuffer.Clear();
-        colliderBuffer.Dispose();
-        queryBuffer.Dispose();
+        colliderBuffer.Dispose("external/klooie/src/klooie/Gaming/Physics/ColliderGroup.cs:1");
+        queryBuffer.Dispose("external/klooie/src/klooie/Gaming/Physics/ColliderGroup.cs:1");
 
         colliderBuffer = null;
         queryBuffer = null;
-        onCollision?.Dispose();
+        onCollision?.Dispose("external/klooie/src/klooie/Gaming/Physics/ColliderGroup.cs:1");
         onCollision = null;
     }
 
@@ -203,7 +203,7 @@ public sealed class ColliderGroup
         }
         finally
         {
-            collision.Dispose();
+            collision.Dispose("external/klooie/src/klooie/Gaming/Physics/ColliderGroup.cs:1");
         }
 
         if (spatialIndex.IsExpired(item)) return 0f;

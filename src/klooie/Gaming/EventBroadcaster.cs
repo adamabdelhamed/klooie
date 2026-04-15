@@ -30,7 +30,7 @@ internal sealed class EventBroadcaster
         Subscribe(expressionText, ev =>
         {
             handler(ev);
-            lt.Dispose();
+            lt.Dispose("external/klooie/src/klooie/Gaming/EventBroadcaster.cs:1");
         }, lt);
     }
 

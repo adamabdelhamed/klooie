@@ -351,43 +351,43 @@ public partial class ConsoleControl : Rectangular
 
         if (_this._focused != null)
         {
-            _this._focused.Dispose();
+            _this._focused.Dispose("external/klooie/src/klooie/Controls/ConsoleControl.cs:1");
             _this._focused = null;
         }
         if (_this._unfocused != null)
         {
-            _this._unfocused.Dispose();
+            _this._unfocused.Dispose("external/klooie/src/klooie/Controls/ConsoleControl.cs:1");
             _this._unfocused = null;
         }
         if (_this._ready != null)
         {
-            _this._ready.Dispose();
+            _this._ready.Dispose("external/klooie/src/klooie/Controls/ConsoleControl.cs:1");
             _this._ready = null;
         }
         if (_this._tagsChanged != null)
         {
-            _this._tagsChanged.Dispose();
+            _this._tagsChanged.Dispose("external/klooie/src/klooie/Controls/ConsoleControl.cs:1");
             _this._tagsChanged = null;
         }
 
         if (_this._keyInputReceived != null)
         {
-            _this._keyInputReceived.Dispose();
+            _this._keyInputReceived.Dispose("external/klooie/src/klooie/Controls/ConsoleControl.cs:1");
             _this._keyInputReceived = null;
         }
 
-        _this.canFocusChanged?.Dispose();
+        _this.canFocusChanged?.Dispose("external/klooie/src/klooie/Controls/ConsoleControl.cs:1");
         _this.canFocusChanged = null;
 
         _this.HasFocus = false;
 
-        _this._filters?.Dispose();
+        _this._filters?.Dispose("external/klooie/src/klooie/Controls/ConsoleControl.cs:1");
         _this._filters = null;
 
         _this.tags?.Clear();
         _this.Tag = null;
 
-        _this.Bitmap?.Dispose();
+        _this.Bitmap?.Dispose("external/klooie/src/klooie/Controls/ConsoleControl.cs:1");
         _this.Bitmap = null;
 
         FocusStackDepthInternal = null;

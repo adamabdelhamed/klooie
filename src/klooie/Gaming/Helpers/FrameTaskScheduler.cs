@@ -97,7 +97,7 @@ public class FrameTaskScheduler : Recyclable
             pendingForCurrentFrequencyPeriod.Items.RemoveAt(0);
             if (!lease.IsRecyclableValid)
             {
-                lease.Dispose();
+                lease.Dispose("external/klooie/src/klooie/Gaming/Helpers/FrameTaskScheduler.cs:1");
                 continue;
             }
 
@@ -130,15 +130,15 @@ public class FrameTaskScheduler : Recyclable
                 readyForNextFrequencyPeriod[i].TryDispose("external/klooie/src/klooie/Gaming/Helpers/FrameTaskScheduler.cs:130");
             }
 
-            pendingForCurrentFrequencyPeriod.Dispose();
+            pendingForCurrentFrequencyPeriod.Dispose("external/klooie/src/klooie/Gaming/Helpers/FrameTaskScheduler.cs:1");
             pendingForCurrentFrequencyPeriod = null;
 
-            readyForNextFrequencyPeriod.Dispose();
+            readyForNextFrequencyPeriod.Dispose("external/klooie/src/klooie/Gaming/Helpers/FrameTaskScheduler.cs:1");
             readyForNextFrequencyPeriod = null;
 
         }
         currentPassStartTime = null;
-        _taskIsLate?.Dispose();
+        _taskIsLate?.Dispose("external/klooie/src/klooie/Gaming/Helpers/FrameTaskScheduler.cs:1");
         _taskIsLate = null;
     }
 }

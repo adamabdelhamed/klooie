@@ -118,7 +118,7 @@ public class VisionTests
             DrawLine(lineStart, rightLineEnd, RGB.Orange, -1, coneLifetime);
 
             await context.PaintAndRecordKeyFrameAsync();
-            coneLifetime.Dispose();
+            coneLifetime.Dispose("external/klooie/src/tests/Gaming/Movement/VisionTests.cs:1");
         }
     }
 

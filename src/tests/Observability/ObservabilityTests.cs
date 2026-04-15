@@ -48,7 +48,7 @@ public partial class ObservabilityTests
         }
         finally
         {
-            lifetime.Dispose();
+            lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityTests.cs:1");
         }
 
         observable.Name = "Some new value";
@@ -76,7 +76,7 @@ public partial class ObservabilityTests
         }
         finally
         {
-            lifetime.Dispose();
+            lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityTests.cs:1");
         }
 
         observable.Name = "Some new value again";
@@ -116,7 +116,7 @@ public partial class ObservabilityTests
         }
         finally
         {
-            lifetime.Dispose();
+            lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityTests.cs:1");
         }
         Assert.AreEqual(2, numChanged);
         observable.Name = "Foo2";
@@ -142,7 +142,7 @@ public partial class ObservabilityTests
         }
         finally
         {
-            lifetime.Dispose();
+            lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityTests.cs:1");
         }
         observable.SomeEventWithAString.Fire("Foo");
         Assert.AreEqual(1, triggerCount);
@@ -166,7 +166,7 @@ public partial class ObservabilityTests
         }
         finally
         {
-            lifetime.Dispose();
+            lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityTests.cs:1");
         }
         observable.SomeEvent.Fire();
         Assert.AreEqual(1, triggerCount);
@@ -195,7 +195,7 @@ public partial class ObservabilityTests
         }
         finally
         {
-            lifetime.Dispose();
+            lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityTests.cs:1");
         }
         observable.SomeEvent.Fire();
         Assert.AreEqual(2, triggerCount);
@@ -232,7 +232,7 @@ public partial class ObservabilityTests
         }
         finally
         {
-            lifetime.Dispose();
+            lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityTests.cs:1");
         }
         observable.Strings.Add("d");
         observable.Strings.Remove("d");
@@ -332,7 +332,7 @@ public partial class ObservabilityTests
         var fired = false;
         lt.OnDisposed(() => fired = true);
         Assert.IsFalse(fired);
-        lt.Dispose();
+        lt.Dispose("external/klooie/src/tests/Observability/ObservabilityTests.cs:1");
         Assert.IsTrue(fired);
     }
 
@@ -343,7 +343,7 @@ public partial class ObservabilityTests
         var originalLease = recyclable.Lease;
         Assert.IsTrue(recyclable.IsStillValid(originalLease));
 
-        recyclable.Dispose();
+        recyclable.Dispose("external/klooie/src/tests/Observability/ObservabilityTests.cs:1");
 
         var reRented = DefaultRecyclablePool.Instance.Rent();
         var reRentedLease = reRented.Lease;

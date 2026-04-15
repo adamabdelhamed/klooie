@@ -57,7 +57,7 @@ public partial class TextBox : ConsoleControl
         if (SelectAllOnFocus && Value.Length > 0)
         {
             isAllSelected = true;
-            blinkTimerHandle?.Dispose();
+            blinkTimerHandle?.Dispose("external/klooie/src/klooie/Controls/TextBox.cs:1");
         }
         else
         {

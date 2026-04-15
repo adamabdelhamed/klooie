@@ -219,7 +219,7 @@ public class MidiGridEditor : BaseGridEditor<MidiGrid, NoteExpression>
 
     public void ClearAddPreview()
     {
-        addNotePreview?.Dispose();
+        addNotePreview?.Dispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MidiGridEditor.cs:1");
         addNotePreview = null;
         pendingAddNote = null;
     }

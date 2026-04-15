@@ -94,17 +94,17 @@ public class Walk : Movement
         {
             Eye.Velocity.RemoveInfluence(influence);
         }
-        influence.Dispose();
+        influence.Dispose("external/klooie/src/klooie/Gaming/Movement/Walk.cs:1");
         influence = null!;
         externalMotionSink = null;
         CloseEnough = 0;
 
         // Return persistent histories
-        lastGoalDistances?.Dispose();
+        lastGoalDistances?.Dispose("external/klooie/src/klooie/Gaming/Movement/Walk.cs:1");
         lastGoalDistances = null!;
-        lastFewAngles?.Dispose();
+        lastFewAngles?.Dispose("external/klooie/src/klooie/Gaming/Movement/Walk.cs:1");
         lastFewAngles = null!;
-        lastFewRoundedBounds?.Dispose();
+        lastFewRoundedBounds?.Dispose("external/klooie/src/klooie/Gaming/Movement/Walk.cs:1");
         lastFewRoundedBounds = null!;
 
         base.OnReturn();
@@ -189,9 +189,9 @@ public class WalkCalculationState
     public void Dehydrate()
     {
         // Only dispose per-tick scratch
-        AngleScores?.Dispose();
+        AngleScores?.Dispose("external/klooie/src/klooie/Gaming/Movement/Walk.cs:1");
         AngleScores = null!;
-        Obstacles?.Dispose();
+        Obstacles?.Dispose("external/klooie/src/klooie/Gaming/Movement/Walk.cs:1");
         Obstacles = null!;
 
         // Do NOT dispose persistent histories (owned by Walk)
@@ -479,7 +479,7 @@ public static class WalkCalculation
         }
         finally
         {
-            prediction.Dispose();
+            prediction.Dispose("external/klooie/src/klooie/Gaming/Movement/Walk.cs:1");
         }
     }
 
@@ -644,7 +644,7 @@ public static class WalkCalculation
         }
         finally
         {
-            prediction.Dispose();
+            prediction.Dispose("external/klooie/src/klooie/Gaming/Movement/Walk.cs:1");
         }
     }
 

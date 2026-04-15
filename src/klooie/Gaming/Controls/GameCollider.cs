@@ -42,7 +42,7 @@ public class GameCollider : ConsoleControl
             GetObstacles(buffer);
             return this.HasLineOfSight(other, buffer.WriteableBuffer);
         }
-        finally { buffer.Dispose(); }
+        finally { buffer.Dispose("external/klooie/src/klooie/Gaming/Controls/GameCollider.cs:1"); }
     }
 
     public GameCollider(bool connectToMainColliderGroup)
@@ -104,7 +104,7 @@ public class GameCollider : ConsoleControl
         }
         finally
         {
-            buffer.Dispose();
+            buffer.Dispose("external/klooie/src/klooie/Gaming/Controls/GameCollider.cs:1");
         }
     }
 
@@ -144,7 +144,7 @@ public class GameCollider : ConsoleControl
         }
         finally
         {
-            buffer.Dispose();
+            buffer.Dispose("external/klooie/src/klooie/Gaming/Controls/GameCollider.cs:1");
         }
         if (causesOverlap == false)
         {
@@ -163,7 +163,7 @@ public class GameCollider : ConsoleControl
         var buffer = ObstacleBufferPool.Instance.Rent();
         GetOverlappingObstacles(buffer);
         isOverlapped = buffer.WriteableBuffer.Count > 0;
-        buffer.Dispose();
+        buffer.Dispose("external/klooie/src/klooie/Gaming/Controls/GameCollider.cs:1");
         return isOverlapped;
     }
 

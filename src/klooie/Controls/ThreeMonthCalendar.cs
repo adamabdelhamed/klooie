@@ -97,7 +97,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
                     tempAnimation
                 );
 
-                right.Dispose();
+                right.Dispose("external/klooie/src/klooie/Controls/ThreeMonthCalendar.cs:1");
                 right = center;
                 center = left;
                 left = temp;
@@ -116,7 +116,7 @@ public class ThreeMonthCalendar : ProtectedConsolePanel
                     tempAnimation
                 );
 
-                left.Dispose();
+                left.Dispose("external/klooie/src/klooie/Controls/ThreeMonthCalendar.cs:1");
                 left = center;
                 center = right;
                 right = temp;

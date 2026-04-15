@@ -114,8 +114,8 @@ public static class CollisionDetector
         }
         finally
         {
-            colliders.Dispose();
-            if (autoDisposePrediction) prediction.Dispose();
+            colliders.Dispose("external/klooie/src/klooie/Gaming/Physics/CollisionDetector.cs:1");
+            if (autoDisposePrediction) prediction.Dispose("external/klooie/src/klooie/Gaming/Physics/CollisionDetector.cs:1");
         }
     }
 

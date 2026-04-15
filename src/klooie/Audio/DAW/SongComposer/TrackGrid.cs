@@ -104,7 +104,7 @@ public partial class TrackGrid : BeatGrid<MelodyClip>
         melodyComposer.Grid.Color = GetColor(melody);
         melodyComposer.Grid.Focus();
 
-        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => panel.Dispose(), panel);
+        ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => panel.Dispose("external/klooie/src/klooie/Audio/DAW/SongComposer/TrackGrid.cs:1"), panel);
         panel.OnDisposed(() =>
         {
             if (melody.Notes.Count == 0)

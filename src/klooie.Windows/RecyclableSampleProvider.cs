@@ -272,7 +272,7 @@ internal class RecyclableSampleProvider : RecyclableAudioProvider
     }
 
     private void ScheduleDisposal() => 
-        SoundProvider.Current.EventLoop.Invoke(this, static me => me.Dispose());
+        SoundProvider.Current.EventLoop.Invoke(this, static me => me.Dispose("external/klooie/src/klooie.Windows/RecyclableSampleProvider.cs:1"));
       
     protected override void OnReturn()
     {

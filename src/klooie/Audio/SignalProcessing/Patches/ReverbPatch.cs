@@ -60,7 +60,7 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
                 }));
             }
 
-            (orig as Recyclable)?.Dispose();
+            (orig as Recyclable)?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/ReverbPatch.cs:1");
             break;
         }
 
@@ -96,9 +96,9 @@ public class ReverbPatch : Recyclable, ISynthPatch, ICompositePatch
 
     protected override void OnReturn()
     {
-        ((Recyclable)dry)?.Dispose();
+        ((Recyclable)dry)?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/ReverbPatch.cs:1");
         dry = null!;
-        ((Recyclable)wet)?.Dispose();
+        ((Recyclable)wet)?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/ReverbPatch.cs:1");
         wet = null!;
         patchSettings = default;
         base.OnReturn();

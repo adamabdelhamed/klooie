@@ -49,7 +49,7 @@ public class DAWPanel : ProtectedConsolePanel
             try
             {
                 await WorkspaceSession.Current.NewSong();
-                ComposerWithTracks.Dispose();
+                ComposerWithTracks.Dispose("external/klooie/src/klooie/Audio/DAW/Panels/DAWPanel.cs:1");
                 ComposerWithTracks = ProtectedPanel.Add(new SongComposer(Session, midiProvider)).Fill();
                 ComposerWithTracks.Grid.Focus();
                 AddNewSongCommand();
@@ -72,7 +72,7 @@ public class DAWPanel : ProtectedConsolePanel
             {
                 var opened = await WorkspaceSession.Current.OpenSong();
                 if(opened == false) return;
-                ComposerWithTracks.Dispose();
+                ComposerWithTracks.Dispose("external/klooie/src/klooie/Audio/DAW/Panels/DAWPanel.cs:1");
                 ComposerWithTracks = ProtectedPanel.Add(new SongComposer(Session, midiProvider)).Fill();
                 ComposerWithTracks.Grid.Focus();
                 AddNewSongCommand();

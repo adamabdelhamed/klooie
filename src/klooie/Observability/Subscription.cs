@@ -12,8 +12,6 @@ internal interface ISubscription
     int Lease { get; }
     bool IsStillValid(int lease);
     void Notify();
-    [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
-    void Dispose();
     void Dispose(int lease, string reason);
     bool TryDispose(int lease, string reason);
 }
@@ -21,9 +19,6 @@ internal interface ISubscription
 internal abstract class Subscription : Recyclable, ISubscription
 {
     internal ILifetime? Lifetime { get; private set; }
-
-    [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
-    public void Dispose() => base.Dispose();
 
     protected override void OnReturn()
     {
@@ -162,7 +157,7 @@ internal sealed class OnceActionSubscription : Subscription
         try { callback?.Invoke(); }
         finally
         {
-            Dispose();
+            Dispose("external/klooie/src/klooie/Observability/Subscription.cs:165");
         }
     }
 
@@ -192,7 +187,7 @@ internal sealed class OnceScopedSubscription<T> : Subscription
     public override void Notify()
     {
         try { callback?.Invoke(scope); }
-        finally { Dispose(); }
+        finally { Dispose("external/klooie/src/klooie/Observability/Subscription.cs:195"); }
     }
 
     protected override void OnReturn()
@@ -220,7 +215,7 @@ internal sealed class OnceArgsSubscription<TArgs> : ArgsSubscription<TArgs>
     public override void Notify()
     {
         try { callback?.Invoke(Args); }
-        finally { Dispose(); }
+        finally { Dispose("external/klooie/src/klooie/Observability/Subscription.cs:223"); }
     }
 
     protected override void OnReturn()
@@ -252,7 +247,7 @@ internal sealed class OnceScopedArgsSubscription<TScope, TArgs> : ArgsSubscripti
     public override void Notify()
     {
         try { callback?.Invoke(scope, Args); }
-        finally { Dispose(); }
+        finally { Dispose("external/klooie/src/klooie/Observability/Subscription.cs:255"); }
     }
 
     protected override void OnReturn()

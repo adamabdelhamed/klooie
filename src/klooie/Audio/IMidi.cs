@@ -113,9 +113,9 @@ public class MidiNoteOnOffDetector : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        _noteOn?.Dispose();
+        _noteOn?.Dispose("external/klooie/src/klooie/Audio/IMidi.cs:1");
         _noteOn = null!;
-        _noteOff?.Dispose();
+        _noteOff?.Dispose("external/klooie/src/klooie/Audio/IMidi.cs:1");
         _noteOff = null!;
         input = null!;
         noteTrackers.Clear();
@@ -158,7 +158,7 @@ public class SustainedNoteTracker : Recyclable
     public void ReleaseNote()
     {
         Releasable.ReleaseNote();
-        Dispose();
+        Dispose("external/klooie/src/klooie/Audio/IMidi.cs:1");
     }
 
     protected override void OnReturn()

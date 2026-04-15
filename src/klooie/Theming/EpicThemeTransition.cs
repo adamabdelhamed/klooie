@@ -18,7 +18,7 @@ public abstract class EpicThemeTransition
         BitmapOfNewTheme = bitmapOfNewTheme;
         Mask = mask.Bitmap;
         await Execute();
-        mask.Dispose();
+        mask.Dispose("external/klooie/src/klooie/Theming/EpicThemeTransition.cs:1");
     }
 }
 

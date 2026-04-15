@@ -43,7 +43,7 @@ namespace klooie.tests
                 control.Background = RGB.Red;
                 ConsoleApp.Current.LayoutRoot.Add(control);
                 await Task.Yield();
-                control.Dispose();
+                control.Dispose("external/klooie/src/tests/Performance/AllocationTests.cs:1");
             });
         });
 
@@ -56,7 +56,7 @@ namespace klooie.tests
                 control.Background = RGB.Red;
                 ConsoleApp.Current.LayoutRoot.Add(control);
                 await Task.Yield();
-                control.Dispose();
+                control.Dispose("external/klooie/src/tests/Performance/AllocationTests.cs:1");
             });
         });
 
@@ -70,7 +70,7 @@ namespace klooie.tests
                 control.Background = RGB.Red;
                 Game.Current.GamePanel.Add(control);
                 await Task.Yield();
-                control.Dispose();
+                control.Dispose("external/klooie/src/tests/Performance/AllocationTests.cs:1");
             });
         });
 

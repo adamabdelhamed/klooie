@@ -143,7 +143,7 @@ public partial class Dropdown : ProtectedConsolePanel
             ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, () =>
             {
                 Value = Options[index];
-                popup.Dispose();
+                popup.Dispose("external/klooie/src/klooie/Controls/Dropdown.cs:1");
             }, popup);
 
              ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, ()=> popup.TryDispose("Escape"), popup);

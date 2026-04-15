@@ -45,7 +45,7 @@ public sealed class ShowTextInputOptions : ShowMessageOptions
         TextBox.Ready.SubscribeOnce(() =>
         {
             TextBox.Focus();
-            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, () => dialogRoot.Dispose(), TextBox);
+            ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Enter, () => dialogRoot.Dispose("external/klooie/src/klooie/Dialogs/TextInputDialog.cs:1"), TextBox);
         });
         return content;
     }

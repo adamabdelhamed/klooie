@@ -39,7 +39,7 @@ public class ProtectedConsolePanelTests
 
         await ConsoleApp.Current.RequestPaintAsync();
 
-        protectedPanel.Dispose();
+        protectedPanel.Dispose("external/klooie/src/tests/Containers/ProtectedConsolePanelTests.cs:1");
 
         Assert.AreEqual(0, host.Controls.Count);
         ConsoleApp.Current.Stop();

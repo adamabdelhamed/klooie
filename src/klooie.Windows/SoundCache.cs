@@ -195,7 +195,7 @@ public sealed class StreamingMusicProvider : ISampleProvider, IDisposable
         _audioRead = Event<AudioReadChunk>.Create();
         lt.OnDisposed(() =>
         {
-            _audioRead.Dispose();
+            _audioRead.Dispose("external/klooie/src/klooie.Windows/SoundCache.cs:1");
             _audioRead = null;
         });
     }

@@ -84,7 +84,7 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
     protected override void OnReturn()
     {
         base.OnReturn();
-        (basePatch as Recyclable)?.Dispose();
+        (basePatch as Recyclable)?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/UnisonPatch.cs:1");
         basePatch = null;
         numVoices = 0;
         detuneCents = 0f;
@@ -94,7 +94,7 @@ public class UnisonPatch : Recyclable, ISynthPatch, ICompositePatch
         {
             if (_innerPatches[i] is Recyclable recyclable)
             {
-                recyclable.Dispose();
+                recyclable.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/UnisonPatch.cs:1");
             }
         }
 

@@ -42,7 +42,7 @@ public class MelodyComposer : ProtectedConsolePanel
 
     protected override void OnReturn()
     {
-        midiListener?.Dispose();
+        midiListener?.Dispose("external/klooie/src/klooie/Audio/DAW/MelodyComposer/MelodyComposer.cs:1");
         midiListener = null;
         base.OnReturn();
     }

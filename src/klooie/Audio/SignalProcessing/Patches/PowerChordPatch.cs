@@ -94,12 +94,12 @@ public class PowerChordPatch : Recyclable, ISynthPatch, ICompositePatch
         {
             for (int i = 0; i < patches.Length; i++)
             {
-                (patches[i] as Recyclable)?.Dispose();
+                (patches[i] as Recyclable)?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/PowerChordPatch.cs:1");
             }
             patches = null!;
         }
 
-        (basePatch as Recyclable)?.Dispose();
+        (basePatch as Recyclable)?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/PowerChordPatch.cs:1");
         basePatch = null!;
 
         intervals = null!;

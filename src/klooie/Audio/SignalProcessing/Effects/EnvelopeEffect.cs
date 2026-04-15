@@ -93,7 +93,7 @@ released.
 
     protected override void OnReturn()
     {
-        Envelope?.Dispose();
+        Envelope?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Effects/EnvelopeEffect.cs:1");
         Envelope = null!;
         base.OnReturn();
     }
@@ -166,7 +166,7 @@ Silence time before the attack begins (seconds).
 
     protected override void OnReturn()
     {
-        Envelope?.Dispose();
+        Envelope?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Effects/EnvelopeEffect.cs:1");
         Envelope = null!;
         base.OnReturn();
     }

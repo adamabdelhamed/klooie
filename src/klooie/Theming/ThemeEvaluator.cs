@@ -151,7 +151,7 @@ internal static class ThemeEvaluator
         {
             parent.TagsChanged.Subscribe(()=>
             {
-                evalLifetime.Dispose();
+                evalLifetime.Dispose("external/klooie/src/klooie/Theming/ThemeEvaluator.cs:1");
                 EvaluateProperty(c, prop, styles, themeLt, tracker);
             }, evalLifetime);
         }
@@ -159,7 +159,7 @@ internal static class ThemeEvaluator
         // invalidate if any of my tags change
         c.TagsChanged.Subscribe(()=>
         {
-            evalLifetime.Dispose();
+            evalLifetime.Dispose("external/klooie/src/klooie/Theming/ThemeEvaluator.cs:1");
             EvaluateProperty(c, prop, styles, themeLt, tracker);
         }, evalLifetime);
     }

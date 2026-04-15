@@ -13,7 +13,7 @@ public static class Lifetime
     private static ILifetime CreateCompleted()
     {
         var lt = new Recyclable(); // Intentionally not from the pool
-        lt.Dispose();
+        lt.Dispose("external/klooie/src/klooie/Observability/Lifetime.cs:1");
         return lt;
     }
 

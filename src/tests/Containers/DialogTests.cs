@@ -30,7 +30,7 @@ public class DialogTests
         Dialog.Shown.Subscribe(async () =>
         {
             await context.PaintAndRecordKeyFrameAsync();
-            lt.Dispose();
+            lt.Dispose("external/klooie/src/tests/Containers/DialogTests.cs:1");
         }, ConsoleApp.Current);
         await context.PaintAndRecordKeyFrameAsync();
         await MessageDialog.Show(new ShowMessageOptions("Hello world".ToGreen()) { UserChoices = DialogChoice.Close, SpeedPercentage = 0, MaxLifetime = lt });
@@ -152,7 +152,7 @@ public class DialogTests
                 await ConsoleApp.Current.SendKey(ConsoleKey.Tab);
                 Assert.IsFalse(label.HasFocus);
                 await Task.Delay(100);
-                ret.Dispose();
+                ret.Dispose("external/klooie/src/tests/Containers/DialogTests.cs:1");
             });
             return ret;
         }, options);

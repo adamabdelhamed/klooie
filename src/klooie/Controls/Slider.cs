@@ -33,7 +33,7 @@ public partial class Slider : ConsoleControl
                 {
                     if(focusLt?.IsStillValid(focusLease) == true)
                     {
-                        focusLt.Dispose();
+                        focusLt.Dispose("external/klooie/src/klooie/Controls/Slider.cs:1");
                     }
                 });
                 ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.RightArrow, SlideUp, focusLt);

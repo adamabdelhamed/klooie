@@ -76,7 +76,7 @@ namespace klooie.Gaming;
     private static void Cleanup(object me)
     {
         TopDownHumanMovementInput _this = (me as TopDownHumanMovementInput)!;
-        if (_this._movementFilter != null) _this._movementFilter.Dispose();
+        if (_this._movementFilter != null) _this._movementFilter.Dispose("external/klooie/src/klooie/Gaming/Movement/TopDownHumanMovementInput.cs:1");
         _this._movementFilter = null;
         _this.Puppet = null;
     }

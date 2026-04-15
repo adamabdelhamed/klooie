@@ -143,7 +143,7 @@ public class GameTests
 
         var backingLifetime = recyclableProperty.GetValue(pauseLease) as Recyclable;
         Assert.IsNotNull(backingLifetime);
-        backingLifetime.Dispose();
+        backingLifetime.Dispose("external/klooie/src/tests/Gaming/GameTests.cs:1");
 
         Game.Current.Resume();
 

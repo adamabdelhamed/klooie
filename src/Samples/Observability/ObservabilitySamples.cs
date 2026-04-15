@@ -14,7 +14,7 @@ internal partial class ObservabilitySamples
         await SomeAsyncWork();
         SomeSyncWork();
         await SomeMoreAsyncWork();
-        someLifetime.Dispose();
+        someLifetime.Dispose("external/klooie/src/Samples/Observability/ObservabilitySamples.cs:1");
         //#EndSample
 
 

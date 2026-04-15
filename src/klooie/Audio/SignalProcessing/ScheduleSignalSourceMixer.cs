@@ -117,7 +117,7 @@ public class ScheduledNoteEvent : Recyclable
 
         if (Patch != null && Patch is Recyclable recyclablePatch)
         {
-            recyclablePatch.Dispose();
+            recyclablePatch.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
             Patch = null;
         }
         base.OnReturn();
@@ -171,7 +171,7 @@ public class ScheduledSignalSourceMixer
 
         MixActiveVoices(buffer, offset, samplesRequested, bufferStart, bufferEnd, scratch.Items);
 
-        scratch.Dispose();
+        scratch.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
 
         // === Apply global volume here ===
         if (Volume != 1f)
@@ -223,7 +223,7 @@ public class ScheduledSignalSourceMixer
                         AudioPreRenderer.Instance.Queue(noteEvent.Note);
                     }
                 }
-                track.Dispose();
+                track.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
             }
         }
 
@@ -239,7 +239,7 @@ public class ScheduledSignalSourceMixer
         {
             if (scheduledNotes[i].IsCancelled)
             {
-                scheduledNotes[i].Dispose();
+                scheduledNotes[i].Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
                 scheduledNotes.RemoveAt(i);
             }
         }
@@ -260,7 +260,7 @@ public class ScheduledSignalSourceMixer
             if (scheduledNoteEvent.IsCancelled)
             {
                 scheduledNotes.RemoveAt(0);
-                scheduledNoteEvent.Dispose();
+                scheduledNoteEvent.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
                 continue;
             }
 
@@ -284,7 +284,7 @@ public class ScheduledSignalSourceMixer
             var patch = scheduledNoteEvent.Note.Instrument?.PatchFunc(scheduledNoteEvent.Note) ?? SynthLead.Create(scheduledNoteEvent.Note);
             if (!patch.IsNotePlayable(scheduledNoteEvent.Note.MidiNote))
             {
-                if (patch is Recyclable r) r.Dispose();
+                if (patch is Recyclable r) r.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
                 continue;
             }
             scheduledNoteEvent.Patch = patch;
@@ -318,7 +318,7 @@ public class ScheduledSignalSourceMixer
             var bv = bufferedVoices[b];
             if (bv.NoteEvent.IsCancelled)
             {
-                bv.NoteEvent.Dispose();
+                bv.NoteEvent.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
                 bufferedVoices.RemoveAt(b);
                 continue;
             }
@@ -337,7 +337,7 @@ public class ScheduledSignalSourceMixer
                 // Note started before this buffer: skip some frames in the cached wave
                 int framesToSkip = (int)(-relPosFrames);
                 srcFrame += framesToSkip;
-                if (srcFrame >= bv.Wave.Frames) { bv.NoteEvent.Dispose(); bufferedVoices.RemoveAt(b); continue; }
+                if (srcFrame >= bv.Wave.Frames) { bv.NoteEvent.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1"); bufferedVoices.RemoveAt(b); continue; }
                 dst = offset;
                 framesThisPass = Math.Min(framesAvailable - framesToSkip, samplesRequested);
             }
@@ -363,7 +363,7 @@ public class ScheduledSignalSourceMixer
 
             if (bv.FrameCursor >= bv.Wave.Frames)
             {
-                bv.NoteEvent.Dispose();
+                bv.NoteEvent.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
                 bufferedVoices.RemoveAt(b);
             }
         }
@@ -380,11 +380,11 @@ public class ScheduledSignalSourceMixer
 
             if (noteEvent.IsCancelled)
             {
-                voice.Dispose();
+                voice.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
                 noteEvent.RemainingVoices--;
                 if (noteEvent.RemainingVoices <= 0)
                 {
-                    noteEvent.Dispose();
+                    noteEvent.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
                 }
                 activeVoices.RemoveAt(v);
                 continue;
@@ -429,11 +429,11 @@ public class ScheduledSignalSourceMixer
 
             if (voice.IsDone)
             {
-                voice.Dispose();
+                voice.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
                 noteEvent.RemainingVoices--;
                 if (noteEvent.RemainingVoices <= 0)
                 {
-                    noteEvent.Dispose();
+                    noteEvent.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/ScheduleSignalSourceMixer.cs:1");
                 }
                 activeVoices.RemoveAt(v);
             }

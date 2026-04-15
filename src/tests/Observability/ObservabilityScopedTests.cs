@@ -59,7 +59,7 @@ namespace klooie.tests
             }
             finally
             {
-                lifetime.Dispose();
+                lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityScopedTests.cs:1");
             }
             // After lifetime is disposed, no more firing
             observable.SomeEvent.Fire();
@@ -108,7 +108,7 @@ namespace klooie.tests
             }
             finally
             {
-                lifetime.Dispose();
+                lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityScopedTests.cs:1");
             }
             // After disposing
             observable.SomeEvent.Fire();
@@ -142,7 +142,7 @@ namespace klooie.tests
             }
             finally
             {
-                lifetime.Dispose();
+                lifetime.Dispose("external/klooie/src/tests/Observability/ObservabilityScopedTests.cs:1");
             }
             // Once lifetime is disposed, no more increments
             observable.SomeEventWithAString.Fire("ignored");

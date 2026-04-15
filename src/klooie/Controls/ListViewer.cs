@@ -410,7 +410,7 @@ internal class ListViewerPanel : ProtectedConsolePanel
 
     private void DisposeGrid()
     {
-        gridLayout?.Dispose();
+        gridLayout?.Dispose("external/klooie/src/klooie/Controls/ListViewer.cs:1");
         ControlsByRow.Clear();
     }
 

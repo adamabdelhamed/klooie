@@ -131,7 +131,7 @@ public class ConsoleAppTests
         Assert.IsFalse(c.HasFocus);
 
         // pop the focus stack and expect focus to be restored back to the control
-        focusThief.Dispose();
+        focusThief.Dispose("external/klooie/src/tests/ConsoleApp/ConsoleAppTests.cs:1");
         Assert.AreSame(c, ConsoleApp.Current.FocusedControl);
         Assert.IsTrue(c.HasFocus);
 
@@ -157,7 +157,7 @@ public class ConsoleAppTests
         Assert.AreEqual(1, count);
 
         // pop the focus stack and expect the next key to increment count
-        focusThief.Dispose();
+        focusThief.Dispose("external/klooie/src/tests/ConsoleApp/ConsoleAppTests.cs:1");
         await ConsoleApp.Current.SendKey(new ConsoleKeyInfo('!', ConsoleKey.Enter, false, false, false));
         Assert.AreEqual(2, count);
 
@@ -337,7 +337,7 @@ public class ConsoleAppTests
             Assert.IsFalse(app.LayoutRoot.Controls.Contains(control));
             app.LayoutRoot.Add(control);
             Assert.IsTrue(app.LayoutRoot.Controls.Contains(control));
-            control.Dispose();
+            control.Dispose("external/klooie/src/tests/ConsoleApp/ConsoleAppTests.cs:1");
             Assert.IsFalse(app.LayoutRoot.Controls.Contains(control));
             Assert.AreEqual(1, addedEventFired);
             Assert.AreEqual(1, removedEventFired);

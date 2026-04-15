@@ -70,7 +70,7 @@ public class Vision : Recyclable, IFrameTask
         }
         finally
         {
-            buffer.Dispose();
+            buffer.Dispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:1");
         }
         _visibleObjectsChanged?.Fire();
     }
@@ -127,7 +127,7 @@ public class Vision : Recyclable, IFrameTask
         }
         finally
         {
-            lineOfSightBuffer.Dispose();
+            lineOfSightBuffer.Dispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:1");
         }
         return true;
     }
@@ -165,7 +165,7 @@ public class Vision : Recyclable, IFrameTask
         }
         finally
         {
-            castBuffer.Dispose();
+            castBuffer.Dispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:1");
         }
     }
 

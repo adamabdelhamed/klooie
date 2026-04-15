@@ -140,7 +140,7 @@ public sealed partial class Camera : ConsolePanel
         Recyclable panLt = null;
         void animate(float dx, float dy)
         {
-            panLt?.Dispose();
+            panLt?.Dispose("external/klooie/src/klooie/Gaming/Camera/Camera.cs:1");
             panLt = DefaultRecyclablePool.Instance.Rent();
             AnimateBy(dx, dy, lt: panLt);
         }

@@ -91,7 +91,7 @@ public class DropdownTests
         await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.Tab.KeyInfo(shift: true), "blue");
         await OpenDropdownChangeAndAssertValue(context, dropdown, ConsoleKey.Tab.KeyInfo(shift: true), "red");
 
-        container.Dispose();
+        container.Dispose("external/klooie/src/tests/Controls/DropdownTests.cs:1");
         await dropdownTask;
         ConsoleApp.Current.Stop();
     });

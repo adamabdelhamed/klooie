@@ -125,10 +125,10 @@ public class SynthPatch : Recyclable, ISynthPatch
         {
             if (Effects[i] is Recyclable r)
             {
-               r.Dispose();
+               r.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/SynthPatch.cs:1");
             }
         }
-        Effects?.Dispose();
+        Effects?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Patches/SynthPatch.cs:1");
         Effects = null!;
         Note = null!;
     }

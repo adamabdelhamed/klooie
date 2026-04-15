@@ -97,7 +97,7 @@ public static partial class Animator
     {
         if (frameState.AnimationState.AnimationShouldContinue == false)
         {
-            frameState.Dispose();
+            frameState.Dispose(@"external/klooie/src/klooie/Animation/Animator.cs:1");
             return;
         }
 
@@ -120,7 +120,7 @@ public static partial class Animator
 
         if (isLastFrame)
         {
-            frameState.Dispose();
+            frameState.Dispose(@"external/klooie/src/klooie/Animation/Animator.cs:1");
         }
     }
 

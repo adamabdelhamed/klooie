@@ -247,7 +247,7 @@ namespace klooie
             foreach (var property in classSymbol.GetMembers().OfType<IPropertySymbol>().Where(p => p.IsPartial() && p.IsAutoProperty()))
             {
                 var propertyName = property.Name;
-                sb.AppendLine($"{Indent(indent)}if(_this._{propertyName}Changed != null) {{_this._{propertyName}Changed.Dispose();_this._{propertyName}Changed = null;}}");
+                sb.AppendLine($"{Indent(indent)}if(_this._{propertyName}Changed != null) {{_this._{propertyName}Changed.Dispose(\"external/klooie/src/klooie.Analyzers/ObservableGenerator.cs\");_this._{propertyName}Changed = null;}}");
             }
             if (isLifetimeManager)
             {

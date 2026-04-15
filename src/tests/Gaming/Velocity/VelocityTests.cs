@@ -62,7 +62,7 @@ public class VelocityTests
         }
         finally
         {
-            testLt.Dispose();
+            testLt.Dispose("external/klooie/src/tests/Gaming/Velocity/VelocityTests.cs:1");
         }
     }
 
@@ -96,7 +96,7 @@ public class VelocityTests
         }
         finally
         {
-            testLt.Dispose();
+            testLt.Dispose("external/klooie/src/tests/Gaming/Velocity/VelocityTests.cs:1");
         }
     }
 
@@ -124,7 +124,7 @@ public class VelocityTests
         }
         finally
         {
-            testLt.Dispose();
+            testLt.Dispose("external/klooie/src/tests/Gaming/Velocity/VelocityTests.cs:1");
         }
     }
 
@@ -149,7 +149,7 @@ public class VelocityTests
         }
         finally
         {
-            testLt.Dispose();
+            testLt.Dispose("external/klooie/src/tests/Gaming/Velocity/VelocityTests.cs:1");
         }
     }
 
@@ -217,7 +217,7 @@ public class VelocityTests
                     }
                     finally
                     {
-                        buffer.Dispose();
+                        buffer.Dispose("external/klooie/src/tests/Gaming/Velocity/VelocityTests.cs:1");
                     }
                 };
 
@@ -235,12 +235,12 @@ public class VelocityTests
             group.SpacialIndex.EnumerateAll(buffer);
             foreach (var collider in buffer.WriteableBuffer)
             {
-                collider.Dispose();
+                collider.Dispose("external/klooie/src/tests/Gaming/Velocity/VelocityTests.cs:1");
             }
         }
         finally
         {
-            testLt.Dispose();
+            testLt.Dispose("external/klooie/src/tests/Gaming/Velocity/VelocityTests.cs:1");
         }
     }
 

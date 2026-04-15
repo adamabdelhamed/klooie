@@ -339,14 +339,14 @@ public class XYChart : ConsolePanel
              var fc = ConsoleApp.Current.FocusedControl;
              if (fc == null)
              {
-                 focusLt?.Dispose();
+                 focusLt?.Dispose("external/klooie/src/klooie/Controls/XYChart.cs:1");
                  focusLt = null;
                  return;
              }
              if (fc == this) return;
              if (Descendents.Contains(fc)) return;
 
-             focusLt?.Dispose();
+             focusLt?.Dispose("external/klooie/src/klooie/Controls/XYChart.cs:1");
              focusLt = null;
 
          }, this);

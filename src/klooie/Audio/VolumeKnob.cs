@@ -50,10 +50,10 @@ public class VolumeKnob : Recyclable
     protected override void OnReturn()
     {
         base.OnReturn();
-        volumeChanged?.Dispose();
+        volumeChanged?.Dispose("external/klooie/src/klooie/Audio/VolumeKnob.cs:1");
         volumeChanged = null;
         volume = 0f;
-        panChanged?.Dispose();
+        panChanged?.Dispose("external/klooie/src/klooie/Audio/VolumeKnob.cs:1");
         panChanged = null;
         pan = 0f;
     }

@@ -133,7 +133,7 @@ public sealed class SynchronousScheduler
         }
         finally
         {
-            delayIfValidInstance.Dispose();
+            delayIfValidInstance.Dispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:1");
         }
     }
 
@@ -220,7 +220,7 @@ public sealed class SynchronousScheduler
 
             FrameDebugger.RegisterTask("ScheduledWork");
             item.InvokeCallback();
-            item.Dispose();
+            item.Dispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:1");
 
             // Remove without advancing i; the next original item slides into i.
             pending.Items.RemoveAt(i);
@@ -232,7 +232,7 @@ public sealed class SynchronousScheduler
         // Dispose AFTER the iteration, and only if nothing remains.
         if (pending.Count == 0)
         {
-            loopLifetime.Dispose();
+            loopLifetime.Dispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:1");
         }
     }
 
@@ -256,7 +256,7 @@ public sealed class SynchronousScheduler
         protected override void OnReturn()
         {
             base.OnReturn();
-            Lease.Dispose();
+            Lease.Dispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:1");
             Callback = null;
             DelayState = null;
         }
@@ -372,7 +372,7 @@ public sealed class SynchronousScheduler
                 var state = PendingWorkItems[i];
                 state.TryDispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:373");
             }
-            PendingWorkItems.Dispose();
+            PendingWorkItems.Dispose("external/klooie/src/klooie/ConsoleApp/SynchronousScheduler.cs:1");
         }
     }
 }

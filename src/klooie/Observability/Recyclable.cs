@@ -51,9 +51,6 @@ public class Recyclable : ILifetime
     [Obsolete("This method is obsolete because it does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
     public bool TryDispose(string reason) => TryDispose(Lease, reason);
 
-
-    [Obsolete]
-    public void Dispose() => Dispose(Lease, "Obsolete Path Provided No Reason");
     [Obsolete]
     public void Dispose(string reason) => Dispose(Lease, reason);
     public bool TryDispose(int lease, string reason)
@@ -117,7 +114,7 @@ public class Recyclable : ILifetime
         OnDisposed(tracker, static (tracker) =>
         {
             tracker.TryDisposeRecyclable();
-            tracker.Dispose();
+            tracker.Dispose("external/klooie/src/klooie/Observability/Recyclable.cs:120");
         });
         return ret;
     }
@@ -149,7 +146,7 @@ public class Recyclable : ILifetime
         {
             if (lts.Length == 0)
             {
-                Dispose();
+                Dispose("external/klooie/src/klooie/Observability/Recyclable.cs:152");
                 return;
             }
             foreach (var lt in lts)
@@ -168,7 +165,7 @@ public class Recyclable : ILifetime
         {
             if (lts.Length == 0)
             {
-                Dispose();
+                Dispose("external/klooie/src/klooie/Observability/Recyclable.cs:171");
                 return;
             }
             remaining = lts.Length;
@@ -181,7 +178,7 @@ public class Recyclable : ILifetime
         {
             if (Interlocked.Decrement(ref remaining) == 0)
             {
-                Dispose();
+                Dispose("external/klooie/src/klooie/Observability/Recyclable.cs:184");
             }
         }
     }

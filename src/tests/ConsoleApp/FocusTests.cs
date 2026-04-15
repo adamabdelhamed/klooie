@@ -33,7 +33,7 @@ public class FocusTests
         ConsoleApp.Current.PushKeyForLifetime(System.ConsoleKey.Enter,()=> { firstItemFired = true; }, lt1);
         ConsoleApp.Current.PushKeyForLifetime(System.ConsoleKey.Enter, () => { secondItemFired = true; }, lt2);
 
-        lt1.Dispose();
+        lt1.Dispose("external/klooie/src/tests/ConsoleApp/FocusTests.cs:1");
         await ConsoleApp.Current.SendKey(System.ConsoleKey.Enter);
         Assert.IsFalse(firstItemFired);
         Assert.IsTrue(secondItemFired);

@@ -48,7 +48,7 @@ public sealed class MidiJamInterpretor : Recyclable
     {
         if (midiImpl.TryConnect(midiDropdown.Value.Id, out IMidiInput input))
         {
-            noteDetector?.Dispose();
+            noteDetector?.Dispose("external/klooie/src/klooie/Audio/DAW/Helpers/MidiJamInterpretor.cs:1");
             noteDetector = MidiNoteOnOffDetector.Create(input);
             noteDetector.NoteOn.Subscribe(HandleNoteOn, noteDetector);
             noteDetector.NoteOff.Subscribe(HandleNoteOff, noteDetector);
@@ -88,7 +88,7 @@ public sealed class MidiJamInterpretor : Recyclable
     {
         base.OnReturn();
         midiInput = null;
-        noteDetector?.Dispose();
+        noteDetector?.Dispose("external/klooie/src/klooie/Audio/DAW/Helpers/MidiJamInterpretor.cs:1");
         noteDetector = null;
 
         engine?.ReleaseAll();

@@ -133,7 +133,7 @@ public class EventTests
         ev.Subscribe(subscriber, lt);
         ev.Fire();
         Assert.AreEqual(1, count);
-        lt.Dispose();
+        lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
         ev.Fire();
         Assert.AreEqual(1, count);
     }
@@ -145,7 +145,7 @@ public class EventTests
         ev.Subscribe(scope, subscriber, lt);
         ev.Fire();
         Assert.AreEqual(1, count);
-        lt.Dispose();
+        lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
         ev.Fire();
         Assert.AreEqual(1, count);
     }
@@ -161,7 +161,7 @@ public class EventTests
         ev.Subscribe(subscriber, lt);
         ev.Fire(args);
         Assert.AreEqual(1, count);
-        lt.Dispose();
+        lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
         ev.Fire(args);
         Assert.AreEqual(1, count);
     }
@@ -178,7 +178,7 @@ public class EventTests
         ev.Subscribe(scope, subscriber, lt);
         ev.Fire(args);
         Assert.AreEqual(1, count);
-        lt.Dispose();
+        lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
         ev.Fire(args);
         Assert.AreEqual(1, count);
     }
@@ -285,7 +285,7 @@ public class EventTests
             Assert.AreEqual(1, callCount);
 
             // Dispose lifetime, should not be called again
-            lt.Dispose();
+            lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
             ev.Fire();
             Assert.AreEqual(1, callCount, "After lifetime is disposed, callback should not be called again.");
         }
@@ -315,7 +315,7 @@ public class EventTests
             ev.Fire();
             Assert.AreEqual(1, callCount);
 
-            lt.Dispose();
+            lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
             ev.Fire();
             Assert.AreEqual(1, callCount);
         }
@@ -505,7 +505,7 @@ public class EventTests
             ev.Fire();
             Assert.AreEqual(2, callCount);
 
-            lt.Dispose();
+            lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
             ev.Fire();
             Assert.AreEqual(2, callCount);
         }
@@ -668,7 +668,7 @@ public class EventTests
             ev.Fire(123);
             Assert.AreEqual(1, callCount);
 
-            lt.Dispose();
+            lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
             ev.Fire(456);
             Assert.AreEqual(1, callCount, "Disposed lifetime should not receive further notifications.");
         }
@@ -784,7 +784,7 @@ public class EventTests
             ev.Fire("B");
             Assert.AreEqual(2, callCount);
 
-            lt.Dispose();
+            lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
             ev.Fire("C");
             Assert.AreEqual(2, callCount);
         }
@@ -931,7 +931,7 @@ public class EventTests
 
             ev.SubscribeThrottled(() => callCount++, lt, maxHz: 50);
             ev.Fire();
-            lt.Dispose();
+            lt.Dispose("external/klooie/src/tests/Observability/EventTests.cs:1");
             ev.Fire();
 
             Assert.AreEqual(1, callCount, "Disposing lifetime should stop further callbacks.");

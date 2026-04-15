@@ -38,7 +38,7 @@ public class HitDetectionTests
         }
         finally
         {
-            testLt.Dispose();
+            testLt.Dispose("external/klooie/src/tests/Gaming/Velocity/HitDetectionTests.cs:1");
         }
     }
  

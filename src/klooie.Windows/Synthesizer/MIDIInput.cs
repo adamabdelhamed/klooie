@@ -86,7 +86,7 @@ public class MIDIInput : Recyclable, IMidiInput, IMidiProvider
         base.OnReturn();
         midiIn?.Dispose();
         midiIn = null;
-        midiFired?.Dispose();
+        midiFired?.Dispose("external/klooie/src/klooie.Windows/Synthesizer/MIDIInput.cs:1");
         midiFired = null;
     }
 

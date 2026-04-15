@@ -107,7 +107,7 @@ public sealed class UniformGrid
     {
         var state = membershipStates[obj];
         membershipStates.Remove(obj);
-        state.Dispose();
+        state.Dispose("external/klooie/src/klooie/Gaming/Physics/UniformGrid.cs:1");
 
         LoadCells(obj.Bounds);
         for (int i = 0; i < cellBuffer.Count; i++)

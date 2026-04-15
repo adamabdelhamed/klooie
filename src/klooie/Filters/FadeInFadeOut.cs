@@ -13,7 +13,7 @@ public static class FadeEx
         await Animator.AnimateAsync(0,percentage, duration, filter, static (state, percentage) =>  state.Percentage = percentage, easingFunction, pauseManager);
         if (percentage == 1)
         {
-            filter.Dispose();
+            filter.Dispose("external/klooie/src/klooie/Filters/FadeInFadeOut.cs:1");
         }
         return filter;
     }
@@ -39,7 +39,7 @@ public static class FadeEx
         await Animator.AnimateAsync(0, percentage, duration, filter, static (state, percentage) => state.Percentage = percentage, easingFunction, pauseManager);
         if(percentage == 1)
         {
-            filter.Dispose();
+            filter.Dispose("external/klooie/src/klooie/Filters/FadeInFadeOut.cs:1");
         }
         return filter;
     }
@@ -81,7 +81,7 @@ internal sealed class FadeOutFilter : Recyclable, IConsoleControlFilter
                 lease.Recyclable.IsVisible = false;
                 lease.Recyclable.Filters.Remove(lease.Owner);
             }
-            lease.Dispose();
+            lease.Dispose("external/klooie/src/klooie/Filters/FadeInFadeOut.cs:1");
         });
     }
 

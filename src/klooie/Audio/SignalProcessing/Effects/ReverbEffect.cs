@@ -48,7 +48,7 @@ class AllPassFilter : Recyclable
 
     protected override void OnReturn()
     {
-        buffer?.Dispose();
+        buffer?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Effects/ReverbEffect.cs:1");
         buffer = null;
         pos = 0;
         base.OnReturn();
@@ -128,7 +128,7 @@ class CombFilter : Recyclable
 
     protected override void OnReturn()
     {
-        buffer?.Dispose();
+        buffer?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Effects/ReverbEffect.cs:1");
         buffer = null;
         pos = 0;
         lastFiltered = 0f;
@@ -289,15 +289,15 @@ Settings controlling reverb decay, diffusion, high-frequency damping, pre-filter
     {
         if (combs != null)
         {
-            foreach (var c in combs) c.Dispose();
+            foreach (var c in combs) c.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Effects/ReverbEffect.cs:1");
             combs = null;
         }
         if (allpasses != null)
         {
-            foreach (var a in allpasses) a.Dispose();
+            foreach (var a in allpasses) a.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Effects/ReverbEffect.cs:1");
             allpasses = null;
         }
-        inputFilter?.Dispose();
+        inputFilter?.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/Effects/ReverbEffect.cs:1");
         inputFilter = null;
         mixVelocityCurve = EffectContext.EaseLinear;
         base.OnReturn();

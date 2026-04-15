@@ -91,7 +91,7 @@ public static class ExportSongUXHelper
         }
         finally
         {
-            filter.Dispose();
+            filter.Dispose("external/klooie/src/klooie/Audio/DAW/Helpers/ExportSongUXHelper.cs:1");
         }
     }
 
@@ -131,7 +131,7 @@ public static class ExportSongUXHelper
         }
         finally
         {
-            filter.Dispose();
+            filter.Dispose("external/klooie/src/klooie/Audio/DAW/Helpers/ExportSongUXHelper.cs:1");
         }
     }
 }

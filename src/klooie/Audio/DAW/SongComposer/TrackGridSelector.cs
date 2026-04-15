@@ -181,7 +181,7 @@ public class TrackGridSelector : BeatGridInputMode<MelodyClip>
 
     private void RemoveAnchorPreview()
     {
-        anchorPreviewControl?.Dispose();
+        anchorPreviewControl?.Dispose("external/klooie/src/klooie/Audio/DAW/SongComposer/TrackGridSelector.cs:1");
         anchorPreviewControl = null;
         selectionPreviewCursor = null;
         selectionPreviewCursorBeatTrack = null;
@@ -255,7 +255,7 @@ public class TrackGridSelector : BeatGridInputMode<MelodyClip>
             var plural = Composer.SelectedValues.Count == 1 ? "melody" : "melodies";
             Composer.StatusChanged.Fire(ConsoleString.Parse($"[White]Selected [Cyan]{Composer.SelectedValues.Count}[White] {plural}."));
             SongComposer.NextMode();
-            selectionRectangle?.Dispose();
+            selectionRectangle?.Dispose("external/klooie/src/klooie/Audio/DAW/SongComposer/TrackGridSelector.cs:1");
             selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;
             selectionAnchor = null;
@@ -267,7 +267,7 @@ public class TrackGridSelector : BeatGridInputMode<MelodyClip>
         else if (k.Key == ConsoleKey.Escape)
         {
             SongComposer.NextMode();
-            selectionRectangle?.Dispose();
+            selectionRectangle?.Dispose("external/klooie/src/klooie/Audio/DAW/SongComposer/TrackGridSelector.cs:1");
             selectionRectangle = null;
             selectionPhase = SelectionPhase.PickingAnchor;
             selectionAnchor = null;

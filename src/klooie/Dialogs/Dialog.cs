@@ -98,7 +98,7 @@ public static class Dialog
         options.Tags?.ForEach(t => dialogContainer.AddTag(t));
 
 
-        if (options.AllowEscapeToClose) ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => { cancelled = true; content.Dispose(); }, content);
+        if (options.AllowEscapeToClose) ConsoleApp.Current.PushKeyForLifetime(ConsoleKey.Escape, () => { cancelled = true; content.Dispose("external/klooie/src/klooie/Dialogs/Dialog.cs:1"); }, content);
 
         // animate in
         await Forward(300 * options.SpeedPercentage, content, percentage => dialogContainer.Width = Math.Max(1, ConsoleMath.Round((4 + content.Width) * percentage)));
@@ -122,7 +122,7 @@ public static class Dialog
         await Reverse(150 * options.SpeedPercentage, content, percentage => dialogContainer.Height = Math.Max(1, (int)Math.Floor((2 + content.Height) * percentage)));
         await Task.Delay((int)(200 * options.SpeedPercentage));
         await Reverse(200 * options.SpeedPercentage, content, percentage => dialogContainer.Width = Math.Max(1, ConsoleMath.Round((4 + content.Width) * percentage)));
-        dialogContainer.Dispose();
+        dialogContainer.Dispose("external/klooie/src/klooie/Dialogs/Dialog.cs:1");
         await ConsoleApp.Current.RequestPaintAsync();
         return cancelled;
     }

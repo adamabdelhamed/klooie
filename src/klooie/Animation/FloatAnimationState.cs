@@ -115,7 +115,7 @@ public static partial  class Animator
                 state.From = state.OriginalFrom;
                 state.To = state.OriginalTo;
                 state.Tcs?.SetResult();
-                state.Dispose();
+                state.Dispose("external/klooie/src/klooie/Animation/FloatAnimationState.cs:1");
             }
         }
     }

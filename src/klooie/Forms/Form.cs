@@ -105,7 +105,7 @@ public sealed class Form : ProtectedConsolePanel
 
     private void CreateGridLayout()
     {
-        grid?.Dispose();
+        grid?.Dispose("external/klooie/src/klooie/Forms/Form.cs:1");
         var rows = new List<GridRowDefinition>();
         rowMap = new Dictionary<int, int>();
         var elementRows = Options.Elements.Select(e => new GridRowDefinition() { Height = e.ValueControl.Height, Type = GridValueType.Pixels }).ToArray();

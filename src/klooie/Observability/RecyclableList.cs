@@ -61,7 +61,7 @@ public class RecyclableListPool<T> : RecycleablePool<RecyclableList<T>>
         }
         finally
         {
-            list.Dispose();
+            list.Dispose("external/klooie/src/klooie/Observability/RecyclableList.cs:1");
         }
     }
 
@@ -74,7 +74,7 @@ public class RecyclableListPool<T> : RecycleablePool<RecyclableList<T>>
         }
         finally
         {
-            list.Dispose();
+            list.Dispose("external/klooie/src/klooie/Observability/RecyclableList.cs:1");
         }
     }
 }

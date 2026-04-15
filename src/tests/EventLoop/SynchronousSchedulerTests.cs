@@ -134,7 +134,7 @@ public class SynchronousSchedulerTests
         var delayIfValidInstancesRentedBefore = delayIfValidInstancePool.Rented;
         var delayIfValidInstancesReturnedBefore = delayIfValidInstancePool.Returned;
 
-        state.Dispose();
+        state.Dispose("external/klooie/src/tests/EventLoop/SynchronousSchedulerTests.cs:1");
         loop.Invoke(() => loop.Scheduler.DelayIfValid(100, state, o => throw new Exception("This should not happen because the state should be disposed")));
         loop.Invoke(() => loop.Scheduler.Delay(200, loop, static loop => loop.Stop()));
 

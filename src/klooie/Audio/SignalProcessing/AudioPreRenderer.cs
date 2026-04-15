@@ -204,7 +204,7 @@ public sealed class AudioPreRenderer
         }
         finally
         {
-            allFloats.Dispose();
+            allFloats.Dispose("external/klooie/src/klooie/Audio/SignalProcessing/AudioPreRenderer.cs:1");
         }
     }
 

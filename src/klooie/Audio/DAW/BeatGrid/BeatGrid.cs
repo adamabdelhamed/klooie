@@ -151,7 +151,7 @@ public abstract class BeatGrid<T> : ProtectedConsolePanel
         {
             if (!tempHashSet.Contains(kvp.Key))
             {
-                kvp.Value.Dispose();
+                kvp.Value.Dispose("external/klooie/src/klooie/Audio/DAW/BeatGrid/BeatGrid.cs:1");
                 visibleCells.Remove(kvp.Key);
             }
         }

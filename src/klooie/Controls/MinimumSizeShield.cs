@@ -44,9 +44,9 @@ public class MinimumSizeShield : ConsolePanel
             IsVisible = false;
             if (tooSmallLifetime?.IsStillValid(tooSmallLifetimeLease) == true)
             {
-                tooSmallLifetime.Dispose();
+                tooSmallLifetime.Dispose("external/klooie/src/klooie/Controls/MinimumSizeShield.cs:1");
                 tooSmallLifetime = null;
-                focusThief?.Dispose();
+                focusThief?.Dispose("external/klooie/src/klooie/Controls/MinimumSizeShield.cs:1");
                 options.OnMinimumSizeMet?.Invoke();
             }
             else

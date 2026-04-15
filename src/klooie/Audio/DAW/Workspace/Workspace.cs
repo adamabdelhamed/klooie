@@ -261,7 +261,7 @@ public class Workspace
             return;
         }
 
-        saveLifetime?.Dispose();
+        saveLifetime?.Dispose("external/klooie/src/klooie/Audio/DAW/Workspace/Workspace.cs:1");
         saveLifetime = DefaultRecyclablePool.Instance.Rent();
         ConsoleApp.Current.Scheduler.DelayIfValid(1000, DelayState.Create(saveLifetime), async (s) =>
         {
@@ -269,7 +269,7 @@ public class Workspace
             await SaveAsync();
             isSaving = false;
             s.DisposeAllValidDependencies();
-            s.Dispose();
+            s.Dispose("external/klooie/src/klooie/Audio/DAW/Workspace/Workspace.cs:1");
             saveLifetime = null;
         });
     }

@@ -36,7 +36,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            prediction.Dispose();
+            prediction.Dispose("external/klooie/src/tests/Gaming/Movement/CollisionDetectorTests.cs:1");
         }
     }
 
@@ -54,7 +54,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            prediction.Dispose();
+            prediction.Dispose("external/klooie/src/tests/Gaming/Movement/CollisionDetectorTests.cs:1");
         }
     }
 
@@ -74,7 +74,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            prediction.Dispose();
+            prediction.Dispose("external/klooie/src/tests/Gaming/Movement/CollisionDetectorTests.cs:1");
         }
     }
 
@@ -100,7 +100,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            prediction.Dispose();
+            prediction.Dispose("external/klooie/src/tests/Gaming/Movement/CollisionDetectorTests.cs:1");
         }
     }
 
@@ -125,7 +125,7 @@ public class CollisionDetectorTests
         }
         finally
         {
-            prediction.Dispose();
+            prediction.Dispose("external/klooie/src/tests/Gaming/Movement/CollisionDetectorTests.cs:1");
         }
     }
 
@@ -161,8 +161,8 @@ public class CollisionDetectorTests
         }
         finally
         {
-            predictionRough.Dispose();
-            predictionPrecise.Dispose();
+            predictionRough.Dispose("external/klooie/src/tests/Gaming/Movement/CollisionDetectorTests.cs:1");
+            predictionPrecise.Dispose("external/klooie/src/tests/Gaming/Movement/CollisionDetectorTests.cs:1");
         }
     }
 

@@ -297,7 +297,7 @@ public class MonthCalendar : ProtectedConsolePanel
             },
             OnMinimumSizeMet = () =>
             {
-                shield?.Dispose();
+                shield?.Dispose("external/klooie/src/klooie/Controls/MonthCalendar.cs:1");
             }
         })).Fill();
     }

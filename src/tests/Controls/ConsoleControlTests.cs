@@ -40,7 +40,7 @@ public class ConsoleControlTests
         }
         finally
         {
-            c.Dispose();
+            c.Dispose("external/klooie/src/tests/Controls/ConsoleControlTests.cs:1");
         }
     }
 
@@ -59,7 +59,7 @@ public class ConsoleControlTests
         }
         finally
         {
-            c.Dispose();
+            c.Dispose("external/klooie/src/tests/Controls/ConsoleControlTests.cs:1");
         }
     }
 

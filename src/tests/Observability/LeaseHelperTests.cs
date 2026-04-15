@@ -18,16 +18,16 @@ public class LeaseHelperTests
             Assert.IsTrue(state.IsOwnerValid);
             Assert.IsTrue(state.IsRecyclableValid);
 
-            owner.Dispose();
+            owner.Dispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:1");
             Assert.IsFalse(state.IsOwnerValid);
             Assert.IsTrue(state.IsRecyclableValid);
 
-            child.Dispose();
+            child.Dispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:1");
             Assert.IsFalse(state.IsRecyclableValid);
         }
         finally
         {
-            state.Dispose();
+            state.Dispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:1");
             owner.TryDispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:31");
             child.TryDispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:32");
         }
@@ -53,7 +53,7 @@ public class LeaseHelperTests
         }
         finally
         {
-            state.Dispose();
+            state.Dispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:1");
         }
     }
 
@@ -64,7 +64,7 @@ public class LeaseHelperTests
         var state = LeaseHelper.Track(item);
         var originalLease = item.Lease;
 
-        item.Dispose();
+        item.Dispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:1");
         var rerented = DefaultRecyclablePool.Instance.Rent();
         var newLease = rerented.Lease;
 
@@ -72,7 +72,7 @@ public class LeaseHelperTests
         Assert.AreNotEqual(originalLease, newLease);
         Assert.IsFalse(state.IsRecyclableValid);
 
-        rerented.Dispose();
-        state.Dispose();
+        rerented.Dispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:1");
+        state.Dispose("external/klooie/src/tests/Observability/LeaseHelperTests.cs:1");
     }
 }

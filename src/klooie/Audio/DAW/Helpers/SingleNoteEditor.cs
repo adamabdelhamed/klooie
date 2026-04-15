@@ -69,7 +69,7 @@ public class SingleNoteEditor : ProtectedConsolePanel
 
     private void OnUnfocused()
     {
-        focusLifetime?.Dispose();
+        focusLifetime?.Dispose(@"external/klooie/src/klooie/Audio/DAW/Helpers/SingleNoteEditor.cs:1");
         focusLifetime = null;
         titleLabel.Content = titleLabel.Content.ToWhite(RGB.Black);
 
@@ -125,7 +125,7 @@ public class SingleNoteEditor : ProtectedConsolePanel
 
     protected override void OnReturn()
     {
-        _noteChanged?.Dispose();
+        _noteChanged?.Dispose(@"external/klooie/src/klooie/Audio/DAW/Helpers/SingleNoteEditor.cs:1");
         _noteChanged = null;
         SetDefaults();
         base.OnReturn();

@@ -99,7 +99,7 @@ public static class ChoiceDialog
                     button.Pressed.Subscribe(() =>
                     {
                         choice = myOption;
-                        layout.Dispose();
+                        layout.Dispose("external/klooie/src/klooie/Dialogs/ChoiceDialog.cs:1");
                     }, layout);
                 }
                 if (options.AutoFocusChoices)

@@ -107,7 +107,7 @@ public class DelayState : Recyclable
                 ret.multipleDependencies.Items.Add(LeaseHelper.Track((Recyclable)dependencies[i]));
             }
         }
-        dependencies.Dispose();
+        dependencies.Dispose("external/klooie/src/klooie/Observability/DelayState.cs:1");
         return ret;
     }
 
@@ -170,7 +170,7 @@ public class DelayState : Recyclable
             {
                 multipleDependencies[i]?.TryDispose("external/klooie/src/klooie/Observability/DelayState.cs:171");
             }
-            multipleDependencies.Dispose();
+            multipleDependencies.Dispose("external/klooie/src/klooie/Observability/DelayState.cs:1");
             multipleDependencies = null;
         }
 

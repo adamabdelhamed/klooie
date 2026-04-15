@@ -28,7 +28,7 @@ public class SourceGeneratorBasedObservabilityTests
         }
         finally
         {
-            lt.Dispose();
+            lt.Dispose("external/klooie/src/tests/Observability/SourceGeneratorBasedObservabilityTests.cs:1");
         }
         propValLt = observable.NameChanged.CreateNextFireLifetime();
         var lease = propValLt.Lease;

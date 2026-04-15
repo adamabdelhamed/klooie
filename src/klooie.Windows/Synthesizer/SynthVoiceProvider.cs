@@ -28,7 +28,7 @@ public class SynthVoiceProvider : RecyclableAudioProvider, IReleasableNote
 
     protected override void OnReturn()
     {
-        source?.Dispose();
+        source?.Dispose("external/klooie/src/klooie.Windows/Synthesizer/SynthVoiceProvider.cs:1");
         source = null;
         base.OnReturn();
     }
@@ -79,7 +79,7 @@ public class SustainedNoteInfo : Recyclable, IReleasableNote
                 me.remainingVoices--;
                 if (me.remainingVoices <= 0)
                 {
-                    me.Dispose();
+                    me.Dispose("external/klooie/src/klooie.Windows/Synthesizer/SynthVoiceProvider.cs:1");
                 }
             });
         }
@@ -98,9 +98,9 @@ public class SustainedNoteInfo : Recyclable, IReleasableNote
     protected override void OnReturn()
     {
         base.OnReturn();
-        voices.Dispose();
+        voices.Dispose("external/klooie/src/klooie.Windows/Synthesizer/SynthVoiceProvider.cs:1");
         voices = null!;
-        ev.Dispose();
+        ev.Dispose("external/klooie/src/klooie.Windows/Synthesizer/SynthVoiceProvider.cs:1");
         ev = null!;
         remainingVoices = 0;
     }
