@@ -12,14 +12,20 @@ internal interface ISubscription
     int Lease { get; }
     bool IsStillValid(int lease);
     void Notify();
-    void Dispose(string reason = null);
-    bool TryDispose(int lease, string reason = null);
-    bool TryDispose(string reason = null);  
+    [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
+    bool TryDispose();
+    [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
+    void Dispose();
+    void Dispose(int lease, string reason);
+    bool TryDispose(int lease, string reason);
 }
 
 internal abstract class Subscription : Recyclable, ISubscription
 {
     internal ILifetime? Lifetime { get; private set; }
+
+    [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
+    public void Dispose() => base.Dispose();
 
     protected override void OnReturn()
     {

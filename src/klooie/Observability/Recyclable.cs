@@ -44,24 +44,33 @@ public class Recyclable : ILifetime
     }
 
 
+    [Obsolete("Adds no value, bypasses lease and reason checks")]
     public static void TryDisposeMe(Recyclable me) => me.TryDispose("Recyclable.TryDisposeMe");
 
-    public bool TryDispose(int lease, string? reason = null)
-    {
-        if (Lease != lease) return false;
-        return TryDispose(reason);
-    }
+    [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
+    public bool TryDispose() => TryDispose(Lease, "Obsolete Path provided No Reason");
 
-    public bool TryDispose(string? reason = null)
+    [Obsolete("This method is obsolete because it does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
+    public bool TryDispose(string reason) => TryDispose(Lease, reason);
+
+    [Obsolete("Use TryDispose(int lease, string reason) so disposal attempts are traceable.")]
+    public bool TryDispose(int lease) => TryDispose(lease, "Obsolete Path provided No Reason");
+    
+    [Obsolete("This method is obsolete because it does not require a reason for disposal, and does not require the caller to provide a lease, which can result in one component silently disposing another component's Recyclable.")]
+    public void Dispose(string? reason = null) => Dispose(Lease, reason ?? "Obsolete Path Provided No Reason");
+
+    public bool TryDispose(int lease, string reason)
     {
-        if (IsExpired || IsExpiring) return false;
-        Dispose(reason);
+        if (Lease != lease || IsExpired || IsExpiring) return false;
+        Dispose(lease, reason);
         return true;
     }
 
-    public void Dispose(string? reason = null)
+    public void Dispose(int lease, string reason)
     {
-        if (IsExpiring || IsExpired) throw new InvalidOperationException("Cannot dispose an object that is already being disposed or has been disposed: "+ GetType().Name);
+        if(string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("A reason must be provided when disposing with the lease parameter", nameof(reason));
+        if (lease != Lease) throw new ArgumentException($"Cannot dispose with an invalid lease. Current lease: {Lease}, provided lease: {lease}");
+        if (IsExpiring || IsExpired) throw new InvalidOperationException("Cannot dispose an object that is already being disposed or has been disposed: " + GetType().Name);
         DisposalReason = reason;
         IsExpiring = true;
         try
