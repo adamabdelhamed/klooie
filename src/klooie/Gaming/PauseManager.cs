@@ -52,168 +52,93 @@ public sealed class PauseManager : IPausable
 public static class EventPauseExtensions
 {
     public static void SubscribePaused(this Event e, IPausable pausable, Action handler, ILifetime subscriptionLifetime)
-        => PauseHandler.Create(e, pausable, handler, subscriptionLifetime);
+        => e.Subscribe(new PauseState(pausable, handler), static s => s.Invoke(), subscriptionLifetime);
 
     public static void SubscribePaused<TScope>(this Event e, IPausable pausable, TScope scope, Action<TScope> handler, ILifetime subscriptionLifetime)
-        => PauseHandler<TScope>.Create(e, pausable, scope, handler, subscriptionLifetime);
+        => e.Subscribe(new PauseState<TScope>(pausable, scope, handler), static s => s.Invoke(), subscriptionLifetime);
 
     public static void SubscribePaused<TArg>(this Event<TArg> e, IPausable pausable, Action<TArg> handler, ILifetime subscriptionLifetime)
-        => PauseArgHandler<TArg>.Create(e, pausable, handler, subscriptionLifetime);
+        => e.Subscribe(new PauseArgState<TArg>(pausable, handler), static (s, arg) => s.Invoke(arg), subscriptionLifetime);
 
     public static void SubscribePaused<TScope, TArg>(this Event<TArg> e, IPausable pausable, TScope scope, Action<TScope, TArg> handler, ILifetime subscriptionLifetime)
-        => PauseScopedArgHandler<TScope, TArg>.Create(e, pausable, scope, handler, subscriptionLifetime);
+        => e.Subscribe(new PauseScopedArgState<TScope, TArg>(pausable, scope, handler), static (s, arg) => s.Invoke(arg), subscriptionLifetime);
 
-    private sealed class PauseHandler : Recyclable
+    private readonly struct PauseState
     {
-        private IPausable pausable;
-        private Action handler;
+        private readonly IPausable pausable;
+        private readonly Action handler;
 
-        public static PauseHandler Create(Event e, IPausable pausable, Action handler, ILifetime lifetime)
+        public PauseState(IPausable pausable, Action handler)
         {
-            var inst = Pool.Instance.Rent();
-            inst.pausable = pausable;
-            inst.handler = handler;
-            e.Subscribe(inst, static me => me.InvokeIfNotPaused(), lifetime);
-            lifetime.OnDisposed(inst, TryDisposeMe);
-            return inst;
+            this.pausable = pausable;
+            this.handler = handler;
         }
 
-        private void InvokeIfNotPaused()
+        public void Invoke()
         {
             if (pausable.IsPaused) return;
-            handler?.Invoke();
-        }
-
-        protected override void OnReturn()
-        {
-            pausable = null;
-            handler = null;
-            base.OnReturn();
-        }
-
-        private sealed class Pool : RecycleablePool<PauseHandler>
-        {
-            public static Pool _instance;
-            public static Pool Instance => _instance ??= new Pool();
-            public override PauseHandler Factory() => new PauseHandler();
+            handler();
         }
     }
 
-    private sealed class PauseHandler<TScope> : Recyclable
+    private readonly struct PauseState<TScope>
     {
-        private IPausable pausable;
-        private TScope scope;
-        private Action<TScope> handler;
+        private readonly IPausable pausable;
+        private readonly TScope scope;
+        private readonly Action<TScope> handler;
 
-        public static PauseHandler<TScope> Create(Event e, IPausable pausable, TScope scope, Action<TScope> handler, ILifetime lifetime)
+        public PauseState(IPausable pausable, TScope scope, Action<TScope> handler)
         {
-            var inst = Pool.Instance.Rent();
-            inst.pausable = pausable;
-            inst.scope = scope;
-            inst.handler = handler;
-            e.Subscribe(inst, static me => me.InvokeIfNotPaused(), lifetime);
-            lifetime.OnDisposed(inst, TryDisposeMe);
-            return inst;
+            this.pausable = pausable;
+            this.scope = scope;
+            this.handler = handler;
         }
 
-        private void InvokeIfNotPaused()
+        public void Invoke()
         {
             if (pausable.IsPaused) return;
-            handler?.Invoke(scope);
-        }
-
-        protected override void OnReturn()
-        {
-            pausable = null;
-            handler = null;
-            scope = default;
-            base.OnReturn();
-        }
-
-        private sealed class Pool : RecycleablePool<PauseHandler<TScope>>
-        {
-            public static Pool _instance;
-            public static Pool Instance => _instance ??= new Pool();
-            public override PauseHandler<TScope> Factory() => new PauseHandler<TScope>();
+            handler(scope);
         }
     }
 
-    private sealed class PauseArgHandler<TArg> : Recyclable
+    private readonly struct PauseArgState<TArg>
     {
-        private IPausable pausable;
-        private Action<TArg> handler;
+        private readonly IPausable pausable;
+        private readonly Action<TArg> handler;
 
-        public static PauseArgHandler<TArg> Create(Event<TArg> e, IPausable pausable, Action<TArg> handler, ILifetime lifetime)
+        public PauseArgState(IPausable pausable, Action<TArg> handler)
         {
-            var inst = Pool.Instance.Rent();
-            inst.pausable = pausable;
-            inst.handler = handler;
-            e.Subscribe<PauseArgHandler<TArg>>(inst, static (me, arg) => me.InvokeIfNotPaused(arg), lifetime);
-            lifetime.OnDisposed(inst, TryDisposeMe);
-            return inst;
+            this.pausable = pausable;
+            this.handler = handler;
         }
 
-        private void InvokeIfNotPaused(TArg arg)
+        public void Invoke(TArg arg)
         {
             if (pausable.IsPaused) return;
-            handler?.Invoke(arg);
-        }
-
-        protected override void OnReturn()
-        {
-            pausable = null;
-            handler = null;
-            base.OnReturn();
-        }
-
-        private sealed class Pool : RecycleablePool<PauseArgHandler<TArg>>
-        {
-            public static Pool _instance;
-            public static Pool Instance => _instance ??= new Pool();
-            public override PauseArgHandler<TArg> Factory() => new PauseArgHandler<TArg>();
+            handler(arg);
         }
     }
 
-    private sealed class PauseScopedArgHandler<TScope, TArg> : Recyclable
+    private readonly struct PauseScopedArgState<TScope, TArg>
     {
-        private IPausable pausable;
-        private TScope scope;
-        private Action<TScope, TArg> handler;
+        private readonly IPausable pausable;
+        private readonly TScope scope;
+        private readonly Action<TScope, TArg> handler;
 
-        public static PauseScopedArgHandler<TScope, TArg> Create(Event<TArg> e, IPausable pausable, TScope scope, Action<TScope, TArg> handler, ILifetime lifetime)
+        public PauseScopedArgState(IPausable pausable, TScope scope, Action<TScope, TArg> handler)
         {
-            var inst = Pool.Instance.Rent();
-            inst.pausable = pausable;
-            inst.scope = scope;
-            inst.handler = handler;
-            e.Subscribe<PauseScopedArgHandler<TScope, TArg>>(inst, static (me, arg) => me.InvokeIfNotPaused(arg), lifetime);
-            lifetime.OnDisposed(inst, TryDisposeMe);
-            return inst;
+            this.pausable = pausable;
+            this.scope = scope;
+            this.handler = handler;
         }
 
-        private void InvokeIfNotPaused(TArg arg)
+        public void Invoke(TArg arg)
         {
             if (pausable.IsPaused) return;
-            handler?.Invoke(scope, arg);
-        }
-
-        protected override void OnReturn()
-        {
-            pausable = null;
-            handler = null;
-            scope = default;
-            base.OnReturn();
-        }
-
-        private sealed class Pool : RecycleablePool<PauseScopedArgHandler<TScope, TArg>>
-        {
-            public static Pool _instance;
-            public static Pool Instance => _instance ??= new Pool();
-            public override PauseScopedArgHandler<TScope, TArg> Factory() => new PauseScopedArgHandler<TScope, TArg>();
+            handler(scope, arg);
         }
     }
 }
-
 /// <summary>
 /// Provides pause state.
 /// </summary>

@@ -83,12 +83,12 @@ public static partial class Animator
 
         if (state.PauseManager != null)
         {
-            ConsoleApp.Current.AfterPaint.SubscribePaused(state.PauseManager, frame, static f => ProcessAnimationFrame(f), frame);
+            ConsoleApp.Current.BeforePaint.SubscribePaused(state.PauseManager, frame, static f => ProcessAnimationFrame(f), frame);
             if (state.PauseManager.IsPaused) return;// don't start the animation if paused
         }
         else
         {
-            ConsoleApp.Current.AfterPaint.Subscribe(frame, static f => ProcessAnimationFrame(f), frame);
+            ConsoleApp.Current.BeforePaint.Subscribe(frame, static f => ProcessAnimationFrame(f), frame);
         }
         ProcessAnimationFrame(frame);
     }
