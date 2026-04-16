@@ -27,7 +27,7 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
 {
     private RecyclableList<T> wrappedRecyclable;
     private List<T> wrapped => (wrappedRecyclable ??= RecyclableListPool<T>.Instance.Rent()).Items;
-    private Dictionary<T, Recyclable> membershipLifetimes;
+    private Dictionary<T, LeaseState<Recyclable>> membershipLifetimes;
     private Event<object> _untypedAdded;
     Event<object> IObservableCollection.Added => _untypedAdded ??= Event<object>.Create();
     private Event<object> _untypedRemove;
@@ -74,7 +74,7 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     protected override void OnInit()
     {
         base.OnInit();
-        membershipLifetimes = new Dictionary<T, Recyclable>();
+        membershipLifetimes = new Dictionary<T, LeaseState<Recyclable>>();
     }
 
     protected override void OnReturn()
@@ -94,9 +94,10 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
         removed = null;
         changed?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:95");
         changed = null;
+        ClearMembershipLifetimes("external/klooie/src/klooie/Observability/ObservableCollection.cs:97");
+        wrappedRecyclable?.Items.Clear();
         wrappedRecyclable?.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:97");
         wrappedRecyclable = null;
-        Clear();
     }
 
     /// <summary>
@@ -130,7 +131,7 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     /// </summary>
     /// <param name="item">the item to track</param>
     /// <returns>a lifetime that expires when the given item is removed from the collection</returns>
-    public ILifetime GetMembershipLifetime(T item) => membershipLifetimes[item];
+    public ILifetime GetMembershipLifetime(T item) => membershipLifetimes[item].Recyclable!;
 
     /// <summary>
     /// Fires the Added event for the given item
@@ -138,7 +139,8 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     /// <param name="item">The item that was added</param>
     internal void FireAdded(T item)
     {
-        membershipLifetimes.Add(item, DefaultRecyclablePool.Instance.Rent());
+        var backingLifetime = DefaultRecyclablePool.Instance.Rent();
+        membershipLifetimes.Add(item, LeaseHelper.Track(backingLifetime));
         added?.Fire(item);
         _untypedAdded?.Fire(item);
         changed?.Fire();
@@ -155,7 +157,8 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
         changed?.Fire();
         var itemLifetime = membershipLifetimes[item];
         membershipLifetimes.Remove(item);
-        itemLifetime.TryDispose("external/klooie/src/klooie/Observability/ObservableCollection.cs:158");
+        itemLifetime.TryDisposeRecyclable();
+        itemLifetime.TryDispose(itemLifetime.Lease, "external/klooie/src/klooie/Observability/ObservableCollection.cs:158");
     }
 
     
@@ -335,6 +338,17 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     /// </summary>
     /// <returns>an enumerator for this list</returns>
     IEnumerator IEnumerable.GetEnumerator() => wrapped.GetEnumerator();
+
+    private void ClearMembershipLifetimes(string reason)
+    {
+        if (membershipLifetimes == null || membershipLifetimes.Count == 0) return;
+        foreach (var membershipLifetime in membershipLifetimes.Values)
+        {
+            membershipLifetime.TryDisposeRecyclable();
+            membershipLifetime.TryDispose(membershipLifetime.Lease, reason);
+        }
+        membershipLifetimes.Clear();
+    }
 }
 
 public class ObservableCollectionPool<T> : RecycleablePool<ObservableCollection<T>>

@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading;
+using System.Reflection;
 
 namespace klooie.tests;
 
@@ -304,6 +305,32 @@ public partial class ObservabilityTests
         Assert.IsFalse(lifetime.IsStillValid(ltLease));
     }
 
+    [TestMethod]
+    public void TestObservableCollectionMembershipLifetime_DoesNotDisposeReusedLease()
+    {
+        var collection = new ObservableCollection<object>();
+        var obj = new object();
+        collection.Add(obj);
+
+        var lifetime = collection.GetMembershipLifetime(obj);
+        Assert.IsTrue(lifetime is Recyclable);
+
+        var membershipTracker = GetMembershipTracker(collection, obj);
+        var backingLifetime = membershipTracker.Recyclable!;
+        var backingLease = membershipTracker.RecyclableLease;
+
+        backingLifetime.Dispose(backingLease, "external/klooie/src/tests/Observability/ObservabilityTests.cs:318");
+
+        var unrelatedLifetime = DefaultRecyclablePool.Instance.Rent();
+        var unrelatedLease = unrelatedLifetime.Lease;
+        Assert.AreSame(backingLifetime, unrelatedLifetime);
+
+        collection.Remove(obj);
+
+        Assert.IsTrue(unrelatedLifetime.IsStillValid(unrelatedLease));
+        unrelatedLifetime.Dispose(unrelatedLease, "external/klooie/src/tests/Observability/ObservabilityTests.cs:326");
+    }
+
 
     [TestMethod]
     public void TestSubscribeOnce()
@@ -322,6 +349,14 @@ public partial class ObservabilityTests
         Assert.AreEqual(1, counter);
         ev.Fire();
         Assert.AreEqual(1, counter);
+    }
+
+    private static LeaseState<Recyclable> GetMembershipTracker(ObservableCollection<object> collection, object item)
+    {
+        var membershipLifetimesField = typeof(ObservableCollection<object>).GetField("membershipLifetimes", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var membershipLifetimes = membershipLifetimesField.GetValue(collection)!;
+        var indexer = membershipLifetimes.GetType().GetProperty("Item")!;
+        return (LeaseState<Recyclable>)indexer.GetValue(membershipLifetimes, [item])!;
     }
  
 

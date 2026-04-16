@@ -115,4 +115,9 @@ It is possible to store the tracker as a field or variable if needed, but the li
 - `ILifetime.OnDisposed(...)` is only valid while the target lifetime is not already expiring. When code is running inside another event notification pass, a lifetime can begin disposing before later subscribers run.
 - Use `OnDisposedOrNow(...)` when the desired behavior is "run this on disposal, or immediately if disposal already started". This is the right pattern for pause/unpause symmetry work that listens to `PauseManager.OnPaused`.
 
+### ObservableCollection membership lifetimes
+- `ObservableCollection<T>` membership lifetimes should store the pooled `LeaseState<Recyclable>` from `LeaseHelper.Track(...)` directly; avoid adding extra wrapper objects around that tracker on the hot path.
+- `GetMembershipLifetime(...)` may expose the backing `Recyclable` as `ILifetime` on hot paths to avoid allocation, but disposal ownership must remain internal to the collection via the captured lease tracker.
+- When an observable collection itself returns to the pool, clear stored items and dispose membership trackers directly instead of relying on `Clear()` after pooled children have already been nulled or returned.
+
 There are likely many places in the codebase where this pattern is not followed. We need to audit the codebase and ensure that all parent/child relationships are using `LeaseHelper` correctly.
