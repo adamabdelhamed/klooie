@@ -139,11 +139,8 @@ public class WalkCalculationState
     public Angle CurrentAngle;
     public float CloseEnough;
     public float Visibility;
-
-    public bool IsCurrentlyCloseEnoughToPointOfInterest =>
-        PointOfInterest.HasValue &&
-        EyeBounds.CalculateNormalizedDistanceTo(PointOfInterest.Value) <= CloseEnough &&
-        WalkCalculation.HasLineOfSightTo(this, PointOfInterest.Value);
+    public bool HasLineOfSightToPointOfInterest;
+    public bool IsCurrentlyCloseEnoughToPointOfInterest;
 
     public void Hydrate(Walk walk)
     {
@@ -170,6 +167,8 @@ public class WalkCalculationState
         PointOfInterest = walk.GetPointOfInterest();
         Hazard = walk.GetHazard();
         CloseEnough = walk.CloseEnough;
+        HasLineOfSightToPointOfInterest = false;
+        IsCurrentlyCloseEnoughToPointOfInterest = false;
 
         // Adaptive weights start from movement’s current weights
         Weights = WanderWeights.Default;
@@ -183,6 +182,12 @@ public class WalkCalculationState
             {
                 Obstacles.WriteableBuffer.RemoveAt(i);
             }
+        }
+
+        if (PointOfInterest.HasValue && EyeBounds.CalculateNormalizedDistanceTo(PointOfInterest.Value) <= CloseEnough)
+        {
+            HasLineOfSightToPointOfInterest = WalkCalculation.HasLineOfSightTo(this, PointOfInterest.Value);
+            IsCurrentlyCloseEnoughToPointOfInterest = HasLineOfSightToPointOfInterest;
         }
     }
 
@@ -198,6 +203,8 @@ public class WalkCalculationState
         LastFewAngles = null!;
         LastFewRoundedBounds = null!;
         LastGoalDistances = null!;
+        HasLineOfSightToPointOfInterest = false;
+        IsCurrentlyCloseEnoughToPointOfInterest = false;
     }
 }
 
@@ -343,7 +350,7 @@ public static class WalkCalculation
 
     private static bool TryWalkDirectlyTowardsPointOfInterest(WalkCalculationState input, ref float newSpeed, ref Angle newAngle)
     {
-        if (input.PointOfInterest.HasValue == false || HasLineOfSightTo(input, input.PointOfInterest.Value) == false) return false;
+        if (input.PointOfInterest.HasValue == false || input.HasLineOfSightToPointOfInterest == false) return false;
 
         var direct = input.EyeBounds.CalculateAngleTo(input.PointOfInterest.Value);
         var s = EvaluateSpeed(input, direct, 1f);

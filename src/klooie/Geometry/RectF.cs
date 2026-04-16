@@ -216,6 +216,18 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         return MathF.Sqrt(dx * dx + dy * dy);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float CalculateDistanceSquaredTo(in RectF a, in RectF b)
+    {
+        float dx = MathF.Max(a.Left - (b.Left + b.Width), b.Left - (a.Left + a.Width));
+        float dy = MathF.Max(a.Top - (b.Top + b.Height), b.Top - (a.Top + a.Height));
+
+        dx = MathF.Max(dx, 0);
+        dy = MathF.Max(dy, 0);
+
+        return (dx * dx) + (dy * dy);
+    }
+
     // Replace branchy corner/edge cases with branchless formulation to match the other overload.
     public static float CalculateDistanceTo(float ax, float ay, float aw, float ah, float bx, float by, float bw, float bh)
     {
@@ -365,4 +377,6 @@ public readonly struct RectF : IEquatable<RectF>, ICollidable
         // Return the intersection rectangle
         return new RectF(x1, y1, x2 - x1, y2 - y1);
     }
+
+
 }

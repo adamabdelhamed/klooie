@@ -143,6 +143,11 @@ public static class CollisionDetector
             return prediction;
         }
         prediction.Visibility = visibility;
+        if (bufferLen <= 0)
+        {
+            prediction.CollisionPredicted = false;
+            return prediction;
+        }
 
         // Compute movement vector exactly like CreateRays()
         var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
@@ -170,12 +175,14 @@ public static class CollisionDetector
         for (int i = 0; i < bufferLen; i++)
         {
             var obstacle = colliders[i];
-            if (ReferenceEquals(from, obstacle) || !from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
+            if (ReferenceEquals(from, obstacle)) continue;
 
             var obBounds = obstacle.Bounds;
 
             // Same coarse distance reject you already had
-            if (visibility < float.MaxValue && RectF.CalculateDistanceTo(movingObject, obBounds) > visibility + VerySmallNumber) continue;
+            if (visibility < float.MaxValue && RectF.CalculateDistanceSquaredTo(movingObject, obBounds) > visibility2Limit) continue;
+
+            if (!from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
 
             // O(1) swept AABB test; returns earliest TOI t in [0, 1] if hit
             if (SweptAabbFirstHit(movingObject, obBounds, dx, dy, out float t, out Edge hitEdge, out float ix, out float iy))
