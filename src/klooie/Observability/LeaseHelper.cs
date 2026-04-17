@@ -189,10 +189,11 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
 {
     private static readonly LazyPool<LeaseState<TRecyclable>> pool = new(() => new LeaseState<TRecyclable>());
 
+    private TRecyclable? rField;
     /// <summary>
     /// The recyclable instance being tracked.
     /// </summary>
-    public TRecyclable? Recyclable { get => field != null && field.IsStillValid(RecyclableLease) ? field : null; private set; }
+    public TRecyclable? Recyclable { get => rField != null && rField.IsStillValid(RecyclableLease) ? rField : null; private set => rField = value; }
 
     /// <summary>
     /// The lease value captured when tracking started.
@@ -219,11 +220,31 @@ public class LeaseState<TRecyclable> : Recyclable where TRecyclable : Recyclable
     [Obsolete("Use the version that lets you pass a reason")]
     public void UnTrackAndDispose() => UnTrackAndDispose("LeaseState<T>.UnTrackAndDispose");
 
+    [Obsolete("use UnTrackAndDisposeStrict or TryUnTrackAndDispose")]
     public void UnTrackAndDispose(string reason)
     {
         if(reason == null) throw new ArgumentException("Reason cannot be null", nameof(reason));
         TryDisposeRecyclable();
         TryDispose(Lease, reason);
+    }
+
+    public void TryUnTrackAndDispose(string reason)
+    {
+        if (reason == null) throw new ArgumentException("Reason cannot be null", nameof(reason));
+        TryDisposeRecyclable();
+        TryDispose(Lease, reason);
+    }
+
+    public void UnTrackAndDisposeStrict(string reason)
+    {
+        if (reason == null) throw new ArgumentException("Reason cannot be null", nameof(reason));
+        if (IsRecyclableValid == false)
+        {
+            var disposalReason = rField == null ? "Recyclable is null" : rField.DisposalReason ?? "DisposalReason is null";
+            throw new InvalidOperationException($"Cannot untrack and dispose because the recyclable is not valid. Last known disposal reason: {disposalReason}");
+        }
+        Recyclable.Dispose(RecyclableLease, reason);
+        Dispose(Lease, reason);
     }
 
     public void Recycle(TRecyclable replacement)
