@@ -43,6 +43,22 @@ public class Recyclable : ILifetime
         Rent();
     }
 
+    public void AssertOwnership(int leaseVersion)
+    {
+        if (IsExpired)
+        {
+            throw new ObjectDisposedException(GetType().FullName, $"Object is already disposed. Lease: {leaseVersion}, Current State: {RecyclableState}, Previous Disposal Reason: {DisposalReason}");
+        }
+        if (IsExpiring)
+        {
+            throw new ObjectDisposedException(GetType().FullName, $"Object is being disposed. Lease: {leaseVersion}, Current State: {RecyclableState}, Previous Disposal Reason: {DisposalReason}");
+        }
+        if (leaseVersion != CurrentVersion)
+        {
+            throw new InvalidOperationException($"Invalid lease version. Provided lease: {leaseVersion}, Current lease: {CurrentVersion}, Current State: {RecyclableState}");
+        }
+    }
+
 
     [Obsolete("Adds no value, bypasses lease and reason checks")]
     public static void TryDisposeMe(Recyclable me) => me.TryDispose("Recyclable.TryDisposeMe");
