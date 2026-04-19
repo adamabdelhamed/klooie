@@ -6,6 +6,7 @@
 public class ConsoleApp : EventLoop
 {
     public static readonly Event Starting = Event.Create();
+
     [ThreadStatic]
     private static ConsoleApp? _current;
 

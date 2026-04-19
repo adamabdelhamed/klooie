@@ -7,7 +7,9 @@ public class Vision : Recyclable, IFrameTask
 {
     public const float DefaultVisibility = 20;
     public const float DefaultAngularVisibility = 60;
+    private const int RetainedSharedRayCandidateCapacity = 256;
     private static Event<Vision>? _visionInitiated;
+    private static readonly List<RayCandidate> sharedRayCandidates = new List<RayCandidate>(32);
     public static Event<Vision> VisionInitiated => _visionInitiated ??= Event<Vision>.Create();
 
     private Event? _visibleObjectsChanged;
@@ -16,8 +18,6 @@ public class Vision : Recyclable, IFrameTask
 
     private VisionFilterContext targetFilterContext = new VisionFilterContext();
     private readonly Dictionary<GameCollider, VisuallyTrackedObject> trackedObjectsMap = new Dictionary<GameCollider, VisuallyTrackedObject>(10);
-    private readonly Dictionary<GameCollider, bool> obstacleFilterCache = new Dictionary<GameCollider, bool>(32);
-    private readonly List<RayCandidate> rayCandidates = new List<RayCandidate>(32);
     private Event<VisionFilterContext>? _targetBeingEvaluated;
     public List<VisuallyTrackedObject> TrackedObjectsList { get; private set; } = new List<VisuallyTrackedObject>(10);
     public Event<VisionFilterContext> TargetBeingEvaluated => _targetBeingEvaluated ?? (_targetBeingEvaluated = Event<VisionFilterContext>.Create());
@@ -56,13 +56,16 @@ public class Vision : Recyclable, IFrameTask
     public void Scan()
     {
         RemoveStaleTrackedObjects();
-        if (Eye.IsVisible == false) return;
-        obstacleFilterCache.Clear();
+        if (Eye.IsVisible == false)
+        {
+            ReleaseScanScratch();
+            return;
+        }
         var buffer = ObstacleBufferPool.Instance.Rent();
-        Eye.ColliderGroup.SpacialIndex.Query(ResolveQueryBounds(), buffer);
-        FilterObstacles(buffer);
         try
         {
+            Eye.ColliderGroup.SpacialIndex.Query(ResolveQueryBounds(), buffer);
+            FilterObstacles(buffer);
             if (TryPerfestScan(buffer) == false)
             {
                 ApproximateScan(buffer);
@@ -70,6 +73,7 @@ public class Vision : Recyclable, IFrameTask
         }
         finally
         {
+            ReleaseScanScratch();
             buffer.Dispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:1");
         }
         _visibleObjectsChanged?.Fire();
@@ -271,7 +275,7 @@ public class Vision : Recyclable, IFrameTask
         for (var i = 0; i < buffer.WriteableBuffer.Count; i++)
         {
             var obstacle = buffer.WriteableBuffer[i];
-            if (IsIgnoredByFilterCached(obstacle) == false)
+            if (IsIgnoredByFilter(obstacle) == false)
             {
                 buffer.WriteableBuffer[writeIndex++] = obstacle;
             }
@@ -297,16 +301,13 @@ public class Vision : Recyclable, IFrameTask
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool IsIgnoredByFilterCached(GameCollider potentialTarget)
+    private void ReleaseScanScratch()
     {
-        if (obstacleFilterCache.TryGetValue(potentialTarget, out var ignored))
+        sharedRayCandidates.Clear();
+        if (sharedRayCandidates.Capacity > RetainedSharedRayCandidateCapacity)
         {
-            return ignored;
+            sharedRayCandidates.Capacity = RetainedSharedRayCandidateCapacity;
         }
-
-        ignored = IsIgnoredByFilter(potentialTarget);
-        obstacleFilterCache[potentialTarget] = ignored;
-        return ignored;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -320,9 +321,9 @@ public class Vision : Recyclable, IFrameTask
     private void PopulateCastObstacles(Angle angle, ObstacleBuffer castBuffer)
     {
         castBuffer.WriteableBuffer.Clear();
-        for (var i = 0; i < rayCandidates.Count; i++)
+        for (var i = 0; i < sharedRayCandidates.Count; i++)
         {
-            var candidate = rayCandidates[i];
+            var candidate = sharedRayCandidates[i];
             if (DiffShortestDegrees(angle.Value, candidate.CenterAngle) > candidate.AngularReach) continue;
             castBuffer.WriteableBuffer.Add(candidate.Collider);
         }
@@ -330,7 +331,7 @@ public class Vision : Recyclable, IFrameTask
 
     private void PopulateRayCandidates(ObstacleBuffer buffer)
     {
-        rayCandidates.Clear();
+        sharedRayCandidates.Clear();
         var eyeBounds = Eye.Bounds;
         var eyeRadius = eyeBounds.Hypotenous * 0.5f;
         const float angularPadding = 1.5f;
@@ -349,7 +350,7 @@ public class Vision : Recyclable, IFrameTask
                 ? 180f
                 : MathF.Min(180f, MathF.Atan2(sweepRadius, centerDistance) * radToDeg + angularPadding);
             var minPossibleDistance = MathF.Max(0, centerDistance - sweepRadius);
-            rayCandidates.Add(new RayCandidate(obstacle, centerAngle, angularReach, minPossibleDistance));
+            sharedRayCandidates.Add(new RayCandidate(obstacle, centerAngle, angularReach, minPossibleDistance));
         }
     }
 
@@ -357,9 +358,9 @@ public class Vision : Recyclable, IFrameTask
     private void PopulatePerfectScanObstacles(Angle angle, float targetDistance, GameCollider target, ObstacleBuffer castBuffer)
     {
         castBuffer.WriteableBuffer.Clear();
-        for (var i = 0; i < rayCandidates.Count; i++)
+        for (var i = 0; i < sharedRayCandidates.Count; i++)
         {
-            var candidate = rayCandidates[i];
+            var candidate = sharedRayCandidates[i];
             if (candidate.Collider == target) continue;
             if (candidate.MinDistance > targetDistance) continue;
             if (DiffShortestDegrees(angle.Value, candidate.CenterAngle) > candidate.AngularReach) continue;
@@ -390,8 +391,7 @@ public class Vision : Recyclable, IFrameTask
 
         TrackedObjectsList.Clear();
         trackedObjectsMap.Clear();
-        obstacleFilterCache.Clear();
-        rayCandidates.Clear();
+        ReleaseScanScratch();
         _visibleObjectsChanged?.TryDispose("external/klooie/src/klooie/Gaming/Physics/Vision.cs:395");
         _visibleObjectsChanged = null;
     }

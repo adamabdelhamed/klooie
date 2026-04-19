@@ -6,6 +6,9 @@ using System.Threading;
 namespace klooie;
 internal sealed class SubscriberCollection
 {
+    private const int MinRetainedSubscriberCapacity = 8;
+    private const int MinRetainedPendingAddCapacity = 4;
+
     [ThreadStatic]
     private static Stack<SubscriberCollection> lightweightCollectionPool;
     [ThreadStatic]
@@ -102,6 +105,8 @@ internal sealed class SubscriberCollection
             var entry = subscribers[i];
             if (entry.Subscription.IsStillValid(entry.Lease) == false) RemoveEntryAt(i);
         }
+
+        TrimOversizedLists();
         return subscribers.Count;
     }
 
@@ -125,7 +130,24 @@ internal sealed class SubscriberCollection
             entry.Subscription.TryDispose(entry.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:125");
             RemoveEntryAt(i);
         }
+
+        TrimOversizedLists(force: true);
         lightweightCollectionPool.Push(this);
+    }
+
+    private void TrimOversizedLists(bool force = false)
+    {
+        TrimOversizedList(subscribers, MinRetainedSubscriberCapacity, force);
+        TrimOversizedList(newSubscribersForNextNotificationCycle, MinRetainedPendingAddCapacity, force);
+    }
+
+    private static void TrimOversizedList<T>(List<T> list, int minRetainedCapacity, bool force)
+    {
+        if (list.Capacity <= minRetainedCapacity) return;
+
+        var targetCapacity = Math.Max(minRetainedCapacity, list.Count * 2);
+        if (force == false && list.Capacity <= targetCapacity * 2) return;
+        list.Capacity = targetCapacity;
     }
 
     private void AssertThreadForSubscription(ISubscription sub)
