@@ -1,7 +1,9 @@
+using PowerArgs;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
+using System.Text;
 
 namespace klooie;
 
@@ -14,12 +16,16 @@ public sealed class ConsoleRecordingExportProgress
 
 public sealed class ConsoleRecordingMp4Exporter
 {
-    private const int OutputWidth = 3840;
-    private const int OutputHeight = 2160;
+    private const int CellPixelWidth = 32;
+    private const int CellPixelHeight = CellPixelWidth * 2;
+    private const float FontPixelSize = 58f;
+    private const string FontFamilyName = "Consolas";
+    private const float TextOffsetX = 1f;
+    private const float TextOffsetY = -10f;
+    private const float TextScaleX = 1.003f;
+    private const float TextScaleY = 0.946f;
     private const double FinalFrameDurationSeconds = 1.0 / 30.0;
     private Font? cachedFont;
-    private int cachedCellWidth;
-    private int cachedCellHeight;
 
     public Task<FileInfo> ExportAsync(FileInfo manifestFile, Action<ConsoleRecordingExportProgress>? progress = null, CancellationToken cancellationToken = default) =>
         Task.Run(() => Export(manifestFile, progress, cancellationToken), cancellationToken);
@@ -36,15 +42,8 @@ public sealed class ConsoleRecordingMp4Exporter
         var framesConcatFile = new FileInfo(Path.Combine(workDirectory.FullName, "frames.ffconcat"));
         var audioConcatFile = new FileInfo(Path.Combine(workDirectory.FullName, "audio.ffconcat"));
 
-        using var frameBuffer = new Bitmap(OutputWidth, OutputHeight);
-        using var graphics = Graphics.FromImage(frameBuffer);
-        graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
-        graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.None;
-        graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-        graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-
         progress?.Invoke(new ConsoleRecordingExportProgress { Stage = "Rendering frames", OutputFile = outputFile });
-        var renderedFrames = RenderFrames(session, workDirectory, framesConcatFile, frameBuffer, graphics, progress, outputFile, cancellationToken);
+        var renderedFrames = RenderFrames(session, workDirectory, framesConcatFile, progress, outputFile, cancellationToken);
         if (renderedFrames == 0) throw new InvalidOperationException("Recording contains no frames to export");
 
         var hasAudio = WriteAudioConcat(session, audioConcatFile);
@@ -54,30 +53,34 @@ public sealed class ConsoleRecordingMp4Exporter
         return outputFile;
     }
 
-    private int RenderFrames(ConsoleRecordingSessionReader session, DirectoryInfo workDirectory, FileInfo framesConcatFile, Bitmap frameBuffer, Graphics graphics, Action<ConsoleRecordingExportProgress>? progress, FileInfo outputFile, CancellationToken cancellationToken)
+    private int RenderFrames(ConsoleRecordingSessionReader session, DirectoryInfo workDirectory, FileInfo framesConcatFile, Action<ConsoleRecordingExportProgress>? progress, FileInfo outputFile, CancellationToken cancellationToken)
     {
-        var frameIndex = 0;
+        var outputWidth = session.Manifest.Chunks.First().FirstFrameWidth * CellPixelWidth;
+        var outputHeight = session.Manifest.Chunks.First().FirstFrameHeight * CellPixelHeight;
+
+        var frameBitmaps = new List<ConsoleBitmap>();
+        var frameDurations = new List<double>();
+
         ConsoleBitmap? previousFrame = null;
         TimeSpan previousFrameTime = TimeSpan.Zero;
-
-        using var concatWriter = new StreamWriter(framesConcatFile.FullName, append: false);
-        concatWriter.WriteLine("ffconcat version 1.0");
 
         foreach (var chunk in session.Manifest.Chunks.OrderBy(c => c.ChunkIndex))
         {
             cancellationToken.ThrowIfCancellationRequested();
+
             using var reader = new ConsoleVideoChunkReader(session.ResolveChunkFile(chunk));
+
             while (reader.ReadFrame())
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
                 if (previousFrame != null)
                 {
                     var duration = reader.CurrentTimestamp - previousFrameTime;
                     if (duration <= TimeSpan.Zero) duration = TimeSpan.FromSeconds(FinalFrameDurationSeconds);
-                    WriteFrame(previousFrame, frameIndex, workDirectory, frameBuffer, graphics, concatWriter, duration.TotalSeconds);
-                    frameIndex++;
-                    previousFrame.Dispose(previousFrame.Lease, "Done exporting frame to MP4");
-                    if (frameIndex % 25 == 0) progress?.Invoke(new ConsoleRecordingExportProgress { Stage = "Rendering frames", FramesRendered = frameIndex, OutputFile = outputFile });
+
+                    frameBitmaps.Add(previousFrame);
+                    frameDurations.Add(duration.TotalSeconds);
                 }
 
                 previousFrame = reader.CurrentBitmap.Clone();
@@ -87,98 +90,164 @@ public sealed class ConsoleRecordingMp4Exporter
 
         if (previousFrame != null)
         {
-            WriteFrame(previousFrame, frameIndex, workDirectory, frameBuffer, graphics, concatWriter, FinalFrameDurationSeconds);
-            AppendFinalConcatEntry(concatWriter, GetFrameFile(workDirectory, frameIndex));
-            frameIndex++;
-            previousFrame.Dispose(previousFrame.Lease, "Done exporting final frame to MP4");
+            frameBitmaps.Add(previousFrame);
+            frameDurations.Add(FinalFrameDurationSeconds);
         }
 
-        return frameIndex;
+
+        var renderedFrames = 0;
+        var app = ConsoleApp.Current;
+      
+        using var rasterContext = new RasterContext(outputWidth, outputHeight);
+
+        for (var i = 0; i < frameBitmaps.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var bitmap = frameBitmaps[i];
+            WriteFrame(bitmap, i, workDirectory, rasterContext.FrameBuffer, rasterContext.Graphics);
+
+            app?.Invoke(bitmap,static bitmap =>  bitmap.Dispose(bitmap.Lease, "Done exporting frame to MP4"));
+
+            var completed = Interlocked.Increment(ref renderedFrames);
+                 
+            progress?.Invoke(new ConsoleRecordingExportProgress
+            {
+                Stage = "Rendering frames",
+                FramesRendered = completed,
+                OutputFile = outputFile
+            });   
+        }
+    
+        using var concatWriter = new StreamWriter(framesConcatFile.FullName, append: false);
+        concatWriter.WriteLine("ffconcat version 1.0");
+
+        for (var i = 0; i < frameDurations.Count; i++)
+        {
+            AppendConcatEntry(concatWriter, GetFrameFile(workDirectory, i), frameDurations[i]);
+        }
+
+        if (frameDurations.Count > 0)
+        {
+            AppendFinalConcatEntry(concatWriter, GetFrameFile(workDirectory, frameDurations.Count - 1));
+        }
+
+        return frameBitmaps.Count;
     }
 
-    private void WriteFrame(ConsoleBitmap bitmap, int frameIndex, DirectoryInfo workDirectory, Bitmap frameBuffer, Graphics graphics, StreamWriter concatWriter, double durationSeconds)
+    private void WriteFrame(ConsoleBitmap bitmap, int frameIndex, DirectoryInfo workDirectory, Bitmap frameBuffer, Graphics graphics)
     {
         var frameFile = GetFrameFile(workDirectory, frameIndex);
         Rasterize(bitmap, frameBuffer, graphics);
         frameBuffer.Save(frameFile.FullName, ImageFormat.Png);
-        AppendConcatEntry(concatWriter, frameFile, durationSeconds);
     }
 
     private void Rasterize(ConsoleBitmap bitmap, Bitmap frameBuffer, Graphics graphics)
     {
         graphics.Clear(Color.Black);
-        EnsureFont(graphics, Math.Max(1, frameBuffer.Width / bitmap.Width), Math.Max(1, frameBuffer.Height / bitmap.Height));
 
-        for (var x = 0; x < bitmap.Width; x++)
+        var font = GetFont();
+
+        graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+        graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+
+        var foregroundLayers = new Dictionary<RGB, StringBuilder>();
+        var backgroundBrushes = new Dictionary<RGB, SolidBrush>();
+
+        try
         {
-            var left = x * frameBuffer.Width / bitmap.Width;
-            var right = (x + 1) * frameBuffer.Width / bitmap.Width;
-            var cellPixelWidth = right - left;
+            for (var y = 0; y < bitmap.Height; y++)
+            {
+                var top = y * CellPixelHeight;
+
+                for (var x = 0; x < bitmap.Width; x++)
+                {
+                    var left = x * CellPixelWidth;
+                    var cell = bitmap.GetPixel(x, y);
+                    var rect = new Rectangle(left, top, CellPixelWidth, CellPixelHeight);
+
+                    if (backgroundBrushes.TryGetValue(cell.BackgroundColor, out var bg) == false)
+                    {
+                        bg = new SolidBrush(Color.FromArgb(cell.BackgroundColor.R, cell.BackgroundColor.G, cell.BackgroundColor.B));
+                        backgroundBrushes[cell.BackgroundColor] = bg;
+                    }
+
+                    graphics.FillRectangle(bg, rect);
+
+                    if (cell.Value != ' ' && foregroundLayers.ContainsKey(cell.ForegroundColor) == false)
+                    {
+                        foregroundLayers[cell.ForegroundColor] = new StringBuilder((bitmap.Width + Environment.NewLine.Length) * bitmap.Height);
+                    }
+                }
+            }
+
+            if (foregroundLayers.Count == 0) return;
+
+            var rowBuffers = new Dictionary<RGB, char[]>(foregroundLayers.Count);
+
+            foreach (var color in foregroundLayers.Keys)
+            {
+                var row = new char[bitmap.Width];
+                Array.Fill(row, ' ');
+                rowBuffers[color] = row;
+            }
 
             for (var y = 0; y < bitmap.Height; y++)
             {
-                var top = y * frameBuffer.Height / bitmap.Height;
-                var bottom = (y + 1) * frameBuffer.Height / bitmap.Height;
-                var cellPixelHeight = bottom - top;
-                var cell = bitmap.GetPixel(x, y);
-                var rect = new Rectangle(left, top, cellPixelWidth, cellPixelHeight);
+                foreach (var row in rowBuffers.Values)
+                {
+                    Array.Fill(row, ' ');
+                }
 
-                using var bg = new SolidBrush(Color.FromArgb(cell.BackgroundColor.R, cell.BackgroundColor.G, cell.BackgroundColor.B));
-                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
-                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-                graphics.FillRectangle(bg, rect);
+                for (var x = 0; x < bitmap.Width; x++)
+                {
+                    var cell = bitmap.GetPixel(x, y);
+                    if (cell.Value == ' ') continue;
+                    rowBuffers[cell.ForegroundColor][x] = cell.Value;
+                }
 
-                if (cell.Value == ' ') continue;
-                EnsureFont(graphics, cellPixelWidth, cellPixelHeight);
-
-                using var fg = new SolidBrush(Color.FromArgb(cell.ForegroundColor.R, cell.ForegroundColor.G, cell.ForegroundColor.B));
-                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-
-                var family = cachedFont!.FontFamily;
-                var style = cachedFont.Style;
-                var emHeight = family.GetEmHeight(style);
-                var ascent = family.GetCellAscent(style);
-                var ascentPixels = cachedFont.Size * ascent / emHeight;
-                var drawX = rect.Left + rect.Width / 2f;
-                var baselineY = rect.Top + rect.Height * 0.80f;
-                var drawY = baselineY - ascentPixels;
-
-                var glyphFormat = StringFormat.GenericTypographic;
-                glyphFormat.Alignment = StringAlignment.Center;
-                glyphFormat.LineAlignment = StringAlignment.Near;
-                glyphFormat.FormatFlags |= StringFormatFlags.NoClip;
-
-                graphics.DrawString(cell.Value.ToString(), cachedFont, fg, new PointF(drawX, drawY), glyphFormat);
+                foreach (var pair in foregroundLayers)
+                {
+                    pair.Value.Append(rowBuffers[pair.Key]);
+                    if (y < bitmap.Height - 1) pair.Value.AppendLine();
+                }
             }
+
+            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+            using var glyphFormat = (StringFormat)StringFormat.GenericTypographic.Clone();
+            glyphFormat.Alignment = StringAlignment.Near;
+            glyphFormat.LineAlignment = StringAlignment.Near;
+            glyphFormat.FormatFlags |= StringFormatFlags.NoClip | StringFormatFlags.MeasureTrailingSpaces;
+
+            foreach (var pair in foregroundLayers)
+            {
+                using var fg = new SolidBrush(Color.FromArgb(pair.Key.R, pair.Key.G, pair.Key.B));
+
+                var oldTransform = graphics.Transform;
+
+                try
+                {
+                    graphics.TranslateTransform(TextOffsetX, TextOffsetY);
+                    graphics.ScaleTransform(TextScaleX, TextScaleY);
+                    graphics.DrawString(pair.Value.ToString(), font, fg, new PointF(0, 0), glyphFormat);
+                }
+                finally
+                {
+                    graphics.Transform = oldTransform;
+                }
+            }
+        }
+        finally
+        {
+            foreach (var brush in backgroundBrushes.Values) brush.Dispose();
         }
     }
 
-    private void EnsureFont(Graphics graphics, int cellWidth, int cellHeight)
+    private Font GetFont()
     {
-        if (cachedFont != null && cachedCellWidth == cellWidth && cachedCellHeight == cellHeight) return;
-        cachedFont?.Dispose();
-
-        var trialSize = (float)cellHeight;
-        while (trialSize > 1)
-        {
-            var testFont = new Font("Consolas", trialSize, FontStyle.Regular, GraphicsUnit.Pixel);
-            var size = graphics.MeasureString("W", testFont, PointF.Empty, StringFormat.GenericTypographic);
-            if (size.Width <= cellWidth && size.Height <= cellHeight)
-            {
-                cachedFont = testFont;
-                cachedCellWidth = cellWidth;
-                cachedCellHeight = cellHeight;
-                return;
-            }
-
-            testFont.Dispose();
-            trialSize -= 0.5f;
-        }
-
-        cachedFont = new Font("Consolas", 1, FontStyle.Regular, GraphicsUnit.Pixel);
-        cachedCellWidth = cellWidth;
-        cachedCellHeight = cellHeight;
+        return cachedFont ??= new Font(FontFamilyName, FontPixelSize, FontStyle.Regular, GraphicsUnit.Pixel);
     }
 
     private bool WriteAudioConcat(ConsoleRecordingSessionReader session, FileInfo audioConcatFile)
@@ -194,10 +263,12 @@ public sealed class ConsoleRecordingMp4Exporter
 
         using var writer = new StreamWriter(audioConcatFile.FullName, append: false);
         writer.WriteLine("ffconcat version 1.0");
+
         for (var i = 0; i < audioFiles.Count; i++)
         {
             writer.WriteLine($"file '{EscapeFfconcatPath(audioFiles[i])}'");
         }
+
         return true;
     }
 
@@ -246,9 +317,12 @@ public sealed class ConsoleRecordingMp4Exporter
         startInfo.ArgumentList.Add(outputFile.FullName);
 
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start ffmpeg");
+
         var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+
         process.WaitForExit();
         cancellationToken.ThrowIfCancellationRequested();
+
         if (process.ExitCode != 0)
         {
             var stderr = stderrTask.GetAwaiter().GetResult();
@@ -256,7 +330,8 @@ public sealed class ConsoleRecordingMp4Exporter
         }
     }
 
-    private static FileInfo GetFrameFile(DirectoryInfo workDirectory, int frameIndex) => new FileInfo(Path.Combine(workDirectory.FullName, $"frame-{frameIndex:D06}.png"));
+    private static FileInfo GetFrameFile(DirectoryInfo workDirectory, int frameIndex) =>
+        new FileInfo(Path.Combine(workDirectory.FullName, $"frame-{frameIndex:D06}.png"));
 
     private static void AppendConcatEntry(StreamWriter writer, FileInfo frameFile, double durationSeconds)
     {
@@ -264,7 +339,31 @@ public sealed class ConsoleRecordingMp4Exporter
         writer.WriteLine($"duration {durationSeconds.ToString("F6", CultureInfo.InvariantCulture)}");
     }
 
-    private static void AppendFinalConcatEntry(StreamWriter writer, FileInfo frameFile) => writer.WriteLine($"file '{EscapeFfconcatPath(frameFile)}'");
+    private static void AppendFinalConcatEntry(StreamWriter writer, FileInfo frameFile) =>
+        writer.WriteLine($"file '{EscapeFfconcatPath(frameFile)}'");
 
-    private static string EscapeFfconcatPath(FileInfo file) => file.FullName.Replace('\\', '/').Replace("'", "'\\''");
+    private static string EscapeFfconcatPath(FileInfo file) =>
+        file.FullName.Replace('\\', '/').Replace("'", "'\\''");
+
+    private sealed class RasterContext : IDisposable
+    {
+        public Bitmap FrameBuffer { get; }
+        public Graphics Graphics { get; }
+
+        public RasterContext(int width, int height)
+        {
+            FrameBuffer = new Bitmap(width, height);
+            Graphics = Graphics.FromImage(FrameBuffer);
+            Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
+            Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.None;
+            Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+        }
+
+        public void Dispose()
+        {
+            Graphics.Dispose();
+            FrameBuffer.Dispose();
+        }
+    }
 }
