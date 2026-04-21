@@ -29,8 +29,6 @@ class VideoPlayerApp : ConsoleApp
             .Add(new ConsoleBitmapPlayer())
             .Fill();
         player.AudioPlayback = new ConsoleRecordingAudioPlayer();
-        var status = LayoutRoot.Add(new Label("Export MP4: E", autoSize: true) { Background = RGB.Black, Foreground = RGB.White }).DockToBottom();
-        status.ZIndex = int.MaxValue;
 
         if (File.Exists(input) && ConsoleRecordingManifestStore.IsManifestFile(new FileInfo(input)))
         {
@@ -46,59 +44,12 @@ class VideoPlayerApp : ConsoleApp
         else if (File.Exists(input))
         {
             player.Load(File.OpenRead(input));
-            status.Text = "Legacy .cv playback; MP4 export requires .krec".ToConsoleString();
         }
         else
         {
             throw new FileNotFoundException("Input path was not found", input);
         }
 
-        PushKeyForLifetime(ConsoleKey.E, () =>
-        {
-            if (recordingManifest == null)
-            {
-                status.Text = "MP4 export requires a .krec recording".ToConsoleString();
-                return;
-            }
-
-            if (exportRunning) return;
-            exportRunning = true;
-            var manifestToExport = recordingManifest;
-            status.Text = "Exporting MP4...".ToConsoleString(RGB.Yellow);
-            var app = this;
-            Task.Run(async () =>
-            {
-                try
-                {
-                    var exporter = new ConsoleRecordingMp4Exporter();
-                    var output = await exporter.ExportAsync(manifestToExport, progress =>
-                    {
-                        app.Invoke(progress, progress =>
-                        {
-                            var frameText = progress.FramesRendered > 0 ? $" ({progress.FramesRendered} frames)" : "";
-                            status.Text = $"{progress.Stage}{frameText}".ToConsoleString(RGB.Yellow);
-                        });
-                    });
-
-                    app.Invoke(output, output =>
-                    {
-                        status.Text = $"Exported {output.FullName}".ToConsoleString(RGB.Green);
-                    });
-                }
-                catch (Exception ex)
-                {
-                    app.Invoke(ex, ex =>
-                    {
-                        status.Text = "MP4 export failed".ToConsoleString(RGB.Red);
-                        _ = MessageDialog.Show(ex.Message);
-                    });
-                }
-                finally
-                {
-                    exportRunning = false;
-                }
-            });
-        }, this);
 
         return Task.CompletedTask;
     }

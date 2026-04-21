@@ -60,9 +60,7 @@ public sealed class ConsoleRecordingMp4Exporter
     private ConsoleRendererScaleProfile scaleProfile;
     private Font Font;
     private StringFormat glyphFormat;
-    private Dictionary<RGB, char[]> rowBuffers = new Dictionary<RGB, char[]>();
-    private Dictionary<RGB, StringBuilder> foregroundLayers = new Dictionary<RGB, StringBuilder>();
-    private readonly Dictionary<RGB, StringBuilder> foregroundLayerCache = new();
+    private readonly Dictionary<(char c, RGB color), Bitmap> tintedGlyphCache = new();
 
     private readonly Dictionary<RGB, SolidBrush> backgroundBrushCache = new();
     private readonly Dictionary<RGB, SolidBrush> foregroundBrushCache = new();
@@ -74,17 +72,6 @@ public sealed class ConsoleRecordingMp4Exporter
         {
             brush = new SolidBrush(Color.FromArgb(color.R, color.G, color.B));
             backgroundBrushCache[color] = brush;
-        }
-
-        return brush;
-    }
-
-    private SolidBrush GetForegroundBrush(RGB color)
-    {
-        if (foregroundBrushCache.TryGetValue(color, out var brush) == false)
-        {
-            brush = new SolidBrush(Color.FromArgb(color.R, color.G, color.B));
-            foregroundBrushCache[color] = brush;
         }
 
         return brush;
@@ -210,7 +197,7 @@ public sealed class ConsoleRecordingMp4Exporter
     {
         var frameFile = GetFrameFile(workDirectory, frameIndex);
         Rasterize(bitmap, frameBuffer, graphics);
-        frameBuffer.Save(frameFile.FullName, ImageFormat.Png);
+        frameBuffer.Save(frameFile.FullName, ImageFormat.Jpeg);
     }
 
     private void Rasterize(ConsoleBitmap bitmap, Bitmap frameBuffer, Graphics graphics)
@@ -264,13 +251,21 @@ public sealed class ConsoleRecordingMp4Exporter
                 var cell = bitmap.GetPixel(x, y);
                 if (cell.Value == ' ') continue;
 
-                var glyph = glyphAtlas.GetGlyph(cell.Value);
-                using var tinted = TintGlyph(glyph, cell.ForegroundColor);
-
+                var tinted = GetTintedGlyph(cell.Value, cell.ForegroundColor);
                 var left = x * scaleProfile.CellPixelWidth;
                 graphics.DrawImageUnscaled(tinted, left - ConsoleGlyphAtlas.GlyphPaddingX, top);
             }
         }
+    }
+
+    private Bitmap GetTintedGlyph(char c, RGB color)
+    {
+        if (tintedGlyphCache.TryGetValue((c, color), out var tinted)) return tinted;
+
+        var glyph = glyphAtlas.GetGlyph(c);
+        tinted = TintGlyph(glyph, color);
+        tintedGlyphCache[(c, color)] = tinted;
+        return tinted;
     }
 
     private Bitmap TintGlyph(Bitmap source, RGB color)
@@ -373,6 +368,16 @@ public sealed class ConsoleRecordingMp4Exporter
             startInfo.ArgumentList.Add("-shortest");
         }
 
+        startInfo.ArgumentList.Add("-preset");
+        startInfo.ArgumentList.Add("veryfast");
+
+        startInfo.ArgumentList.Add("-tune");
+        startInfo.ArgumentList.Add("zerolatency");
+
+        startInfo.ArgumentList.Add("-threads");
+        startInfo.ArgumentList.Add("2");
+        startInfo.ArgumentList.Add("-x264-params");
+        startInfo.ArgumentList.Add("rc-lookahead=10");
         startInfo.ArgumentList.Add(outputFile.FullName);
 
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start ffmpeg");
@@ -390,7 +395,7 @@ public sealed class ConsoleRecordingMp4Exporter
     }
 
     private static FileInfo GetFrameFile(DirectoryInfo workDirectory, int frameIndex) =>
-        new FileInfo(Path.Combine(workDirectory.FullName, $"frame-{frameIndex:D06}.png"));
+        new FileInfo(Path.Combine(workDirectory.FullName, $"frame-{frameIndex:D06}.jpg"));
 
     private static void AppendConcatEntry(StreamWriter writer, FileInfo frameFile, double durationSeconds)
     {
@@ -472,11 +477,11 @@ public sealed class ConsoleGlyphAtlas : IDisposable
             if (GlyphHasVisiblePixels(glyph)) return glyph;
 
             glyph.Dispose();
-            return (Bitmap)glyphs['?'].Clone();
+            return glyphs['?'];
         }
         catch
         {
-            return (Bitmap)glyphs['?'].Clone();
+            return glyphs['?'];
         }
     }
 
