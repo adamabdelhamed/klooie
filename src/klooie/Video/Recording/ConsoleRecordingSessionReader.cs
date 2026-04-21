@@ -62,7 +62,7 @@ public sealed class ConsoleRecordingSessionReader
         return ret;
     }
 
-    private FileInfo ResolveChunkFile(ConsoleRecordingChunkInfo chunk)
+    public FileInfo ResolveChunkFile(ConsoleRecordingChunkInfo chunk)
     {
         if (string.IsNullOrWhiteSpace(chunk.VideoPath) == false)
         {
@@ -72,5 +72,16 @@ public sealed class ConsoleRecordingSessionReader
         }
 
         return new FileInfo(Path.Combine(ConsoleRecordingSession.GetChunksDirectory(sessionDirectory).FullName, $"chunk-{chunk.ChunkIndex:D6}.cv"));
+    }
+
+    public FileInfo ResolveAudioFile(ConsoleRecordingChunkInfo chunk)
+    {
+        if (string.IsNullOrWhiteSpace(chunk.AudioPath) == false)
+        {
+            var relative = chunk.AudioPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            return new FileInfo(Path.Combine(sessionDirectory.FullName, relative));
+        }
+
+        return new FileInfo(Path.Combine(ConsoleRecordingSession.GetAudioDirectory(sessionDirectory).FullName, $"chunk-{chunk.ChunkIndex:D6}.wav"));
     }
 }

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.6" />
     <ProjectReference Include="..\klooie\klooie.csproj" />
   </ItemGroup>
   <PropertyGroup>
