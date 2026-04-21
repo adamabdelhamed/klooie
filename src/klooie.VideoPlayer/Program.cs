@@ -1,11 +1,20 @@
 ﻿using PowerArgs;
+using System.Diagnostics;
 
 namespace klooie.VideoPlayer;
 class Program
 {
     [ArgRequired, ArgPosition(0)]
     public string InputPath { get; set; } = "";
-    static void Main(string[] args) => Args.InvokeMain<Program>(args);
+    static void Main(string[] args)
+    {
+        Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+        Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
+        Thread.CurrentThread.Name = "UI Thread";
+        ConsoleProvider.Fancy = true;//ENABLE_VIRTUAL_TERMINAL_PROCESSING and such
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Args.InvokeMain<Program>(args);
+    }
     public void Main() => new VideoPlayerApp().Run();
 }
 
