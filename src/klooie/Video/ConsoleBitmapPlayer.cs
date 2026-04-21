@@ -89,6 +89,13 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
     /// The in memory video data structure.  This is set once the first frame of the video is loaded
     /// </summary>
     private InMemoryConsoleBitmapVideo inMemoryVideo;
+    private IConsoleRecordingAudioPlayback audioPlayback;
+
+    public IConsoleRecordingAudioPlayback AudioPlayback
+    {
+        get => audioPlayback;
+        set => audioPlayback = value;
+    }
 
     /// <summary>
     /// The cursor position at the time playback started.  If the current state is not Playing then this value
@@ -204,6 +211,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
         playStartPosition = TimeSpan.Zero;
         playStartTime = DateTime.UtcNow;
         playerProgressBar.PlayCursorPosition = 0;
+        RestartAudioIfPlaying();
         if (inMemoryVideo != null && inMemoryVideo.Frames.Count > 0)
         {
             CurrentFrame = inMemoryVideo.Frames[0].Bitmap;
@@ -224,6 +232,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
         playStartPosition = duration.Value;
         playStartTime = DateTime.UtcNow;
         playerProgressBar.PlayCursorPosition = Math.Min(1, playerProgressBar.LoadProgressPosition);
+        audioPlayback?.Stop();
         if (inMemoryVideo != null && inMemoryVideo.Frames.Count > 0)
         {
             CurrentFrame = inMemoryVideo.Frames[inMemoryVideo.Frames.Count - 1].Bitmap;
@@ -251,6 +260,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
 
         playStartPosition = TimeSpan.FromSeconds(playerProgressBar.PlayCursorPosition * duration.Value.TotalSeconds);
         playStartTime = DateTime.UtcNow;
+        RestartAudioIfPlaying();
         CurrentFrame = inMemoryVideo.Frames.OrderBy(f => Math.Abs((f.FrameTime - playStartPosition).TotalSeconds)).First().Bitmap;
     }
 
@@ -265,6 +275,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
 
         playStartPosition = previousFrame.FrameTime;
         playStartTime = DateTime.UtcNow;
+        audioPlayback?.Stop();
         CurrentFrame = previousFrame.Bitmap;
         lastFrameIndex--;
     }
@@ -290,6 +301,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
 
         playStartPosition = TimeSpan.FromSeconds(playerProgressBar.PlayCursorPosition * duration.Value.TotalSeconds);
         playStartTime = DateTime.UtcNow;
+        RestartAudioIfPlaying();
         CurrentFrame = inMemoryVideo.Frames.OrderBy(f => Math.Abs((f.FrameTime - playStartPosition).TotalSeconds)).First().Bitmap;
     }
 
@@ -304,6 +316,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
 
         playStartPosition = nextFrame.FrameTime;
         playStartTime = DateTime.UtcNow;
+        audioPlayback?.Stop();
         CurrentFrame = nextFrame.Bitmap;
         lastFrameIndex++;
     }
@@ -349,15 +362,18 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
             {
                 throw new InvalidOperationException("Playback is not permitted before a video is loaded");
             }
+            audioPlayback?.PlayFrom(TimeSpan.FromSeconds(playerProgressBar.PlayCursorPosition * duration.Value.TotalSeconds));
             ConsoleApp.Current.Invoke(PlayLoop);
         }
         else if (State == PlayerState.Stopped)
         {
+            audioPlayback?.Stop();
             pictureFrame.BorderColor = RGB.Yellow;
             playButton.Text = "Play".ToConsoleString();
         }
         else if (State == PlayerState.Paused)
         {
+            audioPlayback?.Pause();
             playButton.Text = "Play".ToConsoleString();
         }
         else if (State == PlayerState.NotLoaded)
@@ -367,6 +383,7 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
         }
         else if (State == PlayerState.Buffering)
         {
+            audioPlayback?.Pause();
             playButton.Text = "Play".ToConsoleString();
         }
         else if (State == PlayerState.Failed)
@@ -487,9 +504,92 @@ public sealed partial class ConsoleBitmapPlayer : ConsolePanel
         return tcs.Task;
     }
 
+    private void RestartAudioIfPlaying()
+    {
+        if (State == PlayerState.Playing) audioPlayback?.PlayFrom(playStartPosition);
+    }
+
+    /// <summary>
+    /// Loads a chunked native recording session from a directory.
+    /// </summary>
+    public Task Load(DirectoryInfo recordingDirectory) => Load(new ConsoleRecordingSessionReader(recordingDirectory));
+
+    /// <summary>
+    /// Loads a chunked native recording session from its launchable manifest file.
+    /// </summary>
+    public Task Load(FileInfo recordingManifest) => Load(new ConsoleRecordingSessionReader(recordingManifest));
+
+    /// <summary>
+    /// Loads a chunked native recording session.
+    /// </summary>
+    public Task Load(ConsoleRecordingSessionReader sessionReader)
+    {
+        var tcs = new TaskCompletionSource();
+        if (ConsoleApp.Current == null)
+        {
+            throw new InvalidOperationException("Can't load until the control has been added to an application");
+        }
+        var app = ConsoleApp.Current;
+        audioPlayback?.Load(sessionReader);
+        Task.Factory.StartNew(() =>
+        {
+            try
+            {
+                sessionReader.ReadToEnd((videoWithProgressInfo) =>
+                {
+                    inMemoryVideo = inMemoryVideo ?? videoWithProgressInfo;
+                    this.duration = videoWithProgressInfo.Duration;
+                    app.Invoke(() =>
+                    {
+                        if (this.CurrentFrame == null && videoWithProgressInfo.Frames.Count > 0)
+                        {
+                            this.CurrentFrame = videoWithProgressInfo.Frames[0].Bitmap;
+                            playerProgressBar.ShowPlayCursor = true;
+                            playButton.CanFocus = true;
+                            seekToBeginningButton.CanFocus = true;
+                            seekBackFrameButton.CanFocus = true;
+                            seekBack10SButton.CanFocus = true;
+                            seekForward10SButton.CanFocus = true;
+                            seekForwardFrameButton.CanFocus = true;
+                            seekToEndButton.CanFocus = true;
+                            State = PlayerState.Stopped;
+                            if (app.FocusedControl == null)
+                            {
+                                app.SetFocus(playButton);
+                            }
+                        }
+
+                        playerProgressBar.LoadProgressPosition = inMemoryVideo.LoadProgress;
+                    });
+                    if (AfterFrameLoadDelay.HasValue)
+                    {
+                        Thread.Sleep(AfterFrameLoadDelay.Value);
+                    }
+                });
+                tcs.SetResult();
+            }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+#if DEBUG
+                    failedMessage = ex.ToString();
+#else
+                    failedMessage = ex.Message;
+#endif
+                ConsoleApp.Current.InvokeNextCycle(() =>
+                {
+                    State = PlayerState.Failed;
+                });
+            }
+        });
+        return tcs.Task;
+    }
+
     protected override void OnReturn()
     {
         base.OnReturn();
+        audioPlayback?.Dispose();
+        audioPlayback = null;
         stopped?.TryDispose("external/klooie/src/klooie/Video/ConsoleBitmapPlayer.cs:493");
         stopped = null;
         onFramePlayed?.TryDispose("external/klooie/src/klooie/Video/ConsoleBitmapPlayer.cs:495");

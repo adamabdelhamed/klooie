@@ -222,6 +222,11 @@ public partial class ConsoleControl : Rectangular
     public ConsoleBitmapVideoWriter Recorder { get; private set; }
 
     /// <summary>
+    /// The native chunked recording session used to record the visual state of the control.
+    /// </summary>
+    public ConsoleRecordingSession RecordingSession { get; private set; }
+
+    /// <summary>
     /// An optional call back that lets you override the timestamp for each recorded frame. If not
     /// specified then the wallclock will be used
     /// </summary>
@@ -389,6 +394,8 @@ public partial class ConsoleControl : Rectangular
 
         _this.Bitmap?.Dispose("external/klooie/src/klooie/Controls/ConsoleControl.cs:1");
         _this.Bitmap = null;
+        _this.RecordingSession?.Stop();
+        _this.RecordingSession = null;
 
         FocusStackDepthInternal = null;
         HasBeenAddedToVisualTree = false;
@@ -461,6 +468,36 @@ public partial class ConsoleControl : Rectangular
             Recorder.TryFinish();
             Recorder = null;
         });
+    }
+
+    /// <summary>
+    /// Starts a native chunked recording session for this control.
+    /// </summary>
+    public ConsoleRecordingSession StartRecording(ConsoleRecordingOptions options) => ConsoleRecordingSession.Start(this, options);
+
+    /// <summary>
+    /// Enables native chunked recording for this control using an existing session.
+    /// </summary>
+    public void EnableRecording(ConsoleRecordingSession session, ILifetime lifetime = null)
+    {
+        if (RecordingSession != null && ReferenceEquals(RecordingSession, session) == false)
+        {
+            throw new InvalidOperationException("This control is already being recorded by a native recording session");
+        }
+        if (session == null) throw new ArgumentNullException(nameof(session));
+
+        RecordingSession = session;
+        lifetime = lifetime ?? this;
+        lifetime.OnDisposed(() =>
+        {
+            RecordingSession?.Stop();
+            RecordingSession = null;
+        });
+    }
+
+    internal void ClearRecordingSession(ConsoleRecordingSession session)
+    {
+        if (ReferenceEquals(RecordingSession, session)) RecordingSession = null;
     }
 
     /// <summary>
@@ -631,6 +668,8 @@ public partial class ConsoleControl : Rectangular
                 Recorder.Window = new RectF(0, 0, Width, Height);
                 Recorder.WriteFrame(Bitmap, false, RecorderTimestampProvider != null ? new TimeSpan?(RecorderTimestampProvider()) : new TimeSpan?());
             }
+
+            RecordingSession?.WriteFrame(Bitmap);
         }
         catch (Exception ex) when (ex is not PaintException)
         {

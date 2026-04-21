@@ -12,6 +12,11 @@ public interface IBinarySoundProvider
     Stream Open(string assetName);
 }
 
+public interface IConsoleAudioRecordingSink
+{
+    void WriteAudioSamples(ReadOnlySpan<float> samples, int sampleRate, int channels, long firstSampleFrame);
+}
+
 public static class SoundProvider
 {
     public const int SampleRate = 44100;
@@ -36,6 +41,7 @@ public interface ISoundProvider
     void Resume();
     void ClearCache();
     long SamplesRendered { get; }
+    IConsoleAudioRecordingSink? AudioRecordingSink { get; set; }
     IReleasableNote? PlaySustainedNote(NoteExpression note);
     Task Play(Song song, ILifetime? lifetime = null);
     EventLoop EventLoop { get; }
@@ -52,6 +58,7 @@ public class NoOpSoundProvider : ISoundProvider
     public void Resume() { }
     public void ClearCache() { }
     public long SamplesRendered => 0;
+    public IConsoleAudioRecordingSink? AudioRecordingSink { get; set; }
 
     public ScheduledSignalSourceMixer ScheduledSignalMixer => throw new NotImplementedException("NoOpSoundProvider does not support ScheduledSignalMixer.");
 

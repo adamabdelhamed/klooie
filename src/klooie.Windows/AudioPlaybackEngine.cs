@@ -38,6 +38,7 @@ public class AudioPlaybackEngine : ISoundProvider
     public EventLoop EventLoop => eventLoop;
     public ScheduledSignalSourceMixer ScheduledSignalMixer => scheduledSynthProvider;
     public long SamplesRendered => scheduledSynthProvider.SamplesRendered;
+    public IConsoleAudioRecordingSink? AudioRecordingSink { get; set; }
     public bool FailedToInitializeOrRun { get; private set; }
 
     public AudioPlaybackEngine(IBinarySoundProvider provider = null)
@@ -53,7 +54,7 @@ public class AudioPlaybackEngine : ISoundProvider
             sfxMixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount)) { ReadFully = true };
             scheduledSynthProvider = new ScheduledSynthProvider();
             masterMixer = new MixingSampleProvider([sfxMixer, scheduledSynthProvider]) { ReadFully = true };
-            mixer = new OutputProtectionSampleProvider(masterMixer);
+            mixer = new RecordingSampleProvider(new OutputProtectionSampleProvider(masterMixer), this);
             soundCache = new SoundCache(provider);
             deviceEnumerator = new MMDeviceEnumerator();
             notificationClient = new AudioDeviceNotificationClient(this);
@@ -441,6 +442,34 @@ public class AudioPlaybackEngine : ISoundProvider
         catch
         {
         }
+    }
+}
+
+internal sealed class RecordingSampleProvider : ISampleProvider
+{
+    private readonly ISampleProvider inner;
+    private readonly AudioPlaybackEngine engine;
+    private long sampleFramePosition;
+
+    public RecordingSampleProvider(ISampleProvider inner, AudioPlaybackEngine engine)
+    {
+        this.inner = inner ?? throw new ArgumentNullException(nameof(inner));
+        this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
+    public WaveFormat WaveFormat => inner.WaveFormat;
+
+    public int Read(float[] buffer, int offset, int count)
+    {
+        var read = inner.Read(buffer, offset, count);
+        if (read > 0)
+        {
+            var firstFrame = sampleFramePosition;
+            sampleFramePosition += read / WaveFormat.Channels;
+            engine.AudioRecordingSink?.WriteAudioSamples(buffer.AsSpan(offset, read), WaveFormat.SampleRate, WaveFormat.Channels, firstFrame);
+        }
+
+        return read;
     }
 }
 
