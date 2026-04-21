@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace klooie;
@@ -14,25 +15,87 @@ public sealed class ConsoleRecordingExportProgress
     public FileInfo? OutputFile { get; set; }
 }
 
+public sealed class ConsoleRendererScaleProfile
+{
+    public required string Name { get; init; }
+    public required int CellPixelWidth { get; init; }
+    public required float FontPixelSize { get; init; }
+    public required string FontFamilyName { get; init; }
+    public required float TextOffsetX { get; init; }
+    public required float TextOffsetY { get; init; }
+    public required float TextScaleX { get; init; }
+    public required float TextScaleY { get; init; }
+
+    public int CellPixelHeight => CellPixelWidth * 2;
+
+    public static ConsoleRendererScaleProfile High { get; } = new ConsoleRendererScaleProfile
+    {
+        Name = "High",
+        CellPixelWidth = 32,
+        FontPixelSize = 58f,
+        FontFamilyName = "Consolas",
+        TextOffsetX = 1f,
+        TextOffsetY = -10f,
+        TextScaleX = 1.003f,
+        TextScaleY = 0.946f,
+    };
+
+
+    public static ConsoleRendererScaleProfile Low { get; } = new ConsoleRendererScaleProfile
+    {
+        Name = "Low",
+        CellPixelWidth = 8,
+        FontPixelSize = 14.5f,
+        FontFamilyName = "Consolas",
+        TextOffsetX = 0f,
+        TextOffsetY = -3f,
+        TextScaleX = 1.003f,
+        TextScaleY = 0.947f,
+    };
+}
+
 public sealed class ConsoleRecordingMp4Exporter
 {
-    private const int CellPixelWidth = 32;
-    private const int CellPixelHeight = CellPixelWidth * 2;
-    private const float FontPixelSize = 58f;
-    private const string FontFamilyName = "Consolas";
-    private const float TextOffsetX = 1f;
-    private const float TextOffsetY = -10f;
-    private const float TextScaleX = 1.003f;
-    private const float TextScaleY = 0.946f;
+    private ConsoleRendererScaleProfile scaleProfile;
+    private Font Font;
+    private StringFormat glyphFormat;
+    private Dictionary<RGB, char[]> rowBuffers = new Dictionary<RGB, char[]>();
+    private Dictionary<RGB, StringBuilder> foregroundLayers = new Dictionary<RGB, StringBuilder>();
+    private readonly Dictionary<RGB, StringBuilder> foregroundLayerCache = new();
+
+    private readonly Dictionary<RGB, SolidBrush> backgroundBrushCache = new();
+    private readonly Dictionary<RGB, SolidBrush> foregroundBrushCache = new();
     private const double FinalFrameDurationSeconds = 1.0 / 30.0;
-    private Font? cachedFont;
 
-    public Task<FileInfo> ExportAsync(FileInfo manifestFile, Action<ConsoleRecordingExportProgress>? progress = null, CancellationToken cancellationToken = default) =>
-        Task.Run(() => Export(manifestFile, progress, cancellationToken), cancellationToken);
+    private SolidBrush GetBackgroundBrush(RGB color)
+    {
+        if (backgroundBrushCache.TryGetValue(color, out var brush) == false)
+        {
+            brush = new SolidBrush(Color.FromArgb(color.R, color.G, color.B));
+            backgroundBrushCache[color] = brush;
+        }
 
-    public FileInfo Export(FileInfo manifestFile, Action<ConsoleRecordingExportProgress>? progress = null, CancellationToken cancellationToken = default)
+        return brush;
+    }
+
+    private SolidBrush GetForegroundBrush(RGB color)
+    {
+        if (foregroundBrushCache.TryGetValue(color, out var brush) == false)
+        {
+            brush = new SolidBrush(Color.FromArgb(color.R, color.G, color.B));
+            foregroundBrushCache[color] = brush;
+        }
+
+        return brush;
+    }
+
+    public Task<FileInfo> ExportAsync(FileInfo manifestFile, ConsoleRendererScaleProfile profile, Action<ConsoleRecordingExportProgress>? progress = null, CancellationToken cancellationToken = default) => Task.Run(() => Export(manifestFile, profile, progress, cancellationToken), cancellationToken);
+
+    public FileInfo Export(FileInfo manifestFile, ConsoleRendererScaleProfile profile, Action<ConsoleRecordingExportProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         if (manifestFile == null) throw new ArgumentNullException(nameof(manifestFile));
+        this.scaleProfile = profile ?? throw new ArgumentNullException(nameof(profile));
+        this.Font = new Font(scaleProfile.FontFamilyName, scaleProfile.FontPixelSize, FontStyle.Regular, GraphicsUnit.Pixel);
         var session = new ConsoleRecordingSessionReader(manifestFile);
         var outputFile = new FileInfo(Path.ChangeExtension(manifestFile.FullName, ".mp4"));
         var workDirectory = new DirectoryInfo(Path.Combine(session.SessionDirectory.FullName, "export-frames"));
@@ -41,6 +104,11 @@ public sealed class ConsoleRecordingMp4Exporter
 
         var framesConcatFile = new FileInfo(Path.Combine(workDirectory.FullName, "frames.ffconcat"));
         var audioConcatFile = new FileInfo(Path.Combine(workDirectory.FullName, "audio.ffconcat"));
+
+        glyphFormat = (StringFormat)StringFormat.GenericTypographic.Clone();
+        glyphFormat.Alignment = StringAlignment.Near;
+        glyphFormat.LineAlignment = StringAlignment.Near;
+        glyphFormat.FormatFlags |= StringFormatFlags.NoClip | StringFormatFlags.MeasureTrailingSpaces;
 
         progress?.Invoke(new ConsoleRecordingExportProgress { Stage = "Rendering frames", OutputFile = outputFile });
         var renderedFrames = RenderFrames(session, workDirectory, framesConcatFile, progress, outputFile, cancellationToken);
@@ -55,8 +123,8 @@ public sealed class ConsoleRecordingMp4Exporter
 
     private int RenderFrames(ConsoleRecordingSessionReader session, DirectoryInfo workDirectory, FileInfo framesConcatFile, Action<ConsoleRecordingExportProgress>? progress, FileInfo outputFile, CancellationToken cancellationToken)
     {
-        var outputWidth = session.Manifest.Chunks.First().FirstFrameWidth * CellPixelWidth;
-        var outputHeight = session.Manifest.Chunks.First().FirstFrameHeight * CellPixelHeight;
+        var outputWidth = session.Manifest.Chunks.First().FirstFrameWidth * scaleProfile.CellPixelWidth;
+        var outputHeight = session.Manifest.Chunks.First().FirstFrameHeight * scaleProfile.CellPixelHeight;
 
         var frameBitmaps = new List<ConsoleBitmap>();
         var frameDurations = new List<double>();
@@ -144,111 +212,119 @@ public sealed class ConsoleRecordingMp4Exporter
 
     private void Rasterize(ConsoleBitmap bitmap, Bitmap frameBuffer, Graphics graphics)
     {
-        graphics.Clear(Color.Black);
-
-        var font = GetFont();
-
         graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
         graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
 
-        var foregroundLayers = new Dictionary<RGB, StringBuilder>();
-        var backgroundBrushes = new Dictionary<RGB, SolidBrush>();
+        foregroundLayers.Clear();
+        FillBackgroundsAndDiscoverForegroundLayers(bitmap, graphics);
 
-        try
+        if (foregroundLayers.Count == 0) return;
+
+        rowBuffers.Clear();
+        BuildForegroundLayerStrings(bitmap);
+        DrawForegroundLayers(graphics);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void FillBackgroundsAndDiscoverForegroundLayers(ConsoleBitmap bitmap, Graphics graphics)
+    {
+        for (var y = 0; y < bitmap.Height; y++)
         {
-            for (var y = 0; y < bitmap.Height; y++)
+            var top = y * scaleProfile.CellPixelHeight;
+            var runStart = 0;
+            var runColor = bitmap.GetPixel(0, y).BackgroundColor;
+
+            for (var x = 0; x < bitmap.Width; x++)
             {
-                var top = y * CellPixelHeight;
+                var cell = bitmap.GetPixel(x, y);
 
-                for (var x = 0; x < bitmap.Width; x++)
+                if (cell.Value != ' ' && foregroundLayers.ContainsKey(cell.ForegroundColor) == false)
                 {
-                    var left = x * CellPixelWidth;
-                    var cell = bitmap.GetPixel(x, y);
-                    var rect = new Rectangle(left, top, CellPixelWidth, CellPixelHeight);
-
-                    if (backgroundBrushes.TryGetValue(cell.BackgroundColor, out var bg) == false)
+                    if (foregroundLayerCache.TryGetValue(cell.ForegroundColor, out var layer) == false)
                     {
-                        bg = new SolidBrush(Color.FromArgb(cell.BackgroundColor.R, cell.BackgroundColor.G, cell.BackgroundColor.B));
-                        backgroundBrushes[cell.BackgroundColor] = bg;
+                        layer = new StringBuilder((bitmap.Width + 1) * bitmap.Height);
+                        foregroundLayerCache[cell.ForegroundColor] = layer;
+                    }
+                    else
+                    {
+                        layer.Clear();
                     }
 
-                    graphics.FillRectangle(bg, rect);
+                    foregroundLayers[cell.ForegroundColor] = layer;
+                }
 
-                    if (cell.Value != ' ' && foregroundLayers.ContainsKey(cell.ForegroundColor) == false)
+                var isLastCell = x == bitmap.Width - 1;
+                var nextColorDifferent = isLastCell == false && bitmap.GetPixel(x + 1, y).BackgroundColor.Equals(runColor) == false;
+
+                if (isLastCell || nextColorDifferent)
+                {
+                    var bg = GetBackgroundBrush(runColor);
+                    graphics.FillRectangle(bg, runStart * scaleProfile.CellPixelWidth, top, (x - runStart + 1) * scaleProfile.CellPixelWidth, scaleProfile.CellPixelHeight);
+
+                    if (isLastCell == false)
                     {
-                        foregroundLayers[cell.ForegroundColor] = new StringBuilder((bitmap.Width + Environment.NewLine.Length) * bitmap.Height);
+                        runStart = x + 1;
+                        runColor = bitmap.GetPixel(runStart, y).BackgroundColor;
                     }
                 }
             }
+        }
+    }
 
-            if (foregroundLayers.Count == 0) return;
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void BuildForegroundLayerStrings(ConsoleBitmap bitmap)
+    {
+        foreach (var color in foregroundLayers.Keys)
+        {
+            var row = new char[bitmap.Width];
+            Array.Fill(row, ' ');
+            rowBuffers[color] = row;
+        }
 
-            var rowBuffers = new Dictionary<RGB, char[]>(foregroundLayers.Count);
-
-            foreach (var color in foregroundLayers.Keys)
+        for (var y = 0; y < bitmap.Height; y++)
+        {
+            foreach (var row in rowBuffers.Values)
             {
-                var row = new char[bitmap.Width];
                 Array.Fill(row, ' ');
-                rowBuffers[color] = row;
             }
 
-            for (var y = 0; y < bitmap.Height; y++)
+            for (var x = 0; x < bitmap.Width; x++)
             {
-                foreach (var row in rowBuffers.Values)
-                {
-                    Array.Fill(row, ' ');
-                }
-
-                for (var x = 0; x < bitmap.Width; x++)
-                {
-                    var cell = bitmap.GetPixel(x, y);
-                    if (cell.Value == ' ') continue;
-                    rowBuffers[cell.ForegroundColor][x] = cell.Value;
-                }
-
-                foreach (var pair in foregroundLayers)
-                {
-                    pair.Value.Append(rowBuffers[pair.Key]);
-                    if (y < bitmap.Height - 1) pair.Value.AppendLine();
-                }
+                var cell = bitmap.GetPixel(x, y);
+                if (cell.Value == ' ') continue;
+                rowBuffers[cell.ForegroundColor][x] = cell.Value;
             }
-
-            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-
-            using var glyphFormat = (StringFormat)StringFormat.GenericTypographic.Clone();
-            glyphFormat.Alignment = StringAlignment.Near;
-            glyphFormat.LineAlignment = StringAlignment.Near;
-            glyphFormat.FormatFlags |= StringFormatFlags.NoClip | StringFormatFlags.MeasureTrailingSpaces;
 
             foreach (var pair in foregroundLayers)
             {
-                using var fg = new SolidBrush(Color.FromArgb(pair.Key.R, pair.Key.G, pair.Key.B));
-
-                var oldTransform = graphics.Transform;
-
-                try
-                {
-                    graphics.TranslateTransform(TextOffsetX, TextOffsetY);
-                    graphics.ScaleTransform(TextScaleX, TextScaleY);
-                    graphics.DrawString(pair.Value.ToString(), font, fg, new PointF(0, 0), glyphFormat);
-                }
-                finally
-                {
-                    graphics.Transform = oldTransform;
-                }
+                pair.Value.Append(rowBuffers[pair.Key]);
+                if (y < bitmap.Height - 1) pair.Value.Append('\n');
             }
         }
-        finally
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void DrawForegroundLayers(Graphics graphics)
+    {
+        foreach (var pair in foregroundLayers)
         {
-            foreach (var brush in backgroundBrushes.Values) brush.Dispose();
+            var fg = GetForegroundBrush(pair.Key);
+            var oldTransform = graphics.Transform;
+
+            try
+            {
+                graphics.TranslateTransform(scaleProfile.TextOffsetX, scaleProfile.TextOffsetY);
+                graphics.ScaleTransform(scaleProfile.TextScaleX, scaleProfile.TextScaleY);
+                graphics.DrawString(pair.Value.ToString(), Font, fg, new PointF(0, 0), glyphFormat);
+            }
+            finally
+            {
+                graphics.Transform = oldTransform;
+            }
         }
     }
 
-    private Font GetFont()
-    {
-        return cachedFont ??= new Font(FontFamilyName, FontPixelSize, FontStyle.Regular, GraphicsUnit.Pixel);
-    }
+
 
     private bool WriteAudioConcat(ConsoleRecordingSessionReader session, FileInfo audioConcatFile)
     {
@@ -354,7 +430,7 @@ public sealed class ConsoleRecordingMp4Exporter
         {
             FrameBuffer = new Bitmap(width, height);
             Graphics = Graphics.FromImage(FrameBuffer);
-            Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
+            Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixel;
             Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.None;
             Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
             Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
