@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="app.ico" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Prefer PowerArgs from super-repo if present, otherwise use klooie's own submodule -->
+    <Klooie_PowerArgs_Path Condition="Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+    <Klooie_PowerArgs_Path Condition="!Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
+      ..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj
+    </Klooie_PowerArgs_Path>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(Klooie_PowerArgs_Path)" />
+    <ProjectReference Include="..\klooie\klooie.csproj" />
+    <ProjectReference Include="..\klooie.Windows\klooie.Windows.csproj" />
+  </ItemGroup>
+
+</Project>
+ 
+ 

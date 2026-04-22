@@ -5,7 +5,6 @@ using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace klooie;
 
@@ -58,7 +57,6 @@ public sealed class ConsoleRendererScaleProfile
 public sealed class ConsoleRecordingMp4Exporter
 {
     private ConsoleRendererScaleProfile scaleProfile;
-    private Font Font;
     private StringFormat glyphFormat;
     private readonly Dictionary<(char c, RGB color), Bitmap> tintedGlyphCache = new();
 
@@ -77,13 +75,10 @@ public sealed class ConsoleRecordingMp4Exporter
         return brush;
     }
 
-    public Task<FileInfo> ExportAsync(FileInfo manifestFile, ConsoleRendererScaleProfile profile, Action<ConsoleRecordingExportProgress>? progress = null, CancellationToken cancellationToken = default) => Task.Run(() => Export(manifestFile, profile, progress, cancellationToken), cancellationToken);
-
     public FileInfo Export(FileInfo manifestFile, ConsoleRendererScaleProfile profile, Action<ConsoleRecordingExportProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         if (manifestFile == null) throw new ArgumentNullException(nameof(manifestFile));
         this.scaleProfile = profile ?? throw new ArgumentNullException(nameof(profile));
-        this.Font = new Font(scaleProfile.FontFamilyName, scaleProfile.FontPixelSize, FontStyle.Regular, GraphicsUnit.Pixel);
         this.glyphAtlas?.Dispose();
         this.glyphAtlas = new ConsoleGlyphAtlas(scaleProfile);
         var session = new ConsoleRecordingSessionReader(manifestFile);
