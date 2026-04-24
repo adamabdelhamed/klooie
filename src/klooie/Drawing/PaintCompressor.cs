@@ -6,22 +6,103 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace klooie;
+public static class PaintDetailSettings
+{
+    public const int DefaultDetailPercent = 60;
+    public static readonly PaintDetailProfile DefaultProfile = new PaintDetailProfile
+    {
+        MinTolerance = 0.005,
+        MaxTolerance = 0.0225,
+        LowestBackpressureBeforeIncreasingTolerance = 0,
+        HighestBackpressureBeforeMaxingTolerance = 0.9,
+        MaxSoftenedRun = 32,
+        FalloffDecay = 0.89,
+    };
+
+    public static PaintDetailProfile LowestDetailProfile { get; set; } = new PaintDetailProfile
+    {
+        MinTolerance = 0.012,
+        MaxTolerance = 0.06,
+        LowestBackpressureBeforeIncreasingTolerance = 0,
+        HighestBackpressureBeforeMaxingTolerance = 0.45,
+        MaxSoftenedRun = 48,
+        FalloffDecay = 0.94,
+    };
+
+    public static PaintDetailProfile HighestDetailProfile { get; set; } = new PaintDetailProfile
+    {
+        MinTolerance = 0.0015,
+        MaxTolerance = 0.012,
+        LowestBackpressureBeforeIncreasingTolerance = 0.1,
+        HighestBackpressureBeforeMaxingTolerance = 1.2,
+        MaxSoftenedRun = 16,
+        FalloffDecay = 0.82,
+    };
+
+    private static int detailPercent = DefaultDetailPercent;
+    private static PaintDetailProfile currentProfile = DefaultProfile;
+    public static int DetailPercent
+    {
+        get => detailPercent;
+        set
+        {
+            detailPercent = Math.Clamp(value, 0, 100);
+            currentProfile = ComputeProfile(detailPercent);
+        }
+    }
+
+    public static PaintDetailProfile CurrentProfile => currentProfile;
+
+    private static PaintDetailProfile ComputeProfile(int percent)
+    {
+        if (percent == DefaultDetailPercent) return DefaultProfile;
+
+        if (percent < DefaultDetailPercent)
+        {
+            var t = (DefaultDetailPercent - percent) / (double)DefaultDetailPercent;
+            return PaintDetailProfile.Lerp(DefaultProfile, LowestDetailProfile, t);
+        }
+        else
+        {
+            var t = (percent - DefaultDetailPercent) / (double)DefaultDetailPercent;
+            return PaintDetailProfile.Lerp(DefaultProfile, HighestDetailProfile, t);
+        }
+    }
+}
+
+public sealed class PaintDetailProfile
+{
+    public double MinTolerance { get; set; }
+    public double MaxTolerance { get; set; }
+    public double LowestBackpressureBeforeIncreasingTolerance { get; set; }
+    public double HighestBackpressureBeforeMaxingTolerance { get; set; }
+    public int MaxSoftenedRun { get; set; }
+    public double FalloffDecay { get; set; }
+
+    internal static PaintDetailProfile Lerp(PaintDetailProfile from, PaintDetailProfile to, double t)
+    {
+        t = Math.Clamp(t, 0, 1);
+        return new PaintDetailProfile
+        {
+            MinTolerance = Lerp(from.MinTolerance, to.MinTolerance, t),
+            MaxTolerance = Lerp(from.MaxTolerance, to.MaxTolerance, t),
+            LowestBackpressureBeforeIncreasingTolerance = Lerp(from.LowestBackpressureBeforeIncreasingTolerance, to.LowestBackpressureBeforeIncreasingTolerance, t),
+            HighestBackpressureBeforeMaxingTolerance = Lerp(from.HighestBackpressureBeforeMaxingTolerance, to.HighestBackpressureBeforeMaxingTolerance, t),
+            MaxSoftenedRun = Math.Clamp((int)Math.Round(Lerp(from.MaxSoftenedRun, to.MaxSoftenedRun, t)), 1, PaintCompressor.MaxSoftenedRunCapacity),
+            FalloffDecay = Lerp(from.FalloffDecay, to.FalloffDecay, t),
+        };
+    }
+
+    private static double Lerp(double from, double to, double t) => from + ((to - from) * t);
+}
+
 internal static class PaintCompressor
 {
-
-    // --- Tolerance decay ---
-    // Q12 fixed-point multipliers (1.0 -> 4096). Shape ~exp decay to ~5% by step 24, ~2% by step 32.
-    // You can tweak these 33 numbers; they’re intentionally conservative.
-    private static readonly ushort[] s_ToleranceFalloffQ12 =
-    {
-    4096, 3600, 3162, 2779, 2440, 2144, 1887, 1659, 1460, 1286, 1134,
-    1000,  882,  778,  686,  606,  535,  472,  416,  366,  322,
-     284,  250,  221,  195,  172,  151,  133,  117,  102,   89,   77,   66, // ~1.6% at 32
-};
-
     // Precomputed per-frame thresholds (squared) and per-channel caps (sqrt) for offsets 0..MaxSoftenedRun-1
-    public static readonly int[] s_ThrSqByOffset = new int[MaxSoftenedRun];
-    public static readonly byte[] s_ChannelCapByOffset = new byte[MaxSoftenedRun];
+    public const int MaxSoftenedRunCapacity = 64;
+    public static readonly int[] s_ThrSqByOffset = new int[MaxSoftenedRunCapacity];
+    public static readonly byte[] s_ChannelCapByOffset = new byte[MaxSoftenedRunCapacity];
+    public static int MaxSoftenedRun => Math.Clamp(PaintDetailSettings.CurrentProfile.MaxSoftenedRun, 1, MaxSoftenedRunCapacity);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int IntSqrt(int x)
@@ -36,7 +117,7 @@ internal static class PaintCompressor
     {
         for (int i = 0; i < MaxSoftenedRun; i++)
         {
-            int m = s_ToleranceFalloffQ12[i];                  // Q12
+            int m = ComputeToleranceFalloffQ12(i);
             int thrSq = baseSq <= 0 ? 0 : (int)(((long)baseSq * m) >> 12);
             s_ThrSqByOffset[i] = thrSq;
 
@@ -45,19 +126,6 @@ internal static class PaintCompressor
             if (cap > 255) cap = 255;
             s_ChannelCapByOffset[i] = (byte)cap;
         }
-    }
-
-    // After this many characters in the SAME run, treat tolerance as zero (exact equality only).
-    public const int MaxSoftenedRun = 32;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int DecayedThresholdSq(int baseSq, int offsetInRun)
-    {
-        if (baseSq <= 0) return 0;
-        if (offsetInRun >= MaxSoftenedRun) return 0;
-        // Fixed-point multiply: (baseSq * falloffQ12) >> 12
-        int m = s_ToleranceFalloffQ12[offsetInRun]; // 0..4096
-        return (int)(((long)baseSq * m) >> 12);
     }
 
     private const int MaxRgbDistSq = 255 * 255 * 3;
@@ -81,10 +149,11 @@ internal static class PaintCompressor
     public static int ComputeColorThresholdSq()
     {
         double backPressure = PaintQoS.BackpressureRatio;
-        var minTolerance = 0.005; // always have a tiny tolerance since we really don't need the full RGB space
-        var maxTolerance = 0.0225; // at extreme backpressure we can loosen things up, but not to the point of being ugly 
-        var lowestBackPressureBeforeIncreasingTolerance = 0f;
-        var highestBackPressureBeforeMaxingTolerance = 0.9f;
+        var profile = PaintDetailSettings.CurrentProfile;
+        var minTolerance = profile.MinTolerance; // always have a tiny tolerance since we really don't need the full RGB space
+        var maxTolerance = profile.MaxTolerance; // at extreme backpressure we can loosen things up, but not to the point of being ugly 
+        var lowestBackPressureBeforeIncreasingTolerance = profile.LowestBackpressureBeforeIncreasingTolerance;
+        var highestBackPressureBeforeMaxingTolerance = profile.HighestBackpressureBeforeMaxingTolerance;
 
         // compute tolerance from min to max based on backpressure
         double tolerance;
@@ -104,5 +173,13 @@ internal static class PaintCompressor
         if (sq < 0) sq = 0;
         if (sq > MaxRgbDistSq) sq = MaxRgbDistSq;
         return (int)sq;
+    }
+
+    private static int ComputeToleranceFalloffQ12(int offset)
+    {
+        var decay = PaintDetailSettings.CurrentProfile.FalloffDecay;
+        decay = Math.Clamp(decay, 0.01, 1);
+        var multiplier = Math.Pow(decay, offset);
+        return Math.Clamp((int)Math.Round(multiplier * 4096), 0, 4096);
     }
 }

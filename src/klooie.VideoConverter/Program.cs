@@ -47,7 +47,7 @@ public class Program
                 try
                 {
                     var converter = new ConsoleRecordingMp4Exporter();
-                    var info = converter.Export(manifestFile, ConsoleRendererScaleProfile.Medium, (p)=> Console.WriteLine($"{p.Stage}: {p.FramesRendered}  frames rendered"));
+                    var info = converter.Export(manifestFile, ConsoleRendererScaleProfile.High, (p)=> Console.WriteLine($"{p.Stage}: {p.FramesRendered}  frames rendered"));
                     Console.WriteLine($"Exported {manifestFile.Name} to {info.FullName}");
                 }
                 catch(Exception ex)
