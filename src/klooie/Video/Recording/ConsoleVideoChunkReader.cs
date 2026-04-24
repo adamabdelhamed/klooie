@@ -5,6 +5,7 @@ namespace klooie;
 public sealed class ConsoleVideoChunkReader : IDisposable
 {
     private readonly StreamReader reader;
+    private readonly List<ConsoleCharacter> cellTable = new();
     private ConsoleBitmap readBuffer;
     private bool reachedEnd;
 
@@ -42,6 +43,12 @@ public sealed class ConsoleVideoChunkReader : IDisposable
             }
 
             if (line.Length == 0) continue;
+            if (line.StartsWith("T|", StringComparison.Ordinal))
+            {
+                ReadCellTableLine(line);
+                continue;
+            }
+
             ReadFrameLine(line);
             return true;
         }
@@ -72,8 +79,9 @@ public sealed class ConsoleVideoChunkReader : IDisposable
         var parts = line.Split('|');
         if (parts.Length < 6) throw new FormatException("Invalid frame line");
 
-        var isRaw = parts[0] == "R";
-        var isDiff = parts[0] == "D";
+        var isRaw = parts[0] == "R" || parts[0] == "R3";
+        var isDiff = parts[0] == "D" || parts[0] == "D3";
+        var usesCellTable = parts[0] == "R3" || parts[0] == "D3";
         if (isRaw == false && isDiff == false) throw new FormatException("Unknown frame kind");
 
         CurrentFrameIsRaw = isRaw;
@@ -91,7 +99,7 @@ public sealed class ConsoleVideoChunkReader : IDisposable
             {
                 for (var x = 0; x < width; x++)
                 {
-                    readBuffer.SetPixel(x, y, ParseCell(cells[index++]));
+                    readBuffer.SetPixel(x, y, usesCellTable ? ParseCellId(cells[index++]) : ParseCell(cells[index++]));
                 }
             }
         }
@@ -106,12 +114,37 @@ public sealed class ConsoleVideoChunkReader : IDisposable
             {
                 var comma1 = diff.IndexOf(',');
                 var comma2 = diff.IndexOf(',', comma1 + 1);
-                var x = int.Parse(diff.Substring(0, comma1), CultureInfo.InvariantCulture);
-                var y = int.Parse(diff.Substring(comma1 + 1, comma2 - comma1 - 1), CultureInfo.InvariantCulture);
-                var cell = ParseCell(diff.Substring(comma2 + 1));
+                var xText = diff.Substring(0, comma1);
+                var yText = diff.Substring(comma1 + 1, comma2 - comma1 - 1);
+                var x = usesCellTable ? FromBase36(xText) : int.Parse(xText, CultureInfo.InvariantCulture);
+                var y = usesCellTable ? FromBase36(yText) : int.Parse(yText, CultureInfo.InvariantCulture);
+                var cellText = diff.Substring(comma2 + 1);
+                var cell = usesCellTable ? ParseCellId(cellText) : ParseCell(cellText);
                 readBuffer.SetPixel(x, y, cell);
             }
         }
+    }
+
+    private void ReadCellTableLine(string line)
+    {
+        var parts = line.Split('|');
+        if (parts.Length != 6) throw new FormatException("Invalid cell table line");
+
+        var id = FromBase36(parts[1]);
+        if (id != cellTable.Count) throw new FormatException("Cell table ids must be contiguous");
+
+        cellTable.Add(new ConsoleCharacter(
+            (char)FromBase36(parts[2]),
+            ParseRgbHex(parts[3]),
+            ParseRgbHex(parts[4]),
+            parts[5] == "1"));
+    }
+
+    private ConsoleCharacter ParseCellId(string value)
+    {
+        var id = FromBase36(value);
+        if ((uint)id >= (uint)cellTable.Count) throw new FormatException("Cell table id is out of range");
+        return cellTable[id];
     }
 
     private void EnsureBitmap(int width, int height, bool replace)
@@ -142,5 +175,35 @@ public sealed class ConsoleVideoChunkReader : IDisposable
             byte.Parse(parts[0], CultureInfo.InvariantCulture),
             byte.Parse(parts[1], CultureInfo.InvariantCulture),
             byte.Parse(parts[2], CultureInfo.InvariantCulture));
+    }
+
+    private static RGB ParseRgbHex(string value)
+    {
+        if (value.Length != 6) throw new FormatException("Invalid RGB hex");
+        return new RGB(
+            byte.Parse(value.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+            byte.Parse(value.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+            byte.Parse(value.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+    }
+
+    private static int FromBase36(string value)
+    {
+        var result = 0;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            var digit = c >= '0' && c <= '9'
+                ? c - '0'
+                : c >= 'A' && c <= 'Z'
+                    ? c - 'A' + 10
+                    : c >= 'a' && c <= 'z'
+                        ? c - 'a' + 10
+                        : -1;
+
+            if (digit < 0 || digit >= 36) throw new FormatException("Invalid base36 value");
+            checked { result = (result * 36) + digit; }
+        }
+
+        return result;
     }
 }

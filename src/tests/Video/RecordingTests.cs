@@ -96,6 +96,30 @@ public class RecordingTests
     }
 
     [TestMethod]
+    public void ConsoleRecordingSession_UsesCellTableEncoding()
+    {
+        var dir = CreateRecordingDirectory();
+        var control = new ConsoleControl();
+        var bitmap = CreateFilledBitmap(20, 10, ConsoleCharacter.RedBG());
+
+        using (var session = ConsoleRecordingSession.Start(control, new ConsoleRecordingOptions { OutputDirectory = dir }))
+        {
+            session.WriteFrame(bitmap);
+            session.Stop();
+        }
+
+        var chunk = new FileInfo(Path.Combine(dir.FullName, "chunks", "chunk-000000.cv"));
+        var text = File.ReadAllText(chunk.FullName);
+        Assert.IsTrue(text.Contains("Encoding=TextV3CellTable"));
+        Assert.IsTrue(text.Contains("T|0|"));
+        Assert.IsTrue(text.Contains("R3|"));
+
+        using var reader = new ConsoleVideoChunkReader(chunk);
+        Assert.IsTrue(reader.ReadFrame());
+        Assert.AreEqual(bitmap, reader.CurrentBitmap);
+    }
+
+    [TestMethod]
     public void ConsoleRecordingSession_RollsChunksAndEachChunkStartsRaw()
     {
         var dir = CreateRecordingDirectory();

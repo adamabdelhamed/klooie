@@ -41,7 +41,6 @@ public sealed class ConsoleBitmapRasterizer : IDisposable
         }
 
         ConfigureGraphics(graphics);
-        graphics.Clear(Color.Black);
         DrawBackgrounds(bitmap, graphics);
         DrawForegroundGlyphs(bitmap, graphics);
     }

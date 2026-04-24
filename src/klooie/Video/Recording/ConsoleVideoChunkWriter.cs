@@ -25,6 +25,7 @@ public sealed class ConsoleVideoChunkWriter : IDisposable
     private readonly FileStream stream;
     private readonly StreamWriter writer;
     private readonly ConsoleRecordingDiagnosticsBuilder diagnostics;
+    private readonly Dictionary<ConsoleCharacter, int> cellIds = new();
     private ConsoleCharacter[] previousPixels;
     private int previousWidth;
     private int previousHeight;
@@ -230,14 +231,16 @@ public sealed class ConsoleVideoChunkWriter : IDisposable
         writer.WriteLine(Magic);
         writer.WriteLine("ChunkIndex=" + chunkIndex.ToString(CultureInfo.InvariantCulture));
         writer.WriteLine("ChunkStartTicks=" + chunkStart.Ticks.ToString(CultureInfo.InvariantCulture));
-        writer.WriteLine("Encoding=TextV2");
+        writer.WriteLine("Encoding=TextV3CellTable");
         writer.WriteLine("KeyframePolicy=ChunkStartOnly");
         writer.WriteLine("ENDHEADER");
     }
 
     private void WriteRawFrame(ConsoleBitmap bitmap, TimeSpan timestamp, int left, int top, int width, int height)
     {
-        writer.Write("R|");
+        EnsureAllCellIds(bitmap, left, top, width, height);
+
+        writer.Write("R3|");
         writer.Write(timestamp.Ticks.ToString(CultureInfo.InvariantCulture));
         writer.Write("|0|");
         writer.Write(width.ToString(CultureInfo.InvariantCulture));
@@ -253,7 +256,7 @@ public sealed class ConsoleVideoChunkWriter : IDisposable
                 if (index > 0) writer.Write("~");
                 var pixel = bitmap.GetPixel(left + x, top + y);
                 previousPixels[index++] = pixel;
-                WriteCell(pixel);
+                WriteCellId(pixel);
             }
         }
         writer.WriteLine();
@@ -265,7 +268,9 @@ public sealed class ConsoleVideoChunkWriter : IDisposable
 
     private void WriteDiffFrame(ConsoleBitmap bitmap, TimeSpan timestamp, int left, int top, int width, int height, int diffCount)
     {
-        writer.Write("D|");
+        EnsureChangedCellIds(bitmap, left, top, width, height);
+
+        writer.Write("D3|");
         writer.Write(timestamp.Ticks.ToString(CultureInfo.InvariantCulture));
         writer.Write("|0|");
         writer.Write(width.ToString(CultureInfo.InvariantCulture));
@@ -285,11 +290,11 @@ public sealed class ConsoleVideoChunkWriter : IDisposable
                 if (pixel.EqualsIn(previousPixels[index]) == false)
                 {
                     if (emitted++ > 0) writer.Write("~");
-                    writer.Write(x.ToString(CultureInfo.InvariantCulture));
+                    writer.Write(ToBase36(x));
                     writer.Write(",");
-                    writer.Write(y.ToString(CultureInfo.InvariantCulture));
+                    writer.Write(ToBase36(y));
                     writer.Write(",");
-                    WriteCell(pixel);
+                    WriteCellId(pixel);
                     previousPixels[index] = pixel;
                 }
                 index++;
@@ -325,6 +330,51 @@ public sealed class ConsoleVideoChunkWriter : IDisposable
         writer.Write(cell.IsUnderlined ? "1" : "0");
     }
 
+    private void WriteCellId(in ConsoleCharacter cell) => writer.Write(ToBase36(cellIds[cell]));
+
+    private void EnsureAllCellIds(ConsoleBitmap bitmap, int left, int top, int width, int height)
+    {
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                EnsureCellId(bitmap.GetPixel(left + x, top + y));
+            }
+        }
+    }
+
+    private void EnsureChangedCellIds(ConsoleBitmap bitmap, int left, int top, int width, int height)
+    {
+        var index = 0;
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var pixel = bitmap.GetPixel(left + x, top + y);
+                if (pixel.EqualsIn(previousPixels[index]) == false) EnsureCellId(pixel);
+                index++;
+            }
+        }
+    }
+
+    private void EnsureCellId(in ConsoleCharacter cell)
+    {
+        if (cellIds.ContainsKey(cell)) return;
+
+        var id = cellIds.Count;
+        cellIds.Add(cell, id);
+        writer.Write("T|");
+        writer.Write(ToBase36(id));
+        writer.Write("|");
+        writer.Write(ToBase36(cell.Value));
+        writer.Write("|");
+        WriteRgbHex(cell.ForegroundColor);
+        writer.Write("|");
+        WriteRgbHex(cell.BackgroundColor);
+        writer.Write("|");
+        writer.WriteLine(cell.IsUnderlined ? "1" : "0");
+    }
+
     private void WriteRgb(in RGB rgb)
     {
         writer.Write(rgb.R.ToString(CultureInfo.InvariantCulture));
@@ -332,6 +382,30 @@ public sealed class ConsoleVideoChunkWriter : IDisposable
         writer.Write(rgb.G.ToString(CultureInfo.InvariantCulture));
         writer.Write(",");
         writer.Write(rgb.B.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private void WriteRgbHex(in RGB rgb)
+    {
+        writer.Write(rgb.R.ToString("X2", CultureInfo.InvariantCulture));
+        writer.Write(rgb.G.ToString("X2", CultureInfo.InvariantCulture));
+        writer.Write(rgb.B.ToString("X2", CultureInfo.InvariantCulture));
+    }
+
+    private static string ToBase36(int value)
+    {
+        const string digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        if (value == 0) return "0";
+
+        Span<char> buffer = stackalloc char[16];
+        var pos = buffer.Length;
+        var remaining = value;
+        while (remaining > 0)
+        {
+            buffer[--pos] = digits[remaining % 36];
+            remaining /= 36;
+        }
+
+        return new string(buffer[pos..]);
     }
 
     private int GetEffectiveLeft(ConsoleBitmap bitmap) => window.HasValue ? Math.Max(0, (int)window.Value.Left) : 0;

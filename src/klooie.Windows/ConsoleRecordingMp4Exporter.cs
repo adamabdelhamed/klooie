@@ -54,11 +54,14 @@ public sealed class ConsoleRecordingMp4Exporter
         var outputWidth = session.Manifest.Chunks.First().FirstFrameWidth * scaleProfile.CellPixelWidth;
         var outputHeight = session.Manifest.Chunks.First().FirstFrameHeight * scaleProfile.CellPixelHeight;
 
-        var frameBitmaps = new List<ConsoleBitmap>();
         var frameDurations = new List<double>();
 
         ConsoleBitmap? previousFrame = null;
         TimeSpan previousFrameTime = TimeSpan.Zero;
+        var renderedFrames = 0;
+        var app = ConsoleApp.Current;
+
+        using var rasterContext = new RasterContext(outputWidth, outputHeight);
 
         foreach (var chunk in session.Manifest.Chunks.OrderBy(c => c.ChunkIndex))
         {
@@ -75,8 +78,17 @@ public sealed class ConsoleRecordingMp4Exporter
                     var duration = reader.CurrentTimestamp - previousFrameTime;
                     if (duration <= TimeSpan.Zero) duration = TimeSpan.FromSeconds(FinalFrameDurationSeconds);
 
-                    frameBitmaps.Add(previousFrame);
+                    WriteFrame(previousFrame, renderedFrames, workDirectory, rasterContext.FrameBuffer, rasterContext.Graphics);
+                    app?.Invoke(previousFrame, static bitmap => bitmap.Dispose(bitmap.Lease, "Done exporting frame to MP4"));
+                    renderedFrames++;
                     frameDurations.Add(duration.TotalSeconds);
+
+                    progress?.Invoke(new ConsoleRecordingExportProgress
+                    {
+                        Stage = "Rendering frames",
+                        FramesRendered = renderedFrames,
+                        OutputFile = outputFile
+                    });
                 }
 
                 previousFrame = reader.CurrentBitmap.Clone();
@@ -86,33 +98,16 @@ public sealed class ConsoleRecordingMp4Exporter
 
         if (previousFrame != null)
         {
-            frameBitmaps.Add(previousFrame);
+            WriteFrame(previousFrame, renderedFrames, workDirectory, rasterContext.FrameBuffer, rasterContext.Graphics);
+            app?.Invoke(previousFrame, static bitmap => bitmap.Dispose(bitmap.Lease, "Done exporting frame to MP4"));
+            renderedFrames++;
             frameDurations.Add(FinalFrameDurationSeconds);
-        }
-
-
-        var renderedFrames = 0;
-        var app = ConsoleApp.Current;
-      
-        using var rasterContext = new RasterContext(outputWidth, outputHeight);
-
-        for (var i = 0; i < frameBitmaps.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var bitmap = frameBitmaps[i];
-            WriteFrame(bitmap, i, workDirectory, rasterContext.FrameBuffer, rasterContext.Graphics);
-
-            app?.Invoke(bitmap,static bitmap =>  bitmap.Dispose(bitmap.Lease, "Done exporting frame to MP4"));
-
-            var completed = Interlocked.Increment(ref renderedFrames);
-                 
             progress?.Invoke(new ConsoleRecordingExportProgress
             {
                 Stage = "Rendering frames",
-                FramesRendered = completed,
+                FramesRendered = renderedFrames,
                 OutputFile = outputFile
-            });   
+            });
         }
     
         using var concatWriter = new StreamWriter(framesConcatFile.FullName, append: false);
@@ -128,7 +123,7 @@ public sealed class ConsoleRecordingMp4Exporter
             AppendFinalConcatEntry(concatWriter, GetFrameFile(workDirectory, frameDurations.Count - 1));
         }
 
-        return frameBitmaps.Count;
+        return renderedFrames;
     }
 
     private void WriteFrame(ConsoleBitmap bitmap, int frameIndex, DirectoryInfo workDirectory, Bitmap frameBuffer, Graphics graphics)
@@ -193,6 +188,10 @@ public sealed class ConsoleRecordingMp4Exporter
 
         startInfo.ArgumentList.Add("-c:v");
         startInfo.ArgumentList.Add("libx264");
+        startInfo.ArgumentList.Add("-crf");
+        startInfo.ArgumentList.Add("16");
+        startInfo.ArgumentList.Add("-preset");
+        startInfo.ArgumentList.Add("veryfast");
         startInfo.ArgumentList.Add("-pix_fmt");
         startInfo.ArgumentList.Add("yuv420p");
 
@@ -203,16 +202,6 @@ public sealed class ConsoleRecordingMp4Exporter
             startInfo.ArgumentList.Add("-shortest");
         }
 
-        startInfo.ArgumentList.Add("-preset");
-        startInfo.ArgumentList.Add("veryfast");
-
-        startInfo.ArgumentList.Add("-tune");
-        startInfo.ArgumentList.Add("zerolatency");
-
-        startInfo.ArgumentList.Add("-threads");
-        startInfo.ArgumentList.Add("2");
-        startInfo.ArgumentList.Add("-x264-params");
-        startInfo.ArgumentList.Add("rc-lookahead=10");
         startInfo.ArgumentList.Add(outputFile.FullName);
 
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start ffmpeg");
@@ -230,7 +219,7 @@ public sealed class ConsoleRecordingMp4Exporter
     }
 
     private static FileInfo GetFrameFile(DirectoryInfo workDirectory, int frameIndex) =>
-        new FileInfo(Path.Combine(workDirectory.FullName, $"frame-{frameIndex:D06}.jpg"));
+        new FileInfo(Path.Combine(workDirectory.FullName, $"frame-{frameIndex:D06}.bmp"));
 
     private static void AppendConcatEntry(StreamWriter writer, FileInfo frameFile, double durationSeconds)
     {
