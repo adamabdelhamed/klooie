@@ -31,6 +31,8 @@ public sealed class ConsoleBitmap : Recyclable
     /// </summary>
     public int Height { get; private set; }
 
+    public RectF Bounds => new RectF(0, 0, Width, Height);
+
     /// <summary>
     /// The console to target when the Paint method is called 
     /// </summary>
@@ -348,6 +350,7 @@ public sealed class ConsoleBitmap : Recyclable
         }
     }
 
+    public void DrawString(ConsoleString? str, LocF location, bool vert = false) => DrawString(str, ConsoleMath.Round(location.Left), ConsoleMath.Round(location.Top), vert);
     /// <summary>
     /// Draws the given string onto the bitmap
     /// </summary>

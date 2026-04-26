@@ -50,6 +50,7 @@
     <Klooie_PowerArgs_Path Condition="!Exists('..\..\..\PowerArgs\PowerArgs\PowerArgs.csproj')">
       ..\..\external\PowerArgs\PowerArgs\PowerArgs.csproj
     </Klooie_PowerArgs_Path>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
