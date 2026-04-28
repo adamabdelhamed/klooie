@@ -7,9 +7,12 @@ public class Vision : Recyclable, IFrameTask
 {
     public const float DefaultVisibility = 20;
     public const float DefaultAngularVisibility = 60;
-    private const int RetainedSharedRayCandidateCapacity = 256;
+
     private static Event<Vision>? _visionInitiated;
-    private static readonly List<RayCandidate> sharedRayCandidates = new List<RayCandidate>(32);
+
+    private const int RetainedSharedRayCandidateCapacity = 5000;
+    private static RayCandidate[] sharedRayCandidates = new RayCandidate[RetainedSharedRayCandidateCapacity];
+    private static int sharedRayCandidateCount;
     public static Event<Vision> VisionInitiated => _visionInitiated ??= Event<Vision>.Create();
 
     private Event? _visibleObjectsChanged;
@@ -303,11 +306,7 @@ public class Vision : Recyclable, IFrameTask
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ReleaseScanScratch()
     {
-        sharedRayCandidates.Clear();
-        if (sharedRayCandidates.Capacity > RetainedSharedRayCandidateCapacity)
-        {
-            sharedRayCandidates.Capacity = RetainedSharedRayCandidateCapacity;
-        }
+        sharedRayCandidateCount = 0;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -321,7 +320,7 @@ public class Vision : Recyclable, IFrameTask
     private void PopulateCastObstacles(Angle angle, ObstacleBuffer castBuffer)
     {
         castBuffer.WriteableBuffer.Clear();
-        for (var i = 0; i < sharedRayCandidates.Count; i++)
+        for (var i = 0; i < sharedRayCandidateCount; i++)
         {
             var candidate = sharedRayCandidates[i];
             if (DiffShortestDegrees(angle.Value, candidate.CenterAngle) > candidate.AngularReach) continue;
@@ -331,7 +330,7 @@ public class Vision : Recyclable, IFrameTask
 
     private void PopulateRayCandidates(ObstacleBuffer buffer)
     {
-        sharedRayCandidates.Clear();
+        sharedRayCandidateCount = 0;
         var eyeBounds = Eye.Bounds;
         var eyeRadius = eyeBounds.Hypotenous * 0.5f;
         const float angularPadding = 1.5f;
@@ -350,7 +349,17 @@ public class Vision : Recyclable, IFrameTask
                 ? 180f
                 : MathF.Min(180f, MathF.Atan2(sweepRadius, centerDistance) * radToDeg + angularPadding);
             var minPossibleDistance = MathF.Max(0, centerDistance - sweepRadius);
-            sharedRayCandidates.Add(new RayCandidate(obstacle, centerAngle, angularReach, minPossibleDistance));
+            EnsureSize();
+            sharedRayCandidates[sharedRayCandidateCount++] = new RayCandidate(obstacle, centerAngle, angularReach, minPossibleDistance);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void EnsureSize()
+    {
+        if (sharedRayCandidateCount == sharedRayCandidates.Length)
+        {
+            Array.Resize(ref sharedRayCandidates, sharedRayCandidates.Length * 2);
         }
     }
 
@@ -358,7 +367,7 @@ public class Vision : Recyclable, IFrameTask
     private void PopulatePerfectScanObstacles(Angle angle, float targetDistance, GameCollider target, ObstacleBuffer castBuffer)
     {
         castBuffer.WriteableBuffer.Clear();
-        for (var i = 0; i < sharedRayCandidates.Count; i++)
+        for (var i = 0; i < sharedRayCandidateCount; i++)
         {
             var candidate = sharedRayCandidates[i];
             if (candidate.Collider == target) continue;
