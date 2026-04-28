@@ -21,12 +21,12 @@ public static class PaintDetailSettings
 
     public static PaintDetailProfile LowestDetailProfile { get; set; } = new PaintDetailProfile
     {
-        MinTolerance = 0.012,
-        MaxTolerance = 0.06,
+        MinTolerance = 0.025,
+        MaxTolerance = 0.12,
         LowestBackpressureBeforeIncreasingTolerance = 0,
-        HighestBackpressureBeforeMaxingTolerance = 0.45,
-        MaxSoftenedRun = 48,
-        FalloffDecay = 0.94,
+        HighestBackpressureBeforeMaxingTolerance = 0.25,
+        MaxSoftenedRun = 64,
+        FalloffDecay = 0.985,
     };
 
     public static PaintDetailProfile HighestDetailProfile { get; set; } = new PaintDetailProfile
@@ -104,6 +104,53 @@ internal static class PaintCompressor
     public static readonly byte[] s_ChannelCapByOffset = new byte[MaxSoftenedRunCapacity];
     public static int MaxSoftenedRun => Math.Clamp(PaintDetailSettings.CurrentProfile.MaxSoftenedRun, 1, MaxSoftenedRunCapacity);
 
+    public static void BuildRunsForLine(ReadOnlySpan<ConsoleCharacter> pixels, int width, int y, int colorThresholdSq, List<Run> runs)
+    {
+        int row = y * width;
+        int x = 0;
+        while (x < width)
+        {
+            ref readonly var first = ref pixels[row + x];
+            int start = x;
+            bool under = first.IsUnderlined;
+            int fgR = first.ForegroundColor.R, fgG = first.ForegroundColor.G, fgB = first.ForegroundColor.B;
+            int bgR = first.BackgroundColor.R, bgG = first.BackgroundColor.G, bgB = first.BackgroundColor.B;
+            int visibleFgCount = first.Value == ' ' ? 0 : 1;
+            int bgCount = 1;
+            RGB avgFg = first.ForegroundColor;
+            RGB avgBg = first.BackgroundColor;
+            x++;
+
+            while (x < width)
+            {
+                ref readonly var next = ref pixels[row + x];
+                if (next.IsUnderlined != under) break;
+
+                int offset = x - start;
+                if (CanJoinRun(in next, in avgFg, in avgBg, offset, colorThresholdSq) == false) break;
+
+                if (next.Value != ' ')
+                {
+                    fgR += next.ForegroundColor.R;
+                    fgG += next.ForegroundColor.G;
+                    fgB += next.ForegroundColor.B;
+                    visibleFgCount++;
+                    avgFg = AverageColor(fgR, fgG, fgB, visibleFgCount);
+                }
+
+                bgR += next.BackgroundColor.R;
+                bgG += next.BackgroundColor.G;
+                bgB += next.BackgroundColor.B;
+                bgCount++;
+                avgBg = AverageColor(bgR, bgG, bgB, bgCount);
+                x++;
+            }
+
+            if (visibleFgCount == 0) avgFg = first.ForegroundColor;
+            runs.Add(new Run(start, x - start, avgFg, avgBg, under));
+        }
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int IntSqrt(int x)
     {
@@ -173,6 +220,55 @@ internal static class PaintCompressor
         if (sq < 0) sq = 0;
         if (sq > MaxRgbDistSq) sq = MaxRgbDistSq;
         return (int)sq;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool CanJoinRun(in ConsoleCharacter c, in RGB avgFg, in RGB avgBg, int offset, int colorThresholdSq)
+    {
+        if (colorThresholdSq == 0)
+        {
+            return c.Value == ' '
+                ? c.BackgroundColor == avgBg
+                : c.ForegroundColor == avgFg && c.BackgroundColor == avgBg;
+        }
+
+        if (offset >= MaxSoftenedRun)
+        {
+            return c.Value == ' '
+                ? c.BackgroundColor == avgBg
+                : c.ForegroundColor == avgFg && c.BackgroundColor == avgBg;
+        }
+
+        int thrSq = s_ThrSqByOffset[offset];
+        byte cap = s_ChannelCapByOffset[offset];
+
+        if (ChannelTooFar(c.BackgroundColor.R, avgBg.R, cap) ||
+            ChannelTooFar(c.BackgroundColor.G, avgBg.G, cap) ||
+            ChannelTooFar(c.BackgroundColor.B, avgBg.B, cap) ||
+            ColorsCloseEnough(c.BackgroundColor, avgBg, thrSq) == false)
+        {
+            return false;
+        }
+
+        if (c.Value == ' ') return true;
+
+        return ChannelTooFar(c.ForegroundColor.R, avgFg.R, cap) == false &&
+               ChannelTooFar(c.ForegroundColor.G, avgFg.G, cap) == false &&
+               ChannelTooFar(c.ForegroundColor.B, avgFg.B, cap) == false &&
+               ColorsCloseEnough(c.ForegroundColor, avgFg, thrSq);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ChannelTooFar(byte a, byte b, byte cap)
+    {
+        int d = a - b;
+        return (d ^ (d >> 31)) > cap;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static RGB AverageColor(int r, int g, int b, int count)
+    {
+        return new RGB((byte)((r + (count >> 1)) / count), (byte)((g + (count >> 1)) / count), (byte)((b + (count >> 1)) / count));
     }
 
     private static int ComputeToleranceFalloffQ12(int offset)

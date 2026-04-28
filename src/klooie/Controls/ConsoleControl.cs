@@ -38,6 +38,7 @@ public partial class ConsoleControl : Rectangular
     private Event _focused, _unfocused,   _ready, _tagsChanged;
     private Event<ConsoleKeyInfo> _keyInputReceived;
     public bool HasBeenAddedToVisualTree { get; private set; }
+    internal bool IsTrackedByFocusManager { get; set; }
     private HashSet<string> tags;
 
     internal int? FocusStackDepthInternal { get; set; }
@@ -398,6 +399,7 @@ public partial class ConsoleControl : Rectangular
         _this.RecordingSession = null;
 
         FocusStackDepthInternal = null;
+        IsTrackedByFocusManager = false;
         HasBeenAddedToVisualTree = false;
         base.OnReturn();
     }

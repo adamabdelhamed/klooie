@@ -41,4 +41,33 @@ public class FocusTests
         ConsoleApp.Current.Stop();
     });
 
+    [TestMethod]
+    public void FocusManager_IgnoresContainersThatDoNotUseFocus() => AppTest.Run(TestContext.TestId(), UITestMode.Headless, async (context) =>
+    {
+        var noFocusPanel = ConsoleApp.Current.LayoutRoot.Add(new ConsolePanel());
+        noFocusPanel.UsesFocusSystem = false;
+
+        var child = noFocusPanel.Add(new ConsoleControl());
+
+        Assert.IsTrue(child.CanFocus);
+        var focusFailed = false;
+        try
+        {
+            child.Focus();
+        }
+        catch (System.InvalidOperationException)
+        {
+            focusFailed = true;
+        }
+
+        Assert.IsTrue(focusFailed);
+        Assert.IsNull(ConsoleApp.Current.FocusedControl);
+
+        var regularControl = ConsoleApp.Current.LayoutRoot.Add(new ConsoleControl());
+        regularControl.Focus();
+        Assert.AreSame(regularControl, ConsoleApp.Current.FocusedControl);
+
+        ConsoleApp.Current.Stop();
+    });
+
 }

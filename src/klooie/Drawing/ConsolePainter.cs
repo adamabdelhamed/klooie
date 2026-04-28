@@ -93,76 +93,7 @@ public static class ConsolePainter
                 {
                     if (paintBuilder.Length >= charBudget) break; // <-- hard cap per frame
                     runsOnLine.Clear();
-                    int x = 0;
-                    while (x < bitmap.Width)
-                    {
-                        var p = pix[bitmap.IndexOf(x, y)];
-                        var fg = p.ForegroundColor;
-                        var bg = p.BackgroundColor;
-                        bool under = p.IsUnderlined;
-                        int start = x;
-                        x++;
-                        while (x < bitmap.Width)
-                        {
-                            var q = pix[bitmap.IndexOf(x, y)];
-
-                            if (q.IsUnderlined != under) break;
-
-                            bool fgOk, bgOk;
-
-                            if (colorThresholdSq == 0)
-                            {
-                                fgOk = (q.ForegroundColor == fg);
-                                bgOk = (q.BackgroundColor == bg);
-                            }
-                            else
-                            {
-                                int offset = x - start;
-                                if (offset >= PaintCompressor.MaxSoftenedRun)
-                                {
-                                    // tolerance fully decayed -> strict equality
-                                    fgOk = (q.ForegroundColor == fg);
-                                    bgOk = (q.BackgroundColor == bg);
-                                }
-                                else
-                                {
-                                    int thrSq = PaintCompressor.s_ThrSqByOffset[offset];
-                                    byte cap = PaintCompressor.s_ChannelCapByOffset[offset];
-
-                                    // --- Space-aware: ignore FG when glyph is space (only BG is visible) ---
-                                    if (q.Value == ' ')
-                                    {
-                                        // fast channel guard on BG before d² compare
-                                        int dBr = q.BackgroundColor.R - bg.R; if ((dBr ^ (dBr >> 31)) > cap) break;
-                                        int dBg = q.BackgroundColor.G - bg.G; if ((dBg ^ (dBg >> 31)) > cap) break;
-                                        int dBb = q.BackgroundColor.B - bg.B; if ((dBb ^ (dBb >> 31)) > cap) break;
-
-                                        bgOk = PaintCompressor.ColorsCloseEnough(q.BackgroundColor, bg, thrSq);
-                                        fgOk = true; // ignored for spaces
-                                    }
-                                    else
-                                    {
-                                        // fast channel guards (FG + BG)
-                                        int dFr = q.ForegroundColor.R - fg.R; if ((dFr ^ (dFr >> 31)) > cap) break;
-                                        int dFg = q.ForegroundColor.G - fg.G; if ((dFg ^ (dFg >> 31)) > cap) break;
-                                        int dFb = q.ForegroundColor.B - fg.B; if ((dFb ^ (dFb >> 31)) > cap) break;
-
-                                        int dBr = q.BackgroundColor.R - bg.R; if ((dBr ^ (dBr >> 31)) > cap) break;
-                                        int dBg = q.BackgroundColor.G - bg.G; if ((dBg ^ (dBg >> 31)) > cap) break;
-                                        int dBb = q.BackgroundColor.B - bg.B; if ((dBb ^ (dBb >> 31)) > cap) break;
-
-                                        fgOk = PaintCompressor.ColorsCloseEnough(q.ForegroundColor, fg, thrSq);
-                                        bgOk = PaintCompressor.ColorsCloseEnough(q.BackgroundColor, bg, thrSq);
-                                    }
-                                }
-                            }
-
-                            if (!fgOk || !bgOk) break;
-                            x++;
-                        }
-
-                        runsOnLine.Add(new Run(start, x - start, fg, bg, under));
-                    }
+                    PaintCompressor.BuildRunsForLine(pix, bitmap.Width, y, colorThresholdSq, runsOnLine);
 
                     for (int i = 0; i < runsOnLine.Count; i++)
                     {

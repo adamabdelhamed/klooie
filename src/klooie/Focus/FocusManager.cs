@@ -315,6 +315,19 @@ public partial class FocusManager : Recyclable,  IObservableObject
         }
     }
 
+    private static bool UsesFocusSystem(ConsoleControl c)
+    {
+        if (c is Container container && container.UsesFocusSystem == false) return false;
+
+        var ancestor = c.Parent;
+        while (ancestor != null)
+        {
+            if (ancestor.UsesFocusSystem == false) return false;
+            ancestor = ancestor.Parent;
+        }
+
+        return true;
+    }
 
     public void Add(ConsoleControl c)
     {
@@ -326,16 +339,22 @@ public partial class FocusManager : Recyclable,  IObservableObject
         // focus context that is appropriate for its FocusStackDepth, which may be on or below the top.
 
 
+        if (UsesFocusSystem(c) == false) return;
+
         CheckNotAlreadyBeingTracked(c);
         var effectiveDepth = FindEffectiveDepth(c);
         if (effectiveDepth > focusStack.Count + 1) throw new NotSupportedException($"{nameof(c.FocusStackDepth)} can only exceed the current focus stack depth by 1");
         c.FocusStackDepthInternal = effectiveDepth;
         if (focusStack.Count < c.FocusStackDepth) Push(c);
         focusStack[c.FocusStackDepth - 1].Controls.Add(c);
+        c.IsTrackedByFocusManager = true;
     }
 
     public void Remove(ConsoleControl c)
     {
+        if (c.IsTrackedByFocusManager == false) return;
+        c.IsTrackedByFocusManager = false;
+
         bool cleared = false;
         if (FocusedControl == c)
         {

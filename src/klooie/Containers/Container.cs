@@ -43,12 +43,29 @@ public abstract class Container : ConsoleControl
     public static ICompositionObserver? CompositionObserver { get; set; }
 
     private Event<ConsoleControl> _descendentAdded, _descendentRemoved;
+    private bool usesFocusSystem = true;
     public Event<ConsoleControl> DescendentAdded { get => _descendentAdded ?? (_descendentAdded = Event<ConsoleControl>.Create()); }
     public Event<ConsoleControl> DescendentRemoved { get => _descendentRemoved ?? (_descendentRemoved = Event<ConsoleControl>.Create()); }
     public static SingleThreadObjectPool<List<ConsoleControl>> DescendentBufferPool { get; private set; } = new SingleThreadObjectPool<List<ConsoleControl>>();
     internal Container()
     {
         OnDisposed(OnReturn);
+    }
+
+    /// <summary>
+    /// When false, this container and its descendants are not registered with the focus manager.
+    /// Use this for visual-only subtrees with large numbers of non-focusable controls.
+    /// </summary>
+    public bool UsesFocusSystem
+    {
+        get => usesFocusSystem;
+        set => usesFocusSystem = value;
+    }
+
+    protected override void OnInit()
+    {
+        base.OnInit();
+        usesFocusSystem = true;
     }
 
     /// <summary>
@@ -358,6 +375,7 @@ public abstract class Container : ConsoleControl
     protected override void OnReturn()
     {
         base.OnReturn();
+        usesFocusSystem = true;
         _descendentAdded?.TryDispose("external/klooie/src/klooie/Containers/Container.cs:361");
         _descendentAdded = null;
         _descendentRemoved?.TryDispose("external/klooie/src/klooie/Containers/Container.cs:363");
