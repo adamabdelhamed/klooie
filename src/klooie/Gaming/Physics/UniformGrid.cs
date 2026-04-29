@@ -12,8 +12,15 @@ public readonly struct UniformGridCell : IEquatable<UniformGridCell>
     }
 
     public bool Equals(UniformGridCell other) => X == other.X && Y == other.Y;
+    public override bool Equals(object? obj) => obj is UniformGridCell other && Equals(other);
 
-    public override int GetHashCode() => HashCode.Combine(X, Y);
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            return (X * 73856093) ^ (Y * 19349663);
+        }
+    }
 
     public RectF GetBounds(float cellWidth, float cellHeight)
     {
@@ -36,10 +43,26 @@ public sealed class UniformGrid
     private readonly Dictionary<GameCollider, UniformGridMembershipState> membershipStates =
         new Dictionary<GameCollider, UniformGridMembershipState>(199);
 
+    private readonly float _invCellWidth;
+    private readonly float _invCellHeight;
+
     public UniformGrid(float cellWidth = 16f, float cellHeight = 8f)
     {
         _cellWidth = cellWidth;
         _cellHeight = cellHeight;
+        _invCellWidth = 1f / cellWidth;
+        _invCellHeight = 1f / cellHeight;
+    }
+
+    private void GetCellRange(in RectF b, out int x0, out int y0, out int x1, out int y1)
+    {
+        const float pad = 1f;
+        const float epsilon = 0.001f;
+
+        x0 = (int)MathF.Floor((b.Left - pad) * _invCellWidth);
+        y0 = (int)MathF.Floor((b.Top - pad) * _invCellHeight);
+        x1 = (int)MathF.Ceiling((b.Right + pad + epsilon) * _invCellWidth) - 1;
+        y1 = (int)MathF.Ceiling((b.Bottom + pad + epsilon) * _invCellHeight) - 1;
     }
 
     public float CellWidth => _cellWidth;
@@ -164,21 +187,23 @@ public sealed class UniformGrid
 
     public ObstacleBuffer Query(in RectF area, ObstacleBuffer outputBuffer)
     {
-        _stamp++;
-        LoadCells(area);
+        var stamp = ++_stamp;
+        GetCellRange(area, out var x0, out var y0, out var x1, out var y1);
 
-        for (int i = 0; i < cellBuffer.Count; i++)
+        for (var y = y0; y <= y1; y++)
         {
-            var cell = cellBuffer[i];
-            if (_buckets.TryGetValue(cell, out var bucketBuffer))
+            for (var x = x0; x <= x1; x++)
             {
-                for (int j = 0; j < bucketBuffer.Items.Count; j++)
-                {
-                    var itemFromBucket = bucketBuffer.Items[j];
-                    if (itemFromBucket.QueryStamp == _stamp) continue;
+                if (_buckets.TryGetValue(new UniformGridCell(x, y), out var bucketBuffer) == false) continue;
 
-                    outputBuffer.WriteableBuffer.Add(itemFromBucket);
-                    itemFromBucket.QueryStamp = _stamp;
+                var items = bucketBuffer.Items;
+                for (var i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+                    if (item.QueryStamp == stamp) continue;
+
+                    item.QueryStamp = stamp;
+                    outputBuffer.WriteableBuffer.Add(item);
                 }
             }
         }
@@ -188,22 +213,24 @@ public sealed class UniformGrid
 
     public void QueryExcept(ObstacleBuffer buffer, GameCollider except)
     {
-        _stamp++;
-        LoadCells(except.Bounds.Grow(80, 40)); // TODO - Hacky, but we grow all colliders to increase the # of obstacles that can be seen.
+        var stamp = ++_stamp;
+        var area = except.Bounds.Grow(80, 40); // TODO - Hacky, but we grow all colliders to increase the # of obstacles that can be seen.
+        GetCellRange(area, out var x0, out var y0, out var x1, out var y1);
 
-        for (int i = 0; i < cellBuffer.Count; i++)
+        for (var y = y0; y <= y1; y++)
         {
-            var cell = cellBuffer[i];
-            if (_buckets.TryGetValue(cell, out var list))
+            for (var x = x0; x <= x1; x++)
             {
-                for (int j = 0; j < list.Items.Count; j++)
+                if (_buckets.TryGetValue(new UniformGridCell(x, y), out var bucketBuffer) == false) continue;
+
+                var items = bucketBuffer.Items;
+                for (var i = 0; i < items.Count; i++)
                 {
-                    var obj = list.Items[j];
-                    if (obj != except && obj.QueryStamp != _stamp)
-                    {
-                        buffer.WriteableBuffer.Add(obj);
-                        obj.QueryStamp = _stamp;
-                    }
+                    var obj = items[i];
+                    if (obj == except || obj.QueryStamp == stamp) continue;
+
+                    obj.QueryStamp = stamp;
+                    buffer.WriteableBuffer.Add(obj);
                 }
             }
         }
@@ -211,20 +238,20 @@ public sealed class UniformGrid
 
     public void EnumerateAll(ObstacleBuffer buffer)
     {
-        _stamp++;
+        var stamp = ++_stamp;
+
         foreach (var list in _buckets.Values)
         {
-            for (int j = 0; j < list.Items.Count; j++)
+            var items = list.Items;
+            for (var i = 0; i < items.Count; i++)
             {
-                var obj = list.Items[j];
-                if (obj.QueryStamp != _stamp)
-                {
-                    buffer.WriteableBuffer.Add(obj);
-                    obj.QueryStamp = _stamp;
-                }
+                var obj = items[i];
+                if (obj.QueryStamp == stamp) continue;
+
+                obj.QueryStamp = stamp;
+                buffer.WriteableBuffer.Add(obj);
             }
         }
-
     }
 
     public RectF GetCellBounds(in UniformGridCell cell) => cell.GetBounds(_cellWidth, _cellHeight);

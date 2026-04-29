@@ -119,22 +119,21 @@ public static class CollisionDetector
         }
     }
 
-    public static CollisionPrediction Predict<T>(
-        ICollidable from,
-        Angle angle,
-        IList<T> colliders,
-        float visibility,
-        CastingMode mode,
-        int bufferLen,
-        CollisionPrediction prediction,
-        List<Edge> edgesHitOutput = null) where T : ICollidable
+    public static CollisionPrediction Predict<T>(ICollidable from, Angle angle, IList<T> colliders, float visibility, CastingMode mode, int bufferLen, CollisionPrediction prediction, List<Edge> edgesHitOutput = null) where T : ICollidable
     {
-        // Preserve existing init/reset behavior & LKG defaults
         var movingObject = from.Bounds;
 
         prediction.Reset();
-        prediction.LKGX = movingObject.Left;
-        prediction.LKGY = movingObject.Top;
+
+        float aLeft = movingObject.Left;
+        float aTop = movingObject.Top;
+        float aRight = movingObject.Right;
+        float aBottom = movingObject.Bottom;
+        float aCenterX = movingObject.CenterX;
+        float aCenterY = movingObject.CenterY;
+
+        prediction.LKGX = aLeft;
+        prediction.LKGY = aTop;
 
         if (visibility == 0f)
         {
@@ -142,19 +141,19 @@ public static class CollisionDetector
             prediction.CollisionPredicted = false;
             return prediction;
         }
+
         prediction.Visibility = visibility;
+
         if (bufferLen <= 0)
         {
             prediction.CollisionPredicted = false;
             return prediction;
         }
 
-        // Compute movement vector exactly like CreateRays()
         var delta = movingObject.RadialOffset(angle, visibility, normalized: false);
-        float dx = delta.Left - movingObject.Left;
-        float dy = delta.Top - movingObject.Top;
+        float dx = delta.Left - aLeft;
+        float dy = delta.Top - aTop;
 
-        // If effectively stationary, bail
         float moveLen2 = dx * dx + dy * dy;
         if (moveLen2 <= VerySmallNumberSquared)
         {
@@ -162,15 +161,25 @@ public static class CollisionDetector
             return prediction;
         }
 
-        // Tracks best (closest) hit
-        float bestT = float.PositiveInfinity;      // normalized 0..1 along the cast
-        int bestIndex = -1;
-        Edge bestEdge = default;
-        float bestIX = 0f, bestIY = 0f;
+        const float axisEps = 1e-8f;
 
-        // Visibility check (same semantics as before)
-        float visibilitySlack = float.IsPositiveInfinity(visibility) ? visibility : (visibility + VerySmallNumber);
-        float visibility2Limit = float.IsPositiveInfinity(visibilitySlack) ? float.PositiveInfinity : visibilitySlack * visibilitySlack;
+        bool movesX = dx > axisEps || dx < -axisEps;
+        bool movesY = dy > axisEps || dy < -axisEps;
+        bool dxPositive = dx > 0f;
+        bool dyPositive = dy > 0f;
+
+        float invDx = movesX ? 1f / dx : 0f;
+        float invDy = movesY ? 1f / dy : 0f;
+
+        float bestT = float.PositiveInfinity;
+        ICollidable bestHit = null;
+        RectF bestBounds = default;
+        bool bestHitVerticalFace = false;
+
+        float sweepLeft = dxPositive ? aLeft : aLeft + dx;
+        float sweepRight = dxPositive ? aRight + dx : aRight;
+        float sweepTop = dyPositive ? aTop : aTop + dy;
+        float sweepBottom = dyPositive ? aBottom + dy : aBottom;
 
         for (int i = 0; i < bufferLen; i++)
         {
@@ -179,144 +188,133 @@ public static class CollisionDetector
 
             var obBounds = obstacle.Bounds;
 
-            // Same coarse distance reject you already had
-            if (visibility < float.MaxValue && RectF.CalculateDistanceSquaredTo(movingObject, obBounds) > visibility2Limit) continue;
+            float bLeft = obBounds.Left;
+            float bTop = obBounds.Top;
+            float bRight = obBounds.Right;
+            float bBottom = obBounds.Bottom;
+
+            if (bRight < sweepLeft - VerySmallNumber || bLeft > sweepRight + VerySmallNumber || bBottom < sweepTop - VerySmallNumber || bTop > sweepBottom + VerySmallNumber) continue;
 
             if (!from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
 
-            // O(1) swept AABB test; returns earliest TOI t in [0, 1] if hit
-            if (SweptAabbFirstHit(movingObject, obBounds, dx, dy, out float t, out Edge hitEdge, out float ix, out float iy))
+            if (SweptAabbFirstHitBeatingBest(aLeft, aTop, aRight, aBottom, bLeft, bTop, bRight, bBottom, invDx, invDy, movesX, movesY, dxPositive, dyPositive, bestT, out float t, out bool hitVerticalFace))
             {
-                // Convert to distance^2 along the path to keep old compare semantics
-                // distance = |v| * t  (|v| ~= visibility)
-                float dist2 = moveLen2 * (t * t);
+                bestT = t;
+                bestHit = obstacle;
+                bestBounds = obBounds;
+                bestHitVerticalFace = hitVerticalFace;
 
-                // Respect visibility^2 ceiling (kept for parity with previous behavior)
-                if (dist2 <= visibility2Limit && t >= -1e-6f && t <= 1f + 1e-6f)
-                {
-                    if (t < bestT)
-                    {
-                        bestT = t;
-                        bestIndex = i;
-                        bestEdge = hitEdge;
-                        bestIX = ix;
-                        bestIY = iy;
+                float clippedDx = dx * bestT;
+                float clippedDy = dy * bestT;
 
-                        // Optional: short-circuit if we literally hit at t==0
-                        if (bestT <= VerySmallNumber) break;
-                    }
-                }
+                sweepLeft = clippedDx >= 0f ? aLeft : aLeft + clippedDx;
+                sweepRight = clippedDx >= 0f ? aRight + clippedDx : aRight;
+                sweepTop = clippedDy >= 0f ? aTop : aTop + clippedDy;
+                sweepBottom = clippedDy >= 0f ? aBottom + clippedDy : aBottom;
+
+                if (bestT <= VerySmallNumber) break;
             }
         }
 
-        if (bestIndex >= 0)
+        if (bestHit != null)
         {
-            var hit = colliders[bestIndex];
-            prediction.ObstacleHitBounds = hit.Bounds;
-            prediction.ColliderHit = hit;
+            prediction.ObstacleHitBounds = bestBounds;
+            prediction.ColliderHit = bestHit;
 
-            // Distance along path minus the same 2*eps bias shave you already applied
             float d = MathF.Sqrt(moveLen2) * bestT - 2f * VerySmallNumber;
             prediction.LKGD = d > 0f ? d : 0f;
 
-            prediction.LKGX = bestIX;
-            prediction.LKGY = bestIY;
-            prediction.CollisionPredicted = true;
-            prediction.Edge = bestEdge;
-            prediction.IntersectionX = bestIX;
-            prediction.IntersectionY = bestIY;
+            if (bestHitVerticalFace)
+            {
+                bool fromLeft = dx > 0f;
+                float ix = fromLeft ? bestBounds.Left : bestBounds.Right;
+                float iy = ClampFast(aCenterY + dy * bestT, bestBounds.Top, bestBounds.Bottom);
 
-            // No rays in the new algorithm; edgesHitOutput intentionally unused.
+                prediction.Edge = fromLeft ? bestBounds.LeftEdge : bestBounds.RightEdge;
+                prediction.LKGX = ix;
+                prediction.LKGY = iy;
+                prediction.IntersectionX = ix;
+                prediction.IntersectionY = iy;
+            }
+            else
+            {
+                bool fromTop = dy > 0f;
+                float ix = ClampFast(aCenterX + dx * bestT, bestBounds.Left, bestBounds.Right);
+                float iy = fromTop ? bestBounds.Top : bestBounds.Bottom;
+
+                prediction.Edge = fromTop ? bestBounds.TopEdge : bestBounds.BottomEdge;
+                prediction.LKGX = ix;
+                prediction.LKGY = iy;
+                prediction.IntersectionX = ix;
+                prediction.IntersectionY = iy;
+            }
+
+            prediction.CollisionPredicted = true;
         }
 
         return prediction;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool SweptAabbFirstHit(
-        in RectF a,          // moving rect (start pose)
-        in RectF b,          // stationary rect
-        float dx, float dy,  // movement vector over the "visibility" path
-        out float t,         // normalized time of impact in [0,1]
-        out Edge hitEdge,    // which physical edge on 'b' we touched
-        out float ix, out float iy) // contact point
+    private static bool SweptAabbFirstHitBeatingBest(float aLeft, float aTop, float aRight, float aBottom, float bLeft, float bTop, float bRight, float bBottom, float invDx, float invDy, bool movesX, bool movesY, bool dxPositive, bool dyPositive, float bestT, out float t, out bool hitVerticalFace)
     {
-        // Defaults
-        t = 0f; ix = 0f; iy = 0f; hitEdge = default;
-        const float eps = 1e-8f;
+        t = 0f;
+        hitVerticalFace = false;
 
-        // Compute entry/exit times for X
-        float xEntry, xExit;
-        if (MathF.Abs(dx) <= eps)
+        float xEntry;
+        if (movesX)
         {
-            // No horizontal motion: must *already* overlap in X to collide
-            if (a.Right <= b.Left || a.Left >= b.Right) return false; // <-- no epsilon here
+            xEntry = dxPositive ? (bLeft - aRight) * invDx : (bRight - aLeft) * invDx;
+        }
+        else
+        {
+            if (aRight <= bLeft || aLeft >= bRight) return false;
             xEntry = float.NegativeInfinity;
-            xExit = float.PositiveInfinity;
         }
-        else if (dx > 0f)
+
+        float yEntry;
+        if (movesY)
         {
-            xEntry = (b.Left - a.Right) / dx;
-            xExit = (b.Right - a.Left) / dx;
+            yEntry = dyPositive ? (bTop - aBottom) * invDy : (bBottom - aTop) * invDy;
         }
         else
         {
-            xEntry = (b.Right - a.Left) / dx; // dx < 0
-            xExit = (b.Left - a.Right) / dx;
-        }
-
-        // Y axis
-        float yEntry, yExit;
-        if (MathF.Abs(dy) <= eps)
-        {
-            if (a.Bottom <= b.Top || a.Top >= b.Bottom) return false; // <-- no epsilon here
+            if (aBottom <= bTop || aTop >= bBottom) return false;
             yEntry = float.NegativeInfinity;
-            yExit = float.PositiveInfinity;
-        }
-        else if (dy > 0f)
-        {
-            yEntry = (b.Top - a.Bottom) / dy;
-            yExit = (b.Bottom - a.Top) / dy;
-        }
-        else
-        {
-            yEntry = (b.Bottom - a.Top) / dy; // dy < 0
-            yExit = (b.Top - a.Bottom) / dy;
         }
 
-        float tEntry = MathF.Max(xEntry, yEntry);
-        float tExit = MathF.Min(xExit, yExit);
-
-        // Bail if no overlap during [0,1]
-        if (tEntry > tExit) return false;
-        if (tExit < -VerySmallNumber) return false;
+        float tEntry = xEntry > yEntry ? xEntry : yEntry;
         if (tEntry > 1f + VerySmallNumber) return false;
 
-        // Clamp for grazing forgiveness
+        float xExit = movesX
+            ? dxPositive ? (bRight - aLeft) * invDx : (bLeft - aRight) * invDx
+            : float.PositiveInfinity;
+
+        float yExit = movesY
+            ? dyPositive ? (bBottom - aTop) * invDy : (bTop - aBottom) * invDy
+            : float.PositiveInfinity;
+
+        float tExit = xExit < yExit ? xExit : yExit;
+
+        if (tEntry > tExit) return false;
+        if (tExit < -VerySmallNumber) return false;
+
         if (tEntry < 0f) tEntry = 0f;
-        if (tEntry > 1f) tEntry = 1f;
+        else if (tEntry > 1f) tEntry = 1f;
+
+        if (tEntry >= bestT) return false;
+
         t = tEntry;
-
-        // Pick edge
-        bool hitVerticalFace = xEntry > yEntry;
-        if (hitVerticalFace)
-        {
-            bool fromLeft = dx > 0f;
-            hitEdge = fromLeft ? b.LeftEdge : b.RightEdge;
-            ix = fromLeft ? b.Left : b.Right;
-            float aCy = a.CenterY + dy * t;
-            iy = Math.Clamp(aCy, b.Top, b.Bottom);
-        }
-        else
-        {
-            bool fromTop = dy > 0f;
-            hitEdge = fromTop ? b.TopEdge : b.BottomEdge;
-            iy = fromTop ? b.Top : b.Bottom;
-            float aCx = a.CenterX + dx * t;
-            ix = Math.Clamp(aCx, b.Left, b.Right);
-        }
-
+        hitVerticalFace = xEntry > yEntry;
         return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float ClampFast(float value, float min, float max)
+    {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
     }
 
 

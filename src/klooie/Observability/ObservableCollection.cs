@@ -164,7 +164,7 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     
 
     internal void FireBeforeAdded(T item) => _beforeAdded?.Fire(item);
-    internal void FireBeforeRemoved(T item) => _beforeAdded?.Fire(item);
+    internal void FireBeforeRemoved(T item) => beforeRemoved?.Fire(item);
     
 
     /// <summary>
@@ -308,22 +308,18 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     /// <returns>true if an item was removed, false if the item was not found in the list</returns>
     public bool Remove(T item)
     {
-        if (wrapped.Contains(item))
+        var list = wrapped;
+        for (var i = 0; i < list.Count; i++)
         {
-            FireBeforeRemoved(item);
+            if (EqualsSafe(list[i], item) == false) continue;
 
-            for (var i = 0; i < wrapped.Count; i++)
-            {
-                if (EqualsSafe(wrapped[i], item))
-                {
-                    LastModifiedIndex = i;
-                    wrapped.RemoveAt(i);
-                    break;
-                }
-            }
+            LastModifiedIndex = i;
+            FireBeforeRemoved(item);
+            list.RemoveAt(i);
             FireRemoved(item);
             return true;
         }
+
         return false;
     }
 
