@@ -148,6 +148,8 @@ public sealed class ColliderGroup
         var colliderBoundsBeforeMovement = item.Bounds;
         var newLocation = item.Bounds.RadialOffset(item.Velocity.Angle, expectedTravelDistance, false);
 
+        // This check was expensive and should not be needed. Leaving commented out in case this ever comes back to bite me.
+        /*
         if (WouldCauseTouching(item, newLocation, out GameCollider preventer))
         {
 #if DEBUG
@@ -163,7 +165,7 @@ public sealed class ColliderGroup
 #endif
             return;
         }
-
+        */
 #if DEBUG
         ColliderGroupDebugger.VelocityEventOccurred?.Fire(new SuccessfulMove()
         {

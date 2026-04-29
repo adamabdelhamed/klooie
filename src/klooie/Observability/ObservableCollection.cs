@@ -216,7 +216,7 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
         set
         {
             var oldItem = wrapped[index];
-            if (EqualsSafe(oldItem, value))
+            if (EqualityComparer<T>.Default.Equals(oldItem, value))
             {
                 return;
             }
@@ -233,14 +233,7 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
         }
     }
 
-    public static bool EqualsSafe(object a, object b)
-    {
-        if (a == null && b == null) return true;
-        if (a == null ^ b == null) return false;
-        if (object.ReferenceEquals(a, b)) return true;
-
-        return a.Equals(b);
-    }
+ 
 
     object IObservableCollection.this[int index]
     {
@@ -308,10 +301,14 @@ public sealed class ObservableCollection<T> : Recyclable, IList<T>, IObservableC
     /// <returns>true if an item was removed, false if the item was not found in the list</returns>
     public bool Remove(T item)
     {
-        var list = wrapped;
+        if (wrappedRecyclable == null) return false;
+
+        var list = wrappedRecyclable.Items;
+        var comparer = EqualityComparer<T>.Default;
+
         for (var i = 0; i < list.Count; i++)
         {
-            if (EqualsSafe(list[i], item) == false) continue;
+            if (comparer.Equals(list[i], item) == false) continue;
 
             LastModifiedIndex = i;
             FireBeforeRemoved(item);
