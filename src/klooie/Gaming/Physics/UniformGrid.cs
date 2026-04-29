@@ -32,8 +32,6 @@ public readonly struct UniformGridCell : IEquatable<UniformGridCell>
 
 public sealed class UniformGrid
 {
-    private readonly List<UniformGridCell> cellBuffer = new List<UniformGridCell>();
-
     private readonly float _cellWidth;
     private readonly float _cellHeight;
 
@@ -65,6 +63,8 @@ public sealed class UniformGrid
         y1 = (int)MathF.Ceiling((b.Bottom + pad + epsilon) * _invCellHeight) - 1;
     }
 
+    private static bool SameCellRange(int ax0, int ay0, int ax1, int ay1, int bx0, int by0, int bx1, int by1) => ax0 == bx0 && ay0 == by0 && ax1 == bx1 && ay1 == by1;
+
     public float CellWidth => _cellWidth;
     public float CellHeight => _cellHeight;
 
@@ -80,26 +80,6 @@ public sealed class UniformGrid
     public int Count { get; private set; }
     private uint _stamp;
 
-    private void LoadCells(in RectF b)
-    {
-        cellBuffer.Clear();
-        const float pad = 1f;
-        const float epsilon = 0.001f;
-
-        var x0 = (int)MathF.Floor((b.Left - pad) / _cellWidth);
-        var y0 = (int)MathF.Floor((b.Top - pad) / _cellHeight);
-        var x1 = (int)MathF.Ceiling((b.Right + pad + epsilon) / _cellWidth) - 1;
-        var y1 = (int)MathF.Ceiling((b.Bottom + pad + epsilon) / _cellHeight) - 1;
-
-        for (int y = y0; y <= y1; y++)
-        {
-            for (int x = x0; x <= x1; x++)
-            {
-                cellBuffer.Add(new UniformGridCell(x, y));
-            }
-        }
-    }
-
     public bool IsExpired(GameCollider c) => membershipStates.TryGetValue(c, out _) == false;
 
     public void Insert(GameCollider obj)
@@ -107,21 +87,13 @@ public sealed class UniformGrid
         if (membershipStates.ContainsKey(obj))
             throw new InvalidOperationException($"This collider of type {obj.GetType().Name} is already registered in the grid. Disposal Reason: {obj.DisposalReason}");
 
-        membershipStates.Add(obj, UniformGridMembershipState.Create(obj, this));
+        GetCellRange(obj.Bounds, out var x0, out var y0, out var x1, out var y1);
+        membershipStates.Add(obj, UniformGridMembershipState.Create(obj, this, x0, y0, x1, y1));
 
         obj.UniformGrid = this;
         obj.BoundsChanged.SubscribeWithPriority(obj, static objParam => objParam.UniformGrid.Update(objParam), obj);
 
-        LoadCells(obj.Bounds);
-        for (int i = 0; i < cellBuffer.Count; i++)
-        {
-            var cell = cellBuffer[i];
-            if (!_buckets.TryGetValue(cell, out var list))
-            {
-                _buckets[cell] = list = RecyclableListPool<GameCollider>.Instance.Rent(100);
-            }
-            list.Items.Add(obj);
-        }
+        AddToCells(obj, x0, y0, x1, y1);
 
         Count++;
     }
@@ -130,22 +102,9 @@ public sealed class UniformGrid
     {
         var state = membershipStates[obj];
         membershipStates.Remove(obj);
-        state.Dispose("external/klooie/src/klooie/Gaming/Physics/UniformGrid.cs:1");
 
-        LoadCells(obj.Bounds);
-        for (int i = 0; i < cellBuffer.Count; i++)
-        {
-            var cell = cellBuffer[i];
-            if (_buckets.TryGetValue(cell, out var list))
-            {
-                list.Items.Remove(obj);
-                if (list.Items.Count == 0)
-                {
-                    _buckets.Remove(cell);
-                    list.TryDispose("external/klooie/src/klooie/Gaming/Physics/UniformGrid.cs:122");
-                }
-            }
-        }
+        RemoveFromCells(obj, state.X0, state.Y0, state.X1, state.Y1);
+        state.Dispose("external/klooie/src/klooie/Gaming/Physics/UniformGrid.cs:1");
 
         Count--;
     }
@@ -153,36 +112,55 @@ public sealed class UniformGrid
     public void Update(GameCollider obj)
     {
         var membershipState = membershipStates[obj];
-
-        // Remove from old cells
-        LoadCells(membershipState.PreviousBounds);
-        for (int i = 0; i < cellBuffer.Count; i++)
+        GetCellRange(obj.Bounds, out var x0, out var y0, out var x1, out var y1);
+        if (SameCellRange(membershipState.X0, membershipState.Y0, membershipState.X1, membershipState.Y1, x0, y0, x1, y1))
         {
-            var cell = cellBuffer[i];
-            if (_buckets.TryGetValue(cell, out var list))
-            {
-                list.Items.Remove(obj);
-                if (list.Items.Count == 0)
-                {
-                    _buckets.Remove(cell);
-                    list.TryDispose("external/klooie/src/klooie/Gaming/Physics/UniformGrid.cs:145");
-                }
-            }
+            membershipState.PreviousBounds = obj.Bounds;
+            return;
         }
 
-        // Add to new cells
-        LoadCells(obj.Bounds);
-        for (int i = 0; i < cellBuffer.Count; i++)
-        {
-            var cell = cellBuffer[i];
-            if (!_buckets.TryGetValue(cell, out var list))
-            {
-                _buckets[cell] = list = RecyclableListPool<GameCollider>.Instance.Rent(100);
-            }
-            list.Items.Add(obj);
-        }
+        RemoveFromCells(obj, membershipState.X0, membershipState.Y0, membershipState.X1, membershipState.Y1);
+        AddToCells(obj, x0, y0, x1, y1);
 
         membershipState.PreviousBounds = obj.Bounds;
+        membershipState.X0 = x0;
+        membershipState.Y0 = y0;
+        membershipState.X1 = x1;
+        membershipState.Y1 = y1;
+    }
+
+    private void AddToCells(GameCollider obj, int x0, int y0, int x1, int y1)
+    {
+        for (var y = y0; y <= y1; y++)
+        {
+            for (var x = x0; x <= x1; x++)
+            {
+                var cell = new UniformGridCell(x, y);
+                if (!_buckets.TryGetValue(cell, out var list))
+                {
+                    _buckets[cell] = list = RecyclableListPool<GameCollider>.Instance.Rent(100);
+                }
+                list.Items.Add(obj);
+            }
+        }
+    }
+
+    private void RemoveFromCells(GameCollider obj, int x0, int y0, int x1, int y1)
+    {
+        for (var y = y0; y <= y1; y++)
+        {
+            for (var x = x0; x <= x1; x++)
+            {
+                var cell = new UniformGridCell(x, y);
+                if (_buckets.TryGetValue(cell, out var list) == false) continue;
+
+                list.Items.Remove(obj);
+                if (list.Items.Count != 0) continue;
+
+                _buckets.Remove(cell);
+                list.TryDispose("external/klooie/src/klooie/Gaming/Physics/UniformGrid.cs:1");
+            }
+        }
     }
 
     public ObstacleBuffer Query(in RectF area, ObstacleBuffer outputBuffer)
@@ -261,15 +239,23 @@ public sealed class UniformGrid
         public GameCollider Collider { get; set; }
         public UniformGrid Grid { get; set; }
         public RectF PreviousBounds { get; set; }
+        public int X0 { get; set; }
+        public int Y0 { get; set; }
+        public int X1 { get; set; }
+        public int Y1 { get; set; }
 
         private static LazyPool<UniformGridMembershipState> pool = new LazyPool<UniformGridMembershipState>(() => new UniformGridMembershipState());
 
-        public static UniformGridMembershipState Create(GameCollider collider, UniformGrid grid)
+        public static UniformGridMembershipState Create(GameCollider collider, UniformGrid grid, int x0, int y0, int x1, int y1)
         {
             var ret = pool.Value.Rent();
             ret.Collider = collider;
             ret.Grid = grid;
             ret.PreviousBounds = collider.Bounds;
+            ret.X0 = x0;
+            ret.Y0 = y0;
+            ret.X1 = x1;
+            ret.Y1 = y1;
             return ret;
         }
 
@@ -280,6 +266,10 @@ public sealed class UniformGrid
             Collider = null;
             Grid = null;
             PreviousBounds = default;
+            X0 = 0;
+            Y0 = 0;
+            X1 = 0;
+            Y1 = 0;
         }
     }
 }
