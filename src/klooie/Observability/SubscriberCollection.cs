@@ -86,27 +86,35 @@ internal sealed class SubscriberCollection
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int EnsureCoherentState()
     {
-        subscribers.EnsureCapacity(subscribers.Count + newSubscribersForNextNotificationCycle.Count);
-        for (var i = 0; i < newSubscribersForNextNotificationCycle.Count; i++)
+        var changed = false;
+        if (newSubscribersForNextNotificationCycle.Count > 0)
         {
-            if (newSubscribersForNextNotificationCycle[i].Priority)
+            subscribers.EnsureCapacity(subscribers.Count + newSubscribersForNextNotificationCycle.Count);
+            for (var i = 0; i < newSubscribersForNextNotificationCycle.Count; i++)
             {
-                subscribers.Insert(0, newSubscribersForNextNotificationCycle[i].Entry);
+                if (newSubscribersForNextNotificationCycle[i].Priority)
+                {
+                    subscribers.Insert(0, newSubscribersForNextNotificationCycle[i].Entry);
+                }
+                else
+                {
+                    subscribers.Add(newSubscribersForNextNotificationCycle[i].Entry);
+                }
             }
-            else
-            {
-                subscribers.Add(newSubscribersForNextNotificationCycle[i].Entry);
-            }
+            newSubscribersForNextNotificationCycle.Clear();
+            changed = true;
         }
-        newSubscribersForNextNotificationCycle.Clear();
 
         for (var i = subscribers.Count - 1; i >= 0; i--)
         {
             var entry = subscribers[i];
-            if (entry.Subscription.IsStillValid(entry.Lease) == false) RemoveEntryAt(i);
+            if (entry.Subscription.IsStillValid(entry.Lease)) continue;
+
+            RemoveEntryAt(i);
+            changed = true;
         }
 
-        TrimOversizedLists();
+        if (changed) TrimOversizedLists();
         return subscribers.Count;
     }
 
