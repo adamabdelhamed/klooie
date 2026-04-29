@@ -146,8 +146,9 @@ public sealed class Velocity : Recyclable
         for (int index = 0; index < _influences.Count; index++)
         {
             var influence = _influences[index];
-            x += influence.DeltaSpeed * (float)Math.Cos(influence.Angle.ToRadians());
-            y += influence.DeltaSpeed * (float)Math.Sin(influence.Angle.ToRadians());
+            var (sin, cos) = MathF.SinCos(influence.Angle.ToRadians());
+            x += influence.DeltaSpeed * cos;
+            y += influence.DeltaSpeed * sin;
         }
         float speed = MathF.Sqrt(x * x + y * y);
 
@@ -162,9 +163,9 @@ public sealed class Velocity : Recyclable
             float sumX = 0, sumY = 0;
             for (int i = 0; i < _influences.Count; i++)
             {
-                float radians = _influences[i].Angle.ToRadians();
-                sumX += (float)Math.Cos(radians);
-                sumY += (float)Math.Sin(radians);
+                var (sin, cos) = MathF.SinCos(_influences[i].Angle.ToRadians());
+                sumX += cos;
+                sumY += sin;
             }
             // Edge case: influences exactly cancel (sumX=sumY=0); fallback to first influence.
             if (sumX != 0 || sumY != 0)
