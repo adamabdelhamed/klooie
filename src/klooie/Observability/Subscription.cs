@@ -47,7 +47,7 @@ internal abstract class Subscription : Recyclable, ISubscription
 internal sealed class ActionSubscription : Subscription
 {
     private ActionSubscription() { }
-    private static LazyPool<ActionSubscription> pool = new LazyPool<ActionSubscription>(() => new ActionSubscription());
+    private static LazyPool<ActionSubscription> pool = new LazyPool<ActionSubscription>(static () => new ActionSubscription());
     public static ActionSubscription Create(Action a)
     {
         var sub = pool.Value.Rent();
@@ -75,7 +75,7 @@ internal sealed class ScopedSubscription<T> : Subscription
     public Action<T> ScopedCallback { get; private set; }
 
     private ScopedSubscription() { }
-    private static LazyPool<ScopedSubscription<T>> pool = new LazyPool<ScopedSubscription<T>>(() => new ScopedSubscription<T>());
+    private static LazyPool<ScopedSubscription<T>> pool = new LazyPool<ScopedSubscription<T>>(static () => new ScopedSubscription<T>());
     public static ScopedSubscription<T> Create(T scope, Action<T> callback)
     {
         var sub = pool.Value.Rent();
@@ -154,7 +154,7 @@ internal sealed class ScopedArgsSubscription<TScope, TArgs> : ArgsSubscription<T
 
 internal sealed class OnceActionSubscription : Subscription
 {
-    private static LazyPool<OnceActionSubscription> pool = new LazyPool<OnceActionSubscription>(() => new OnceActionSubscription());
+    private static LazyPool<OnceActionSubscription> pool = new LazyPool<OnceActionSubscription>(static () => new OnceActionSubscription());
 
     private Action? callback;
 
@@ -185,7 +185,7 @@ internal sealed class OnceActionSubscription : Subscription
 
 internal sealed class OnceScopedSubscription<T> : Subscription
 {
-    private static LazyPool<OnceScopedSubscription<T>> pool = new LazyPool<OnceScopedSubscription<T>>(() => new OnceScopedSubscription<T>());
+    private static LazyPool<OnceScopedSubscription<T>> pool = new LazyPool<OnceScopedSubscription<T>>(static () => new OnceScopedSubscription<T>());
 
     private Action<T>? callback;
     private T scope;
@@ -216,7 +216,7 @@ internal sealed class OnceScopedSubscription<T> : Subscription
 
 internal sealed class OnceArgsSubscription<TArgs> : ArgsSubscription<TArgs>
 {
-    private static LazyPool<OnceArgsSubscription<TArgs>> pool = new LazyPool<OnceArgsSubscription<TArgs>>(() => new OnceArgsSubscription<TArgs>());
+    private static LazyPool<OnceArgsSubscription<TArgs>> pool = new LazyPool<OnceArgsSubscription<TArgs>>(static () => new OnceArgsSubscription<TArgs>());
 
     private Action<TArgs>? callback;
 
@@ -247,7 +247,7 @@ internal sealed class OnceArgsSubscription<TArgs> : ArgsSubscription<TArgs>
 internal sealed class OnceScopedArgsSubscription<TScope, TArgs> : ArgsSubscription<TArgs>
 {
     private static LazyPool<OnceScopedArgsSubscription<TScope, TArgs>> pool =
-        new LazyPool<OnceScopedArgsSubscription<TScope, TArgs>>(() => new OnceScopedArgsSubscription<TScope, TArgs>());
+        new LazyPool<OnceScopedArgsSubscription<TScope, TArgs>>(static () => new OnceScopedArgsSubscription<TScope, TArgs>());
 
     private Action<TScope, TArgs>? callback;
     private TScope scope;

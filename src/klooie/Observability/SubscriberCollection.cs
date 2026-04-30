@@ -11,12 +11,15 @@ internal sealed class SubscriberCollection
 
     [ThreadStatic]
     private static Stack<SubscriberCollection> lightweightCollectionPool;
-    [ThreadStatic]
-    private static Stack<Subscriber> lightweightSubscriberPool;
 
     internal int ThreadId;
-    private readonly List<Subscriber> subscribers = new List<Subscriber>(4);
-    private readonly List<PendingAdd> newSubscribersForNextNotificationCycle = new List<PendingAdd>(4);
+    private bool hasSingleSubscriber;
+    private Subscriber singleSubscriber;
+    private List<Subscriber>? subscribers;
+    private bool hasSinglePendingAdd;
+    private PendingAdd singlePendingAdd;
+    private List<PendingAdd>? newSubscribersForNextNotificationCycle;
+    private int notificationDepth;
 
     public int Count => EnsureCoherentState();
     private SubscriberCollection() => ThreadId = Thread.CurrentThread.ManagedThreadId;
@@ -29,32 +32,97 @@ internal sealed class SubscriberCollection
 
     private static Subscriber CreateSubscriber(ISubscription sub)
     {
-        lightweightSubscriberPool ??= new Stack<Subscriber>(100);
-        var ret = lightweightSubscriberPool.Count > 0 ? lightweightSubscriberPool.Pop() : new Subscriber();
-        ret.Subscription = sub;
-        ret.Lease = sub.Lease;
-        return ret;
+        return new Subscriber { Subscription = sub, Lease = sub.Lease };
     }
 
     public void Subscribe(ISubscription subscription)
     {
-        AssertThreadForSubscription(subscription);
-        newSubscribersForNextNotificationCycle.Add(new PendingAdd { Entry = CreateSubscriber(subscription), Priority = false });
+        if (PrepareToSubscribe(subscription) == false) return;
+        AddPending(new PendingAdd { Entry = CreateSubscriber(subscription), Priority = false });
     }
 
     public void SubscribeWithPriority(ISubscription subscription)
     {
-        AssertThreadForSubscription(subscription);
-        newSubscribersForNextNotificationCycle.Add(new PendingAdd { Entry = CreateSubscriber(subscription), Priority = true });
+        if (PrepareToSubscribe(subscription) == false) return;
+        AddPending(new PendingAdd { Entry = CreateSubscriber(subscription), Priority = true });
     }
 
-    private void RemoveEntryAt(int i)
+    private bool PrepareToSubscribe(ISubscription subscription)
     {
-        var entry = subscribers[i];
+        AssertThreadForSubscription(subscription);
+        if (subscription.IsStillValid(subscription.Lease) == false)
+        {
+            subscription.TryDispose(subscription.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:54");
+            return false;
+        }
+
+        if (notificationDepth == 0 && PendingCount > 0) EnsureCoherentState();
+        return true;
+    }
+
+    private int PendingCount => (hasSinglePendingAdd ? 1 : 0) + (newSubscribersForNextNotificationCycle?.Count ?? 0);
+
+    private int SubscriberCount => (hasSingleSubscriber ? 1 : 0) + (subscribers?.Count ?? 0);
+
+    private void AddPending(PendingAdd pendingAdd)
+    {
+        if (newSubscribersForNextNotificationCycle == null && hasSinglePendingAdd == false)
+        {
+            singlePendingAdd = pendingAdd;
+            hasSinglePendingAdd = true;
+            return;
+        }
+
+        newSubscribersForNextNotificationCycle ??= new List<PendingAdd>(4);
+        if (hasSinglePendingAdd)
+        {
+            newSubscribersForNextNotificationCycle.Add(singlePendingAdd);
+            singlePendingAdd = default;
+            hasSinglePendingAdd = false;
+        }
+
+        newSubscribersForNextNotificationCycle.Add(pendingAdd);
+    }
+
+    private void AddSubscriber(Subscriber entry, bool priority)
+    {
+        if (subscribers == null && hasSingleSubscriber == false)
+        {
+            singleSubscriber = entry;
+            hasSingleSubscriber = true;
+            return;
+        }
+
+        subscribers ??= new List<Subscriber>(4);
+        if (hasSingleSubscriber)
+        {
+            subscribers.Add(singleSubscriber);
+            singleSubscriber = default;
+            hasSingleSubscriber = false;
+        }
+
+        if (priority)
+        {
+            subscribers.Insert(0, entry);
+        }
+        else
+        {
+            subscribers.Add(entry);
+        }
+    }
+
+    private void RemoveSingleSubscriber()
+    {
+        singleSubscriber.Subscription?.TryDispose(singleSubscriber.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:99");
+        singleSubscriber = default;
+        hasSingleSubscriber = false;
+    }
+
+    private void RemoveSubscriberAt(int i)
+    {
+        var entry = subscribers![i];
         subscribers.RemoveAt(i);
-        entry.Subscription = null;
-        entry.Lease = 0;
-        lightweightSubscriberPool.Push(entry);
+        entry.Subscription?.TryDispose(entry.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:69");
     }
 
     public void Notify<T>(T arg)
@@ -65,10 +133,28 @@ internal sealed class SubscriberCollection
         AssertThreadForNotify();
 #endif
         EnsureCoherentState();
-        for (var i = 0; i < subscribers.Count; i++)
+        notificationDepth++;
+        try
         {
-            (subscribers[i].Subscription as ArgsSubscription<T>)?.SetArgs(arg); // setting args has no side effect. It just prepares the subscription for notification.
-            subscribers[i].Subscription.Notify();
+            if (hasSingleSubscriber)
+            {
+                (singleSubscriber.Subscription as ArgsSubscription<T>)?.SetArgs(arg); // setting args has no side effect. It just prepares the subscription for notification.
+                singleSubscriber.Subscription?.Notify();
+                if (singleSubscriber.Subscription?.IsStillValid(singleSubscriber.Lease) != true) RemoveSingleSubscriber();
+                return;
+            }
+
+            if (subscribers == null) return;
+            for (var i = 0; i < subscribers.Count; i++)
+            {
+                var entry = subscribers[i];
+                (entry.Subscription as ArgsSubscription<T>)?.SetArgs(arg); // setting args has no side effect. It just prepares the subscription for notification.
+                entry.Subscription?.Notify();
+            }
+        }
+        finally
+        {
+            notificationDepth--;
         }
     }
 
@@ -80,63 +166,107 @@ internal sealed class SubscriberCollection
         AssertThreadForNotify();
 #endif
         EnsureCoherentState();
-        for (var i = 0; i < subscribers.Count; i++) subscribers[i].Subscription.Notify();
+        notificationDepth++;
+        try
+        {
+            if (hasSingleSubscriber)
+            {
+                singleSubscriber.Subscription?.Notify();
+                if (singleSubscriber.Subscription?.IsStillValid(singleSubscriber.Lease) != true) RemoveSingleSubscriber();
+                return;
+            }
+
+            if (subscribers == null) return;
+            for (var i = 0; i < subscribers.Count; i++)
+            {
+                var entry = subscribers[i];
+                entry.Subscription?.Notify();
+            }
+        }
+        finally
+        {
+            notificationDepth--;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int EnsureCoherentState()
     {
         var changed = false;
-        if (newSubscribersForNextNotificationCycle.Count > 0)
+        if (hasSinglePendingAdd)
         {
-            subscribers.EnsureCapacity(subscribers.Count + newSubscribersForNextNotificationCycle.Count);
+            AddSubscriber(singlePendingAdd.Entry, singlePendingAdd.Priority);
+            singlePendingAdd = default;
+            hasSinglePendingAdd = false;
+            changed = true;
+        }
+
+        if (newSubscribersForNextNotificationCycle?.Count > 0)
+        {
+            subscribers?.EnsureCapacity(SubscriberCount + newSubscribersForNextNotificationCycle.Count);
             for (var i = 0; i < newSubscribersForNextNotificationCycle.Count; i++)
             {
-                if (newSubscribersForNextNotificationCycle[i].Priority)
-                {
-                    subscribers.Insert(0, newSubscribersForNextNotificationCycle[i].Entry);
-                }
-                else
-                {
-                    subscribers.Add(newSubscribersForNextNotificationCycle[i].Entry);
-                }
+                AddSubscriber(newSubscribersForNextNotificationCycle[i].Entry, newSubscribersForNextNotificationCycle[i].Priority);
             }
             newSubscribersForNextNotificationCycle.Clear();
             changed = true;
         }
 
-        for (var i = subscribers.Count - 1; i >= 0; i--)
+        if (hasSingleSubscriber && singleSubscriber.Subscription?.IsStillValid(singleSubscriber.Lease) != true)
         {
-            var entry = subscribers[i];
-            if (entry.Subscription.IsStillValid(entry.Lease)) continue;
-
-            RemoveEntryAt(i);
+            RemoveSingleSubscriber();
             changed = true;
         }
 
+        if (subscribers != null)
+        {
+            for (var i = subscribers.Count - 1; i >= 0; i--)
+            {
+                var entry = subscribers[i];
+                if (entry.Subscription?.IsStillValid(entry.Lease) == true) continue;
+
+                RemoveSubscriberAt(i);
+                changed = true;
+            }
+        }
+
         if (changed) TrimOversizedLists();
-        return subscribers.Count;
+        return SubscriberCount;
     }
 
     public void Dispose()
     {
         if (ThreadId != Thread.CurrentThread.ManagedThreadId) throw new InvalidOperationException("Cannot dispose SubscriberCollection from a different thread");
+        notificationDepth = 0;
 
-        for(var i = newSubscribersForNextNotificationCycle.Count - 1; i >= 0; i--)
+        if (hasSinglePendingAdd)
         {
-            var entry = newSubscribersForNextNotificationCycle[i].Entry;
-            entry.Subscription?.TryDispose(entry.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:115");
-            entry.Subscription = null;
-            entry.Lease = 0;
-            newSubscribersForNextNotificationCycle.RemoveAt(i);
-            lightweightSubscriberPool.Push(entry);
+            singlePendingAdd.Entry.Subscription?.TryDispose(singlePendingAdd.Entry.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:196");
+            singlePendingAdd = default;
+            hasSinglePendingAdd = false;
         }
 
-        for (int i = subscribers.Count - 1; i >= 0; i--)
+        if (newSubscribersForNextNotificationCycle != null)
         {
-            var entry = subscribers[i];
-            entry.Subscription.TryDispose(entry.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:125");
-            RemoveEntryAt(i);
+            for(var i = newSubscribersForNextNotificationCycle.Count - 1; i >= 0; i--)
+            {
+                var entry = newSubscribersForNextNotificationCycle[i].Entry;
+                entry.Subscription?.TryDispose(entry.Lease, "external/klooie/src/klooie/Observability/SubscriberCollection.cs:115");
+                newSubscribersForNextNotificationCycle.RemoveAt(i);
+            }
+        }
+
+        if (hasSingleSubscriber)
+        {
+            RemoveSingleSubscriber();
+        }
+
+        if (subscribers != null)
+        {
+            for (int i = subscribers.Count - 1; i >= 0; i--)
+            {
+                RemoveSubscriberAt(i);
+            }
         }
 
         TrimOversizedLists(force: true);
@@ -145,8 +275,8 @@ internal sealed class SubscriberCollection
 
     private void TrimOversizedLists(bool force = false)
     {
-        TrimOversizedList(subscribers, MinRetainedSubscriberCapacity, force);
-        TrimOversizedList(newSubscribersForNextNotificationCycle, MinRetainedPendingAddCapacity, force);
+        if (subscribers != null) TrimOversizedList(subscribers, MinRetainedSubscriberCapacity, force);
+        if (newSubscribersForNextNotificationCycle != null) TrimOversizedList(newSubscribersForNextNotificationCycle, MinRetainedPendingAddCapacity, force);
     }
 
     private static void TrimOversizedList<T>(List<T> list, int minRetainedCapacity, bool force)
@@ -175,10 +305,9 @@ internal sealed class SubscriberCollection
         public bool Priority;
     }
 
-    private sealed class Subscriber
+    private struct Subscriber
     {
-        public ISubscription Subscription;
+        public ISubscription? Subscription;
         public int Lease;
-        public Subscriber() { }
     }
 }

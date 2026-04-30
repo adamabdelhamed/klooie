@@ -12,7 +12,7 @@ public class Event<T> : Recyclable
     /// </summary>
     public bool HasSubscriptions => subscribers == null ? false : subscribers.Count > 0;
 
-    public int SubscriberCount => Subscribers?.Count ?? 0;
+    public int SubscriberCount => subscribers?.Count ?? 0;
 
     private Event() { }
 

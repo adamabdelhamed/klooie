@@ -7,6 +7,8 @@ public class Recyclable : ILifetime
     public static bool PoolingEnabled { get; set; } = true;
     public static StackHunterMode StackHunterMode { get; set; } = StackHunterMode.Off;
 
+    private ISubscription? singleDisposalSubscriber;
+    private int singleDisposalSubscriberLease;
     private SubscriberCollection? disposalSubscribers;
     private SubscriberCollection DisposalSubscribers
     {
@@ -87,10 +89,24 @@ public class Recyclable : ILifetime
         {
             OnReturn();
 
-            if (disposalSubscribers?.Count > 0)
+            if (singleDisposalSubscriber != null)
             {
-                disposalSubscribers.Notify();
-                disposalSubscribers?.Dispose();
+                try
+                {
+                    if (singleDisposalSubscriber.IsStillValid(singleDisposalSubscriberLease)) singleDisposalSubscriber.Notify();
+                }
+                finally
+                {
+                    singleDisposalSubscriber.TryDispose(singleDisposalSubscriberLease, "external/klooie/src/klooie/Observability/Recyclable.cs:95");
+                    singleDisposalSubscriber = null;
+                    singleDisposalSubscriberLease = default;
+                }
+            }
+
+            if (disposalSubscribers != null)
+            {
+                if (disposalSubscribers.Count > 0) disposalSubscribers.Notify();
+                disposalSubscribers.Dispose();
                 disposalSubscribers = null;
             }
 
@@ -145,7 +161,7 @@ public class Recyclable : ILifetime
     {
         if(IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed" + GetType().Name);
         var subscription = ActionSubscription.Create(cleanupCode);
-        DisposalSubscribers.Subscribe(subscription);
+        AddDisposalSubscription(subscription);
     }
 
     public void OnDisposed<T>(T scope, Action<T> cleanupCode)
@@ -153,6 +169,25 @@ public class Recyclable : ILifetime
         if (IsExpired || IsExpiring) throw new InvalidOperationException("Cannot add a disposal callback to an object that is already being disposed or has been disposed" + GetType().Name);
         if (scope == null) throw new ArgumentNullException(nameof(scope));
         var subscription = ScopedSubscription<T>.Create(scope, cleanupCode);
+        AddDisposalSubscription(subscription);
+    }
+
+    private void AddDisposalSubscription(ISubscription subscription)
+    {
+        if (singleDisposalSubscriber == null && disposalSubscribers == null)
+        {
+            singleDisposalSubscriber = subscription;
+            singleDisposalSubscriberLease = subscription.Lease;
+            return;
+        }
+
+        if (singleDisposalSubscriber != null)
+        {
+            DisposalSubscribers.Subscribe(singleDisposalSubscriber);
+            singleDisposalSubscriber = null;
+            singleDisposalSubscriberLease = default;
+        }
+
         DisposalSubscribers.Subscribe(subscription);
     }
 
