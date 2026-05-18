@@ -2,7 +2,7 @@ namespace klooie.blazor.BrowserConsole;
 
 public sealed class BrowserConsoleBitmap
 {
-    private readonly BrowserConsoleCell[] cells;
+    private BrowserConsoleCell[] cells;
 
     public BrowserConsoleBitmap(int width, int height, BrowserConsoleCell? fill = null)
     {
@@ -14,8 +14,8 @@ public sealed class BrowserConsoleBitmap
         cells = Enumerable.Repeat(fill ?? BrowserConsoleCell.Empty, width * height).ToArray();
     }
 
-    public int Width { get; }
-    public int Height { get; }
+    public int Width { get; private set; }
+    public int Height { get; private set; }
     public IReadOnlyList<BrowserConsoleCell> Cells => cells;
 
     public BrowserConsoleCell this[int x, int y]
@@ -45,7 +45,7 @@ public sealed class BrowserConsoleBitmap
 
     public void CopyFrom(klooie.ConsoleBitmap source)
     {
-        if (source.Width != Width || source.Height != Height) throw new ArgumentException("Bitmap dimensions must match.", nameof(source));
+        Resize(source.Width, source.Height);
 
         var pixels = source.Pixels;
         for (var i = 0; i < pixels.Length; i++)
@@ -53,6 +53,17 @@ public sealed class BrowserConsoleBitmap
             var pixel = pixels[i];
             cells[i] = new BrowserConsoleCell(pixel.Value.ToString(), pixel.ForegroundColor.ToWebString(), pixel.BackgroundColor.ToWebString());
         }
+    }
+
+    public void Resize(int width, int height)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+        if (Width == width && Height == height) return;
+
+        Width = width;
+        Height = height;
+        cells = Enumerable.Repeat(BrowserConsoleCell.Empty, width * height).ToArray();
     }
 
     private int GetIndex(int x, int y)

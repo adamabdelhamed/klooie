@@ -4,8 +4,8 @@ namespace klooie.blazor.BrowserConsole;
 
 public sealed class BrowserKlooieTerminalHost : ITerminalHost
 {
-    public const int TerminalWidth = 120;
-    public const int TerminalHeight = 16;
+    private int width = 80;
+    private int height = 25;
 
     public BrowserKlooieTerminalHost(BrowserConsoleBitmap bitmap)
     {
@@ -14,7 +14,14 @@ public sealed class BrowserKlooieTerminalHost : ITerminalHost
 
     public BrowserConsoleBitmap Bitmap { get; }
 
-    public static void InitConsoleProvider() => ConsoleProvider.Current = new NoOpConsole(TerminalWidth, TerminalHeight);
+    public static void InitConsoleProvider() => ConsoleProvider.Current = new NoOpConsole(80, 25);
+
+    public void Resize(int width, int height)
+    {
+        this.width = Math.Max(1, width);
+        this.height = Math.Max(1, height);
+        if (ConsoleProvider.Current is NoOpConsole console) console.Resize(this.width, this.height);
+    }
 
     public bool Present(LayoutRootPanel root, ConsoleBitmap bitmap)
     {
@@ -24,8 +31,8 @@ public sealed class BrowserKlooieTerminalHost : ITerminalHost
 
     public bool SyncSize(LayoutRootPanel root)
     {
-        if (root.Width == TerminalWidth && root.Height == TerminalHeight) return false;
-        root.ResizeTo(TerminalWidth, TerminalHeight);
+        if (root.Width == width && root.Height == height) return false;
+        root.ResizeTo(width, height);
         return true;
     }
 
@@ -48,6 +55,13 @@ public sealed class BrowserKlooieTerminalHost : ITerminalHost
         public int BufferWidth { get; set; }
         public int WindowHeight { get; set; }
         public int WindowWidth { get; set; }
+
+        public void Resize(int width, int height)
+        {
+            BufferWidth = width;
+            WindowWidth = width;
+            WindowHeight = height;
+        }
 
         public void Append(string text) { }
         public void Clear() { }

@@ -1,6 +1,6 @@
 @namespace klooie.blazor.BrowserConsole
 
-<div class="browser-console" style="@GridStyle" role="img" aria-label="Fake klooie console bitmap">
+<div class="browser-console" style="@GridStyle" role="img" aria-label="klooie console bitmap">
     @foreach (var cell in Bitmap.Cells)
     {
         <span class="browser-console-cell" style="@GetCellStyle(cell)">@GetGlyph(cell)</span>

@@ -11,7 +11,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
     public BrowserKlooieRuntime()
     {
         BrowserKlooieTerminalHost.InitConsoleProvider();
-        Bitmap = new BrowserConsoleBitmap(BrowserKlooieTerminalHost.TerminalWidth, BrowserKlooieTerminalHost.TerminalHeight);
+        Bitmap = new BrowserConsoleBitmap(80, 25);
         app = new DemoApp();
         app.StartCooperative();
         host = new BrowserKlooieTerminalHost(Bitmap);
@@ -21,9 +21,10 @@ public sealed class BrowserKlooieRuntime : IDisposable
 
     public BrowserConsoleBitmap Bitmap { get; }
 
-    public void Tick(TimeSpan budget)
+    public void Tick(int width, int height, TimeSpan budget)
     {
         if (disposed) return;
+        host.Resize(width, height);
         app.Tick(budget);
     }
 

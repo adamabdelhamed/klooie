@@ -4,12 +4,12 @@
     display: inline-grid;
     grid-auto-flow: row;
     padding: 0;
-    border: 1px solid #2a3142;
-    background: #10141f;
+    border: 0;
+    background: #000;
     font-family: Consolas, "Cascadia Mono", "Courier New", monospace;
     font-size: 1rem;
     line-height: 1;
-    box-shadow: 0 8px 22px rgba(8, 11, 18, 0.18);
+    box-shadow: none;
 }
 
 .browser-console-cell {
