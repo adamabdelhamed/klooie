@@ -1,0 +1,24 @@
+.browser-console {
+    --browser-console-cell-width: 1ch;
+    --browser-console-cell-height: 1em;
+    display: inline-grid;
+    grid-auto-flow: row;
+    padding: 0;
+    border: 1px solid #2a3142;
+    background: #10141f;
+    font-family: Consolas, "Cascadia Mono", "Courier New", monospace;
+    font-size: 1rem;
+    line-height: 1;
+    box-shadow: 0 8px 22px rgba(8, 11, 18, 0.18);
+}
+
+.browser-console-cell {
+    width: var(--browser-console-cell-width);
+    height: var(--browser-console-cell-height);
+    display: inline-block;
+    text-align: left;
+    line-height: var(--browser-console-cell-height);
+    overflow: hidden;
+    white-space: pre;
+    box-sizing: border-box;
+}

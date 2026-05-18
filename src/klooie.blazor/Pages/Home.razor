@@ -1,0 +1,38 @@
+@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<h1>klooie browser renderer</h1>
+
+<p>A hardcoded console bitmap rendered with plain HTML and CSS cells.</p>
+
+<BrowserConsoleRenderer Bitmap="sampleBitmap" />
+
+@code {
+    private readonly BrowserConsoleBitmap sampleBitmap = CreateSampleBitmap();
+
+    private static BrowserConsoleBitmap CreateSampleBitmap()
+    {
+        var bitmap = new BrowserConsoleBitmap(34, 10, new BrowserConsoleCell(" ", "#d7dde8", "#111722"));
+        var panel = new BrowserConsoleCell(" ", "#d7dde8", "#1d2638");
+        var status = new BrowserConsoleCell(" ", "#f8fafc", "#234e70");
+        var danger = new BrowserConsoleCell(" ", "#f8fafc", "#6f1d1b");
+        var moss = new BrowserConsoleCell(" ", "#ecfdf5", "#22543d");
+
+        bitmap.FillRect(1, 1, 32, 8, panel);
+        bitmap.FillRect(2, 2, 30, 1, status);
+        bitmap.FillRect(2, 6, 10, 2, danger);
+        bitmap.FillRect(13, 6, 19, 2, moss);
+
+        bitmap.Write(3, 2, "KLOOIE WASM PROOF", "#f8fafc", "#234e70");
+        bitmap.Write(3, 4, "fg colors:", "#d7dde8", "#1d2638");
+        bitmap.Write(14, 4, "red", "#ff6b6b", "#1d2638");
+        bitmap.Write(18, 4, "green", "#51cf66", "#1d2638");
+        bitmap.Write(24, 4, "cyan", "#66d9ef", "#1d2638");
+        bitmap.Write(4, 6, "spaces", "#f8fafc", "#6f1d1b");
+        bitmap.Write(15, 6, "symbol: ◆", "#fde68a", "#22543d");
+        bitmap.Write(15, 7, "independent cells", "#bfdbfe", "#22543d");
+
+        return bitmap;
+    }
+}

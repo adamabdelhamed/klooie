@@ -1,0 +1,19 @@
+@namespace klooie.blazor.BrowserConsole
+
+<div class="browser-console" style="@GridStyle" role="img" aria-label="Fake klooie console bitmap">
+    @foreach (var cell in Bitmap.Cells)
+    {
+        <span class="browser-console-cell" style="@GetCellStyle(cell)">@GetGlyph(cell)</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required BrowserConsoleBitmap Bitmap { get; set; }
+
+    private string GridStyle => $"grid-template-columns: repeat({Bitmap.Width}, var(--browser-console-cell-width)); grid-template-rows: repeat({Bitmap.Height}, var(--browser-console-cell-height));";
+
+    private static string GetCellStyle(BrowserConsoleCell cell) => $"color: {cell.ForegroundColor}; background-color: {cell.BackgroundColor};";
+
+    private static string GetGlyph(BrowserConsoleCell cell) => string.IsNullOrWhiteSpace(cell.Glyph) ? "\u00A0" : cell.Glyph;
+}
