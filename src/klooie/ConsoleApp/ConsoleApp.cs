@@ -140,14 +140,7 @@ public class ConsoleApp : EventLoop
     {
         try
         {
-            _current = this;
-            Name = GetType().Name;
-            layoutRoot = LayoutRootPanelPool.Instance.Rent();
-            OnDisposed(LayoutRoot, TryDisposeMe);
-            focus = FocusManagerPool.Instance.Rent();
-            OnDisposed(focus, TryDisposeMe);
-            ConsolePainter.Initialize();
-            Invoke(static () => Starting.Fire());
+            InitializeAppRun();
             base.Run();
         }
         finally
@@ -157,8 +150,26 @@ public class ConsoleApp : EventLoop
         }
     }
 
+    public override void StartCooperative()
+    {
+        InitializeAppRun();
+        base.StartCooperative();
+    }
+
  
     protected virtual Task Startup() => Task.CompletedTask;
+
+    private void InitializeAppRun()
+    {
+        _current = this;
+        Name = GetType().Name;
+        layoutRoot = LayoutRootPanelPool.Instance.Rent();
+        OnDisposed(LayoutRoot, TryDisposeMe);
+        focus = FocusManagerPool.Instance.Rent();
+        OnDisposed(focus, TryDisposeMe);
+        ConsolePainter.Initialize();
+        Invoke(static () => Starting.Fire());
+    }
 
     public Task RequestPaintAsync() => layoutRoot == null ? Task.CompletedTask : layoutRoot.RequestPaintAsync();
 

@@ -1,38 +1,44 @@
 @page "/"
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
 <PageTitle>Home</PageTitle>
 
 <h1>klooie browser renderer</h1>
 
-<p>A hardcoded console bitmap rendered with plain HTML and CSS cells.</p>
+<p>Live klooie visual tree rendered from <code>LayoutRoot.Bitmap</code>.</p>
 
-<BrowserConsoleRenderer Bitmap="sampleBitmap" />
+<div class="browser-demo" data-ticks="@tickCount">
+    <BrowserConsoleRenderer Bitmap="runtime.Bitmap" />
+</div>
 
 @code {
-    private readonly BrowserConsoleBitmap sampleBitmap = CreateSampleBitmap();
+    private readonly BrowserKlooieRuntime runtime = new();
+    private DotNetObjectReference<Home>? dotNetRef;
+    private int? pumpId;
+    private long tickCount;
 
-    private static BrowserConsoleBitmap CreateSampleBitmap()
+    [JSInvokable]
+    public Task Tick()
     {
-        var bitmap = new BrowserConsoleBitmap(34, 10, new BrowserConsoleCell(" ", "#d7dde8", "#111722"));
-        var panel = new BrowserConsoleCell(" ", "#d7dde8", "#1d2638");
-        var status = new BrowserConsoleCell(" ", "#f8fafc", "#234e70");
-        var danger = new BrowserConsoleCell(" ", "#f8fafc", "#6f1d1b");
-        var moss = new BrowserConsoleCell(" ", "#ecfdf5", "#22543d");
+        tickCount++;
+        runtime.Tick(TimeSpan.FromMilliseconds(8));
+        return InvokeAsync(StateHasChanged);
+    }
 
-        bitmap.FillRect(1, 1, 32, 8, panel);
-        bitmap.FillRect(2, 2, 30, 1, status);
-        bitmap.FillRect(2, 6, 10, 2, danger);
-        bitmap.FillRect(13, 6, 19, 2, moss);
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
 
-        bitmap.Write(3, 2, "KLOOIE WASM PROOF", "#f8fafc", "#234e70");
-        bitmap.Write(3, 4, "fg colors:", "#d7dde8", "#1d2638");
-        bitmap.Write(14, 4, "red", "#ff6b6b", "#1d2638");
-        bitmap.Write(18, 4, "green", "#51cf66", "#1d2638");
-        bitmap.Write(24, 4, "cyan", "#66d9ef", "#1d2638");
-        bitmap.Write(4, 6, "spaces", "#f8fafc", "#6f1d1b");
-        bitmap.Write(15, 6, "symbol: ◆", "#fde68a", "#22543d");
-        bitmap.Write(15, 7, "independent cells", "#bfdbfe", "#22543d");
+        dotNetRef = DotNetObjectReference.Create(this);
+        pumpId = await JS.InvokeAsync<int>("klooieFramePump.start", dotNetRef);
+    }
 
-        return bitmap;
+    public async ValueTask DisposeAsync()
+    {
+        if (pumpId is not null) await JS.InvokeVoidAsync("klooieFramePump.stop", pumpId.Value);
+
+        dotNetRef?.Dispose();
+        runtime.Dispose();
     }
 }

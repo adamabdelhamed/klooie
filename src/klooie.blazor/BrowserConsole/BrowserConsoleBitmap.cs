@@ -43,6 +43,18 @@ public sealed class BrowserConsoleBitmap
         }
     }
 
+    public void CopyFrom(klooie.ConsoleBitmap source)
+    {
+        if (source.Width != Width || source.Height != Height) throw new ArgumentException("Bitmap dimensions must match.", nameof(source));
+
+        var pixels = source.Pixels;
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            var pixel = pixels[i];
+            cells[i] = new BrowserConsoleCell(pixel.Value.ToString(), pixel.ForegroundColor.ToWebString(), pixel.BackgroundColor.ToWebString());
+        }
+    }
+
     private int GetIndex(int x, int y)
     {
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual((uint)x, (uint)Width);

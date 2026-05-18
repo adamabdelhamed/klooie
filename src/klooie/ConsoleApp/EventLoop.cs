@@ -240,6 +240,34 @@ public class EventLoop : Recyclable
         }
     }
 
+    public virtual void StartCooperative()
+    {
+        if (IsRunning) return;
+
+        runMode = false;
+        Thread = System.Threading.Thread.CurrentThread;
+        runDeferred = new TaskCompletionSource<bool>();
+        syncContext = new CustomSyncContext(this);
+        SynchronizationContext.SetSynchronizationContext(syncContext);
+        stopRequested = false;
+        IsDrainingOrDrained = false;
+        Cycle = -1;
+        LoopStarted.Fire();
+    }
+
+    public void Tick(TimeSpan budget)
+    {
+        if (!IsRunning || IsDrainingOrDrained) return;
+        RunOneCycle();
+    }
+
+    public void StopCooperative()
+    {
+        if (!IsRunning) return;
+        stopRequested = true;
+        CompleteCooperativeRun();
+    }
+
     private void RunCommon()
     {
         syncContext = new CustomSyncContext(this);
@@ -422,6 +450,134 @@ public class EventLoop : Recyclable
             LoopStopped.Fire();
             SynchronizationContext.SetSynchronizationContext(null);
         }
+    }
+
+    private void RunOneCycle()
+    {
+        try
+        {
+            RunOneCycleCore();
+            if (stopRequested) CompleteCooperativeRun();
+        }
+        catch (Exception ex)
+        {
+            runDeferred?.SetException(ex);
+            CompleteCooperativeRun();
+            ExceptionDispatchInfo.Capture(ex).Throw();
+        }
+    }
+
+    private void RunOneCycleCore()
+    {
+        if (Cycle == long.MaxValue) Cycle = 0;
+        else Cycle++;
+
+        try
+        {
+            startOfCycle?.Fire();
+        }
+        catch (Exception ex)
+        {
+            var handling = HandleWorkItemException(ex, null);
+            if (handling == EventLoopExceptionHandling.Throw) throw;
+            if (handling == EventLoopExceptionHandling.Stop)
+            {
+                stopRequested = true;
+                return;
+            }
+        }
+
+        var todoOnThisCycle = new List<SynchronizedEventBase>();
+        lock (workQueue)
+        {
+            while (workQueue.Count > 0)
+            {
+                var workItem = workQueue[0];
+                workQueue.RemoveAt(0);
+                todoOnThisCycle.Add(workItem);
+            }
+        }
+
+        for (var i = 0; i < pendingWorkItems.Count; i++)
+        {
+            if (pendingWorkItems[i].IsFinished && pendingWorkItems[i].IsFailed)
+            {
+                var handling = HandleWorkItemException(pendingWorkItems[i].Exception, pendingWorkItems[i]);
+                if (handling == EventLoopExceptionHandling.Throw) ExceptionDispatchInfo.Capture(pendingWorkItems[i].Exception).Throw();
+                if (handling == EventLoopExceptionHandling.Stop)
+                {
+                    stopRequested = true;
+                    return;
+                }
+
+                var wi = pendingWorkItems[i];
+                pendingWorkItems.RemoveAt(i--);
+                pool.Return(wi);
+                if (stopRequested) return;
+            }
+            else if (pendingWorkItems[i].IsFinished)
+            {
+                var wi = pendingWorkItems[i];
+                pendingWorkItems.RemoveAt(i--);
+                pool.Return(wi);
+                if (stopRequested) return;
+            }
+        }
+
+        foreach (var workItem in todoOnThisCycle)
+        {
+            try
+            {
+                workItem.Run();
+                if (workItem.IsFinished == false)
+                {
+                    pendingWorkItems.Add(workItem);
+                }
+                else if (workItem.Exception != null)
+                {
+                    throw new AggregateException(workItem.Exception);
+                }
+                else
+                {
+                    pool.Return(workItem);
+                    if (stopRequested) return;
+                }
+            }
+            catch (Exception ex)
+            {
+                var handling = HandleWorkItemException(ex, workItem);
+                if (handling == EventLoopExceptionHandling.Throw) throw;
+                if (handling == EventLoopExceptionHandling.Stop)
+                {
+                    stopRequested = true;
+                    return;
+                }
+            }
+        }
+
+        try
+        {
+            EndOfCycle.Fire();
+        }
+        catch (Exception ex)
+        {
+            var handling = HandleWorkItemException(ex, null);
+            if (handling == EventLoopExceptionHandling.Throw) throw;
+            if (handling == EventLoopExceptionHandling.Stop) stopRequested = true;
+        }
+    }
+
+    private void CompleteCooperativeRun()
+    {
+        if (IsDrainingOrDrained) return;
+
+        IsDrainingOrDrained = true;
+        LoopStopped.Fire();
+        SynchronizationContext.SetSynchronizationContext(null);
+        pendingWorkItems.Clear();
+        workQueue.Clear();
+        runDeferred?.TrySetResult(true);
+        runDeferred = null;
     }
 
     public void Stop()
