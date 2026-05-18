@@ -17,6 +17,13 @@ body {
     background: #000;
 }
 
+.klooie-canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+}
+
 .browser-console-measure {
     position: absolute;
     left: -10000px;

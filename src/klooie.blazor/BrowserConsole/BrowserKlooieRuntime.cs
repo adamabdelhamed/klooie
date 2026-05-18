@@ -11,21 +11,22 @@ public sealed class BrowserKlooieRuntime : IDisposable
     public BrowserKlooieRuntime()
     {
         BrowserKlooieTerminalHost.InitConsoleProvider();
-        Bitmap = new BrowserConsoleBitmap(80, 25);
+        FrameBuffer = new BrowserConsoleFrameBuffer(80, 25);
         app = new DemoApp();
         app.StartCooperative();
-        host = new BrowserKlooieTerminalHost(Bitmap);
+        host = new BrowserKlooieTerminalHost(FrameBuffer);
         ((LayoutRootPanel)app.LayoutRoot).TerminalHost = host;
         host.SyncSize((LayoutRootPanel)app.LayoutRoot);
     }
 
-    public BrowserConsoleBitmap Bitmap { get; }
+    public BrowserConsoleFrameBuffer FrameBuffer { get; }
 
-    public void Tick(int width, int height, TimeSpan budget)
+    public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget)
     {
-        if (disposed) return;
+        if (disposed) return BrowserConsoleFrame.Empty;
         host.Resize(width, height);
         app.Tick(budget);
+        return FrameBuffer.ToFrame();
     }
 
     public void Dispose()

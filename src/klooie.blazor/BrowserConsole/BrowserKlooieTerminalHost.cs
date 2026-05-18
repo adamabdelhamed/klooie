@@ -7,12 +7,12 @@ public sealed class BrowserKlooieTerminalHost : ITerminalHost
     private int width = 80;
     private int height = 25;
 
-    public BrowserKlooieTerminalHost(BrowserConsoleBitmap bitmap)
+    public BrowserKlooieTerminalHost(BrowserConsoleFrameBuffer frameBuffer)
     {
-        Bitmap = bitmap;
+        FrameBuffer = frameBuffer;
     }
 
-    public BrowserConsoleBitmap Bitmap { get; }
+    public BrowserConsoleFrameBuffer FrameBuffer { get; }
 
     public static void InitConsoleProvider() => ConsoleProvider.Current = new NoOpConsole(80, 25);
 
@@ -25,7 +25,7 @@ public sealed class BrowserKlooieTerminalHost : ITerminalHost
 
     public bool Present(LayoutRootPanel root, ConsoleBitmap bitmap)
     {
-        Bitmap.CopyFrom(bitmap);
+        FrameBuffer.CopyFrom(bitmap);
         return true;
     }
 

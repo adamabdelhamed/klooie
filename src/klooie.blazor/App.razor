@@ -2,7 +2,7 @@
 @inject IJSRuntime JS
 
 <div @ref="hostElement" class="klooie-host" data-ticks="@tickCount">
-    <BrowserConsoleRenderer Bitmap="runtime.Bitmap" />
+    <canvas class="klooie-canvas" aria-label="klooie console bitmap"></canvas>
 </div>
 
 @code {
@@ -13,11 +13,11 @@
     private long tickCount;
 
     [JSInvokable]
-    public void Tick(int width, int height)
+    public BrowserConsoleFrame Tick(int width, int height, double elapsedMilliseconds)
     {
         tickCount++;
-        runtime.Tick(width, height, TimeSpan.FromMilliseconds(8));
-        StateHasChanged();
+        var budget = TimeSpan.FromMilliseconds(Math.Clamp(elapsedMilliseconds, 1, 33));
+        return runtime.Tick(width, height, budget);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

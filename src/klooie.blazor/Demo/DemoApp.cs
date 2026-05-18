@@ -4,20 +4,24 @@ namespace klooie.blazor.Demo;
 
 public class DemoApp : ConsoleApp
 {
-    protected override Task Startup()
+    protected override async Task Startup()
     {
         var staticLabel = ConsoleStringRendererPool.Instance.Rent();
-        staticLabel.Content = "Static label".ToGreen();
-        
+        staticLabel.Content = "0 FPS".ToGreen();
+
+        BeforePaint.Subscribe(() => staticLabel.Content = $"{FramesPerSecond} FPS".ToGreen() , this);
+
         LayoutRoot.Add(staticLabel).DockToRight().DockToTop(padding: 1);
 
-        var label = ConsoleStringRendererPool.Instance.Rent();
-        label.Content = "Animated label".ToRed(bg: RGB.Red.ToOther(RGB.Black, .9f));
-        LayoutRoot.Add(label);
-        label.X = 2;
-        label.Y = 4;
- 
-        label.AnimateSync(()=> new RectF(LayoutRoot.Width - (label.Width + 2), label.Y, label.Width, label.Height), 3000, easingFunction: EasingFunctions.EaseInOutCinematic, autoReverse: true, loop: this);
-        return Task.CompletedTask;
+        for (var i = 0; i < 15; i++)
+        {
+            var label = ConsoleStringRendererPool.Instance.Rent();
+            label.Content = "Animated label".ToRed(bg: RGB.Red.ToOther(RGB.Black, .9f));
+            LayoutRoot.Add(label);
+            label.X = 2;
+            label.Y = 4 + i * 2;
+            await Task.Delay(1000);
+            label.AnimateSync(() => new RectF(LayoutRoot.Width - (label.Width + 2), label.Y, label.Width, label.Height), 3000, easingFunction: EasingFunctions.EaseInOutCinematic, autoReverse: true, loop: this);
+        }
     }
 }
