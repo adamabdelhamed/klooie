@@ -13,11 +13,11 @@
     private long tickCount;
 
     [JSInvokable]
-    public Task Tick(int width, int height)
+    public void Tick(int width, int height)
     {
         tickCount++;
         runtime.Tick(width, height, TimeSpan.FromMilliseconds(8));
-        return InvokeAsync(StateHasChanged);
+        StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

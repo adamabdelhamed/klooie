@@ -2,7 +2,6 @@
     --browser-console-cell-width: 1ch;
     --browser-console-cell-height: 1em;
     display: inline-grid;
-    grid-auto-flow: row;
     padding: 0;
     border: 0;
     background: #000;
@@ -12,11 +11,19 @@
     box-shadow: none;
 }
 
-.browser-console-cell {
-    width: var(--browser-console-cell-width);
+.browser-console-row {
+    width: calc(var(--browser-console-bitmap-width) * var(--browser-console-cell-width));
+    height: var(--browser-console-cell-height);
+    display: block;
+    line-height: var(--browser-console-cell-height);
+    overflow: hidden;
+    white-space: pre;
+    box-sizing: border-box;
+}
+
+.browser-console-run {
     height: var(--browser-console-cell-height);
     display: inline-block;
-    text-align: left;
     line-height: var(--browser-console-cell-height);
     overflow: hidden;
     white-space: pre;

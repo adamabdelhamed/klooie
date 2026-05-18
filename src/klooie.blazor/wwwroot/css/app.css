@@ -17,6 +17,17 @@ body {
     background: #000;
 }
 
+.browser-console-measure {
+    position: absolute;
+    left: -10000px;
+    top: -10000px;
+    visibility: hidden;
+    font-family: Consolas, "Cascadia Mono", "Courier New", monospace;
+    font-size: 1rem;
+    line-height: 1;
+    white-space: pre;
+}
+
 #blazor-error-ui {
     color-scheme: light only;
     background: lightyellow;

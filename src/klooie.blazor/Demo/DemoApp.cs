@@ -16,8 +16,8 @@ public class DemoApp : ConsoleApp
         LayoutRoot.Add(label);
         label.X = 2;
         label.Y = 4;
-        var dest = new RectF( LayoutRoot.Width - (label.Width + 2), label.Y, label.Width, label.Height);
-        label.AnimateSync(()=> dest, 1000, autoReverse: true, loop: this);
+ 
+        label.AnimateSync(()=> new RectF(LayoutRoot.Width - (label.Width + 2), label.Y, label.Width, label.Height), 3000, easingFunction: EasingFunctions.EaseInOutCinematic, autoReverse: true, loop: this);
         return Task.CompletedTask;
     }
 }

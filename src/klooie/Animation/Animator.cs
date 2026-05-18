@@ -64,9 +64,6 @@ public static partial class Animator
             return;
         }
 
-        var numberOfFrames = (float)(ConsoleMath.Round(animationTime.TotalSeconds * LayoutRootPanel.MaxPaintRate));
-        numberOfFrames = Math.Max(numberOfFrames, 2);
-
         var initialValue = state.From;
         state.Set(initialValue);
 
@@ -74,11 +71,9 @@ public static partial class Animator
 
         var frame = AnimationFrameState.Create();
         frame.AnimationState = state;
-        frame.NumberOfFrames = numberOfFrames;
         frame.InitialValue = initialValue;
         frame.Delta = delta;
         frame.StartTime = Stopwatch.GetTimestamp();
-        frame.I = -1;
         frame.OnDisposed(state, onDone);
 
         if (state.PauseManager != null)
@@ -101,14 +96,14 @@ public static partial class Animator
             return;
         }
 
-        frameState.I++;
-
-        var numberOfFrames = frameState.NumberOfFrames;
-        var isLastFrame = frameState.I >= numberOfFrames - 1;
+        var elapsed = Stopwatch.GetElapsedTime(frameState.StartTime);
+        var duration = TimeSpan.FromMilliseconds(frameState.AnimationState.Duration);
+        var isLastFrame = elapsed >= duration;
 
         FrameDebugger.RegisterTask(nameof(ProcessAnimationFrame));
 
-        var percentageDone = frameState.I / numberOfFrames;
+        var percentageDone = duration == TimeSpan.Zero ? 1f : (float)(elapsed.TotalMilliseconds / duration.TotalMilliseconds);
+        percentageDone = Math.Clamp(percentageDone, 0f, 1f);
         percentageDone = frameState.AnimationState.EasingFunction != null
             ? frameState.AnimationState.EasingFunction(percentageDone)
             : percentageDone;

@@ -11,11 +11,9 @@ public static partial class Animator
     private class AnimationFrameState : DelayState
     {
         public FloatAnimationState AnimationState { get; set; }
-        public float NumberOfFrames { get; set; }
         public float InitialValue { get; set; }
         public float Delta { get; set; }
         public long StartTime { get; set; }
-        public float I { get; set; }
 
         private AnimationFrameState() { }
         private static LazyPool<AnimationFrameState> pool = new LazyPool<AnimationFrameState>(() => new AnimationFrameState());
@@ -30,11 +28,9 @@ public static partial class Animator
         {
             base.OnInit();
             AnimationState = null;
-            NumberOfFrames = 0;
             InitialValue = 0;
             Delta = 0;
             StartTime = 0;
-            I = 0;
         }
     }
 }

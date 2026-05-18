@@ -43,6 +43,14 @@ public sealed class BrowserConsoleBitmap
         }
     }
 
+    public IEnumerable<BrowserConsoleRow> Rows
+    {
+        get
+        {
+            for (var y = 0; y < Height; y++) yield return new BrowserConsoleRow(cells, y * Width, Width);
+        }
+    }
+
     public void CopyFrom(klooie.ConsoleBitmap source)
     {
         Resize(source.Width, source.Height);
@@ -72,4 +80,50 @@ public sealed class BrowserConsoleBitmap
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual((uint)y, (uint)Height);
         return y * Width + x;
     }
+}
+
+public readonly struct BrowserConsoleRow
+{
+    private readonly BrowserConsoleCell[] cells;
+    private readonly int offset;
+
+    public BrowserConsoleRow(BrowserConsoleCell[] cells, int offset, int width)
+    {
+        this.cells = cells;
+        this.offset = offset;
+        Width = width;
+    }
+
+    public int Width { get; }
+
+    public IEnumerable<BrowserConsoleRun> Runs
+    {
+        get
+        {
+            var start = 0;
+            var text = new System.Text.StringBuilder();
+            var current = cells[offset];
+
+            for (var x = 0; x < Width; x++)
+            {
+                var cell = cells[offset + x];
+                if (x > 0 && !cell.HasSameStyle(current))
+                {
+                    yield return new BrowserConsoleRun(start, text.ToString(), current.ForegroundColor, current.BackgroundColor);
+                    start = x;
+                    text.Clear();
+                    current = cell;
+                }
+
+                text.Append(string.IsNullOrWhiteSpace(cell.Glyph) ? '\u00A0' : cell.Glyph);
+            }
+
+            yield return new BrowserConsoleRun(start, text.ToString(), current.ForegroundColor, current.BackgroundColor);
+        }
+    }
+}
+
+public readonly record struct BrowserConsoleRun(int Start, string Text, string ForegroundColor, string BackgroundColor)
+{
+    public int Length => Text.Length;
 }
