@@ -8,9 +8,8 @@ public class DemoApp : ConsoleApp
     {
         var staticLabel = ConsoleStringRendererPool.Instance.Rent();
         staticLabel.Content = "Static label".ToGreen();
-        staticLabel.X = 2;
-        staticLabel.Y = 2;
-        LayoutRoot.Add(staticLabel);
+        
+        LayoutRoot.Add(staticLabel).DockToRight().DockToTop(padding: 1);
 
         var label = ConsoleStringRendererPool.Instance.Rent();
         label.Content = "Animated label".ToRed(bg: RGB.Red.ToOther(RGB.Black, .9f));
