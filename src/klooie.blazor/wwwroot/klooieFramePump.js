@@ -12,10 +12,11 @@ window.klooieFramePump = {
             cellHeight: 16,
             devicePixelRatio: 1,
             heldKeys: new Map(),
+            pendingKeys: [],
             listeners: []
         };
         this.pumps[id] = state;
-        setupKeyboard(dotNetRef, hostElement, state);
+        setupKeyboard(hostElement, state);
 
         const frame = async (timestamp) => {
             if (state.stopped) return;
@@ -25,7 +26,9 @@ window.klooieFramePump = {
 
             try {
                 const size = measure(hostElement, state);
-                const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed);
+                pumpKeyboardRepeats(state, timestamp);
+                const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
+                const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys);
                 drawFrame(canvas, context, terminalFrame, state);
             } catch (error) {
                 console.error("klooie frame pump tick failed", error);
@@ -47,38 +50,21 @@ window.klooieFramePump = {
     }
 };
 
-function setupKeyboard(dotNetRef, hostElement, state) {
+function setupKeyboard(hostElement, state) {
     if (!hostElement.hasAttribute("tabindex")) {
         hostElement.tabIndex = 0;
     }
-
-    const send = (event) => {
-        const payload = keyboardEventToPayload(event);
-        dotNetRef.invokeMethodAsync("SendKey", payload)
-            .catch(error => console.error("klooie key dispatch failed", error));
-    };
 
     const startRepeat = (event) => {
         const keyId = keyboardEventId(event);
         if (state.heldKeys.has(keyId)) return;
 
         const payload = keyboardEventToPayload(event);
-        const held = {
-            delayId: 0,
-            intervalId: 0,
-            payload
-        };
-
-        held.delayId = window.setTimeout(() => {
-            if (!state.heldKeys.has(keyId)) return;
-
-            held.intervalId = window.setInterval(() => {
-                dotNetRef.invokeMethodAsync("SendKey", held.payload)
-                    .catch(error => console.error("klooie key repeat dispatch failed", error));
-            }, 33);
-        }, 400);
-
-        state.heldKeys.set(keyId, held);
+        state.pendingKeys.push(payload);
+        state.heldKeys.set(keyId, {
+            payload,
+            nextRepeatAt: performance.now() + 400
+        });
     };
 
     const clearRepeat = (event) => clearHeldKey(state, keyboardEventId(event));
@@ -95,7 +81,6 @@ function setupKeyboard(dotNetRef, hostElement, state) {
 
         if (isModifierOnlyKey(event.key)) return;
         if (event.repeat) return;
-        send(event);
         startRepeat(event);
     };
 
@@ -135,12 +120,22 @@ function teardownKeyboard(state) {
 }
 
 function clearHeldKey(state, keyId) {
-    const held = state.heldKeys.get(keyId);
-    if (!held) return;
-
-    window.clearTimeout(held.delayId);
-    window.clearInterval(held.intervalId);
     state.heldKeys.delete(keyId);
+}
+
+function pumpKeyboardRepeats(state, timestamp) {
+    for (const held of state.heldKeys.values()) {
+        let repeats = 0;
+        while (timestamp >= held.nextRepeatAt && repeats < 4) {
+            state.pendingKeys.push(held.payload);
+            held.nextRepeatAt += 33;
+            repeats++;
+        }
+
+        if (repeats === 4 && timestamp >= held.nextRepeatAt) {
+            held.nextRepeatAt = timestamp + 33;
+        }
+    }
 }
 
 function keyboardEventId(event) {

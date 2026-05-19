@@ -33,8 +33,13 @@ else
     public string? AppRoute { get; set; }
 
     [JSInvokable]
-    public BrowserConsoleFrame Tick(int width, int height, double elapsedMilliseconds)
+    public BrowserConsoleFrame Tick(int width, int height, double elapsedMilliseconds, BrowserKeyboardEvent[] keyboardEvents)
     {
+        foreach (var keyboardEvent in keyboardEvents)
+        {
+            SendKey(keyboardEvent);
+        }
+
         tickCount++;
         var budget = TimeSpan.FromMilliseconds(Math.Clamp(elapsedMilliseconds, 1, 33));
         return runtime?.Tick(width, height, budget) ?? BrowserConsoleFrame.Empty;
