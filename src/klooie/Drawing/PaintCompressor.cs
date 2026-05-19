@@ -127,15 +127,26 @@ internal static class PaintCompressor
                 if (next.IsUnderlined != under) break;
 
                 int offset = x - start;
-                if (CanJoinRun(in next, in avgFg, in avgBg, offset, colorThresholdSq) == false) break;
+                if (CanJoinRun(in next, visibleFgCount > 0, in avgFg, in avgBg, offset, colorThresholdSq) == false) break;
 
                 if (next.Value != ' ')
                 {
-                    fgR += next.ForegroundColor.R;
-                    fgG += next.ForegroundColor.G;
-                    fgB += next.ForegroundColor.B;
-                    visibleFgCount++;
-                    avgFg = AverageColor(fgR, fgG, fgB, visibleFgCount);
+                    if (visibleFgCount == 0)
+                    {
+                        fgR = next.ForegroundColor.R;
+                        fgG = next.ForegroundColor.G;
+                        fgB = next.ForegroundColor.B;
+                        visibleFgCount = 1;
+                        avgFg = next.ForegroundColor;
+                    }
+                    else
+                    {
+                        fgR += next.ForegroundColor.R;
+                        fgG += next.ForegroundColor.G;
+                        fgB += next.ForegroundColor.B;
+                        visibleFgCount++;
+                        avgFg = AverageColor(fgR, fgG, fgB, visibleFgCount);
+                    }
                 }
 
                 bgR += next.BackgroundColor.R;
@@ -223,20 +234,20 @@ internal static class PaintCompressor
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool CanJoinRun(in ConsoleCharacter c, in RGB avgFg, in RGB avgBg, int offset, int colorThresholdSq)
+    private static bool CanJoinRun(in ConsoleCharacter c, bool hasVisibleForeground, in RGB avgFg, in RGB avgBg, int offset, int colorThresholdSq)
     {
         if (colorThresholdSq == 0)
         {
             return c.Value == ' '
                 ? c.BackgroundColor == avgBg
-                : c.ForegroundColor == avgFg && c.BackgroundColor == avgBg;
+                : (hasVisibleForeground == false || c.ForegroundColor == avgFg) && c.BackgroundColor == avgBg;
         }
 
         if (offset >= MaxSoftenedRun)
         {
             return c.Value == ' '
                 ? c.BackgroundColor == avgBg
-                : c.ForegroundColor == avgFg && c.BackgroundColor == avgBg;
+                : (hasVisibleForeground == false || c.ForegroundColor == avgFg) && c.BackgroundColor == avgBg;
         }
 
         int thrSq = s_ThrSqByOffset[offset];
@@ -252,10 +263,7 @@ internal static class PaintCompressor
 
         if (c.Value == ' ') return true;
 
-        return ChannelTooFar(c.ForegroundColor.R, avgFg.R, cap) == false &&
-               ChannelTooFar(c.ForegroundColor.G, avgFg.G, cap) == false &&
-               ChannelTooFar(c.ForegroundColor.B, avgFg.B, cap) == false &&
-               ColorsCloseEnough(c.ForegroundColor, avgFg, thrSq);
+        return hasVisibleForeground == false || c.ForegroundColor == avgFg;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

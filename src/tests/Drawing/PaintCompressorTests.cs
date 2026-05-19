@@ -9,7 +9,7 @@ namespace klooie.tests;
 public class PaintCompressorTests
 {
     [TestMethod]
-    public void PaintCompressor_UsesCentroidToCompressGentleGradients()
+    public void PaintCompressor_UsesCentroidToCompressGentleBackgroundGradients()
     {
         var previousDetail = PaintDetailSettings.DetailPercent;
         PaintDetailSettings.DetailPercent = PaintDetailSettings.DefaultDetailPercent;
@@ -19,7 +19,7 @@ public class PaintCompressorTests
             for (int i = 0; i < pixels.Length; i++)
             {
                 var color = new RGB((byte)i, 0, 0);
-                pixels[i] = new ConsoleCharacter('X', color, RGB.Black);
+                pixels[i] = new ConsoleCharacter('X', RGB.White, color);
             }
 
             int threshold = PaintCompressor.ComputeColorThresholdSq();
@@ -29,7 +29,8 @@ public class PaintCompressorTests
 
             Assert.IsTrue(runs.Count < pixels.Length);
             Assert.IsTrue(runs[0].Length > 2);
-            Assert.AreNotEqual(pixels[0].ForegroundColor, runs[0].FG);
+            Assert.AreEqual(RGB.White, runs[0].FG);
+            Assert.AreNotEqual(pixels[0].BackgroundColor, runs[0].BG);
         }
         finally
         {
@@ -57,6 +58,54 @@ public class PaintCompressorTests
     }
 
     [TestMethod]
+    public void PaintCompressor_DoesNotSoftenVisibleForeground()
+    {
+        var previousDetail = PaintDetailSettings.DetailPercent;
+        PaintDetailSettings.DetailPercent = 0;
+        try
+        {
+            var pixels = new[]
+            {
+                new ConsoleCharacter('X', new RGB(100, 0, 0), RGB.Black),
+                new ConsoleCharacter('X', new RGB(101, 0, 0), RGB.Black),
+            };
+
+            int threshold = PaintCompressor.ComputeColorThresholdSq();
+            PaintCompressor.BuildPerFrameThresholds(threshold);
+            var runs = new List<Run>();
+            PaintCompressor.BuildRunsForLine(pixels, pixels.Length, 0, threshold, runs);
+
+            Assert.AreEqual(2, runs.Count);
+            Assert.AreEqual(pixels[0].ForegroundColor, runs[0].FG);
+            Assert.AreEqual(pixels[1].ForegroundColor, runs[1].FG);
+        }
+        finally
+        {
+            PaintDetailSettings.DetailPercent = previousDetail;
+        }
+    }
+
+    [TestMethod]
+    public void PaintCompressor_LeadingSpacesCanJoinFirstVisibleForeground()
+    {
+        var pixels = new[]
+        {
+            new ConsoleCharacter(' ', RGB.Red, RGB.Blue),
+            new ConsoleCharacter('X', RGB.Green, RGB.Blue),
+            new ConsoleCharacter('X', RGB.Green, RGB.Blue),
+        };
+
+        PaintCompressor.BuildPerFrameThresholds(0);
+        var runs = new List<Run>();
+        PaintCompressor.BuildRunsForLine(pixels, pixels.Length, 0, 0, runs);
+
+        Assert.AreEqual(1, runs.Count);
+        Assert.AreEqual(3, runs[0].Length);
+        Assert.AreEqual(RGB.Green, runs[0].FG);
+        Assert.AreEqual(RGB.Blue, runs[0].BG);
+    }
+
+    [TestMethod]
     public void PaintCompressor_LowDetailCompressesColorRampsMoreAggressively()
     {
         var previousDetail = PaintDetailSettings.DetailPercent;
@@ -66,7 +115,7 @@ public class PaintCompressorTests
             for (int i = 0; i < pixels.Length; i++)
             {
                 var color = new RGB((byte)(30 + (i * 4)), 40, 50);
-                pixels[i] = new ConsoleCharacter('X', color, RGB.Black);
+                pixels[i] = new ConsoleCharacter('X', RGB.White, color);
             }
 
             int defaultRunCount = CountRunsAtDetail(PaintDetailSettings.DefaultDetailPercent, pixels);
