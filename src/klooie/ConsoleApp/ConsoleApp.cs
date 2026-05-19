@@ -195,6 +195,10 @@ public class ConsoleApp : EventLoop
 
     public static bool LogTailEnabled { get; set; } = true;
 
+    public static Task RunAsync(ConsoleApp app) => ConsoleAppRunner.RunAsync(app);
+
+    public Task RunAsync() => ConsoleAppRunner.RunAsync(this);
+
     public void WriteLine(ConsoleString s)
     {
         if (!LogTailEnabled) return;

@@ -2,8 +2,7 @@ html, body, #app {
     width: 100%;
     height: 100%;
     margin: 0;
-    overflow: hidden;
-    background: #000;
+    background: #0d1117;
 }
 
 body {
@@ -15,6 +14,71 @@ body {
     height: 100vh;
     overflow: hidden;
     background: #000;
+}
+
+.home-page {
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 48px;
+    color: #e6edf3;
+    background: #0d1117;
+}
+
+.home-panel {
+    width: min(760px, 100%);
+}
+
+.home-panel h1 {
+    margin: 0 0 24px 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.home-panel p {
+    color: #9aa7b2;
+}
+
+.eyebrow {
+    margin: 0 0 8px 0;
+    color: #58a6ff;
+    font-size: .875rem;
+    text-transform: uppercase;
+}
+
+.app-list {
+    display: grid;
+    gap: 12px;
+}
+
+.app-link {
+    display: grid;
+    grid-template-columns: minmax(120px, max-content) 1fr;
+    gap: 4px 16px;
+    padding: 16px;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    color: #e6edf3;
+    text-decoration: none;
+    background: #161b22;
+}
+
+.app-link:hover,
+.app-link:focus-visible {
+    border-color: #58a6ff;
+    outline: none;
+}
+
+.app-title {
+    font-weight: 700;
+}
+
+.app-route {
+    color: #7ee787;
+}
+
+.app-description {
+    grid-column: 1 / -1;
+    color: #9aa7b2;
 }
 
 .klooie-canvas {

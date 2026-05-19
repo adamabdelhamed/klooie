@@ -1,0 +1,79 @@
+@page "/{AppRoute}"
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject KlooieBlazorAppRegistry Registry
+
+@if (registration is null)
+{
+    <main class="home-page">
+        <section class="home-panel">
+            <h1>App not found</h1>
+            <p>No app is registered at /@AppRoute.</p>
+            <a href="">Back to apps</a>
+        </section>
+    </main>
+}
+else
+{
+    <div @ref="hostElement" class="klooie-host" data-ticks="@tickCount">
+        <canvas class="klooie-canvas" aria-label="@registration.DisplayName"></canvas>
+    </div>
+}
+
+@code {
+    private BrowserKlooieRuntime? runtime;
+    private KlooieBlazorAppRegistration? registration;
+    private DotNetObjectReference<KlooieAppHost>? dotNetRef;
+    private ElementReference hostElement;
+    private int? pumpId;
+    private long tickCount;
+    private string? activeRoute;
+
+    [Parameter]
+    public string? AppRoute { get; set; }
+
+    [JSInvokable]
+    public BrowserConsoleFrame Tick(int width, int height, double elapsedMilliseconds)
+    {
+        tickCount++;
+        var budget = TimeSpan.FromMilliseconds(Math.Clamp(elapsedMilliseconds, 1, 33));
+        return runtime?.Tick(width, height, budget) ?? BrowserConsoleFrame.Empty;
+    }
+
+    protected override void OnParametersSet()
+    {
+        registration = AppRoute is null ? null : Registry.Find(AppRoute);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (registration is null) return;
+        if (runtime is not null && activeRoute == registration.Route) return;
+
+        await StopPumpAsync();
+        runtime?.Dispose();
+
+        activeRoute = registration.Route;
+        runtime = new BrowserKlooieRuntime(registration);
+        dotNetRef = DotNetObjectReference.Create(this);
+        pumpId = await JS.InvokeAsync<int>("klooieFramePump.start", dotNetRef, hostElement);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopPumpAsync();
+        runtime?.Dispose();
+    }
+
+    private async Task StopPumpAsync()
+    {
+        if (pumpId is not null)
+        {
+            await JS.InvokeVoidAsync("klooieFramePump.stop", pumpId.Value);
+            pumpId = null;
+        }
+
+        dotNetRef?.Dispose();
+        dotNetRef = null;
+    }
+}

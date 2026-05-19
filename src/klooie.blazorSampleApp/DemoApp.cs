@@ -1,6 +1,6 @@
-﻿using PowerArgs;
+using PowerArgs;
 
-namespace klooie.blazor.Demo;
+namespace klooie.blazorSampleApp;
 
 public class DemoApp : ConsoleApp
 {
@@ -9,19 +9,19 @@ public class DemoApp : ConsoleApp
         var staticLabel = ConsoleStringRendererPool.Instance.Rent();
         staticLabel.Content = "0 FPS".ToGreen();
 
-        BeforePaint.Subscribe(() => staticLabel.Content = $"{FramesPerSecond} FPS".ToGreen() , this);
+        BeforePaint.Subscribe(() => staticLabel.Content = $"{FramesPerSecond} FPS".ToGreen(), this);
 
-        LayoutRoot.Add(staticLabel).DockToRight().DockToTop(padding: 1);
+        _ = LayoutRoot.Add(staticLabel).DockToRight().DockToTop(padding: 1);
 
         for (var i = 0; i < 15; i++)
         {
             var label = ConsoleStringRendererPool.Instance.Rent();
             label.Content = "Animated label".ToRed(bg: RGB.Red.ToOther(RGB.Black, .9f));
-            LayoutRoot.Add(label);
+            _ = LayoutRoot.Add(label);
             label.X = 2;
             label.Y = 4 + i * 2;
             await Task.Delay(1000);
-            label.AnimateSync(() => new RectF(LayoutRoot.Width - (label.Width + 2), label.Y, label.Width, label.Height), 3000, easingFunction: EasingFunctions.EaseInOutCinematic, autoReverse: true, loop: this);
+            _ = label.AnimateSync(() => new RectF(LayoutRoot.Width - (label.Width + 2), label.Y, label.Width, label.Height), 3000, easingFunction: EasingFunctions.EaseInOutCinematic, autoReverse: true, loop: this);
         }
     }
 }

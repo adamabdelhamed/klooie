@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\klooie\klooie.csproj" />
+    <ProjectReference Include="..\klooie.blazorSampleApp\klooie.blazorSampleApp.csproj" />
   </ItemGroup>
   <PropertyGroup>
     <!-- Prefer PowerArgs from super-repo if present, otherwise use klooie's own submodule -->

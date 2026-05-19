@@ -1,38 +1,16 @@
-@implements IAsyncDisposable
-@inject IJSRuntime JS
-
-<div @ref="hostElement" class="klooie-host" data-ticks="@tickCount">
-    <canvas class="klooie-canvas" aria-label="klooie console bitmap"></canvas>
-</div>
-
-@code {
-    private readonly BrowserKlooieRuntime runtime = new();
-    private DotNetObjectReference<App>? dotNetRef;
-    private ElementReference hostElement;
-    private int? pumpId;
-    private long tickCount;
-
-    [JSInvokable]
-    public BrowserConsoleFrame Tick(int width, int height, double elapsedMilliseconds)
-    {
-        tickCount++;
-        var budget = TimeSpan.FromMilliseconds(Math.Clamp(elapsedMilliseconds, 1, 33));
-        return runtime.Tick(width, height, budget);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return;
-
-        dotNetRef = DotNetObjectReference.Create(this);
-        pumpId = await JS.InvokeAsync<int>("klooieFramePump.start", dotNetRef, hostElement);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (pumpId is not null) await JS.InvokeVoidAsync("klooieFramePump.stop", pumpId.Value);
-
-        dotNetRef?.Dispose();
-        runtime.Dispose();
-    }
-}
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" />
+    </Found>
+    <NotFound>
+        <LayoutView>
+            <main class="home-page">
+                <section class="home-panel">
+                    <h1>App not found</h1>
+                    <p>The requested klooie app is not registered.</p>
+                    <a href="">Back to apps</a>
+                </section>
+            </main>
+        </LayoutView>
+    </NotFound>
+</Router>

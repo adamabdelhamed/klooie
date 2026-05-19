@@ -1,0 +1,27 @@
+@page "/"
+@inject KlooieBlazorAppRegistry Registry
+
+<main class="home-page">
+    <section class="home-panel">
+        <p class="eyebrow">klooie.blazor</p>
+        <h1>Registered apps</h1>
+
+        @if (Registry.Apps.Count == 0)
+        {
+            <p>No apps are registered.</p>
+        }
+        else
+        {
+            <div class="app-list">
+                @foreach (var app in Registry.Apps)
+                {
+                    <a class="app-link" href="@app.Route">
+                        <span class="app-title">@app.DisplayName</span>
+                        <span class="app-route">/@app.Route</span>
+                        <span class="app-description">@app.Description</span>
+                    </a>
+                }
+            </div>
+        }
+    </section>
+</main>

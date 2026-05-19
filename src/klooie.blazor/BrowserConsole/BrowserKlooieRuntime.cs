@@ -1,22 +1,27 @@
-using klooie.blazor.Demo;
+using klooie.blazor.Hosting;
 
 namespace klooie.blazor.BrowserConsole;
 
 public sealed class BrowserKlooieRuntime : IDisposable
 {
-    private readonly DemoApp app;
     private readonly BrowserKlooieTerminalHost host;
+    private readonly Recyclable subscriptionLifetime;
+    private readonly int subscriptionLifetimeLease;
+    private readonly Task entryTask;
+    private ConsoleApp? app;
+    private Exception? entryException;
     private bool disposed;
 
-    public BrowserKlooieRuntime()
+    public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration)
     {
+        ArgumentNullException.ThrowIfNull(registration);
+
         BrowserKlooieTerminalHost.InitConsoleProvider();
         FrameBuffer = new BrowserConsoleFrameBuffer(80, 25);
-        app = new DemoApp();
-        app.StartCooperative();
         host = new BrowserKlooieTerminalHost(FrameBuffer);
-        ((LayoutRootPanel)app.LayoutRoot).TerminalHost = host;
-        host.SyncSize((LayoutRootPanel)app.LayoutRoot);
+        subscriptionLifetime = DefaultRecyclablePool.Instance.Rent(out subscriptionLifetimeLease);
+        ConsoleApp.Starting.Subscribe(this, static me => me.BindStartingApp(), subscriptionLifetime);
+        entryTask = RunEntryPointAsync(registration);
     }
 
     public BrowserConsoleFrameBuffer FrameBuffer { get; }
@@ -24,8 +29,10 @@ public sealed class BrowserKlooieRuntime : IDisposable
     public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget)
     {
         if (disposed) return BrowserConsoleFrame.Empty;
+        if (entryException is not null) throw entryException;
+
         host.Resize(width, height);
-        app.Tick(budget);
+        app?.Tick(budget);
         return FrameBuffer.ToFrame();
     }
 
@@ -33,7 +40,64 @@ public sealed class BrowserKlooieRuntime : IDisposable
     {
         if (disposed) return;
         disposed = true;
-        app.StopCooperative();
-        app.TryDispose(app.Lease, "BrowserKlooieRuntime disposed");
+        app?.StopCooperative();
+        app?.TryDispose(app.Lease, "BrowserKlooieRuntime disposed");
+        subscriptionLifetime.TryDispose(subscriptionLifetimeLease, "BrowserKlooieRuntime disposed");
+    }
+
+    private async Task RunEntryPointAsync(KlooieBlazorAppRegistration registration)
+    {
+        try
+        {
+            using (ConsoleAppRunner.Use(new BrowserConsoleAppRunner(this)))
+            {
+                await registration.RunAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            entryException = ex;
+        }
+    }
+
+    private void BindStartingApp()
+    {
+        if (ConsoleApp.Current is not null) BindApp(ConsoleApp.Current);
+    }
+
+    private void BindApp(ConsoleApp app)
+    {
+        this.app = app;
+        if (app.LayoutRoot is not LayoutRootPanel root) return;
+
+        root.TerminalHost = host;
+        host.SyncSize(root);
+    }
+
+    private sealed class BrowserConsoleAppRunner : IConsoleAppRunner
+    {
+        private readonly BrowserKlooieRuntime runtime;
+
+        public BrowserConsoleAppRunner(BrowserKlooieRuntime runtime)
+        {
+            this.runtime = runtime;
+        }
+
+        public async Task RunAsync(ConsoleApp app)
+        {
+            var stopped = app.LoopStopped.CreateNextFireTask();
+            app.StartCooperative();
+            runtime.BindApp(app);
+
+            try
+            {
+                await stopped;
+            }
+            finally
+            {
+                if (ReferenceEquals(runtime.app, app)) runtime.app = null;
+                app.TryDispose(app.Lease, "Browser console app run completed");
+            }
+        }
     }
 }
