@@ -15,7 +15,7 @@
 }
 else
 {
-    <div @ref="hostElement" class="klooie-host" data-ticks="@tickCount">
+    <div @ref="hostElement" class="klooie-host" data-ticks="@tickCount" tabindex="0">
         <canvas class="klooie-canvas" aria-label="@registration.DisplayName"></canvas>
     </div>
 }
@@ -38,6 +38,14 @@ else
         tickCount++;
         var budget = TimeSpan.FromMilliseconds(Math.Clamp(elapsedMilliseconds, 1, 33));
         return runtime?.Tick(width, height, budget) ?? BrowserConsoleFrame.Empty;
+    }
+
+    [JSInvokable]
+    public void SendKey(BrowserKeyboardEvent keyboardEvent)
+    {
+        var keyInfo = BrowserConsoleKeyMapper.ToConsoleKeyInfo(keyboardEvent);
+        if (keyInfo is null) return;
+        runtime?.EnqueueKey(keyInfo.Value);
     }
 
     protected override void OnParametersSet()

@@ -36,6 +36,12 @@ public sealed class BrowserKlooieRuntime : IDisposable
         return FrameBuffer.ToFrame();
     }
 
+    public void EnqueueKey(ConsoleKeyInfo key)
+    {
+        if (disposed) return;
+        host.EnqueueKey(key);
+    }
+
     public void Dispose()
     {
         if (disposed) return;

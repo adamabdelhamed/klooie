@@ -10,9 +10,12 @@ window.klooieFramePump = {
             lastTimestamp: performance.now(),
             cellWidth: 8,
             cellHeight: 16,
-            devicePixelRatio: 1
+            devicePixelRatio: 1,
+            heldKeys: new Map(),
+            listeners: []
         };
         this.pumps[id] = state;
+        setupKeyboard(dotNetRef, hostElement, state);
 
         const frame = async (timestamp) => {
             if (state.stopped) return;
@@ -36,10 +39,143 @@ window.klooieFramePump = {
     },
     stop(id) {
         const pump = this.pumps[id];
-        if (pump) pump.stopped = true;
+        if (pump) {
+            pump.stopped = true;
+            teardownKeyboard(pump);
+        }
         delete this.pumps[id];
     }
 };
+
+function setupKeyboard(dotNetRef, hostElement, state) {
+    if (!hostElement.hasAttribute("tabindex")) {
+        hostElement.tabIndex = 0;
+    }
+
+    const send = (event) => {
+        const payload = keyboardEventToPayload(event);
+        dotNetRef.invokeMethodAsync("SendKey", payload)
+            .catch(error => console.error("klooie key dispatch failed", error));
+    };
+
+    const startRepeat = (event) => {
+        const keyId = keyboardEventId(event);
+        if (state.heldKeys.has(keyId)) return;
+
+        const payload = keyboardEventToPayload(event);
+        const held = {
+            delayId: 0,
+            intervalId: 0,
+            payload
+        };
+
+        held.delayId = window.setTimeout(() => {
+            if (!state.heldKeys.has(keyId)) return;
+
+            held.intervalId = window.setInterval(() => {
+                dotNetRef.invokeMethodAsync("SendKey", held.payload)
+                    .catch(error => console.error("klooie key repeat dispatch failed", error));
+            }, 33);
+        }, 400);
+
+        state.heldKeys.set(keyId, held);
+    };
+
+    const clearRepeat = (event) => clearHeldKey(state, keyboardEventId(event));
+    const clearAllRepeats = () => {
+        for (const keyId of state.heldKeys.keys()) {
+            clearHeldKey(state, keyId);
+        }
+    };
+
+    const keydown = (event) => {
+        if (event.isComposing || event.key === "Process") return;
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (isModifierOnlyKey(event.key)) return;
+        if (event.repeat) return;
+        send(event);
+        startRepeat(event);
+    };
+
+    const keyup = (event) => {
+        clearRepeat(event);
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    const pointerdown = () => hostElement.focus({ preventScroll: true });
+
+    hostElement.addEventListener("keydown", keydown);
+    hostElement.addEventListener("keyup", keyup);
+    hostElement.addEventListener("pointerdown", pointerdown);
+    window.addEventListener("blur", clearAllRepeats);
+
+    state.listeners.push(
+        [hostElement, "keydown", keydown],
+        [hostElement, "keyup", keyup],
+        [hostElement, "pointerdown", pointerdown],
+        [window, "blur", clearAllRepeats]);
+
+    window.setTimeout(() => {
+        if (!state.stopped) hostElement.focus({ preventScroll: true });
+    }, 0);
+}
+
+function teardownKeyboard(state) {
+    for (const [target, eventName, listener] of state.listeners) {
+        target.removeEventListener(eventName, listener);
+    }
+
+    state.listeners = [];
+    for (const keyId of state.heldKeys.keys()) {
+        clearHeldKey(state, keyId);
+    }
+}
+
+function clearHeldKey(state, keyId) {
+    const held = state.heldKeys.get(keyId);
+    if (!held) return;
+
+    window.clearTimeout(held.delayId);
+    window.clearInterval(held.intervalId);
+    state.heldKeys.delete(keyId);
+}
+
+function keyboardEventId(event) {
+    return `${event.code || event.key}:${event.location || 0}`;
+}
+
+function keyboardEventToPayload(event) {
+    return {
+        key: event.key || "",
+        code: event.code || "",
+        location: event.location || 0,
+        altKey: event.altKey,
+        shiftKey: event.shiftKey,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        capsLock: event.getModifierState?.("CapsLock") || false
+    };
+}
+
+function isModifierOnlyKey(key) {
+    return key === "Alt" ||
+        key === "AltGraph" ||
+        key === "CapsLock" ||
+        key === "Control" ||
+        key === "Fn" ||
+        key === "FnLock" ||
+        key === "Hyper" ||
+        key === "Meta" ||
+        key === "NumLock" ||
+        key === "ScrollLock" ||
+        key === "Shift" ||
+        key === "Super" ||
+        key === "Symbol" ||
+        key === "SymbolLock";
+}
 
 function measure(hostElement, state) {
     const rect = measureCell(hostElement);

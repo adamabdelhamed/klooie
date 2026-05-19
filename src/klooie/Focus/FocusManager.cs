@@ -235,7 +235,7 @@ public partial class FocusManager : Recyclable,  IObservableObject
 
     private void CheckForKeyboardInput()
     {
-        if (ConsoleProvider.Current.KeyAvailable)
+        while (ConsoleProvider.Current.KeyAvailable)
         {
             var info = ConsoleProvider.Current.ReadKey(true);
             HandleKeyInput(info);
