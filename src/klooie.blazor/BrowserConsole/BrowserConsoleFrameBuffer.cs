@@ -7,6 +7,8 @@ namespace klooie.blazor.BrowserConsole;
 public sealed class BrowserConsoleFrameBuffer
 {
     private BrowserConsoleCell[] cells;
+    private BrowserConsoleCell[] lastSentCells;
+    private bool needsFullFrame = true;
     private readonly Dictionary<RGB, string> colorCache = new();
 
     public BrowserConsoleFrameBuffer(int width, int height)
@@ -17,7 +19,9 @@ public sealed class BrowserConsoleFrameBuffer
         Width = width;
         Height = height;
         cells = new BrowserConsoleCell[width * height];
+        lastSentCells = new BrowserConsoleCell[width * height];
         Array.Fill(cells, BrowserConsoleCell.Empty);
+        Array.Fill(lastSentCells, BrowserConsoleCell.Empty);
     }
 
     public int Width { get; private set; }
@@ -37,6 +41,7 @@ public sealed class BrowserConsoleFrameBuffer
 
     public BrowserConsoleFrame ToFrame()
     {
+        var full = needsFullFrame;
         var x = new List<int>(Height * 4);
         var y = new List<int>(Height * 4);
         var text = new List<string>(Height * 4);
@@ -49,12 +54,34 @@ public sealed class BrowserConsoleFrameBuffer
             var rowOffset = row * Width;
             var runStart = 0;
             var current = cells[rowOffset];
+            var inRun = false;
             builder.Clear();
 
             for (var column = 0; column < Width; column++)
             {
-                var cell = cells[rowOffset + column];
-                if (column > 0 && !cell.HasSameStyle(current))
+                var index = rowOffset + column;
+                var cell = cells[index];
+                var changed = full || IsDirty(index, column);
+
+                if (!changed)
+                {
+                    if (inRun)
+                    {
+                        AddRun(x, y, text, foreground, background, runStart, row, builder, current);
+                        builder.Clear();
+                        inRun = false;
+                    }
+
+                    continue;
+                }
+
+                if (!inRun)
+                {
+                    runStart = column;
+                    current = cell;
+                    inRun = true;
+                }
+                else if (!cell.HasSameStyle(current))
                 {
                     AddRun(x, y, text, foreground, background, runStart, row, builder, current);
                     runStart = column;
@@ -65,13 +92,20 @@ public sealed class BrowserConsoleFrameBuffer
                 builder.Append(char.IsWhiteSpace(cell.Glyph) ? '\u00A0' : cell.Glyph);
             }
 
-            AddRun(x, y, text, foreground, background, runStart, row, builder, current);
+            if (inRun)
+            {
+                AddRun(x, y, text, foreground, background, runStart, row, builder, current);
+            }
         }
+
+        Array.Copy(cells, lastSentCells, cells.Length);
+        needsFullFrame = false;
 
         return new BrowserConsoleFrame
         {
             Width = Width,
             Height = Height,
+            Full = full,
             X = x.ToArray(),
             Y = y.ToArray(),
             Text = text.ToArray(),
@@ -107,7 +141,17 @@ public sealed class BrowserConsoleFrameBuffer
         Width = width;
         Height = height;
         cells = new BrowserConsoleCell[width * height];
+        lastSentCells = new BrowserConsoleCell[width * height];
         Array.Fill(cells, BrowserConsoleCell.Empty);
+        Array.Fill(lastSentCells, BrowserConsoleCell.Empty);
+        needsFullFrame = true;
+    }
+
+    private bool IsDirty(int index, int column)
+    {
+        if (cells[index] != lastSentCells[index]) return true;
+        if (column > 0 && cells[index - 1] != lastSentCells[index - 1]) return true;
+        return column < Width - 1 && cells[index + 1] != lastSentCells[index + 1];
     }
 
     private string GetColor(RGB color)

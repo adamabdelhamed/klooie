@@ -13,28 +13,34 @@ window.klooieFramePump = {
             devicePixelRatio: 1,
             heldKeys: new Map(),
             pendingKeys: [],
+            inFrame: false,
+            immediateFrameRequested: false,
             listeners: []
         };
         this.pumps[id] = state;
         setupKeyboard(hostElement, state);
+        updateCellMetrics(hostElement, state);
+
+        const resize = () => updateCellMetrics(hostElement, state);
+        window.addEventListener("resize", resize);
+        window.visualViewport?.addEventListener("resize", resize);
+        state.listeners.push(
+            [window, "resize", resize],
+            [window.visualViewport, "resize", resize]);
 
         const frame = async (timestamp) => {
             if (state.stopped) return;
-
-            const elapsed = Math.max(1, timestamp - state.lastTimestamp);
-            state.lastTimestamp = timestamp;
-
-            try {
-                const size = measure(hostElement, state);
-                pumpKeyboardRepeats(state, timestamp);
-                const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
-                const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys);
-                drawFrame(canvas, context, terminalFrame, state);
-            } catch (error) {
-                console.error("klooie frame pump tick failed", error);
-            }
-
+            await runFrame(dotNetRef, hostElement, canvas, context, state, timestamp);
             requestAnimationFrame(frame);
+        };
+
+        state.requestImmediateFrame = () => {
+            if (state.immediateFrameRequested || state.inFrame || state.stopped) return;
+            state.immediateFrameRequested = true;
+            setTimeout(async () => {
+                state.immediateFrameRequested = false;
+                await runFrame(dotNetRef, hostElement, canvas, context, state, performance.now());
+            }, 0);
         };
 
         requestAnimationFrame(frame);
@@ -50,6 +56,29 @@ window.klooieFramePump = {
     }
 };
 
+async function runFrame(dotNetRef, hostElement, canvas, context, state, timestamp) {
+    if (state.stopped || state.inFrame) return;
+    state.inFrame = true;
+
+    const elapsed = Math.max(1, timestamp - state.lastTimestamp);
+    state.lastTimestamp = timestamp;
+
+    try {
+        const size = measure(hostElement, state);
+        pumpKeyboardRepeats(state, timestamp);
+        const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
+        const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys);
+        drawFrame(canvas, context, terminalFrame, state);
+    } catch (error) {
+        console.error("klooie frame pump tick failed", error);
+    } finally {
+        state.inFrame = false;
+        if (state.pendingKeys.length > 0) {
+            state.requestImmediateFrame?.();
+        }
+    }
+}
+
 function setupKeyboard(hostElement, state) {
     if (!hostElement.hasAttribute("tabindex")) {
         hostElement.tabIndex = 0;
@@ -61,6 +90,7 @@ function setupKeyboard(hostElement, state) {
 
         const payload = keyboardEventToPayload(event);
         state.pendingKeys.push(payload);
+        state.requestImmediateFrame?.();
         state.heldKeys.set(keyId, {
             payload,
             nextRepeatAt: performance.now() + 400
@@ -110,7 +140,7 @@ function setupKeyboard(hostElement, state) {
 
 function teardownKeyboard(state) {
     for (const [target, eventName, listener] of state.listeners) {
-        target.removeEventListener(eventName, listener);
+        target?.removeEventListener(eventName, listener);
     }
 
     state.listeners = [];
@@ -173,20 +203,22 @@ function isModifierOnlyKey(key) {
 }
 
 function measure(hostElement, state) {
-    const rect = measureCell(hostElement);
     const viewport = window.visualViewport;
     const viewportWidth = viewport?.width || window.innerWidth || document.documentElement.clientWidth;
     const viewportHeight = viewport?.height || window.innerHeight || document.documentElement.clientHeight;
-    const cellWidth = Math.max(1, rect?.width || 8);
-    const cellHeight = Math.max(1, rect?.height || 16);
-    state.cellWidth = cellWidth;
-    state.cellHeight = cellHeight;
     state.devicePixelRatio = window.devicePixelRatio || 1;
 
     return {
-        width: Math.max(1, Math.floor(viewportWidth / cellWidth)),
-        height: Math.max(1, Math.floor(viewportHeight / cellHeight))
+        width: Math.max(1, Math.floor(viewportWidth / state.cellWidth)),
+        height: Math.max(1, Math.floor(viewportHeight / state.cellHeight))
     };
+}
+
+function updateCellMetrics(hostElement, state) {
+    const rect = measureCell(hostElement);
+    state.cellWidth = Math.max(1, rect?.width || 8);
+    state.cellHeight = Math.max(1, rect?.height || 16);
+    state.devicePixelRatio = window.devicePixelRatio || 1;
 }
 
 function measureCell(hostElement) {
@@ -215,8 +247,10 @@ function drawFrame(canvas, context, frame, state) {
     context.setTransform(state.devicePixelRatio, 0, 0, state.devicePixelRatio, 0, 0);
     context.textBaseline = "top";
     context.font = "16px Consolas, 'Cascadia Mono', 'Courier New', monospace";
-    context.fillStyle = "#000";
-    context.fillRect(0, 0, cssWidth, cssHeight);
+    if (frame.full) {
+        context.fillStyle = "#000";
+        context.fillRect(0, 0, cssWidth, cssHeight);
+    }
 
     const x = frame.x;
     const y = frame.y;

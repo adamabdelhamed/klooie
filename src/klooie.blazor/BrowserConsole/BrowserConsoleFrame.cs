@@ -6,6 +6,7 @@ public sealed class BrowserConsoleFrame
     {
         Width = 1,
         Height = 1,
+        Full = true,
         X = Array.Empty<int>(),
         Y = Array.Empty<int>(),
         Text = Array.Empty<string>(),
@@ -15,6 +16,7 @@ public sealed class BrowserConsoleFrame
 
     public required int Width { get; init; }
     public required int Height { get; init; }
+    public required bool Full { get; init; }
     public required int[] X { get; init; }
     public required int[] Y { get; init; }
     public required string[] Text { get; init; }
