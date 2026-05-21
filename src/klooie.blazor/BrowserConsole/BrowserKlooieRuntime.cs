@@ -1,12 +1,9 @@
 using klooie.blazor.Hosting;
-using System.Diagnostics;
 
 namespace klooie.blazor.BrowserConsole;
 
 public sealed class BrowserKlooieRuntime : IDisposable
 {
-    private const double MaxPumpMillisecondsPerInterop = 12;
-    private const int MaxCyclesPerInterop = 256;
     private readonly BrowserKlooieTerminalHost host;
     private readonly Recyclable subscriptionLifetime;
     private readonly int subscriptionLifetimeLease;
@@ -38,19 +35,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
         var currentApp = app;
         if (currentApp is not null)
         {
-            var targetMilliseconds = Math.Clamp(budget.TotalMilliseconds, 1, MaxPumpMillisecondsPerInterop);
-            var started = Stopwatch.GetTimestamp();
-            var cycles = 0;
-
-            do
-            {
-                currentApp.Tick(TimeSpan.Zero);
-                cycles++;
-            }
-            while (cycles < MaxCyclesPerInterop &&
-                currentApp.IsRunning &&
-                !currentApp.IsDrainingOrDrained &&
-                Stopwatch.GetElapsedTime(started).TotalMilliseconds < targetMilliseconds);
+            currentApp.Tick(budget);
         }
 
         return FrameBuffer.ToFrame();

@@ -6,9 +6,12 @@ namespace klooie.blazor.BrowserConsole;
 
 public sealed class BrowserConsoleFrameBuffer
 {
-    private BrowserConsoleCell[] cells;
     private BrowserConsoleCell[] lastSentCells;
+    private bool[] dirtyCells;
+    private BrowserConsoleFrame? pendingFrame;
+    private BrowserConsoleFrame? unchangedFrame;
     private bool needsFullFrame = true;
+    private bool hasPendingFrame = true;
     private readonly Dictionary<RGB, string> colorCache = new();
 
     public BrowserConsoleFrameBuffer(int width, int height)
@@ -18,9 +21,8 @@ public sealed class BrowserConsoleFrameBuffer
 
         Width = width;
         Height = height;
-        cells = new BrowserConsoleCell[width * height];
         lastSentCells = new BrowserConsoleCell[width * height];
-        Array.Fill(cells, BrowserConsoleCell.Empty);
+        dirtyCells = new bool[width * height];
         Array.Fill(lastSentCells, BrowserConsoleCell.Empty);
     }
 
@@ -31,17 +33,36 @@ public sealed class BrowserConsoleFrameBuffer
     {
         Resize(source.Width, source.Height);
 
-        var pixels = source.Pixels;
-        for (var i = 0; i < pixels.Length; i++)
-        {
-            var pixel = pixels[i];
-            cells[i] = new BrowserConsoleCell(pixel.Value, pixel.ForegroundColor, pixel.BackgroundColor);
-        }
+        pendingFrame = BuildFrame(source);
+        hasPendingFrame = true;
+        unchangedFrame = null;
     }
 
     public BrowserConsoleFrame ToFrame()
     {
+        if (!hasPendingFrame)
+        {
+            return unchangedFrame ??= CreateUnchangedFrame();
+        }
+
+        hasPendingFrame = false;
+        var frame = pendingFrame ?? CreateUnchangedFrame();
+        pendingFrame = null;
+        return frame;
+    }
+
+    private BrowserConsoleFrame BuildFrame(ConsoleBitmap source)
+    {
         var full = needsFullFrame;
+        var pixels = source.Pixels;
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            var pixel = pixels[i];
+            var cell = new BrowserConsoleCell(pixel.Value, pixel.ForegroundColor, pixel.BackgroundColor);
+            dirtyCells[i] = full || cell != lastSentCells[i];
+            lastSentCells[i] = cell;
+        }
+
         var x = new List<int>(Height * 4);
         var y = new List<int>(Height * 4);
         var text = new List<string>(Height * 4);
@@ -53,14 +74,16 @@ public sealed class BrowserConsoleFrameBuffer
         {
             var rowOffset = row * Width;
             var runStart = 0;
-            var current = cells[rowOffset];
+            var firstPixel = pixels[rowOffset];
+            var current = new BrowserConsoleCell(firstPixel.Value, firstPixel.ForegroundColor, firstPixel.BackgroundColor);
             var inRun = false;
             builder.Clear();
 
             for (var column = 0; column < Width; column++)
             {
                 var index = rowOffset + column;
-                var cell = cells[index];
+                var pixel = pixels[index];
+                var cell = new BrowserConsoleCell(pixel.Value, pixel.ForegroundColor, pixel.BackgroundColor);
                 var changed = full || IsDirty(index, column);
 
                 if (!changed)
@@ -98,7 +121,6 @@ public sealed class BrowserConsoleFrameBuffer
             }
         }
 
-        Array.Copy(cells, lastSentCells, cells.Length);
         needsFullFrame = false;
 
         return new BrowserConsoleFrame
@@ -140,18 +162,32 @@ public sealed class BrowserConsoleFrameBuffer
 
         Width = width;
         Height = height;
-        cells = new BrowserConsoleCell[width * height];
         lastSentCells = new BrowserConsoleCell[width * height];
-        Array.Fill(cells, BrowserConsoleCell.Empty);
+        dirtyCells = new bool[width * height];
         Array.Fill(lastSentCells, BrowserConsoleCell.Empty);
         needsFullFrame = true;
+        hasPendingFrame = true;
+        pendingFrame = null;
+        unchangedFrame = null;
     }
+
+    private BrowserConsoleFrame CreateUnchangedFrame() => new()
+    {
+        Width = Width,
+        Height = Height,
+        Full = false,
+        X = Array.Empty<int>(),
+        Y = Array.Empty<int>(),
+        Text = Array.Empty<string>(),
+        Foreground = Array.Empty<string>(),
+        Background = Array.Empty<string>()
+    };
 
     private bool IsDirty(int index, int column)
     {
-        if (cells[index] != lastSentCells[index]) return true;
-        if (column > 0 && cells[index - 1] != lastSentCells[index - 1]) return true;
-        return column < Width - 1 && cells[index + 1] != lastSentCells[index + 1];
+        if (dirtyCells[index]) return true;
+        if (column > 0 && dirtyCells[index - 1]) return true;
+        return column < Width - 1 && dirtyCells[index + 1];
     }
 
     private string GetColor(RGB color)

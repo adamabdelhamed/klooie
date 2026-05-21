@@ -15,41 +15,44 @@ window.klooieFramePump = {
             pendingKeys: [],
             inFrame: false,
             immediateFrameRequested: false,
+            sizeDirty: true,
+            frameTimer: undefined,
             listeners: []
         };
         this.pumps[id] = state;
         setupKeyboard(hostElement, state);
         updateCellMetrics(hostElement, state);
 
-        const resize = () => updateCellMetrics(hostElement, state);
+        const resize = () => {
+            updateCellMetrics(hostElement, state);
+            state.sizeDirty = true;
+            state.requestImmediateFrame?.();
+        };
         window.addEventListener("resize", resize);
         window.visualViewport?.addEventListener("resize", resize);
         state.listeners.push(
             [window, "resize", resize],
             [window.visualViewport, "resize", resize]);
 
-        const frame = async (timestamp) => {
-            if (state.stopped) return;
-            await runFrame(dotNetRef, hostElement, canvas, context, state, timestamp);
-            requestAnimationFrame(frame);
-        };
-
         state.requestImmediateFrame = () => {
             if (state.immediateFrameRequested || state.inFrame || state.stopped) return;
             state.immediateFrameRequested = true;
-            setTimeout(async () => {
+            requestAnimationFrame(async (timestamp) => {
                 state.immediateFrameRequested = false;
-                await runFrame(dotNetRef, hostElement, canvas, context, state, performance.now());
-            }, 0);
+                await runFrame(dotNetRef, hostElement, canvas, context, state, timestamp);
+            });
         };
 
-        requestAnimationFrame(frame);
+        state.frameTimer = window.setInterval(() => {
+            runFrame(dotNetRef, hostElement, canvas, context, state, performance.now());
+        }, 17);
         return id;
     },
     stop(id) {
         const pump = this.pumps[id];
         if (pump) {
             pump.stopped = true;
+            window.clearInterval(pump.frameTimer);
             teardownKeyboard(pump);
         }
         delete this.pumps[id];
@@ -69,6 +72,7 @@ async function runFrame(dotNetRef, hostElement, canvas, context, state, timestam
         const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
         const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys);
         drawFrame(canvas, context, terminalFrame, state);
+        state.sizeDirty = false;
     } catch (error) {
         console.error("klooie frame pump tick failed", error);
     } finally {
@@ -234,6 +238,8 @@ function measureCell(hostElement) {
 }
 
 function drawFrame(canvas, context, frame, state) {
+    if (!frame.full && frame.text.length === 0) return;
+
     const cssWidth = frame.width * state.cellWidth;
     const cssHeight = frame.height * state.cellHeight;
     const pixelWidth = Math.max(1, Math.ceil(cssWidth * state.devicePixelRatio));
