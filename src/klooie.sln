@@ -35,9 +35,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.VideoConverter", "kl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.VideoConverterProfileCalibrator", "klooie.VideoConverterProfileCalibrator\klooie.VideoConverterProfileCalibrator.csproj", "{47FB0849-3E79-45AC-AE38-43D39B3FBBA6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.blazor", "klooie.blazor\klooie.blazor.csproj", "{E304929F-8538-476C-80F6-146EAE2DBD40}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.blazorSampleApp", "klooie.blazorSampleApp\klooie.blazorSampleApp.csproj", "{6C4238FB-F435-4512-96AF-D4753B04A60A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "klooie.Packager", "klooie.Packager\klooie.Packager.csproj", "{AFE5D33B-05E4-40DA-A6BD-561E769AD082}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -205,18 +205,6 @@ Global
 		{47FB0849-3E79-45AC-AE38-43D39B3FBBA6}.Release|x64.Build.0 = Release|Any CPU
 		{47FB0849-3E79-45AC-AE38-43D39B3FBBA6}.Release|x86.ActiveCfg = Release|Any CPU
 		{47FB0849-3E79-45AC-AE38-43D39B3FBBA6}.Release|x86.Build.0 = Release|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Debug|x64.Build.0 = Debug|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Debug|x86.Build.0 = Debug|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Release|x64.ActiveCfg = Release|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Release|x64.Build.0 = Release|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Release|x86.ActiveCfg = Release|Any CPU
-		{E304929F-8538-476C-80F6-146EAE2DBD40}.Release|x86.Build.0 = Release|Any CPU
 		{6C4238FB-F435-4512-96AF-D4753B04A60A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6C4238FB-F435-4512-96AF-D4753B04A60A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6C4238FB-F435-4512-96AF-D4753B04A60A}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -229,6 +217,18 @@ Global
 		{6C4238FB-F435-4512-96AF-D4753B04A60A}.Release|x64.Build.0 = Release|Any CPU
 		{6C4238FB-F435-4512-96AF-D4753B04A60A}.Release|x86.ActiveCfg = Release|Any CPU
 		{6C4238FB-F435-4512-96AF-D4753B04A60A}.Release|x86.Build.0 = Release|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Debug|x64.Build.0 = Debug|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Debug|x86.Build.0 = Debug|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Release|x64.ActiveCfg = Release|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Release|x64.Build.0 = Release|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Release|x86.ActiveCfg = Release|Any CPU
+		{AFE5D33B-05E4-40DA-A6BD-561E769AD082}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

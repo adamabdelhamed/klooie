@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "klooie.blazorSampleApp Web": {
+      "commandName": "Executable",
+      "executablePath": "python",
+      "commandLineArgs": "-m http.server 5187 --bind 127.0.0.1 --directory ..\\..\\klooie.web",
+      "launchBrowser": true,
+      "applicationUrl": "http://127.0.0.1:5187/"
+    }
+  }
+}

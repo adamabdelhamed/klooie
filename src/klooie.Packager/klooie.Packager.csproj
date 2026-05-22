@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>kpack</AssemblyName>
+    <RootNamespace>klooie.Packager</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Templates\WebHost\**\*.cs" />
+    <Content Include="Templates\WebHost\**\*" Exclude="Templates\WebHost\bin\**;Templates\WebHost\obj\**;Templates\WebHost\klooie.Packager.WebHostTemplate.csproj">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="Templates\WebHost\klooie.Packager.WebHostTemplate.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

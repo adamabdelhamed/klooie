@@ -4,10 +4,22 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <KlooiePackageOnBuild Condition="'$(KlooiePackageOnBuild)' == ''">true</KlooiePackageOnBuild>
+    <KlooieDotNetHost Condition="'$(DotNetHostPath)' != ''">$(DotNetHostPath)</KlooieDotNetHost>
+    <KlooieDotNetHost Condition="'$(KlooieDotNetHost)' == ''">dotnet</KlooieDotNetHost>
+    <KlooiePackagerDll>$(MSBuildProjectDirectory)\..\klooie.Packager\bin\$(Configuration)\net10.0\kpack.dll</KlooiePackagerDll>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\klooie\klooie.csproj" />
+    <ProjectReference Include="..\klooie.Packager\klooie.Packager.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" Condition="'$(KlooiePackageOnBuild)' == 'true'" />
   </ItemGroup>
+
+  <Target Name="KlooiePackageWebOnBuild"
+          AfterTargets="Build"
+          Condition="'$(KlooiePackageOnBuild)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Message Importance="High" Text="Packaging klooie web output to $(MSBuildProjectDirectory)\bin\klooie.web" />
+    <Exec Command="&quot;$(KlooieDotNetHost)&quot; &quot;$(KlooiePackagerDll)&quot; &quot;$(MSBuildProjectFullPath)&quot; -type Web" />
+  </Target>
 
 </Project>

@@ -1,6 +1,5 @@
 using klooie.blazor;
 using klooie.blazor.Hosting;
-using klooie.blazorSampleApp;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
@@ -13,10 +12,10 @@ builder.Services.AddSingleton(_ =>
 {
     var registry = new KlooieBlazorAppRegistry();
     registry.Register(
-        route: "DemoApp",
-        displayName: "DemoApp",
-        description: "Animated labels rendered through the browser console host.",
-        runAsync: DemoAppProgram.MainAsync);
+        route: "__template_check",
+        displayName: "Template Check",
+        description: "Compile-time template validation entrypoint.",
+        runAsync: () => Task.CompletedTask);
     return registry;
 });
 
