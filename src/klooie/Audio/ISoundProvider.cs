@@ -6,10 +6,25 @@ public interface IReleasableNote
 {
     void ReleaseNote();
 }
-public interface IBinarySoundProvider
+public interface IBinaryAssetProvider
 {
     bool Contains(string assetName);
     Stream Open(string assetName);
+}
+
+public interface IBinarySoundProvider : IBinaryAssetProvider
+{
+}
+
+public static class BinaryAssetProvider
+{
+    public static IBinaryAssetProvider Current { get; set; } = new EmptyBinaryAssetProvider();
+}
+
+public sealed class EmptyBinaryAssetProvider : IBinaryAssetProvider
+{
+    public bool Contains(string assetName) => false;
+    public Stream Open(string assetName) => throw new FileNotFoundException($"Asset '{assetName}' not found.");
 }
 
 public interface IConsoleAudioRecordingSink
@@ -51,8 +66,9 @@ public interface ISoundProvider
 
 public class NoOpSoundProvider : ISoundProvider
 {
+    private readonly ScheduledSignalSourceMixer scheduledSignalMixer = new(ScheduledSignalMixerMode.PreRenderOnly);
     public EventLoop EventLoop => ConsoleApp.Current;
-    public VolumeKnob MasterVolume { get; set; }
+    public VolumeKnob MasterVolume { get; set; } = VolumeKnob.Create();
     public void Loop(string? sound, ILifetime? duration = null, VolumeKnob? volumeKnob = null, bool isMusic = false) { }
     public ILifetime Play(string? sound, ILifetime? maxDuration = null, VolumeKnob? volumeKnob = null, bool isMusic = false) => Lifetime.Completed;
     public void Pause() { }
@@ -62,7 +78,7 @@ public class NoOpSoundProvider : ISoundProvider
     public bool FailedToInitializeOrRun => false;
     public IConsoleAudioRecordingSink? AudioRecordingSink { get; set; }
 
-    public ScheduledSignalSourceMixer ScheduledSignalMixer => throw new NotImplementedException("NoOpSoundProvider does not support ScheduledSignalMixer.");
+    public ScheduledSignalSourceMixer ScheduledSignalMixer => scheduledSignalMixer;
 
     public Task Play(Song song, ILifetime? lifetime = null)
     {

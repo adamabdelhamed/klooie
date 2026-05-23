@@ -41,7 +41,7 @@ public class AudioPlaybackEngine : ISoundProvider
     public IConsoleAudioRecordingSink? AudioRecordingSink { get; set; }
     public bool FailedToInitializeOrRun { get; private set; }
 
-    public AudioPlaybackEngine(IBinarySoundProvider provider = null)
+    public AudioPlaybackEngine(IBinaryAssetProvider provider = null)
     {
         try
         {

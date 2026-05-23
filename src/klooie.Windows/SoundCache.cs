@@ -4,12 +4,12 @@ using NAudio.Wave.SampleProviders;
 namespace klooie;
 internal sealed class SoundCache
 {
-    private readonly IBinarySoundProvider? provider;
+    private readonly IBinaryAssetProvider? provider;
     private readonly Dictionary<string, CachedSound> cached;
 
 
 
-    public SoundCache(IBinarySoundProvider? provider)
+    public SoundCache(IBinaryAssetProvider? provider)
     {
         this.provider = provider;
         cached = new Dictionary<string, CachedSound>(StringComparer.OrdinalIgnoreCase);
@@ -81,7 +81,7 @@ internal sealed class CachedSound
     public WaveFormat WaveFormat { get; set; }
 
     public string SoundId { get; set; }
-    public CachedSound(IBinarySoundProvider provider, string soundId)
+    public CachedSound(IBinaryAssetProvider provider, string soundId)
     {
         LoadFrom(provider, soundId);
     }
@@ -94,7 +94,7 @@ internal sealed class CachedSound
     /// Loads (or reloads) audio data from the provider into this instance.
     /// If the current capacity is insufficient, the buffer is grown according to <paramref name="growPolicy"/>.
     /// </summary>
-    public void LoadFrom(IBinarySoundProvider provider, string soundId)
+    public void LoadFrom(IBinaryAssetProvider provider, string soundId)
     {
         SoundId = soundId;
 
@@ -139,7 +139,7 @@ internal sealed class CachedSound
 
 public static class PcmCache
 {
-    public static string GetOrBuild(string assetId, IBinarySoundProvider provider)
+    public static string GetOrBuild(string assetId, IBinaryAssetProvider provider)
     {
         var cachePath = Path.Combine(Path.GetTempPath(), $"ttbs_{assetId}.wav");
         if (File.Exists(cachePath)) return cachePath;
@@ -187,7 +187,7 @@ public sealed class StreamingMusicProvider : ISampleProvider, IDisposable
 
 
 
-    public StreamingMusicProvider(IBinarySoundProvider p, string id, bool loop)
+    public StreamingMusicProvider(IBinaryAssetProvider p, string id, bool loop)
     {
         var wavPath = PcmCache.GetOrBuild(id, p);
         trackId = id;

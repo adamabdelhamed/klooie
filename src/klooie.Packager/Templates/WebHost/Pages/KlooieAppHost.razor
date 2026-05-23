@@ -1,6 +1,7 @@
 @page "/{AppRoute}"
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject HttpClient Http
 @inject KlooieBlazorAppRegistry Registry
 
 @if (registration is null)
@@ -67,7 +68,7 @@ else
         runtime?.Dispose();
 
         activeRoute = registration.Route;
-        runtime = new BrowserKlooieRuntime(registration);
+        runtime = new BrowserKlooieRuntime(registration, JS, Http);
         dotNetRef = DotNetObjectReference.Create(this);
         pumpId = await JS.InvokeAsync<int>("klooieFramePump.start", dotNetRef, hostElement);
     }

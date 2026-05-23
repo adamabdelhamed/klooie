@@ -70,6 +70,65 @@ window.klooieFramePump = {
     }
 };
 
+window.klooieAssets = {
+    audioCache: new Map(),
+
+    play(url, volume, isMusic) {
+        const normalizedVolume = Math.max(0, Math.min(1, Number(volume) || 1));
+        const cached = this.audioCache.get(url);
+        if (!cached) {
+            this.preload(url);
+            this.playUncached(url, normalizedVolume, isMusic);
+            return;
+        }
+
+        cached.then(cachedUrl => {
+                const audio = new Audio(cachedUrl);
+                audio.volume = normalizedVolume;
+                audio.loop = false;
+                audio.preload = "auto";
+                const playPromise = audio.play();
+                if (playPromise?.catch) {
+                    playPromise.catch(error => console.debug("klooie audio play skipped", error));
+                }
+            })
+            .catch(error => console.debug("klooie audio play failed", error));
+    },
+
+    getAudioUrl(url) {
+        const existing = this.audioCache.get(url);
+        if (existing) return existing;
+
+        const load = fetch(url, { cache: "force-cache" })
+            .then(response => {
+                if (!response.ok) throw new Error(`Audio request failed: ${response.status} ${url}`);
+                return response.blob();
+            })
+            .then(blob => URL.createObjectURL(blob));
+        this.audioCache.set(url, load);
+        return load;
+    },
+
+    preload(url) {
+        this.getAudioUrl(url).catch(error => console.debug("klooie audio preload failed", error));
+    },
+
+    playUncached(url, volume, isMusic) {
+        try {
+            const audio = new Audio(url);
+            audio.volume = Math.max(0, Math.min(1, Number(volume) || 1));
+            audio.loop = false;
+            audio.preload = "auto";
+            const playPromise = audio.play();
+            if (playPromise?.catch) {
+                playPromise.catch(error => console.debug("klooie audio play skipped", error));
+            }
+        } catch (error) {
+            console.debug("klooie audio play failed", error);
+        }
+    }
+};
+
 async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
     if (state.stopped || state.inFrame) return;
     state.inFrame = true;
@@ -265,6 +324,34 @@ function createConsoleRenderer(canvas, state) {
     }
 }
 
+function verifyWebGlFrame(gl, pixelWidth, pixelHeight, rendererName, frame, state) {
+    if (!frame || frame.text.length === 0) return true;
+
+    const pixels = new Uint8Array(pixelWidth * pixelHeight * 4);
+    gl.readPixels(0, 0, pixelWidth, pixelHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+    let visiblePixels = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+        if (pixels[i] !== 0 || pixels[i + 1] !== 0 || pixels[i + 2] !== 0) {
+            visiblePixels++;
+            if (visiblePixels > 16) return true;
+        }
+    }
+
+    console.error("klooie WebGL renderer produced an all-black frame", {
+        renderer: rendererName,
+        canvasWidth: pixelWidth,
+        canvasHeight: pixelHeight,
+        frameWidth: frame.width,
+        frameHeight: frame.height,
+        textRunCount: frame.text.length,
+        firstTextRun: frame.text[0] || "",
+        devicePixelRatio: state.devicePixelRatio,
+        userAgent: navigator.userAgent
+    });
+    return false;
+}
+
 class WebGl2CellConsoleRenderer {
     constructor(canvas, state) {
         const gl = canvas.getContext("webgl2", {
@@ -297,6 +384,8 @@ class WebGl2CellConsoleRenderer {
         this.backgroundData = new Uint8Array(0);
         this.uploads = [];
         this.vertexData = new Float32Array(12);
+        this.blackFrameChecks = 0;
+        this.blackFrameReported = false;
         this.metricsKey = "";
         this.atlasDirty = false;
         this.atlasSize = 2048;
@@ -365,6 +454,10 @@ class WebGl2CellConsoleRenderer {
         const uploadAll = this.applyFrame(frame, resized);
         this.uploadCellTextures(uploadAll);
         this.draw(pixelWidth, pixelHeight, state);
+        if (!this.blackFrameReported && this.blackFrameChecks < 3 && frame.text.length > 0) {
+            this.blackFrameChecks++;
+            this.blackFrameReported = !verifyWebGlFrame(this.gl, pixelWidth, pixelHeight, "webgl2-cell", frame, state);
+        }
     }
 
     configureCellTexture(texture) {
@@ -704,6 +797,8 @@ class WebGlConsoleRenderer {
         this.textVertexCount = 0;
         this.solidData = new Float32Array(0);
         this.textData = new Float32Array(0);
+        this.blackFrameChecks = 0;
+        this.blackFrameReported = false;
         this.atlasCanvas = createRasterCanvas(this.atlasSize, this.atlasSize);
         this.atlasContext = this.atlasCanvas.getContext("2d", { alpha: true });
 
@@ -789,6 +884,10 @@ class WebGlConsoleRenderer {
         }
 
         this.blitToCanvas(displayPixelWidth, displayPixelHeight);
+        if (!this.blackFrameReported && this.blackFrameChecks < 3 && frame.text.length > 0) {
+            this.blackFrameChecks++;
+            this.blackFrameReported = !verifyWebGlFrame(this.gl, displayPixelWidth, displayPixelHeight, "webgl-retained", frame, state);
+        }
     }
 
     ensureMetrics(state) {

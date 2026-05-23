@@ -2,8 +2,8 @@
   "profiles": {
     "klooie.blazorSampleApp Web": {
       "commandName": "Executable",
-      "executablePath": "python",
-      "commandLineArgs": "-m http.server 5187 --bind 127.0.0.1 --directory ..\\..\\klooie.web",
+      "executablePath": "..\\..\\..\\..\\klooie.Packager\\RunKpack.cmd",
+      "commandLineArgs": "..\\..\\..\\klooie.blazorSampleApp.csproj -type Serve -port 5187",
       "launchBrowser": true,
       "applicationUrl": "http://127.0.0.1:5187/"
     }

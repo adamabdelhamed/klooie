@@ -1,4 +1,5 @@
 using klooie.blazor.Hosting;
+using Microsoft.JSInterop;
 
 namespace klooie.blazor.BrowserConsole;
 
@@ -12,7 +13,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
     private Exception? entryException;
     private bool disposed;
 
-    public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration)
+    public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http)
     {
         ArgumentNullException.ThrowIfNull(registration);
 
@@ -21,7 +22,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
         host = new BrowserKlooieTerminalHost(FrameBuffer);
         subscriptionLifetime = DefaultRecyclablePool.Instance.Rent(out subscriptionLifetimeLease);
         ConsoleApp.Starting.Subscribe(this, static me => me.BindStartingApp(), subscriptionLifetime);
-        entryTask = RunEntryPointAsync(registration);
+        entryTask = RunEntryPointAsync(registration, js, http);
     }
 
     public BrowserConsoleFrameBuffer FrameBuffer { get; }
@@ -56,10 +57,13 @@ public sealed class BrowserKlooieRuntime : IDisposable
         subscriptionLifetime.TryDispose(subscriptionLifetimeLease, "BrowserKlooieRuntime disposed");
     }
 
-    private async Task RunEntryPointAsync(KlooieBlazorAppRegistration registration)
+    private async Task RunEntryPointAsync(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http)
     {
         try
         {
+            BinaryAssetProvider.Current = await BrowserAssetProvider.CreateAsync(http);
+            SoundProvider.Current = new BrowserSoundProvider(js);
+
             using (ConsoleAppRunner.Use(new BrowserConsoleAppRunner(this)))
             {
                 await registration.RunAsync();
