@@ -12,7 +12,6 @@ public sealed class BrowserConsoleFrameBuffer
     private BrowserConsoleFrame? unchangedFrame;
     private bool needsFullFrame = true;
     private bool hasPendingFrame = true;
-    private readonly Dictionary<RGB, string> colorCache = new();
 
     public BrowserConsoleFrameBuffer(int width, int height)
     {
@@ -66,8 +65,8 @@ public sealed class BrowserConsoleFrameBuffer
         var x = new List<int>(Height * 4);
         var y = new List<int>(Height * 4);
         var text = new List<string>(Height * 4);
-        var foreground = new List<string>(Height * 4);
-        var background = new List<string>(Height * 4);
+        var foreground = new List<int>(Height * 4);
+        var background = new List<int>(Height * 4);
         var builder = new StringBuilder(Width);
 
         for (var row = 0; row < Height; row++)
@@ -140,8 +139,8 @@ public sealed class BrowserConsoleFrameBuffer
         List<int> x,
         List<int> y,
         List<string> text,
-        List<string> foreground,
-        List<string> background,
+        List<int> foreground,
+        List<int> background,
         int runStart,
         int row,
         StringBuilder builder,
@@ -150,8 +149,8 @@ public sealed class BrowserConsoleFrameBuffer
         x.Add(runStart);
         y.Add(row);
         text.Add(builder.ToString());
-        foreground.Add(GetColor(style.ForegroundColor));
-        background.Add(GetColor(style.BackgroundColor));
+        foreground.Add(PackColor(style.ForegroundColor));
+        background.Add(PackColor(style.BackgroundColor));
     }
 
     private void Resize(int width, int height)
@@ -179,22 +178,14 @@ public sealed class BrowserConsoleFrameBuffer
         X = Array.Empty<int>(),
         Y = Array.Empty<int>(),
         Text = Array.Empty<string>(),
-        Foreground = Array.Empty<string>(),
-        Background = Array.Empty<string>()
+        Foreground = Array.Empty<int>(),
+        Background = Array.Empty<int>()
     };
 
     private bool IsDirty(int index, int column)
     {
-        if (dirtyCells[index]) return true;
-        if (column > 0 && dirtyCells[index - 1]) return true;
-        return column < Width - 1 && dirtyCells[index + 1];
+        return dirtyCells[index];
     }
 
-    private string GetColor(RGB color)
-    {
-        if (colorCache.TryGetValue(color, out var webColor)) return webColor;
-        webColor = color.ToWebString();
-        colorCache[color] = webColor;
-        return webColor;
-    }
+    private static int PackColor(RGB color) => (color.R << 16) | (color.G << 8) | color.B;
 }

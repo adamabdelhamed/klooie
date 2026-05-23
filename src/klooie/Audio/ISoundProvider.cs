@@ -46,6 +46,7 @@ public interface ISoundProvider
     Task Play(Song song, ILifetime? lifetime = null);
     EventLoop EventLoop { get; }
     public ScheduledSignalSourceMixer ScheduledSignalMixer { get; }
+    public bool FailedToInitializeOrRun { get;  }
 }
 
 public class NoOpSoundProvider : ISoundProvider
@@ -58,6 +59,7 @@ public class NoOpSoundProvider : ISoundProvider
     public void Resume() { }
     public void ClearCache() { }
     public long SamplesRendered => 0;
+    public bool FailedToInitializeOrRun => false;
     public IConsoleAudioRecordingSink? AudioRecordingSink { get; set; }
 
     public ScheduledSignalSourceMixer ScheduledSignalMixer => throw new NotImplementedException("NoOpSoundProvider does not support ScheduledSignalMixer.");

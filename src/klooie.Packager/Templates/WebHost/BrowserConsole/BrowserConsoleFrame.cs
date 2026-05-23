@@ -10,8 +10,8 @@ public sealed class BrowserConsoleFrame
         X = Array.Empty<int>(),
         Y = Array.Empty<int>(),
         Text = Array.Empty<string>(),
-        Foreground = Array.Empty<string>(),
-        Background = Array.Empty<string>()
+        Foreground = Array.Empty<int>(),
+        Background = Array.Empty<int>()
     };
 
     public required int Width { get; init; }
@@ -20,6 +20,6 @@ public sealed class BrowserConsoleFrame
     public required int[] X { get; init; }
     public required int[] Y { get; init; }
     public required string[] Text { get; init; }
-    public required string[] Foreground { get; init; }
-    public required string[] Background { get; init; }
+    public required int[] Foreground { get; init; }
+    public required int[] Background { get; init; }
 }
