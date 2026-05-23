@@ -72,27 +72,91 @@ window.klooieFramePump = {
 
 window.klooieAssets = {
     audioCache: new Map(),
+    decodedAudioCache: new Map(),
+    active: new Map(),
+    music: new Set(),
+    audioContext: undefined,
+    paused: false,
 
-    play(url, volume, isMusic) {
-        const normalizedVolume = Math.max(0, Math.min(1, Number(volume) || 1));
-        const cached = this.audioCache.get(url);
-        if (!cached) {
-            this.preload(url);
-            this.playUncached(url, normalizedVolume, isMusic);
-            return;
+    play(id, url, volume, pan, loop, isMusic, startPaused, dotNetRef) {
+        const playbackId = String(id);
+        this.stop(playbackId);
+        if (isMusic) {
+            for (const musicId of Array.from(this.music)) this.stop(musicId);
         }
 
-        cached.then(cachedUrl => {
-                const audio = new Audio(cachedUrl);
-                audio.volume = normalizedVolume;
-                audio.loop = false;
-                audio.preload = "auto";
-                const playPromise = audio.play();
-                if (playPromise?.catch) {
-                    playPromise.catch(error => console.debug("klooie audio play skipped", error));
+        this.getDecodedAudio(url)
+            .then(buffer => {
+                const context = this.getAudioContext();
+                const source = context.createBufferSource();
+                const gain = context.createGain();
+                const panner = typeof context.createStereoPanner === "function" ? context.createStereoPanner() : undefined;
+                const state = {
+                    id: playbackId,
+                    context,
+                    source,
+                    gain,
+                    panner,
+                    volume: normalizeUnit(volume, 1),
+                    pan: normalizePan(pan),
+                    loop: !!loop,
+                    isMusic: !!isMusic,
+                    dotNetRef,
+                    paused: !!startPaused || this.paused,
+                    startedAt: 0,
+                    offset: 0,
+                    stopping: false,
+                    buffer
+                };
+
+                source.buffer = buffer;
+                source.loop = state.loop;
+                gain.gain.value = state.paused ? 0 : state.volume;
+                if (panner) {
+                    panner.pan.value = state.pan;
+                    source.connect(panner);
+                    panner.connect(gain);
+                } else {
+                    source.connect(gain);
                 }
+
+                gain.connect(context.destination);
+                source.onended = () => {
+                    if (!state.stopping && !state.loop) {
+                        this.active.delete(playbackId);
+                        this.music.delete(playbackId);
+                        state.dotNetRef?.invokeMethodAsync("AudioEnded", Number(playbackId))
+                            ?.catch(error => console.debug("klooie audio ended callback failed", error));
+                    }
+                };
+
+                this.active.set(playbackId, state);
+                if (state.isMusic) this.music.add(playbackId);
+                this.startState(state);
             })
             .catch(error => console.debug("klooie audio play failed", error));
+    },
+
+    startState(state) {
+        try {
+            if (state.context.state === "suspended" && !state.paused) {
+                state.context.resume().catch(error => console.debug("klooie audio resume skipped", error));
+            }
+
+            state.startedAt = state.context.currentTime - state.offset;
+            state.source.start(0, state.offset);
+        } catch (error) {
+            console.debug("klooie audio play skipped", error);
+        }
+    },
+
+    getAudioContext() {
+        if (!this.audioContext) {
+            const AudioContextType = window.AudioContext || window.webkitAudioContext;
+            this.audioContext = new AudioContextType();
+        }
+
+        return this.audioContext;
     },
 
     getAudioUrl(url) {
@@ -109,25 +173,94 @@ window.klooieAssets = {
         return load;
     },
 
-    preload(url) {
-        this.getAudioUrl(url).catch(error => console.debug("klooie audio preload failed", error));
+    getDecodedAudio(url) {
+        const existing = this.decodedAudioCache.get(url);
+        if (existing) return existing;
+
+        const load = fetch(url, { cache: "force-cache" })
+            .then(response => {
+                if (!response.ok) throw new Error(`Audio request failed: ${response.status} ${url}`);
+                return response.arrayBuffer();
+            })
+            .then(bytes => this.getAudioContext().decodeAudioData(bytes));
+        this.decodedAudioCache.set(url, load);
+        return load;
     },
 
-    playUncached(url, volume, isMusic) {
+    preload(url) {
+        this.getDecodedAudio(url).catch(error => console.debug("klooie audio preload failed", error));
+    },
+
+    update(id, volume, pan) {
+        const state = this.active.get(String(id));
+        if (!state) return;
+
+        state.volume = normalizeUnit(volume, 1);
+        state.pan = normalizePan(pan);
+        state.gain.gain.value = state.paused || this.paused ? 0 : state.volume;
+        if (state.panner) state.panner.pan.value = state.pan;
+    },
+
+    stop(id) {
+        const state = this.active.get(String(id));
+        if (!state) return;
+
+        state.stopping = true;
         try {
-            const audio = new Audio(url);
-            audio.volume = Math.max(0, Math.min(1, Number(volume) || 1));
-            audio.loop = false;
-            audio.preload = "auto";
-            const playPromise = audio.play();
-            if (playPromise?.catch) {
-                playPromise.catch(error => console.debug("klooie audio play skipped", error));
-            }
-        } catch (error) {
-            console.debug("klooie audio play failed", error);
+            state.source.stop();
+        } catch {
         }
+
+        try {
+            state.source.disconnect();
+            state.panner?.disconnect();
+            state.gain.disconnect();
+        } catch {
+        }
+
+        this.active.delete(String(id));
+        this.music.delete(String(id));
+    },
+
+    pauseAll() {
+        this.paused = true;
+        for (const state of this.active.values()) {
+            state.paused = true;
+            state.gain.gain.value = 0;
+        }
+    },
+
+    resumeAll() {
+        this.paused = false;
+        if (this.audioContext?.state === "suspended") {
+            this.audioContext.resume().catch(error => console.debug("klooie audio resume skipped", error));
+        }
+
+        for (const state of this.active.values()) {
+            state.paused = false;
+            state.gain.gain.value = state.volume;
+        }
+    },
+
+    clearAudioCache() {
+        for (const urlPromise of this.audioCache.values()) {
+            urlPromise.then(url => URL.revokeObjectURL(url)).catch(() => { });
+        }
+
+        this.audioCache.clear();
+        this.decodedAudioCache.clear();
     }
 };
+
+function normalizeUnit(value, fallback) {
+    const numeric = Number(value);
+    return Math.max(0, Math.min(1, Number.isFinite(numeric) ? numeric : fallback));
+}
+
+function normalizePan(value) {
+    const numeric = Number(value);
+    return Math.max(-1, Math.min(1, Number.isFinite(numeric) ? numeric : 0));
+}
 
 async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
     if (state.stopped || state.inFrame) return;
