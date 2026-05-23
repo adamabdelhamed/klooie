@@ -66,5 +66,8 @@ For this milestone, packaging `klooie.blazorSampleApp` with `-type Web` should:
 - The packager currently discovers `[KlooieWebTarget]` on a static no-argument `MainAsync` or `Main` method. If no marker exists, it falls back to no-argument static `MainAsync`/`Main` candidates.
 - `[KlooieWebTarget(DisplayName = "...", Description = "...")]` is used for generated registry metadata.
 - The generated web host keeps `RootNamespace` as `klooie.blazor` because the folded template source still uses that namespace.
+- `kpack -type Web` passes `KlooieOptimizeWebAssembly=true`, which makes the generated WebHost set `PublishTrimmed=true` and `RunAOTCompilation=true` so the Blazor WebAssembly SDK can AOT compile and relink the runtime when `wasm-tools` is installed. `-type Serve` derives that property from the Visual Studio launch working directory: Release launches AOT publish, Debug launches stay fast.
+- Serve packaging is guarded by a per-project cross-process temp-file lock. Keep that lock because Release AOT publishes are long-running and concurrent publishes for the same target can collide in referenced project intermediate outputs even when the generated host directories are unique.
+- Generated web host intermediates use short unique paths under `obj/kp`; keep those paths short because Blazor WebAssembly publish creates deep `obj/Release/net*/wasm/for-publish` trees and long paths can surface as missing WebCIL/static-asset files.
 - Keep `Templates/WebHost/Program.cs` valid. The packager overwrites `Program.cs` in generated temp hosts, but the template version is needed by the compile-check project.
 - `kpack` passes `-p:KlooiePackageOnBuild=false` to its internal `dotnet publish` calls. Keep this suppression or sample build packaging will recurse.

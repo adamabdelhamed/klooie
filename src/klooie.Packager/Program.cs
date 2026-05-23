@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Security;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -21,7 +22,7 @@ internal static class Program
 
             if (options.Type == PackageType.Web)
             {
-                await PackageWebAsync(project);
+                await PackageWebAsync(project, optimizeWebAssembly: true);
             }
             else if (options.Type == PackageType.Serve)
             {
@@ -41,19 +42,18 @@ internal static class Program
         }
     }
 
-    private static async Task<string> PackageWebAsync(ProjectInfo project)
+    private static async Task<string> PackageWebAsync(ProjectInfo project, bool optimizeWebAssembly)
     {
         var target = WebEntryPointDiscoverer.Discover(project);
         var templateDirectory = LocateWebHostTemplateDirectory();
 
-        var tempDirectory = Path.Combine(project.Directory, "obj", "klooie.packager", "web");
-        var publishDirectory = Path.Combine(project.Directory, "obj", "klooie.packager", "publish");
+        var intermediateRoot = CreatePackageIntermediateDirectory(project);
+        var tempDirectory = Path.Combine(intermediateRoot, "web");
+        var publishDirectory = Path.Combine(intermediateRoot, "publish");
         var outputDirectory = GetWebOutputDirectory(project);
 
-        ResetDirectory(tempDirectory, project.Directory);
-        ResetDirectory(publishDirectory, project.Directory);
-        ResetDirectory(outputDirectory, project.Directory);
-
+        Directory.CreateDirectory(tempDirectory);
+        Directory.CreateDirectory(publishDirectory);
         CopyWebHostTemplate(templateDirectory, tempDirectory);
         WriteGeneratedWebProject(project, tempDirectory, target);
 
@@ -66,6 +66,7 @@ internal static class Program
                 "-c",
                 "Release",
                 "-p:KlooiePackageOnBuild=false",
+                $"-p:KlooieOptimizeWebAssembly={optimizeWebAssembly.ToString().ToLowerInvariant()}",
                 "-o",
                 publishDirectory,
                 "--nologo"
@@ -78,6 +79,7 @@ internal static class Program
             throw new InvalidOperationException($"Publish did not produce static web output at '{staticOutput}'.");
         }
 
+        ResetDirectory(outputDirectory, project.Directory);
         CopyDirectory(staticOutput, outputDirectory);
         CopyProjectAssets(project, outputDirectory);
         Console.WriteLine($"Web package written to {outputDirectory}");
@@ -125,22 +127,72 @@ internal static class Program
 
     private static async Task ServeWebAsync(ProjectInfo project, int port)
     {
-        KillProcessesListeningOnPort(port);
+        var requestedPort = port;
+        KillProcessesListeningOnPort(requestedPort);
 
         var outputDirectory = GetWebOutputDirectory(project);
-        using var listener = new HttpListener();
-        listener.Prefixes.Add($"http://127.0.0.1:{port}/");
-        listener.Start();
+        using var listener = StartListener(requestedPort, out port);
 
         Console.WriteLine($"Packaging and serving {outputDirectory} at http://127.0.0.1:{port}/");
+        if (port != requestedPort) Console.WriteLine($"Requested port {requestedPort} was unavailable, so kpack is serving on port {port} instead.");
         Console.WriteLine("Press Ctrl+C or stop debugging to end the server.");
 
-        var packageTask = Task.Run(() => PackageWebAsync(project));
+        var packageTask = Task.Run(() => PackageWebWithLockAsync(project, optimizeWebAssembly: IsReleaseLaunchDirectory()));
         while (true)
         {
             var context = await listener.GetContextAsync();
             _ = Task.Run(() => ServeRequestAsync(context, outputDirectory, packageTask));
         }
+    }
+
+    private static async Task<string> PackageWebWithLockAsync(ProjectInfo project, bool optimizeWebAssembly)
+    {
+        var lockPath = GetPackageLockPath(project);
+        Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
+
+        await using var lockStream = await AcquirePackageLockAsync(lockPath);
+        return await PackageWebAsync(project, optimizeWebAssembly);
+    }
+
+    private static async Task<FileStream> AcquirePackageLockAsync(string lockPath)
+    {
+        while (true)
+        {
+            try
+            {
+                return new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            }
+            catch (IOException)
+            {
+                await Task.Delay(1000);
+            }
+        }
+    }
+
+    private static HttpListener StartListener(int requestedPort, out int actualPort)
+    {
+        HttpListenerException? lastException = null;
+        for (var attempts = 0; attempts < 25; attempts++)
+        {
+            var port = requestedPort + attempts;
+            var listener = new HttpListener();
+            listener.Prefixes.Clear();
+            listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+
+            try
+            {
+                listener.Start();
+                actualPort = port;
+                return listener;
+            }
+            catch (HttpListenerException ex)
+            {
+                lastException = ex;
+                listener.Close();
+            }
+        }
+
+        throw new InvalidOperationException($"Could not listen on any localhost port from {requestedPort} through {requestedPort + 24}.", lastException);
     }
 
     private static async Task ServeRequestAsync(HttpListenerContext context, string outputDirectory, Task<string> packageTask)
@@ -274,7 +326,7 @@ internal static class Program
         if (!OperatingSystem.IsWindows()) return;
 
         var currentProcessId = Environment.ProcessId;
-        foreach (var processId in FindWindowsTcpListenerProcessIds(port).Where(pid => pid != currentProcessId).Distinct())
+        foreach (var processId in FindWindowsTcpListenerProcessIds(port).Where(pid => pid != currentProcessId && pid != 4).Distinct())
         {
             try
             {
@@ -334,6 +386,25 @@ internal static class Program
         return Path.Combine(project.Directory, "bin", "klooie.web");
     }
 
+    private static string CreatePackageIntermediateDirectory(ProjectInfo project)
+    {
+        var runsRoot = Path.Combine(project.Directory, "obj", "kp");
+        Directory.CreateDirectory(runsRoot);
+        return Directory.CreateDirectory(Path.Combine(runsRoot, $"{Environment.ProcessId:x}-{Guid.NewGuid():N}"[..20])).FullName;
+    }
+
+    private static string GetPackageLockPath(ProjectInfo project)
+    {
+        var projectHash = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(project.Path).ToUpperInvariant())))[..16];
+        return Path.Combine(Path.GetTempPath(), "klooie-packager-locks", $"{projectHash}.lock");
+    }
+
+    private static bool IsReleaseLaunchDirectory()
+    {
+        var currentDirectory = Path.GetFullPath(Directory.GetCurrentDirectory());
+        return currentDirectory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part => string.Equals(part, "Release", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static void WriteGeneratedWebProject(ProjectInfo project, string tempDirectory, WebEntryPoint target)
     {
         var projectReference = SecurityElement.Escape(project.Path);
@@ -350,11 +421,14 @@ internal static class Program
                 <Nullable>enable</Nullable>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+                <PublishTrimmed Condition="'$(KlooieOptimizeWebAssembly)' == 'true'">true</PublishTrimmed>
+                <RunAOTCompilation Condition="'$(KlooieOptimizeWebAssembly)' == 'true'">true</RunAOTCompilation>
               </PropertyGroup>
 
               <ItemGroup>
                 <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.5" />
                 <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.5" PrivateAssets="all" />
+                <PackageReference Include="System.Formats.Nrbf" Version="10.0.8" />
               </ItemGroup>
 
               <ItemGroup>
