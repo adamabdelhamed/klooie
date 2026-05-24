@@ -19,10 +19,12 @@ window.klooieFramePump = {
             frameTimer: undefined,
             frameAnimationId: undefined,
             renderer: undefined,
+            knownGamepads: new Map(),
             listeners: []
         };
         this.pumps[id] = state;
         setupKeyboard(hostElement, state);
+        setupGamepads(state);
         updateCellMetrics(hostElement, state);
         state.renderer = createConsoleRenderer(canvas, state);
 
@@ -65,6 +67,7 @@ window.klooieFramePump = {
             }
             pump.renderer?.dispose();
             teardownKeyboard(pump);
+            teardownGamepads(pump);
         }
         delete this.pumps[id];
     }
@@ -273,7 +276,7 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
         const size = measure(hostElement, state);
         pumpKeyboardRepeats(state, timestamp);
         const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
-        const gamepadSnapshotJson = readGamepadSnapshotJson();
+        const gamepadSnapshotJson = readGamepadSnapshotJson(state);
         const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson);
         state.renderer.render(canvas, terminalFrame, state);
         state.sizeDirty = false;
@@ -357,6 +360,32 @@ function teardownKeyboard(state) {
     }
 }
 
+function setupGamepads(state) {
+    if (typeof window === "undefined") return;
+
+    const connected = (event) => {
+        const gamepad = event?.gamepad;
+        if (gamepad) state.knownGamepads.set(gamepad.index || 0, gamepad);
+        state.requestImmediateFrame?.();
+    };
+
+    const disconnected = (event) => {
+        const gamepad = event?.gamepad;
+        if (gamepad) state.knownGamepads.delete(gamepad.index || 0);
+        state.requestImmediateFrame?.();
+    };
+
+    window.addEventListener("gamepadconnected", connected);
+    window.addEventListener("gamepaddisconnected", disconnected);
+    state.listeners.push(
+        [window, "gamepadconnected", connected],
+        [window, "gamepaddisconnected", disconnected]);
+}
+
+function teardownGamepads(state) {
+    state.knownGamepads?.clear();
+}
+
 function clearHeldKey(state, keyId) {
     state.heldKeys.delete(keyId);
 }
@@ -410,27 +439,33 @@ function isModifierOnlyKey(key) {
         key === "SymbolLock";
 }
 
-function readGamepadSnapshotJson() {
-    if (typeof navigator === "undefined" || typeof navigator.getGamepads !== "function") return null;
-
+function readGamepadSnapshotJson(state) {
     try {
-        const rawGamepads = navigator.getGamepads();
-        const gamepads = [];
+        const rawGamepads = typeof navigator !== "undefined" && typeof navigator.getGamepads === "function"
+            ? navigator.getGamepads()
+            : [];
+        const gamepadsByIndex = new Map();
+        for (const gamepad of state?.knownGamepads?.values?.() || []) {
+            if (!gamepad || !gamepad.connected) continue;
+            gamepadsByIndex.set(gamepad.index || 0, gamepad);
+        }
+
         for (const gamepad of rawGamepads) {
             if (!gamepad || !gamepad.connected) continue;
-
-            gamepads.push({
-                id: gamepad.id || "",
-                index: gamepad.index || 0,
-                connected: !!gamepad.connected,
-                mapping: gamepad.mapping || "",
-                buttons: Array.from(gamepad.buttons || [], button => ({
-                    pressed: !!button?.pressed,
-                    value: normalizeUnit(button?.value, 0)
-                })),
-                axes: Array.from(gamepad.axes || [], axis => normalizeAxis(axis))
-            });
+            gamepadsByIndex.set(gamepad.index || 0, gamepad);
         }
+
+        const gamepads = Array.from(gamepadsByIndex.values(), gamepad => ({
+            id: gamepad.id || "",
+            index: gamepad.index || 0,
+            connected: !!gamepad.connected,
+            mapping: gamepad.mapping || "",
+            buttons: Array.from(gamepad.buttons || [], button => ({
+                pressed: !!button?.pressed,
+                value: normalizeUnit(button?.value, 0)
+            })),
+            axes: Array.from(gamepad.axes || [], axis => normalizeAxis(axis))
+        }));
 
         return JSON.stringify({ gamepads });
     } catch (error) {
