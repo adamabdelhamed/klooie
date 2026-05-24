@@ -1,9 +1,16 @@
 {
   "profiles": {
-    "klooie.blazorSampleApp Web": {
+    "klooie.blazorSampleApp Web Fast": {
       "commandName": "Executable",
       "executablePath": "..\\..\\..\\..\\klooie.Packager\\RunKpack.cmd",
-      "commandLineArgs": "..\\..\\..\\klooie.blazorSampleApp.csproj -type Serve -port 5187",
+      "commandLineArgs": "..\\..\\..\\klooie.blazorSampleApp.csproj -type Serve -port 5187 -webMode Fast",
+      "launchBrowser": true,
+      "applicationUrl": "http://127.0.0.1:5187/"
+    },
+    "klooie.blazorSampleApp Web AOT": {
+      "commandName": "Executable",
+      "executablePath": "..\\..\\..\\..\\klooie.Packager\\RunKpack.cmd",
+      "commandLineArgs": "..\\..\\..\\klooie.blazorSampleApp.csproj -type Serve -port 5187 -webMode Aot",
       "launchBrowser": true,
       "applicationUrl": "http://127.0.0.1:5187/"
     }

@@ -5,8 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <KlooiePackageOnBuild Condition="'$(KlooiePackageOnBuild)' == ''">true</KlooiePackageOnBuild>
+    <KlooieWebMode Condition="'$(KlooieWebMode)' == ''">Fast</KlooieWebMode>
     <KlooieDotNetHost Condition="'$(DotNetHostPath)' != ''">$(DotNetHostPath)</KlooieDotNetHost>
     <KlooieDotNetHost Condition="'$(KlooieDotNetHost)' == ''">dotnet</KlooieDotNetHost>
+    <KlooiePackagerProject>$(MSBuildProjectDirectory)\..\klooie.Packager\klooie.Packager.csproj</KlooiePackagerProject>
     <KlooiePackagerDll>$(MSBuildProjectDirectory)\..\klooie.Packager\bin\$(Configuration)\net10.0\kpack.dll</KlooiePackagerDll>
   </PropertyGroup>
 
@@ -15,11 +17,23 @@
     <ProjectReference Include="..\klooie.Packager\klooie.Packager.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" Condition="'$(KlooiePackageOnBuild)' == 'true'" />
   </ItemGroup>
 
+  <Target Name="KlooieBuildPackager"
+          BeforeTargets="KlooiePackageWebOnBuild"
+          Condition="'$(KlooiePackageOnBuild)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Message Importance="High" Text="Building klooie packager ($(Configuration)) before web packaging" />
+    <Exec Command="&quot;$(KlooieDotNetHost)&quot; build &quot;$(KlooiePackagerProject)&quot; -c &quot;$(Configuration)&quot; --nologo" />
+  </Target>
+
   <Target Name="KlooiePackageWebOnBuild"
           AfterTargets="Build"
           Condition="'$(KlooiePackageOnBuild)' == 'true' and '$(DesignTimeBuild)' != 'true'">
-    <Message Importance="High" Text="Packaging klooie web output to $(MSBuildProjectDirectory)\bin\klooie.web" />
-    <Exec Command="&quot;$(KlooieDotNetHost)&quot; &quot;$(KlooiePackagerDll)&quot; &quot;$(MSBuildProjectFullPath)&quot; -type Web" />
+    <Message Importance="High" Text="Packaging klooie web output ($(KlooieWebMode) mode) to $(MSBuildProjectDirectory)\bin\klooie.web" />
+    <Exec Command="&quot;$(KlooieDotNetHost)&quot; &quot;$(KlooiePackagerDll)&quot; &quot;$(MSBuildProjectFullPath)&quot; -type Web -webMode &quot;$(KlooieWebMode)&quot;" />
+  </Target>
+
+  <Target Name="KlooieCleanWebArtifacts" AfterTargets="Clean">
+    <Message Importance="High" Text="Cleaning klooie web artifacts from bin\klooie.web and obj\kp" />
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\bin\klooie.web;$(MSBuildProjectDirectory)\obj\kp;$(MSBuildProjectDirectory)\obj\klooie.packager" />
   </Target>
 
 </Project>

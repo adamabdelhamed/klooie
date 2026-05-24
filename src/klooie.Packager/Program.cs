@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Security;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -20,13 +21,15 @@ internal static class Program
             var options = PackageOptions.Parse(args);
             var project = ProjectInfo.Load(options.ProjectPath);
 
+            var webMode = options.WebMode ?? project.WebMode;
+
             if (options.Type == PackageType.Web)
             {
-                await PackageWebAsync(project, optimizeWebAssembly: true);
+                await PackageWebAsync(project, webMode);
             }
             else if (options.Type == PackageType.Serve)
             {
-                await ServeWebAsync(project, options.Port);
+                await ServeWebAsync(project, options.Port, webMode);
             }
             else
             {
@@ -42,15 +45,23 @@ internal static class Program
         }
     }
 
-    private static async Task<string> PackageWebAsync(ProjectInfo project, bool optimizeWebAssembly)
+    private static async Task<string> PackageWebAsync(ProjectInfo project, KlooieWebMode webMode)
     {
         var target = WebEntryPointDiscoverer.Discover(project);
         var templateDirectory = LocateWebHostTemplateDirectory();
-
         var intermediateRoot = CreatePackageIntermediateDirectory(project);
         var tempDirectory = Path.Combine(intermediateRoot, "web");
         var publishDirectory = Path.Combine(intermediateRoot, "publish");
         var outputDirectory = GetWebOutputDirectory(project);
+        var fingerprint = ComputeWebPackageFingerprint(project, templateDirectory, webMode);
+
+        if (IsWebPackageCurrent(outputDirectory, fingerprint))
+        {
+            Console.WriteLine($"Klooie web package is current ({webMode} mode): {outputDirectory}");
+            return outputDirectory;
+        }
+
+        Console.WriteLine($"Packaging klooie web output ({webMode} mode) to {outputDirectory}");
 
         Directory.CreateDirectory(tempDirectory);
         Directory.CreateDirectory(publishDirectory);
@@ -64,9 +75,11 @@ internal static class Program
                 "publish",
                 generatedProjectPath,
                 "-c",
-                "Release",
+                GetPublishConfiguration(webMode),
                 "-p:KlooiePackageOnBuild=false",
-                $"-p:KlooieOptimizeWebAssembly={optimizeWebAssembly.ToString().ToLowerInvariant()}",
+                $"-p:KlooieOptimizeWebAssembly={ShouldOptimizeWebAssembly(webMode).ToString().ToLowerInvariant()}",
+                $"-p:PublishTrimmed={ShouldOptimizeWebAssembly(webMode).ToString().ToLowerInvariant()}",
+                $"-p:RunAOTCompilation={ShouldOptimizeWebAssembly(webMode).ToString().ToLowerInvariant()}",
                 "-o",
                 publishDirectory,
                 "--nologo"
@@ -82,6 +95,7 @@ internal static class Program
         ResetDirectory(outputDirectory, project.Directory);
         CopyDirectory(staticOutput, outputDirectory);
         CopyProjectAssets(project, outputDirectory);
+        WriteWebPackageStamp(outputDirectory, fingerprint, webMode);
         Console.WriteLine($"Web package written to {outputDirectory}");
         return outputDirectory;
     }
@@ -125,33 +139,41 @@ internal static class Program
         Console.WriteLine($"Windows executable written to {Path.Combine(outputDirectory, $"{project.AssemblyName}.exe")}");
     }
 
-    private static async Task ServeWebAsync(ProjectInfo project, int port)
+    private static async Task ServeWebAsync(ProjectInfo project, int port, KlooieWebMode webMode)
     {
         var requestedPort = port;
         KillProcessesListeningOnPort(requestedPort);
+        WaitForPortToBeAvailable(requestedPort);
 
         var outputDirectory = GetWebOutputDirectory(project);
-        using var listener = StartListener(requestedPort, out port);
+        using var listener = StartListener(requestedPort);
 
-        Console.WriteLine($"Packaging and serving {outputDirectory} at http://127.0.0.1:{port}/");
-        if (port != requestedPort) Console.WriteLine($"Requested port {requestedPort} was unavailable, so kpack is serving on port {port} instead.");
+        Console.WriteLine($"Packaging and serving {outputDirectory} at http://127.0.0.1:{requestedPort}/ ({webMode} mode)");
         Console.WriteLine("Press Ctrl+C or stop debugging to end the server.");
 
-        var packageTask = Task.Run(() => PackageWebWithLockAsync(project, optimizeWebAssembly: IsReleaseLaunchDirectory()));
-        while (true)
+        var packageTask = Task.Run(() => PackageWebWithLockAsync(project, webMode));
+        WriteServerPidFile(requestedPort);
+        try
         {
-            var context = await listener.GetContextAsync();
-            _ = Task.Run(() => ServeRequestAsync(context, outputDirectory, packageTask));
+            while (true)
+            {
+                var context = await listener.GetContextAsync();
+                _ = Task.Run(() => ServeRequestAsync(context, outputDirectory, packageTask));
+            }
+        }
+        finally
+        {
+            DeleteServerPidFile(requestedPort);
         }
     }
 
-    private static async Task<string> PackageWebWithLockAsync(ProjectInfo project, bool optimizeWebAssembly)
+    private static async Task<string> PackageWebWithLockAsync(ProjectInfo project, KlooieWebMode webMode)
     {
         var lockPath = GetPackageLockPath(project);
         Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
 
         await using var lockStream = await AcquirePackageLockAsync(lockPath);
-        return await PackageWebAsync(project, optimizeWebAssembly);
+        return await PackageWebAsync(project, webMode);
     }
 
     private static async Task<FileStream> AcquirePackageLockAsync(string lockPath)
@@ -169,30 +191,22 @@ internal static class Program
         }
     }
 
-    private static HttpListener StartListener(int requestedPort, out int actualPort)
+    private static HttpListener StartListener(int requestedPort)
     {
-        HttpListenerException? lastException = null;
-        for (var attempts = 0; attempts < 25; attempts++)
+        var listener = new HttpListener();
+        listener.Prefixes.Clear();
+        listener.Prefixes.Add($"http://127.0.0.1:{requestedPort}/");
+
+        try
         {
-            var port = requestedPort + attempts;
-            var listener = new HttpListener();
-            listener.Prefixes.Clear();
-            listener.Prefixes.Add($"http://127.0.0.1:{port}/");
-
-            try
-            {
-                listener.Start();
-                actualPort = port;
-                return listener;
-            }
-            catch (HttpListenerException ex)
-            {
-                lastException = ex;
-                listener.Close();
-            }
+            listener.Start();
+            return listener;
         }
-
-        throw new InvalidOperationException($"Could not listen on any localhost port from {requestedPort} through {requestedPort + 24}.", lastException);
+        catch
+        {
+            listener.Close();
+            throw;
+        }
     }
 
     private static async Task ServeRequestAsync(HttpListenerContext context, string outputDirectory, Task<string> packageTask)
@@ -325,8 +339,17 @@ internal static class Program
     {
         if (!OperatingSystem.IsWindows()) return;
 
+        StopKnownKpackServer(port);
+
         var currentProcessId = Environment.ProcessId;
-        foreach (var processId in FindWindowsTcpListenerProcessIds(port).Where(pid => pid != currentProcessId && pid != 4).Distinct())
+        var listenerProcessIds = FindWindowsTcpListenerProcessIds(port)
+            .Concat(FindWindowsTcpListenerProcessIdsWithPowerShell(port))
+            .Concat(FindWindowsHttpSysListenerProcessIds(port))
+            .Where(pid => pid != currentProcessId && pid != 4)
+            .Distinct()
+            .ToArray();
+
+        foreach (var processId in listenerProcessIds)
         {
             try
             {
@@ -339,6 +362,88 @@ internal static class Program
             {
                 Console.Error.WriteLine($"Could not stop process {processId} on port {port}: {ex.Message}");
             }
+        }
+    }
+
+    private static void StopKnownKpackServer(int port)
+    {
+        var pidPath = GetServerPidPath(port);
+        if (!File.Exists(pidPath)) return;
+
+        var currentProcessId = Environment.ProcessId;
+        var text = File.ReadAllText(pidPath).Trim();
+        if (int.TryParse(text, out var processId) == false || processId == currentProcessId)
+        {
+            TryDeleteFile(pidPath);
+            return;
+        }
+
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            Console.WriteLine($"Stopping existing kpack server process {processId} using port {port}.");
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit(5000);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Could not stop recorded kpack server process {processId} on port {port}: {ex.Message}");
+        }
+        finally
+        {
+            TryDeleteFile(pidPath);
+        }
+    }
+
+    private static void WriteServerPidFile(int port)
+    {
+        Directory.CreateDirectory(GetServerPidDirectory());
+        File.WriteAllText(GetServerPidPath(port), Environment.ProcessId.ToString());
+    }
+
+    private static void DeleteServerPidFile(int port)
+    {
+        var pidPath = GetServerPidPath(port);
+        if (File.Exists(pidPath) && string.Equals(File.ReadAllText(pidPath).Trim(), Environment.ProcessId.ToString(), StringComparison.Ordinal))
+        {
+            TryDeleteFile(pidPath);
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch
+        {
+        }
+    }
+
+    private static string GetServerPidPath(int port)
+    {
+        return Path.Combine(GetServerPidDirectory(), $"{port}.pid");
+    }
+
+    private static string GetServerPidDirectory()
+    {
+        return Path.Combine(Path.GetTempPath(), "klooie-packager-servers");
+    }
+
+    private static void WaitForPortToBeAvailable(int port)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            var listenerProcessIds = FindWindowsTcpListenerProcessIds(port)
+                .Concat(FindWindowsTcpListenerProcessIdsWithPowerShell(port))
+                .Concat(FindWindowsHttpSysListenerProcessIds(port))
+                .Where(pid => pid != Environment.ProcessId && pid != 4);
+
+            if (listenerProcessIds.Any() == false) return;
+            Thread.Sleep(100);
         }
     }
 
@@ -370,6 +475,74 @@ internal static class Program
         process.WaitForExit();
     }
 
+    private static IEnumerable<int> FindWindowsTcpListenerProcessIdsWithPowerShell(int port)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "powershell",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        startInfo.ArgumentList.Add("-NoProfile");
+        startInfo.ArgumentList.Add("-Command");
+        startInfo.ArgumentList.Add($"Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess");
+
+        using var process = Process.Start(startInfo);
+        if (process is null) yield break;
+
+        while (process.StandardOutput.ReadLine() is { } line)
+        {
+            if (int.TryParse(line.Trim(), out var processId)) yield return processId;
+        }
+
+        process.WaitForExit();
+    }
+
+    private static IEnumerable<int> FindWindowsHttpSysListenerProcessIds(int port)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "netsh",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        startInfo.ArgumentList.Add("http");
+        startInfo.ArgumentList.Add("show");
+        startInfo.ArgumentList.Add("servicestate");
+        startInfo.ArgumentList.Add("view=requestq");
+
+        using var process = Process.Start(startInfo);
+        if (process is null) yield break;
+
+        int? currentProcessId = null;
+        while (process.StandardOutput.ReadLine() is { } line)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith("ID:", StringComparison.OrdinalIgnoreCase))
+            {
+                var idText = trimmed["ID:".Length..].Split(',', 2)[0].Trim();
+                currentProcessId = int.TryParse(idText, out var id) ? id : null;
+                continue;
+            }
+
+            if (currentProcessId.HasValue && IsHttpSysUrlForPort(trimmed, port))
+            {
+                yield return currentProcessId.Value;
+            }
+        }
+
+        process.WaitForExit();
+    }
+
+    private static bool IsHttpSysUrlForPort(string line, int port)
+    {
+        if (!line.StartsWith("HTTP://", StringComparison.OrdinalIgnoreCase) && !line.StartsWith("HTTPS://", StringComparison.OrdinalIgnoreCase)) return false;
+        return line.Contains($":{port}/", StringComparison.OrdinalIgnoreCase) ||
+               line.Contains($":{port}:", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool EndpointMatchesPort(string endpoint, int port)
     {
         var suffix = ":" + port.ToString();
@@ -399,10 +572,148 @@ internal static class Program
         return Path.Combine(Path.GetTempPath(), "klooie-packager-locks", $"{projectHash}.lock");
     }
 
-    private static bool IsReleaseLaunchDirectory()
+    private static bool ShouldOptimizeWebAssembly(KlooieWebMode webMode)
     {
-        var currentDirectory = Path.GetFullPath(Directory.GetCurrentDirectory());
-        return currentDirectory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part => string.Equals(part, "Release", StringComparison.OrdinalIgnoreCase));
+        return webMode == KlooieWebMode.Aot;
+    }
+
+    private static string GetPublishConfiguration(KlooieWebMode webMode)
+    {
+        return webMode == KlooieWebMode.Fast ? "Debug" : "Release";
+    }
+
+    private static bool IsWebPackageCurrent(string outputDirectory, string fingerprint)
+    {
+        var stampPath = GetWebPackageStampPath(outputDirectory);
+        return File.Exists(Path.Combine(outputDirectory, "index.html")) &&
+               Directory.Exists(Path.Combine(outputDirectory, "_framework")) &&
+               File.Exists(stampPath) &&
+               string.Equals(File.ReadAllText(stampPath).Trim(), fingerprint, StringComparison.Ordinal);
+    }
+
+    private static void WriteWebPackageStamp(string outputDirectory, string fingerprint, KlooieWebMode webMode)
+    {
+        File.WriteAllText(GetWebPackageStampPath(outputDirectory), fingerprint);
+        File.WriteAllText(Path.Combine(outputDirectory, "klooie.package.mode.txt"), webMode.ToString());
+    }
+
+    private static string GetWebPackageStampPath(string outputDirectory)
+    {
+        return Path.Combine(outputDirectory, "klooie.package.stamp");
+    }
+
+    private static string ComputeWebPackageFingerprint(ProjectInfo project, string templateDirectory, KlooieWebMode webMode)
+    {
+        var fingerprint = new StringBuilder();
+        AddFingerprintText(fingerprint, $"mode:{webMode}");
+        AddFingerprintText(fingerprint, $"target:{project.TargetFramework}");
+
+        foreach (var file in EnumerateWebPackageInputs(project, templateDirectory).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var info = new FileInfo(file);
+            AddFingerprintText(fingerprint, Path.GetFullPath(file).ToUpperInvariant());
+            AddFingerprintText(fingerprint, info.Length.ToString());
+            AddFingerprintText(fingerprint, info.LastWriteTimeUtc.Ticks.ToString());
+        }
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(fingerprint.ToString())));
+    }
+
+    private static IEnumerable<string> EnumerateWebPackageInputs(ProjectInfo project, string templateDirectory)
+    {
+        var visitedProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var projectPath in EnumerateProjectGraph(project.Path, visitedProjects))
+        {
+            yield return projectPath;
+            var projectDirectory = Path.GetDirectoryName(projectPath)!;
+            foreach (var file in Directory.EnumerateFiles(projectDirectory, "*", SearchOption.AllDirectories).Where(IsRelevantProjectInput))
+            {
+                yield return file;
+            }
+        }
+
+        foreach (var file in Directory.EnumerateFiles(templateDirectory, "*", SearchOption.AllDirectories).Where(IsRelevantProjectInput))
+        {
+            yield return file;
+        }
+
+        foreach (var file in Directory.EnumerateFiles(AppContext.BaseDirectory, "*", SearchOption.AllDirectories).Where(IsPackagerRuntimeInput))
+        {
+            yield return file;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateProjectGraph(string projectPath, HashSet<string> visitedProjects)
+    {
+        projectPath = Path.GetFullPath(projectPath);
+        if (!visitedProjects.Add(projectPath)) yield break;
+
+        yield return projectPath;
+
+        XDocument document;
+        try
+        {
+            document = XDocument.Load(projectPath);
+        }
+        catch
+        {
+            yield break;
+        }
+
+        var projectDirectory = Path.GetDirectoryName(projectPath)!;
+        var references = document.Descendants()
+            .Where(element => element.Name.LocalName == "ProjectReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .Where(include => string.IsNullOrWhiteSpace(include) == false)
+            .Select(include => Path.GetFullPath(Path.Combine(projectDirectory, include!)))
+            .Where(File.Exists);
+
+        foreach (var reference in references)
+        {
+            foreach (var transitiveReference in EnumerateProjectGraph(reference, visitedProjects))
+            {
+                yield return transitiveReference;
+            }
+        }
+    }
+
+    private static bool IsRelevantProjectInput(string path)
+    {
+        if (IsBuildArtifactPath(path)) return false;
+
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        return extension == ".cs" ||
+               extension == ".csproj" ||
+               extension == ".props" ||
+               extension == ".targets" ||
+               extension == ".json" ||
+               extension == ".razor" ||
+               extension == ".html" ||
+               extension == ".css" ||
+               extension == ".js" ||
+               path.Contains($"{Path.DirectorySeparatorChar}Assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPackagerRuntimeInput(string path)
+    {
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        return extension == ".dll" ||
+               extension == ".deps.json" ||
+               extension == ".runtimeconfig.json";
+    }
+
+    private static bool IsBuildArtifactPath(string path)
+    {
+        var parts = Path.GetFullPath(path).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return parts.Any(part => string.Equals(part, "bin", StringComparison.OrdinalIgnoreCase) ||
+                                 string.Equals(part, "obj", StringComparison.OrdinalIgnoreCase) ||
+                                 string.Equals(part, ".git", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void AddFingerprintText(StringBuilder fingerprint, string text)
+    {
+        fingerprint.Append(text);
+        fingerprint.Append('\0');
     }
 
     private static void WriteGeneratedWebProject(ProjectInfo project, string tempDirectory, WebEntryPoint target)
@@ -649,13 +960,13 @@ internal static class Program
     }
 }
 
-internal sealed record PackageOptions(string ProjectPath, PackageType Type, int Port)
+internal sealed record PackageOptions(string ProjectPath, PackageType Type, int Port, KlooieWebMode? WebMode)
 {
     public static PackageOptions Parse(string[] args)
     {
         if (args.Length == 0 || args.Any(arg => arg is "-h" or "--help" or "/?"))
         {
-            throw new InvalidOperationException("Usage: kpack <project.csproj> -type Web|EXE|Serve [-port 5188]");
+            throw new InvalidOperationException("Usage: kpack <project.csproj> -type Web|EXE|Serve [-port 5188] [-webMode Fast|Aot]");
         }
 
         var projectPath = Path.GetFullPath(args[0]);
@@ -666,6 +977,7 @@ internal sealed record PackageOptions(string ProjectPath, PackageType Type, int 
 
         var type = PackageType.Web;
         var port = 5188;
+        KlooieWebMode? webMode = null;
         for (var i = 1; i < args.Length; i++)
         {
             if (string.Equals(args[i], "-type", StringComparison.OrdinalIgnoreCase))
@@ -683,6 +995,17 @@ internal sealed record PackageOptions(string ProjectPath, PackageType Type, int 
                 continue;
             }
 
+            if (string.Equals(args[i], "-webMode", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || TryParseWebMode(args[i], out var parsedWebMode) == false)
+                {
+                    throw new InvalidOperationException("-webMode requires Fast or Aot.");
+                }
+
+                webMode = parsedWebMode;
+                continue;
+            }
+
             if (string.Equals(args[i], "-port", StringComparison.OrdinalIgnoreCase))
             {
                 if (++i >= args.Length || int.TryParse(args[i], out port) == false || port < 1 || port > 65535)
@@ -695,7 +1018,25 @@ internal sealed record PackageOptions(string ProjectPath, PackageType Type, int 
             throw new InvalidOperationException($"Unknown argument '{args[i]}'.");
         }
 
-        return new PackageOptions(projectPath, type, port);
+        return new PackageOptions(projectPath, type, port, webMode);
+    }
+
+    public static bool TryParseWebMode(string value, out KlooieWebMode webMode)
+    {
+        if (string.Equals(value, "Fast", StringComparison.OrdinalIgnoreCase))
+        {
+            webMode = KlooieWebMode.Fast;
+            return true;
+        }
+
+        if (string.Equals(value, "Aot", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "AOT", StringComparison.OrdinalIgnoreCase))
+        {
+            webMode = KlooieWebMode.Aot;
+            return true;
+        }
+
+        webMode = KlooieWebMode.Fast;
+        return false;
     }
 }
 
@@ -706,7 +1047,13 @@ internal enum PackageType
     Serve
 }
 
-internal sealed record ProjectInfo(string Path, string Directory, string AssemblyName, string RootNamespace, string TargetFramework)
+internal enum KlooieWebMode
+{
+    Fast,
+    Aot
+}
+
+internal sealed record ProjectInfo(string Path, string Directory, string AssemblyName, string RootNamespace, string TargetFramework, KlooieWebMode WebMode)
 {
     public static ProjectInfo Load(string path)
     {
@@ -715,13 +1062,19 @@ internal sealed record ProjectInfo(string Path, string Directory, string Assembl
         var assemblyName = ReadProperty(document, "AssemblyName") ?? projectName;
         var rootNamespace = ReadProperty(document, "RootNamespace") ?? assemblyName;
         var targetFramework = ReadProperty(document, "TargetFramework") ?? ReadProperty(document, "TargetFrameworks")?.Split(';')[0] ?? "net10.0";
+        var webModeText = ReadProperty(document, "KlooieWebMode") ?? "Fast";
+        if (PackageOptions.TryParseWebMode(webModeText, out var webMode) == false)
+        {
+            throw new InvalidOperationException($"KlooieWebMode in '{path}' must be Fast or Aot.");
+        }
 
         return new ProjectInfo(
             System.IO.Path.GetFullPath(path),
             System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path))!,
             assemblyName,
             rootNamespace,
-            targetFramework);
+            targetFramework,
+            webMode);
     }
 
     private static string? ReadProperty(XDocument document, string name)

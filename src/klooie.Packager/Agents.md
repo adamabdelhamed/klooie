@@ -18,7 +18,7 @@ This project builds the `kpack` command line tool. It packages normal klooie pro
 - `../klooie.blazorSampleApp/DemoAppProgram.cs`: Sample target using `[KlooieWebTarget]`.
 - `../klooie.blazorSampleApp/klooie.blazorSampleApp.csproj`: Builds the packager and runs `kpack` after normal builds so Visual Studio sample builds refresh `bin/klooie.web`.
 - `RunKpack.cmd`: VS-friendly launcher that copies Debug packager output to a temp folder before running `kpack`; this avoids locking `bin\Debug\net10.0\kpack.dll` across rebuilds.
-- `../klooie.blazorSampleApp/Properties/launchSettings.json`: VS launch profile for running `RunKpack.cmd ... -type Serve` on port 5187. VS launches from `bin/<Configuration>/net10.0`, so the profile reaches the launcher and target project with relative paths.
+- `../klooie.blazorSampleApp/Properties/launchSettings.json`: VS launch profiles for running `RunKpack.cmd ... -type Serve -webMode Fast|Aot` on port 5187. VS launches from `bin/<Configuration>/net10.0`, so the profile reaches the launcher and target project with relative paths.
 
 ## Expected Commands
 
@@ -63,10 +63,12 @@ For this milestone, packaging `klooie.blazorSampleApp` with `-type Web` should:
 - Final web output goes to `bin/klooie.web`.
 - For web packages, an `Assets` directory beside the target `.csproj` is copied by convention to `bin/klooie.web/assets`; `assets/klooie-assets.json` lists the copied files for the browser asset provider.
 - `-type Serve` first runs the normal web package path, then stops any existing Windows TCP listener on the requested port and serves `bin/klooie.web` on `127.0.0.1` with no-cache headers. Use it for Visual Studio F5/Ctrl+F5 browser launches instead of a standalone static server.
+- Windows `HttpListener` registrations can appear in `netstat` as PID 4, so serve cleanup also checks kpack PID files and `netsh http show servicestate` to stop stale `dotnet.exe` listeners for the requested localhost port.
 - The packager currently discovers `[KlooieWebTarget]` on a static no-argument `MainAsync` or `Main` method. If no marker exists, it falls back to no-argument static `MainAsync`/`Main` candidates.
 - `[KlooieWebTarget(DisplayName = "...", Description = "...")]` is used for generated registry metadata.
 - The generated web host keeps `RootNamespace` as `klooie.blazor` because the folded template source still uses that namespace.
-- `kpack -type Web` passes `KlooieOptimizeWebAssembly=true`, which makes the generated WebHost set `PublishTrimmed=true` and `RunAOTCompilation=true` so the Blazor WebAssembly SDK can AOT compile and relink the runtime when `wasm-tools` is installed. `-type Serve` derives that property from the Visual Studio launch working directory: Release launches AOT publish, Debug launches stay fast.
+- Web packaging uses `KlooieWebMode` from the target project unless `-webMode Fast|Aot` is passed. `Aot` makes the generated WebHost set `PublishTrimmed=true` and `RunAOTCompilation=true`; `Fast` leaves AOT off even in Release. Do not infer AOT from Debug/Release.
+- `kpack` writes `bin/klooie.web/klooie.package.stamp` and skips publish when the project graph, template, packager runtime, assets, and selected web mode are unchanged. Keep that stamp mode-aware so switching Fast/Aot repackages.
 - Serve packaging is guarded by a per-project cross-process temp-file lock. Keep that lock because Release AOT publishes are long-running and concurrent publishes for the same target can collide in referenced project intermediate outputs even when the generated host directories are unique.
 - Generated web host intermediates use short unique paths under `obj/kp`; keep those paths short because Blazor WebAssembly publish creates deep `obj/Release/net*/wasm/for-publish` trees and long paths can surface as missing WebCIL/static-asset files.
 - Keep `Templates/WebHost/Program.cs` valid. The packager overwrites `Program.cs` in generated temp hosts, but the template version is needed by the compile-check project.
