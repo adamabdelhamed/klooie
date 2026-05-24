@@ -1,5 +1,6 @@
 using klooie.blazor.Hosting;
 using Microsoft.JSInterop;
+using System.Reflection;
 
 namespace klooie.blazor.BrowserConsole;
 
@@ -12,6 +13,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
     private ConsoleApp? app;
     private Exception? entryException;
     private bool disposed;
+    private static MethodInfo? updateGamepadsJsonMethod;
 
     public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http)
     {
@@ -27,11 +29,12 @@ public sealed class BrowserKlooieRuntime : IDisposable
 
     public BrowserConsoleFrameBuffer FrameBuffer { get; }
 
-    public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget)
+    public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget, string? gamepadSnapshotJson)
     {
         if (disposed) return BrowserConsoleFrame.Empty;
         if (entryException is not null) throw entryException;
 
+        TryUpdateBrowserGamepads(gamepadSnapshotJson);
         host.Resize(width, height);
         var currentApp = app;
         if (currentApp is not null)
@@ -46,6 +49,33 @@ public sealed class BrowserKlooieRuntime : IDisposable
     {
         if (disposed) return;
         host.EnqueueKey(key);
+    }
+
+    private static void TryUpdateBrowserGamepads(string? gamepadSnapshotJson)
+    {
+        if (string.IsNullOrWhiteSpace(gamepadSnapshotJson)) return;
+
+        try
+        {
+            var method = updateGamepadsJsonMethod ??= FindUpdateGamepadsJsonMethod();
+            method?.Invoke(null, [gamepadSnapshotJson]);
+        }
+        catch
+        {
+            updateGamepadsJsonMethod = null;
+        }
+    }
+
+    private static MethodInfo? FindUpdateGamepadsJsonMethod()
+    {
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            var type = assembly.GetType("TotallyTextualBattleSimulator.WebHumanInputPlatform", throwOnError: false);
+            var method = type?.GetMethod("UpdateGamepadsJson", BindingFlags.Public | BindingFlags.Static, [typeof(string)]);
+            if (method is not null) return method;
+        }
+
+        return null;
     }
 
     public void Dispose()

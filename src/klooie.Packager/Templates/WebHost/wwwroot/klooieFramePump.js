@@ -273,7 +273,8 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
         const size = measure(hostElement, state);
         pumpKeyboardRepeats(state, timestamp);
         const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
-        const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys);
+        const gamepadSnapshotJson = readGamepadSnapshotJson();
+        const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson);
         state.renderer.render(canvas, terminalFrame, state);
         state.sizeDirty = false;
     } catch (error) {
@@ -407,6 +408,40 @@ function isModifierOnlyKey(key) {
         key === "Super" ||
         key === "Symbol" ||
         key === "SymbolLock";
+}
+
+function readGamepadSnapshotJson() {
+    if (typeof navigator === "undefined" || typeof navigator.getGamepads !== "function") return null;
+
+    try {
+        const rawGamepads = navigator.getGamepads();
+        const gamepads = [];
+        for (const gamepad of rawGamepads) {
+            if (!gamepad || !gamepad.connected) continue;
+
+            gamepads.push({
+                id: gamepad.id || "",
+                index: gamepad.index || 0,
+                connected: !!gamepad.connected,
+                mapping: gamepad.mapping || "",
+                buttons: Array.from(gamepad.buttons || [], button => ({
+                    pressed: !!button?.pressed,
+                    value: normalizeUnit(button?.value, 0)
+                })),
+                axes: Array.from(gamepad.axes || [], axis => normalizeAxis(axis))
+            });
+        }
+
+        return JSON.stringify({ gamepads });
+    } catch (error) {
+        console.debug("klooie gamepad snapshot skipped", error);
+        return null;
+    }
+}
+
+function normalizeAxis(value) {
+    const numeric = Number(value);
+    return Math.max(-1, Math.min(1, Number.isFinite(numeric) ? numeric : 0));
 }
 
 function measure(hostElement, state) {

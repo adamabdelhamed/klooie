@@ -34,7 +34,7 @@ else
     public string? AppRoute { get; set; }
 
     [JSInvokable]
-    public BrowserConsoleFrame Tick(int width, int height, double elapsedMilliseconds, BrowserKeyboardEvent[] keyboardEvents)
+    public BrowserConsoleFrame Tick(int width, int height, double elapsedMilliseconds, BrowserKeyboardEvent[] keyboardEvents, string? gamepadSnapshotJson)
     {
         foreach (var keyboardEvent in keyboardEvents)
         {
@@ -43,7 +43,7 @@ else
 
         tickCount++;
         var budget = TimeSpan.FromMilliseconds(Math.Clamp(elapsedMilliseconds, 1, 33));
-        return runtime?.Tick(width, height, budget) ?? BrowserConsoleFrame.Empty;
+        return runtime?.Tick(width, height, budget, gamepadSnapshotJson) ?? BrowserConsoleFrame.Empty;
     }
 
     [JSInvokable]
