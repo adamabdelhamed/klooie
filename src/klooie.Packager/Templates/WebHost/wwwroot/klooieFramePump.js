@@ -73,6 +73,68 @@ window.klooieFramePump = {
     }
 };
 
+window.clawsBigAscii = {
+    rasterize(text) {
+        text = text || "";
+        const font = "bold 20px 'Cascadia Mono', Consolas, 'Courier New', monospace";
+        const graphemes = getTextGraphemes(text);
+        const measureCanvas = document.createElement("canvas");
+        const measureContext = measureCanvas.getContext("2d", { willReadFrequently: true });
+        measureContext.font = font;
+        measureContext.textBaseline = "alphabetic";
+
+        const fullMetrics = measureContext.measureText(text || " ");
+        const ascent = Math.ceil(fullMetrics.actualBoundingBoxAscent || 20);
+        const descent = Math.ceil(fullMetrics.actualBoundingBoxDescent || 5);
+        const measuredHeight = Math.max(1, ascent + descent);
+        let measuredWidth = 0;
+        for (const grapheme of graphemes) {
+            measuredWidth += Math.round(measureContext.measureText(grapheme).width);
+        }
+
+        const width = Math.max(1, measuredWidth + 2);
+        const height = Math.max(1, measuredHeight + 4);
+        measureCanvas.width = width;
+        measureCanvas.height = height;
+        measureContext.font = font;
+        measureContext.textBaseline = "alphabetic";
+        measureContext.fillStyle = "white";
+        measureContext.fillRect(0, 0, width, height);
+        measureContext.fillStyle = "black";
+        measureContext.imageSmoothingEnabled = true;
+        measureContext.imageSmoothingQuality = "high";
+
+        let penX = 0;
+        for (const grapheme of graphemes) {
+            measureContext.fillText(grapheme, penX, ascent);
+            penX += Math.round(measureContext.measureText(grapheme).width);
+        }
+
+        const rgba = measureContext.getImageData(0, 0, width, height).data;
+        let binary = "";
+        const chunkSize = 0x8000;
+        for (let i = 0; i < rgba.length; i += 4) {
+            const gray = Math.round((rgba[i] + rgba[i + 1] + rgba[i + 2]) / 3);
+            binary += String.fromCharCode(gray);
+            if (binary.length >= chunkSize) {
+                const remaining = rgba.length - i - 4;
+                if (remaining <= 0) break;
+            }
+        }
+
+        return `${width},${height},${btoa(binary)}`;
+    }
+};
+
+function getTextGraphemes(text) {
+    if (!text) return [];
+    if (typeof Intl !== "undefined" && Intl.Segmenter) {
+        const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+        return Array.from(segmenter.segment(text), s => s.segment);
+    }
+    return Array.from(text);
+}
+
 window.klooieAssets = {
     audioCache: new Map(),
     decodedAudioCache: new Map(),

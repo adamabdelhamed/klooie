@@ -93,6 +93,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
         {
             BinaryAssetProvider.Current = await BrowserAssetProvider.CreateAsync(http);
             SoundProvider.Current = new BrowserSoundProvider(js);
+            TryConfigureBrowserBigASCII(js);
 
             using (ConsoleAppRunner.Use(new BrowserConsoleAppRunner(this)))
             {
@@ -102,6 +103,25 @@ public sealed class BrowserKlooieRuntime : IDisposable
         catch (Exception ex)
         {
             entryException = ex;
+        }
+    }
+
+    private static void TryConfigureBrowserBigASCII(IJSRuntime js)
+    {
+        try
+        {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType("TotallyTextualBattleSimulator.BigASCII", throwOnError: false);
+                var method = type?.GetMethod("ConfigureBrowserRasterizer", BindingFlags.Public | BindingFlags.Static, [typeof(object)]);
+                if (method is null) continue;
+
+                method.Invoke(null, [js]);
+                return;
+            }
+        }
+        catch
+        {
         }
     }
 
@@ -136,7 +156,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
 
             try
             {
-                await stopped;
+                await stopped.ConfigureAwait(false);
             }
             finally
             {

@@ -25,7 +25,7 @@ internal static class Program
 
             if (options.Type == PackageType.Web)
             {
-                await PackageWebAsync(project, webMode);
+                await PackageWebWithLockAsync(project, webMode);
             }
             else if (options.Type == PackageType.Serve)
             {
@@ -66,7 +66,7 @@ internal static class Program
         Directory.CreateDirectory(tempDirectory);
         Directory.CreateDirectory(publishDirectory);
         CopyWebHostTemplate(templateDirectory, tempDirectory);
-        WriteGeneratedWebProject(project, tempDirectory, target);
+        WriteGeneratedWebProject(project, tempDirectory, target, ShouldOptimizeWebAssembly(webMode));
 
         var generatedProjectPath = Path.Combine(tempDirectory, $"{GeneratedProjectName}.csproj");
         await RunDotNetAsync(
@@ -77,9 +77,6 @@ internal static class Program
                 "-c",
                 GetPublishConfiguration(webMode),
                 "-p:KlooiePackageOnBuild=false",
-                $"-p:KlooieOptimizeWebAssembly={ShouldOptimizeWebAssembly(webMode).ToString().ToLowerInvariant()}",
-                $"-p:PublishTrimmed={ShouldOptimizeWebAssembly(webMode).ToString().ToLowerInvariant()}",
-                $"-p:RunAOTCompilation={ShouldOptimizeWebAssembly(webMode).ToString().ToLowerInvariant()}",
                 "-o",
                 publishDirectory,
                 "--nologo"
@@ -384,6 +381,9 @@ internal static class Program
             Console.WriteLine($"Stopping existing kpack server process {processId} using port {port}.");
             process.Kill(entireProcessTree: true);
             process.WaitForExit(5000);
+        }
+        catch (ArgumentException)
+        {
         }
         catch (Exception ex)
         {
@@ -716,10 +716,11 @@ internal static class Program
         fingerprint.Append('\0');
     }
 
-    private static void WriteGeneratedWebProject(ProjectInfo project, string tempDirectory, WebEntryPoint target)
+    private static void WriteGeneratedWebProject(ProjectInfo project, string tempDirectory, WebEntryPoint target, bool optimizeWebAssembly)
     {
         var projectReference = SecurityElement.Escape(project.Path);
         var targetFramework = SecurityElement.Escape(project.TargetFramework);
+        var optimizeWebAssemblyText = optimizeWebAssembly.ToString().ToLowerInvariant();
 
         File.WriteAllText(
             Path.Combine(tempDirectory, $"{GeneratedProjectName}.csproj"),
@@ -732,8 +733,8 @@ internal static class Program
                 <Nullable>enable</Nullable>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
-                <PublishTrimmed Condition="'$(KlooieOptimizeWebAssembly)' == 'true'">true</PublishTrimmed>
-                <RunAOTCompilation Condition="'$(KlooieOptimizeWebAssembly)' == 'true'">true</RunAOTCompilation>
+                <PublishTrimmed>{optimizeWebAssemblyText}</PublishTrimmed>
+                <RunAOTCompilation>{optimizeWebAssemblyText}</RunAOTCompilation>
               </PropertyGroup>
 
               <ItemGroup>
@@ -898,8 +899,41 @@ internal static class Program
             throw new InvalidOperationException($"Refusing to clean path outside the project directory: {fullPath}");
         }
 
-        if (Directory.Exists(fullPath)) Directory.Delete(fullPath, recursive: true);
         Directory.CreateDirectory(fullPath);
+        ClearDirectoryWithRetry(fullPath);
+    }
+
+    private static void ClearDirectoryWithRetry(string fullPath)
+    {
+        if (!Directory.Exists(fullPath)) return;
+
+        const int maxAttempts = 10;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(fullPath))
+                {
+                    File.Delete(file);
+                }
+
+                foreach (var directory in Directory.EnumerateDirectories(fullPath))
+                {
+                    Directory.Delete(directory, recursive: true);
+                }
+
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (attempt == maxAttempts)
+                {
+                    throw;
+                }
+
+                Thread.Sleep(500);
+            }
+        }
     }
 
     private static void CopyDirectory(string source, string destination, Func<string, bool>? includeFile = null)
