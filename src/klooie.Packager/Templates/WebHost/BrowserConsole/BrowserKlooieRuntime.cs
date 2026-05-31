@@ -94,6 +94,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
             BinaryAssetProvider.Current = await BrowserAssetProvider.CreateAsync(http);
             SoundProvider.Current = new BrowserSoundProvider(js);
             TryConfigureBrowserBigASCII(js);
+            TryConfigureBrowserAppStorage(js);
 
             using (ConsoleAppRunner.Use(new BrowserConsoleAppRunner(this)))
             {
@@ -114,6 +115,25 @@ public sealed class BrowserKlooieRuntime : IDisposable
             {
                 var type = assembly.GetType("TotallyTextualBattleSimulator.BigASCII", throwOnError: false);
                 var method = type?.GetMethod("ConfigureBrowserRasterizer", BindingFlags.Public | BindingFlags.Static, [typeof(object)]);
+                if (method is null) continue;
+
+                method.Invoke(null, [js]);
+                return;
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private static void TryConfigureBrowserAppStorage(IJSRuntime js)
+    {
+        try
+        {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType("TotallyTextualBattleSimulator.AppStorage", throwOnError: false);
+                var method = type?.GetMethod("ConfigureBrowserStorage", BindingFlags.Public | BindingFlags.Static, [typeof(object)]);
                 if (method is null) continue;
 
                 method.Invoke(null, [js]);
