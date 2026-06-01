@@ -41,6 +41,8 @@ public sealed class UniformGrid
     private readonly Dictionary<GameCollider, UniformGridMembershipState> membershipStates =
         new Dictionary<GameCollider, UniformGridMembershipState>(199);
 
+    private readonly List<GameCollider> allColliders = new List<GameCollider>(1000);
+
     private readonly float _invCellWidth;
     private readonly float _invCellHeight;
 
@@ -88,7 +90,9 @@ public sealed class UniformGrid
             throw new InvalidOperationException($"This collider of type {obj.GetType().Name} is already registered in the grid. Disposal Reason: {obj.DisposalReason}");
 
         GetCellRange(obj.Bounds, out var x0, out var y0, out var x1, out var y1);
-        membershipStates.Add(obj, UniformGridMembershipState.Create(obj, this, x0, y0, x1, y1));
+        var allCollidersIndex = allColliders.Count;
+        membershipStates.Add(obj, UniformGridMembershipState.Create(obj, this, x0, y0, x1, y1, allCollidersIndex));
+        allColliders.Add(obj);
 
         obj.UniformGrid = this;
         obj.BoundsChanged.SubscribeWithPriority(obj, static objParam => objParam.UniformGrid.Update(objParam), obj);
@@ -102,11 +106,25 @@ public sealed class UniformGrid
     {
         var state = membershipStates[obj];
         membershipStates.Remove(obj);
+        RemoveFromAllColliders(state.AllCollidersIndex);
 
         RemoveFromCells(obj, state.X0, state.Y0, state.X1, state.Y1);
         state.Dispose("external/klooie/src/klooie/Gaming/Physics/UniformGrid.cs:1");
 
         Count--;
+    }
+
+    private void RemoveFromAllColliders(int index)
+    {
+        var lastIndex = allColliders.Count - 1;
+        if (index != lastIndex)
+        {
+            var moved = allColliders[lastIndex];
+            allColliders[index] = moved;
+            if (membershipStates.TryGetValue(moved, out var movedState)) movedState.AllCollidersIndex = index;
+        }
+
+        allColliders.RemoveAt(lastIndex);
     }
 
     public void Update(GameCollider obj)
@@ -216,19 +234,9 @@ public sealed class UniformGrid
 
     public void EnumerateAll(ObstacleBuffer buffer)
     {
-        var stamp = ++_stamp;
-
-        foreach (var list in _buckets.Values)
+        for (var i = 0; i < allColliders.Count; i++)
         {
-            var items = list.Items;
-            for (var i = 0; i < items.Count; i++)
-            {
-                var obj = items[i];
-                if (obj.QueryStamp == stamp) continue;
-
-                obj.QueryStamp = stamp;
-                buffer.WriteableBuffer.Add(obj);
-            }
+            buffer.WriteableBuffer.Add(allColliders[i]);
         }
     }
 
@@ -243,10 +251,11 @@ public sealed class UniformGrid
         public int Y0 { get; set; }
         public int X1 { get; set; }
         public int Y1 { get; set; }
+        public int AllCollidersIndex { get; set; }
 
         private static LazyPool<UniformGridMembershipState> pool = new LazyPool<UniformGridMembershipState>(() => new UniformGridMembershipState());
 
-        public static UniformGridMembershipState Create(GameCollider collider, UniformGrid grid, int x0, int y0, int x1, int y1)
+        public static UniformGridMembershipState Create(GameCollider collider, UniformGrid grid, int x0, int y0, int x1, int y1, int allCollidersIndex)
         {
             var ret = pool.Value.Rent();
             ret.Collider = collider;
@@ -256,6 +265,7 @@ public sealed class UniformGrid
             ret.Y0 = y0;
             ret.X1 = x1;
             ret.Y1 = y1;
+            ret.AllCollidersIndex = allCollidersIndex;
             return ret;
         }
 
@@ -270,6 +280,7 @@ public sealed class UniformGrid
             Y0 = 0;
             X1 = 0;
             Y1 = 0;
+            AllCollidersIndex = 0;
         }
     }
 }

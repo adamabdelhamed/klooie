@@ -33,6 +33,7 @@ public class Recyclable : ILifetime
 
     public int Lease => CurrentVersion;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsStillValid(int leaseVersion)
     {
         return !IsExpired && !IsExpiring && leaseVersion == CurrentVersion;

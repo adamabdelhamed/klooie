@@ -136,9 +136,15 @@ public sealed class ColliderGroup
         queryBuffer.WriteableBuffer.Clear();
         spatialIndex.Query(swept, queryBuffer);
         var list = queryBuffer.WriteableBuffer;
+        if (list.Count == 0)
+        {
+            hitPrediction.Reset();
+            hitPrediction.Visibility = expectedTravelDistance;
+            item.Velocity.NextCollision = hitPrediction;
+            return false;
+        }
 
         CollisionDetector.Predict(item, item.Velocity.Angle, list, expectedTravelDistance, CastingMode.Precise, list.Count, hitPrediction);
-        hitPrediction.ColliderHit = hitPrediction.ColliderHit;
         item.Velocity.NextCollision = hitPrediction;
         return hitPrediction.CollisionPredicted;
     }

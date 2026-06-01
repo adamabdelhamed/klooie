@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -27,6 +28,7 @@ internal abstract class Subscription : Recyclable, ISubscription
         LifetimeLease = lifetime.Lease;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     bool ISubscription.IsStillValid(int lease)
     {
         var myLeaseIsValid = base.IsStillValid(lease);

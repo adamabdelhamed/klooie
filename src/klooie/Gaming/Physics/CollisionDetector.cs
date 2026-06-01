@@ -167,6 +167,7 @@ public static class CollisionDetector
         bool movesY = dy > axisEps || dy < -axisEps;
         bool dxPositive = dx > 0f;
         bool dyPositive = dy > 0f;
+        bool fromCanCollideWithEverything = CanCollideWithEverything(from);
 
         float invDx = movesX ? 1f / dx : 0f;
         float invDy = movesY ? 1f / dy : 0f;
@@ -195,7 +196,8 @@ public static class CollisionDetector
 
             if (bRight < sweepLeft - VerySmallNumber || bLeft > sweepRight + VerySmallNumber || bBottom < sweepTop - VerySmallNumber || bTop > sweepBottom + VerySmallNumber) continue;
 
-            if (!from.CanCollideWith(obstacle) || !obstacle.CanCollideWith(from)) continue;
+            if ((fromCanCollideWithEverything == false && !from.CanCollideWith(obstacle)) ||
+                (CanCollideWithEverything(obstacle) == false && !obstacle.CanCollideWith(from))) continue;
 
             if (SweptAabbFirstHitBeatingBest(aLeft, aTop, aRight, aBottom, bLeft, bTop, bRight, bBottom, invDx, invDy, movesX, movesY, dxPositive, dyPositive, bestT, out float t, out bool hitVerticalFace))
             {
@@ -254,6 +256,9 @@ public static class CollisionDetector
 
         return prediction;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool CanCollideWithEverything(ICollidable collidable) => collidable is ColliderBox || collidable is RectF;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool SweptAabbFirstHitBeatingBest(float aLeft, float aTop, float aRight, float aBottom, float bLeft, float bTop, float bRight, float bBottom, float invDx, float invDy, bool movesX, bool movesY, bool dxPositive, bool dyPositive, float bestT, out float t, out bool hitVerticalFace)
