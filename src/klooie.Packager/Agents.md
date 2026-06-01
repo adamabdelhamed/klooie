@@ -8,6 +8,7 @@ This project builds the `kpack` command line tool. It packages normal klooie pro
 - If those paths must change, verify with an actual packaged app in a browser, not just `dotnet build`.
 - Keep the generated Blazor host route simple: `/` should start the single packaged app directly.
 - The old `klooie.blazor` prototype project was intentionally folded into this packager as template files under `Templates/WebHost`.
+- The WebHost template injects a touch controller overlay only for coarse-pointer/touch environments. It synthesizes a browser gamepad snapshot with `mapping: "klooie-touch"` and Xbox-style button indexes; keep it compatible with `klooie/Controllers/BrowserGamepadController.cs` rather than app-specific input code.
 
 ## Key Files
 

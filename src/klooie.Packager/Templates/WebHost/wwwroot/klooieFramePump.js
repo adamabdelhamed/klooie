@@ -20,11 +20,13 @@ window.klooieFramePump = {
             frameAnimationId: undefined,
             renderer: undefined,
             knownGamepads: new Map(),
+            touchController: undefined,
             listeners: []
         };
         this.pumps[id] = state;
         setupKeyboard(hostElement, state);
         setupGamepads(state);
+        setupTouchController(hostElement, state);
         updateCellMetrics(hostElement, state);
         state.renderer = createConsoleRenderer(canvas, state);
 
@@ -68,6 +70,7 @@ window.klooieFramePump = {
             pump.renderer?.dispose();
             teardownKeyboard(pump);
             teardownGamepads(pump);
+            teardownTouchController(pump);
         }
         delete this.pumps[id];
     }
@@ -448,6 +451,162 @@ function teardownGamepads(state) {
     state.knownGamepads?.clear();
 }
 
+function setupTouchController(hostElement, state) {
+    if (!shouldShowTouchController()) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "klooie-touch-controller";
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.innerHTML = `
+        <div class="klooie-touch-stick-zone">
+            <div class="klooie-touch-stick-base">
+                <div class="klooie-touch-stick-knob"></div>
+            </div>
+        </div>
+        <div class="klooie-touch-shoulders">
+            <button type="button" data-button="4">LB</button>
+            <button type="button" data-button="6">LT</button>
+            <button type="button" data-button="7">RT</button>
+            <button type="button" data-button="5">RB</button>
+        </div>
+        <div class="klooie-touch-system">
+            <button type="button" data-button="8">View</button>
+            <button type="button" data-button="9">Menu</button>
+        </div>
+        <div class="klooie-touch-face">
+            <button type="button" class="klooie-touch-y" data-button="3">Y</button>
+            <button type="button" class="klooie-touch-x" data-button="2">X</button>
+            <button type="button" class="klooie-touch-b" data-button="1">B</button>
+            <button type="button" class="klooie-touch-a" data-button="0">A</button>
+        </div>`;
+    hostElement.appendChild(overlay);
+
+    const buttons = new Array(17).fill(false);
+    const axes = [0, 0, 0, 0];
+    const stickZone = overlay.querySelector(".klooie-touch-stick-zone");
+    const stickBase = overlay.querySelector(".klooie-touch-stick-base");
+    const stickKnob = overlay.querySelector(".klooie-touch-stick-knob");
+    let stickPointerId = undefined;
+    let stickBaseCenterX = 0;
+    let stickBaseCenterY = 0;
+    const stickRadius = () => Math.max(42, Math.min(72, stickBase.getBoundingClientRect().width * 0.42));
+
+    const resetStick = () => {
+        axes[0] = 0;
+        axes[1] = 0;
+        stickPointerId = undefined;
+        stickBase.style.transform = "";
+        stickKnob.style.transform = "";
+        state.requestImmediateFrame?.();
+    };
+
+    const updateStick = (event) => {
+        if (stickPointerId !== event.pointerId) return;
+        event.preventDefault();
+        const radius = stickRadius();
+        const dx = event.clientX - stickBaseCenterX;
+        const dy = event.clientY - stickBaseCenterY;
+        const distance = Math.hypot(dx, dy);
+        const clampedDistance = Math.min(distance, radius);
+        const unitX = distance > 0 ? dx / distance : 0;
+        const unitY = distance > 0 ? dy / distance : 0;
+        const knobX = unitX * clampedDistance;
+        const knobY = unitY * clampedDistance;
+
+        if (distance > radius) {
+            stickBaseCenterX = event.clientX - knobX;
+            stickBaseCenterY = event.clientY - knobY;
+        }
+
+        const zoneRect = stickZone.getBoundingClientRect();
+        stickBase.style.transform = `translate(${stickBaseCenterX - zoneRect.left - stickBase.offsetWidth / 2}px, ${stickBaseCenterY - zoneRect.top - stickBase.offsetHeight / 2}px)`;
+        stickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+        axes[0] = clamp(knobX / radius, -1, 1);
+        axes[1] = clamp(knobY / radius, -1, 1);
+        state.requestImmediateFrame?.();
+    };
+
+    const stickDown = (event) => {
+        if (stickPointerId !== undefined) return;
+        event.preventDefault();
+        stickPointerId = event.pointerId;
+        stickZone.setPointerCapture?.(event.pointerId);
+        const zoneRect = stickZone.getBoundingClientRect();
+        stickBaseCenterX = event.clientX;
+        stickBaseCenterY = event.clientY;
+        stickBase.style.transform = `translate(${stickBaseCenterX - zoneRect.left - stickBase.offsetWidth / 2}px, ${stickBaseCenterY - zoneRect.top - stickBase.offsetHeight / 2}px)`;
+        updateStick(event);
+    };
+
+    stickZone.addEventListener("pointerdown", stickDown);
+    stickZone.addEventListener("pointermove", updateStick);
+    stickZone.addEventListener("pointerup", resetStick);
+    stickZone.addEventListener("pointercancel", resetStick);
+
+    const buttonPointerDown = (event) => {
+        const index = Number(event.currentTarget.dataset.button);
+        if (!Number.isInteger(index)) return;
+        event.preventDefault();
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        buttons[index] = true;
+        event.currentTarget.classList.add("is-pressed");
+        state.requestImmediateFrame?.();
+    };
+
+    const buttonPointerUp = (event) => {
+        const index = Number(event.currentTarget.dataset.button);
+        if (!Number.isInteger(index)) return;
+        event.preventDefault();
+        buttons[index] = false;
+        event.currentTarget.classList.remove("is-pressed");
+        state.requestImmediateFrame?.();
+    };
+
+    const buttonElements = Array.from(overlay.querySelectorAll("button[data-button]"));
+    for (const button of buttonElements) {
+        button.addEventListener("pointerdown", buttonPointerDown);
+        button.addEventListener("pointerup", buttonPointerUp);
+        button.addEventListener("pointercancel", buttonPointerUp);
+        button.addEventListener("contextmenu", preventDefault);
+    }
+
+    state.touchController = {
+        overlay,
+        buttons,
+        axes,
+        readGamepad() {
+            return {
+                id: "Klooie Touch Controller (Xbox)",
+                index: 1000,
+                connected: true,
+                mapping: "klooie-touch",
+                buttons: buttons.map(pressed => ({ pressed, value: pressed ? 1 : 0 })),
+                axes: axes.slice(0)
+            };
+        },
+        dispose() {
+            overlay.remove();
+        }
+    };
+}
+
+function teardownTouchController(state) {
+    state.touchController?.dispose?.();
+    state.touchController = undefined;
+}
+
+function shouldShowTouchController() {
+    if (typeof window === "undefined") return false;
+    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches;
+    const hoverless = window.matchMedia?.("(hover: none)")?.matches;
+    const touchPoints = navigator.maxTouchPoints || 0;
+    return !!(coarse || hoverless || touchPoints > 0);
+}
+
+function preventDefault(event) {
+    event.preventDefault();
+}
+
 function clearHeldKey(state, keyId) {
     state.heldKeys.delete(keyId);
 }
@@ -529,6 +688,10 @@ function readGamepadSnapshotJson(state) {
             axes: Array.from(gamepad.axes || [], axis => normalizeAxis(axis))
         }));
 
+        if (state?.touchController) {
+            gamepads.push(state.touchController.readGamepad());
+        }
+
         return JSON.stringify({ gamepads });
     } catch (error) {
         console.debug("klooie gamepad snapshot skipped", error);
@@ -539,6 +702,10 @@ function readGamepadSnapshotJson(state) {
 function normalizeAxis(value) {
     const numeric = Number(value);
     return Math.max(-1, Math.min(1, Number.isFinite(numeric) ? numeric : 0));
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
 }
 
 function measure(hostElement, state) {

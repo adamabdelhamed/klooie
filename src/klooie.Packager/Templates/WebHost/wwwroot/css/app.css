@@ -10,10 +10,148 @@ body {
 }
 
 .klooie-host {
+    position: relative;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
     background: #000;
+}
+
+.klooie-touch-controller {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    pointer-events: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.klooie-touch-controller button {
+    pointer-events: auto;
+    touch-action: none;
+    border: 1px solid rgba(255, 255, 255, .36);
+    border-radius: 999px;
+    color: rgba(255, 255, 255, .88);
+    background: rgba(14, 20, 28, .34);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .22), inset 0 0 18px rgba(255, 255, 255, .08);
+    font: 700 16px Consolas, "Cascadia Mono", "Courier New", monospace;
+}
+
+.klooie-touch-controller button.is-pressed {
+    background: rgba(88, 166, 255, .52);
+    border-color: rgba(255, 255, 255, .72);
+}
+
+.klooie-touch-stick-zone {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: min(46vw, 360px);
+    height: min(44vh, 320px);
+    pointer-events: auto;
+    touch-action: none;
+}
+
+.klooie-touch-stick-base {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: clamp(116px, 22vw, 168px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .28);
+    background: radial-gradient(circle, rgba(255, 255, 255, .11), rgba(14, 20, 28, .26));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .24), inset 0 0 28px rgba(255, 255, 255, .08);
+}
+
+.klooie-touch-stick-knob {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 46%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    transform: translate(0, 0);
+    margin: -23% 0 0 -23%;
+    border: 1px solid rgba(255, 255, 255, .42);
+    background: rgba(255, 255, 255, .24);
+    box-shadow: 0 5px 16px rgba(0, 0, 0, .25);
+}
+
+.klooie-touch-face {
+    position: absolute;
+    right: max(18px, env(safe-area-inset-right));
+    bottom: max(28px, env(safe-area-inset-bottom));
+    width: clamp(184px, 36vw, 250px);
+    height: clamp(164px, 30vw, 220px);
+    pointer-events: none;
+}
+
+.klooie-touch-face button {
+    position: absolute;
+    width: clamp(56px, 11vw, 76px);
+    aspect-ratio: 1;
+}
+
+.klooie-touch-y {
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+}
+
+.klooie-touch-x {
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.klooie-touch-b {
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.klooie-touch-a {
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+}
+
+.klooie-touch-shoulders {
+    position: absolute;
+    inset: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) auto max(12px, env(safe-area-inset-left));
+    display: grid;
+    grid-template-columns: repeat(4, minmax(58px, 1fr));
+    gap: 10px;
+    pointer-events: none;
+}
+
+.klooie-touch-shoulders button {
+    min-height: 44px;
+}
+
+.klooie-touch-system {
+    position: absolute;
+    left: 50%;
+    bottom: max(18px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: flex;
+    gap: 14px;
+    pointer-events: none;
+}
+
+.klooie-touch-system button {
+    min-width: 64px;
+    min-height: 40px;
+    font-size: 13px;
+}
+
+@media (pointer: fine) and (hover: hover) {
+    .klooie-touch-controller {
+        display: none;
+    }
 }
 
 .home-page {

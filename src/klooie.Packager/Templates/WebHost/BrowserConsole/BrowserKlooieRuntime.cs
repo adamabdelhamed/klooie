@@ -13,7 +13,6 @@ public sealed class BrowserKlooieRuntime : IDisposable
     private ConsoleApp? app;
     private Exception? entryException;
     private bool disposed;
-    private static MethodInfo? updateGamepadsJsonMethod;
 
     public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http)
     {
@@ -57,25 +56,11 @@ public sealed class BrowserKlooieRuntime : IDisposable
 
         try
         {
-            var method = updateGamepadsJsonMethod ??= FindUpdateGamepadsJsonMethod();
-            method?.Invoke(null, [gamepadSnapshotJson]);
+            BrowserControllerInput.UpdateGamepadsJson(gamepadSnapshotJson);
         }
         catch
         {
-            updateGamepadsJsonMethod = null;
         }
-    }
-
-    private static MethodInfo? FindUpdateGamepadsJsonMethod()
-    {
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            var type = assembly.GetType("TotallyTextualBattleSimulator.WebHumanInputPlatform", throwOnError: false);
-            var method = type?.GetMethod("UpdateGamepadsJson", BindingFlags.Public | BindingFlags.Static, [typeof(string)]);
-            if (method is not null) return method;
-        }
-
-        return null;
     }
 
     public void Dispose()
