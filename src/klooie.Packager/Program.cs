@@ -322,6 +322,7 @@ internal static class Program
         if (extension == ".js") return "text/javascript; charset=utf-8";
         if (extension == ".css") return "text/css; charset=utf-8";
         if (extension == ".json") return "application/json; charset=utf-8";
+        if (extension == ".webmanifest") return "application/manifest+json; charset=utf-8";
         if (extension == ".wasm") return "application/wasm";
         if (extension == ".mp3") return "audio/mpeg";
         if (extension == ".map") return "application/json; charset=utf-8";
@@ -770,7 +771,10 @@ internal static class Program
                     route: "{{RootRoute}}",
                     displayName: "{{EscapeCSharpString(target.DisplayName)}}",
                     description: "{{EscapeCSharpString(target.Description)}}",
-                    runAsync: {{target.ToFuncTaskExpression()}});
+                    runAsync: {{target.ToFuncTaskExpression()}},
+                    mobileOptions: new KlooieBlazorMobileOptions(
+                        RequireHorizontal: {{target.RequireHorizontal.ToString().ToLowerInvariant()}},
+                        TouchTriggerToggle: {{target.TouchTriggerToggle.ToString().ToLowerInvariant()}}));
                 return registry;
             });
 
@@ -793,9 +797,10 @@ internal static class Program
 
             <head>
                 <meta charset="utf-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <title>klooie</title>
                 <base href="/" />
+                <link rel="manifest" href="manifest.webmanifest" />
                 <link rel="preload" id="webassembly" />
                 <link rel="stylesheet" href="css/app.css" />
                 <script type="importmap"></script>
@@ -816,11 +821,42 @@ internal static class Program
                     <span class="dismiss">X</span>
                 </div>
                 <script src="klooieFramePump.js"></script>
+                <script>
+                    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+                        navigator.serviceWorker.register("service-worker.js").catch(() => {});
+                    }
+                </script>
                 <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
             </body>
 
             </html>
             """);
+
+        File.WriteAllText(
+            Path.Combine(tempDirectory, "wwwroot", "manifest.webmanifest"),
+            JsonSerializer.Serialize(new
+            {
+                name = target.DisplayName,
+                short_name = target.DisplayName,
+                description = target.Description,
+                start_url = ".",
+                scope = ".",
+                display = "fullscreen",
+                display_override = new[] { "fullscreen", "standalone", "minimal-ui" },
+                background_color = "#000000",
+                theme_color = "#000000",
+                orientation = target.RequireHorizontal ? "landscape" : "any",
+                icons = new[]
+                {
+                    new
+                    {
+                        src = "icon.svg",
+                        sizes = "any",
+                        type = "image/svg+xml",
+                        purpose = "any maskable"
+                    }
+                }
+            }));
     }
 
     private static string LocateWebHostTemplateDirectory()
@@ -1125,7 +1161,9 @@ internal sealed record WebEntryPoint(
     string MethodName,
     string ReturnType,
     string DisplayName,
-    string Description)
+    string Description,
+    bool RequireHorizontal,
+    bool TouchTriggerToggle)
 {
     public string ToFuncTaskExpression()
     {
@@ -1215,7 +1253,9 @@ internal static class WebEntryPointDiscoverer
             methodName,
             returnType,
             ReadAttributeString(attributeSource, "DisplayName") ?? project.AssemblyName,
-            ReadAttributeString(attributeSource, "Description") ?? "Packaged klooie app.");
+            ReadAttributeString(attributeSource, "Description") ?? "Packaged klooie app.",
+            ReadAttributeBool(attributeSource, "RequireHorizontal"),
+            ReadAttributeBool(attributeSource, "TouchTriggerToggle"));
     }
 
     private static string? ReadAttributeString(string? attributeSource, string propertyName)
@@ -1224,6 +1264,14 @@ internal static class WebEntryPointDiscoverer
 
         var match = Regex.Match(attributeSource, $@"\b{Regex.Escape(propertyName)}\s*=\s*""(?<value>[^""]*)""");
         return match.Success ? match.Groups["value"].Value : null;
+    }
+
+    private static bool ReadAttributeBool(string? attributeSource, string propertyName)
+    {
+        if (attributeSource is null) return false;
+
+        var match = Regex.Match(attributeSource, $@"\b{Regex.Escape(propertyName)}\s*=\s*(?<value>true|false)", RegexOptions.IgnoreCase);
+        return match.Success && bool.TryParse(match.Groups["value"].Value, out var value) && value;
     }
 
     private static int FindMatchingBrace(string text, int openBraceIndex)

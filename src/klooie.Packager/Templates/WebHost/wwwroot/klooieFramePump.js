@@ -1,7 +1,27 @@
+window.klooiePwa = window.klooiePwa || {
+    deferredInstallPrompt: undefined,
+    installPromptEnabled: false,
+    installed: window.matchMedia?.("(display-mode: fullscreen)")?.matches || window.matchMedia?.("(display-mode: standalone)")?.matches || navigator.standalone === true
+};
+
+window.addEventListener("beforeinstallprompt", event => {
+    if (!window.klooiePwa.installPromptEnabled) return;
+
+    event.preventDefault();
+    window.klooiePwa.deferredInstallPrompt = event;
+    window.dispatchEvent(new Event("klooie-pwa-install-available"));
+});
+
+window.addEventListener("appinstalled", () => {
+    window.klooiePwa.installed = true;
+    window.klooiePwa.deferredInstallPrompt = undefined;
+    window.dispatchEvent(new Event("klooie-pwa-installed"));
+});
+
 window.klooieFramePump = {
     nextId: 1,
     pumps: {},
-    start(dotNetRef, hostElement) {
+    start(dotNetRef, hostElement, mobileOptions) {
         const id = this.nextId++;
         const canvas = hostElement.querySelector("canvas");
         const state = {
@@ -21,9 +41,11 @@ window.klooieFramePump = {
             renderer: undefined,
             knownGamepads: new Map(),
             touchController: undefined,
+            mobileOptions: normalizeMobileOptions(mobileOptions),
             listeners: []
         };
         this.pumps[id] = state;
+        window.klooiePwa.installPromptEnabled = window.klooiePwa.installPromptEnabled || (state.mobileOptions.requireHorizontal && shouldShowTouchController());
         setupKeyboard(hostElement, state);
         setupGamepads(state);
         setupTouchController(hostElement, state);
@@ -451,21 +473,43 @@ function teardownGamepads(state) {
     state.knownGamepads?.clear();
 }
 
-function setupTouchController(hostElement, state) {
+function normalizeMobileOptions(options) {
+    options = options || {};
+    return {
+        requireHorizontal: !!(options.requireHorizontal ?? options.RequireHorizontal),
+        touchTriggerToggle: !!(options.touchTriggerToggle ?? options.TouchTriggerToggle)
+    };
+}
+
+function setupTouchController(hostElement, state)
+{
     if (!shouldShowTouchController()) return;
 
     const overlay = document.createElement("div");
     overlay.className = "klooie-touch-controller";
     overlay.setAttribute("aria-hidden", "true");
     overlay.innerHTML = `
+        <div class="klooie-horizontal-required">
+            <div class="klooie-horizontal-required-card">
+                <div class="klooie-horizontal-required-icon">↻</div>
+                <div>Flip your phone horizontally</div>
+            </div>
+        </div>
+        <div class="klooie-mobile-actions" hidden>
+            <button type="button" class="klooie-mobile-fullscreen">Fullscreen</button>
+            <button type="button" class="klooie-mobile-install" hidden>Install</button>
+            <button type="button" class="klooie-mobile-dismiss" aria-label="Dismiss">X</button>
+        </div>
         <div class="klooie-touch-stick-zone">
             <div class="klooie-touch-stick-base">
                 <div class="klooie-touch-stick-knob"></div>
             </div>
         </div>
-        <div class="klooie-touch-shoulders">
-            <button type="button" data-button="4">LB</button>
+        <div class="klooie-touch-shoulders klooie-touch-left-shoulders">
             <button type="button" data-button="6">LT</button>
+            <button type="button" data-button="4">LB</button>
+        </div>
+        <div class="klooie-touch-shoulders klooie-touch-right-shoulders">
             <button type="button" data-button="7">RT</button>
             <button type="button" data-button="5">RB</button>
         </div>
@@ -486,12 +530,55 @@ function setupTouchController(hostElement, state) {
     const stickZone = overlay.querySelector(".klooie-touch-stick-zone");
     const stickBase = overlay.querySelector(".klooie-touch-stick-base");
     const stickKnob = overlay.querySelector(".klooie-touch-stick-knob");
+    const mobileActions = overlay.querySelector(".klooie-mobile-actions");
+    const fullscreenButton = overlay.querySelector(".klooie-mobile-fullscreen");
+    const installButton = overlay.querySelector(".klooie-mobile-install");
+    const dismissButton = overlay.querySelector(".klooie-mobile-dismiss");
     let stickPointerId = undefined;
     let stickBaseCenterX = 0;
     let stickBaseCenterY = 0;
+    let mobileActionsDismissed = sessionStorage.getItem("klooie-mobile-actions-dismissed") === "true";
     const stickRadius = () => Math.max(42, Math.min(72, stickBase.getBoundingClientRect().width * 0.42));
 
-    const resetStick = () => {
+    const updateMobileMode = () =>
+    {
+        const requireHorizontal = state.mobileOptions.requireHorizontal;
+        const portrait = isPortraitViewport();
+        overlay.classList.toggle("requires-horizontal", requireHorizontal);
+        overlay.classList.toggle("is-portrait", requireHorizontal && portrait);
+        hostElement.classList.toggle("klooie-mobile-portrait-blocked", requireHorizontal && portrait);
+        updateMobileActions();
+    };
+
+    const updateMobileActions = () =>
+    {
+        const active = state.mobileOptions.requireHorizontal && !isPortraitViewport() && !mobileActionsDismissed;
+        const canInstall = !!window.klooiePwa?.deferredInstallPrompt && !window.klooiePwa.installed;
+        const canManualInstall = isIosBrowser() && !window.klooiePwa.installed;
+        const fullscreenActive = isFullscreenActive();
+        const canFullscreen = canRequestFullscreen();
+        fullscreenButton.hidden = fullscreenActive || !canFullscreen;
+        installButton.hidden = !canInstall && !canManualInstall;
+        installButton.textContent = canInstall ? "Install" : "Add to Home Screen";
+        mobileActions.hidden = !active || ((fullscreenActive || !canFullscreen) && !canInstall && !canManualInstall);
+    };
+
+    const clampStickBaseCenter = () =>
+    {
+        const zoneRect = stickZone.getBoundingClientRect();
+        const half = stickBase.offsetWidth / 2;
+        stickBaseCenterX = clamp(stickBaseCenterX, zoneRect.left + half, zoneRect.right - half);
+        stickBaseCenterY = clamp(stickBaseCenterY, zoneRect.top + half, zoneRect.bottom - half);
+    };
+
+    const moveStickBase = () =>
+    {
+        const zoneRect = stickZone.getBoundingClientRect();
+        stickBase.style.transform = `translate(${stickBaseCenterX - zoneRect.left - stickBase.offsetWidth / 2}px, ${stickBaseCenterY - zoneRect.top - stickBase.offsetHeight / 2}px)`;
+    };
+
+    const resetStick = () =>
+    {
         axes[0] = 0;
         axes[1] = 0;
         stickPointerId = undefined;
@@ -500,41 +587,55 @@ function setupTouchController(hostElement, state) {
         state.requestImmediateFrame?.();
     };
 
-    const updateStick = (event) => {
+    const updateStick = (event) =>
+    {
         if (stickPointerId !== event.pointerId) return;
         event.preventDefault();
+
         const radius = stickRadius();
-        const dx = event.clientX - stickBaseCenterX;
-        const dy = event.clientY - stickBaseCenterY;
-        const distance = Math.hypot(dx, dy);
-        const clampedDistance = Math.min(distance, radius);
-        const unitX = distance > 0 ? dx / distance : 0;
-        const unitY = distance > 0 ? dy / distance : 0;
-        const knobX = unitX * clampedDistance;
-        const knobY = unitY * clampedDistance;
+        clampStickBaseCenter();
+
+        let dx = event.clientX - stickBaseCenterX;
+        let dy = event.clientY - stickBaseCenterY;
+        let distance = Math.hypot(dx, dy);
+        let clampedDistance = Math.min(distance, radius);
+        let unitX = distance > 0 ? dx / distance : 0;
+        let unitY = distance > 0 ? dy / distance : 0;
+        let knobX = unitX * clampedDistance;
+        let knobY = unitY * clampedDistance;
 
         if (distance > radius) {
             stickBaseCenterX = event.clientX - knobX;
             stickBaseCenterY = event.clientY - knobY;
+            clampStickBaseCenter();
+
+            dx = event.clientX - stickBaseCenterX;
+            dy = event.clientY - stickBaseCenterY;
+            distance = Math.hypot(dx, dy);
+            clampedDistance = Math.min(distance, radius);
+            unitX = distance > 0 ? dx / distance : 0;
+            unitY = distance > 0 ? dy / distance : 0;
+            knobX = unitX * clampedDistance;
+            knobY = unitY * clampedDistance;
         }
 
-        const zoneRect = stickZone.getBoundingClientRect();
-        stickBase.style.transform = `translate(${stickBaseCenterX - zoneRect.left - stickBase.offsetWidth / 2}px, ${stickBaseCenterY - zoneRect.top - stickBase.offsetHeight / 2}px)`;
+        moveStickBase();
         stickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
         axes[0] = clamp(knobX / radius, -1, 1);
         axes[1] = clamp(knobY / radius, -1, 1);
         state.requestImmediateFrame?.();
     };
 
-    const stickDown = (event) => {
+    const stickDown = (event) =>
+    {
         if (stickPointerId !== undefined) return;
         event.preventDefault();
         stickPointerId = event.pointerId;
         stickZone.setPointerCapture?.(event.pointerId);
-        const zoneRect = stickZone.getBoundingClientRect();
         stickBaseCenterX = event.clientX;
         stickBaseCenterY = event.clientY;
-        stickBase.style.transform = `translate(${stickBaseCenterX - zoneRect.left - stickBase.offsetWidth / 2}px, ${stickBaseCenterY - zoneRect.top - stickBase.offsetHeight / 2}px)`;
+        clampStickBaseCenter();
+        moveStickBase();
         updateStick(event);
     };
 
@@ -543,20 +644,33 @@ function setupTouchController(hostElement, state) {
     stickZone.addEventListener("pointerup", resetStick);
     stickZone.addEventListener("pointercancel", resetStick);
 
-    const buttonPointerDown = (event) => {
+    const buttonPointerDown = (event) =>
+    {
         const index = Number(event.currentTarget.dataset.button);
         if (!Number.isInteger(index)) return;
         event.preventDefault();
         event.currentTarget.setPointerCapture?.(event.pointerId);
-        buttons[index] = true;
-        event.currentTarget.classList.add("is-pressed");
+
+        const isTrigger = index === 6 || index === 7;
+        if (isTrigger && state.mobileOptions.touchTriggerToggle) {
+            buttons[index] = !buttons[index];
+        } else {
+            buttons[index] = true;
+        }
+
+        event.currentTarget.classList.toggle("is-pressed", buttons[index]);
         state.requestImmediateFrame?.();
     };
 
-    const buttonPointerUp = (event) => {
+    const buttonPointerUp = (event) =>
+    {
         const index = Number(event.currentTarget.dataset.button);
         if (!Number.isInteger(index)) return;
         event.preventDefault();
+
+        const isTrigger = index === 6 || index === 7;
+        if (isTrigger && state.mobileOptions.touchTriggerToggle) return;
+
         buttons[index] = false;
         event.currentTarget.classList.remove("is-pressed");
         state.requestImmediateFrame?.();
@@ -570,11 +684,23 @@ function setupTouchController(hostElement, state) {
         button.addEventListener("contextmenu", preventDefault);
     }
 
+    window.addEventListener("resize", updateMobileMode);
+    window.addEventListener("orientationchange", updateMobileMode);
+    document.addEventListener("fullscreenchange", updateMobileMode);
+    document.addEventListener("webkitfullscreenchange", updateMobileMode);
+    window.addEventListener("klooie-pwa-install-available", updateMobileMode);
+    window.addEventListener("klooie-pwa-installed", updateMobileMode);
+    fullscreenButton.addEventListener("pointerdown", requestFullscreenFromButton);
+    installButton.addEventListener("pointerdown", promptPwaInstall);
+    dismissButton.addEventListener("pointerdown", dismissMobileActions);
+    updateMobileMode();
+
     state.touchController = {
         overlay,
         buttons,
         axes,
-        readGamepad() {
+        readGamepad()
+        {
             return {
                 id: "Klooie Touch Controller (Xbox)",
                 index: 1000,
@@ -584,10 +710,48 @@ function setupTouchController(hostElement, state) {
                 axes: axes.slice(0)
             };
         },
-        dispose() {
+        dispose()
+        {
+            window.removeEventListener("resize", updateMobileMode);
+            window.removeEventListener("orientationchange", updateMobileMode);
+            document.removeEventListener("fullscreenchange", updateMobileMode);
+            document.removeEventListener("webkitfullscreenchange", updateMobileMode);
+            window.removeEventListener("klooie-pwa-install-available", updateMobileMode);
+            window.removeEventListener("klooie-pwa-installed", updateMobileMode);
+            hostElement.classList.remove("klooie-mobile-portrait-blocked");
             overlay.remove();
         }
     };
+
+    function requestFullscreenFromButton(event) {
+        event.preventDefault();
+        requestFullscreen(hostElement).finally(updateMobileMode);
+    }
+
+    async function promptPwaInstall(event) {
+        event.preventDefault();
+        const prompt = window.klooiePwa?.deferredInstallPrompt;
+        if (!prompt) {
+            if (isIosBrowser()) window.alert("Use the browser Share button, then choose Add to Home Screen.");
+            return;
+        }
+
+        window.klooiePwa.deferredInstallPrompt = undefined;
+        try {
+            await prompt.prompt();
+            await prompt.userChoice;
+        } catch {
+        }
+
+        updateMobileMode();
+    }
+
+    function dismissMobileActions(event) {
+        event.preventDefault();
+        mobileActionsDismissed = true;
+        sessionStorage.setItem("klooie-mobile-actions-dismissed", "true");
+        updateMobileMode();
+    }
 }
 
 function teardownTouchController(state) {
@@ -601,6 +765,40 @@ function shouldShowTouchController() {
     const hoverless = window.matchMedia?.("(hover: none)")?.matches;
     const touchPoints = navigator.maxTouchPoints || 0;
     return !!(coarse || hoverless || touchPoints > 0);
+}
+
+function isPortraitViewport() {
+    const viewport = window.visualViewport;
+    const width = viewport?.width || window.innerWidth || document.documentElement.clientWidth;
+    const height = viewport?.height || window.innerHeight || document.documentElement.clientHeight;
+    return height > width;
+}
+
+function isFullscreenActive() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement) ||
+        window.matchMedia?.("(display-mode: fullscreen)")?.matches ||
+        window.matchMedia?.("(display-mode: standalone)")?.matches ||
+        navigator.standalone === true;
+}
+
+function canRequestFullscreen() {
+    const element = document.documentElement;
+    return !!(element.requestFullscreen || element.webkitRequestFullscreen);
+}
+
+function isIosBrowser() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+async function requestFullscreen(element) {
+    try {
+        if (element.requestFullscreen) {
+            await element.requestFullscreen({ navigationUI: "hide" });
+        } else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+        }
+    } catch {
+    }
 }
 
 function preventDefault(event) {

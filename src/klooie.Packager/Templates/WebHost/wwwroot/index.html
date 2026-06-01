@@ -3,9 +3,10 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>klooie.blazor</title>
     <base href="/" />
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="css/app.css" />
     <link href="klooie.blazor.styles.css" rel="stylesheet" />
@@ -27,6 +28,11 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="klooieFramePump.js"></script>
+    <script>
+        if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+            navigator.serviceWorker.register("service-worker.js").catch(() => {});
+        }
+    </script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 </body>
 

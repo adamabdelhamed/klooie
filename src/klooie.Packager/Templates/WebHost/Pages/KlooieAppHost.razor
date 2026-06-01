@@ -70,7 +70,7 @@ else
         activeRoute = registration.Route;
         runtime = new BrowserKlooieRuntime(registration, JS, Http);
         dotNetRef = DotNetObjectReference.Create(this);
-        pumpId = await JS.InvokeAsync<int>("klooieFramePump.start", dotNetRef, hostElement);
+        pumpId = await JS.InvokeAsync<int>("klooieFramePump.start", dotNetRef, hostElement, registration.MobileOptions);
     }
 
     public async ValueTask DisposeAsync()

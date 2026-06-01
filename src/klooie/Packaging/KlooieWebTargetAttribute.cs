@@ -8,4 +8,8 @@ public sealed class KlooieWebTargetAttribute : Attribute
     public string? DisplayName { get; set; }
 
     public string? Description { get; set; }
+
+    public bool RequireHorizontal { get; set; }
+
+    public bool TouchTriggerToggle { get; set; }
 }
