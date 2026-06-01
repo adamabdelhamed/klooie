@@ -6,7 +6,13 @@ public sealed class KlooieBlazorAppRegistry
 
     public IReadOnlyList<KlooieBlazorAppRegistration> Apps => apps;
 
-    public void Register(string route, string displayName, string description, Func<Task> runAsync, KlooieBlazorMobileOptions? mobileOptions = null)
+    public void Register(
+        string route,
+        string displayName,
+        string description,
+        Func<Task> runAsync,
+        KlooieBlazorMobileOptions? mobileOptions = null,
+        KlooieBlazorBrowserMetadata? browserMetadata = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(route);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -18,7 +24,13 @@ public sealed class KlooieBlazorAppRegistry
             throw new InvalidOperationException($"A klooie app is already registered for route '{route}'.");
         }
 
-        apps.Add(new KlooieBlazorAppRegistration(route, displayName, description, runAsync, mobileOptions ?? new KlooieBlazorMobileOptions()));
+        apps.Add(new KlooieBlazorAppRegistration(
+            route,
+            displayName,
+            description,
+            runAsync,
+            mobileOptions ?? new KlooieBlazorMobileOptions(),
+            browserMetadata ?? KlooieBlazorBrowserMetadata.FromDisplayName(displayName, description)));
     }
 
     public KlooieBlazorAppRegistration? Find(string route)

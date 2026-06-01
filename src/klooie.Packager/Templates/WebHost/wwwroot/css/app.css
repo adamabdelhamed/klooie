@@ -26,20 +26,25 @@ body {
 }
 
 .klooie-touch-controller {
-    --klooie-touch-lift: 10dvh;
+    --klooie-touch-lift: clamp(14px, 4dvh, 32px);
+    --klooie-touch-system-left: max(22px, env(safe-area-inset-left));
+    --klooie-touch-system-bottom: max(8px, env(safe-area-inset-bottom));
+    --klooie-touch-system-height: clamp(32px, 8dvh, 38px);
+    --klooie-touch-system-clearance: clamp(8px, 2.5dvh, 14px);
     --klooie-touch-stick-left: max(14px, env(safe-area-inset-left));
-    --klooie-touch-stick-bottom: calc(max(8px, env(safe-area-inset-bottom)) + var(--klooie-touch-lift));
-    --klooie-touch-stick-width: clamp(190px, 30vw, 330px);
-    --klooie-touch-stick-height: clamp(168px, 42vh, 292px);
-    --klooie-touch-stick-base-size: clamp(116px, 20vw, 160px);
-    --klooie-touch-stick-center-offset: clamp(58px, 10vw, 80px);
+    --klooie-touch-stick-bottom: calc(var(--klooie-touch-system-bottom) + var(--klooie-touch-system-height) + var(--klooie-touch-system-clearance));
+    --klooie-touch-stick-width: clamp(136px, 25vw, 240px);
+    --klooie-touch-stick-height: clamp(118px, 32dvh, 190px);
+    --klooie-touch-stick-base-size: clamp(84px, 24dvh, 126px);
+    --klooie-touch-stick-center-offset: clamp(42px, 12dvh, 63px);
     --klooie-touch-face-right: max(18px, env(safe-area-inset-right));
-    --klooie-touch-face-bottom: calc(max(24px, env(safe-area-inset-bottom)) + var(--klooie-touch-lift));
-    --klooie-touch-face-width: clamp(206px, 34vw, 274px);
-    --klooie-touch-face-height: clamp(186px, 30vw, 244px);
-    --klooie-touch-face-center-offset: clamp(103px, 17vw, 137px);
-    --klooie-touch-button-size: clamp(64px, 10.5vw, 84px);
-    --klooie-touch-shoulder-width: clamp(70px, 11vw, 92px);
+    --klooie-touch-face-bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--klooie-touch-lift));
+    --klooie-touch-face-width: clamp(150px, 28vw, 218px);
+    --klooie-touch-face-height: clamp(132px, 36dvh, 190px);
+    --klooie-touch-face-center-offset: clamp(75px, 14vw, 109px);
+    --klooie-touch-button-size: clamp(48px, 15dvh, 68px);
+    --klooie-touch-shoulder-width: clamp(56px, 12vw, 82px);
+    --klooie-touch-shoulder-height: clamp(34px, 10dvh, 48px);
     position: fixed;
     inset: 0;
     z-index: 20;
@@ -83,6 +88,48 @@ body {
     display: grid;
 }
 
+.klooie-zoom-control {
+    position: fixed;
+    left: 50%;
+    top: max(10px, env(safe-area-inset-top));
+    transform: translateX(-50%);
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 999px;
+    background: rgba(8, 13, 20, .66);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+    .klooie-zoom-control button {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, .30);
+        border-radius: 50%;
+        color: rgba(255, 255, 255, .9);
+        background: rgba(255, 255, 255, .15);
+        font: 700 20px Consolas, "Cascadia Mono", "Courier New", monospace;
+        line-height: 1;
+    }
+
+    .klooie-zoom-control button:disabled {
+        opacity: .38;
+    }
+
+    .klooie-zoom-value {
+        min-width: 48px;
+        color: rgba(255, 255, 255, .92);
+        font: 700 13px Consolas, "Cascadia Mono", "Courier New", monospace;
+        text-align: center;
+    }
+
 .klooie-horizontal-required-card {
     display: grid;
     gap: 14px;
@@ -103,9 +150,8 @@ body {
 
 .klooie-mobile-actions {
     position: absolute;
-    left: 50%;
+    left: max(10px, env(safe-area-inset-left));
     top: max(10px, env(safe-area-inset-top));
-    transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -221,25 +267,27 @@ body {
     position: absolute;
     display: grid;
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: clamp(5px, 1.4dvh, 8px);
     pointer-events: none;
 }
 
 .klooie-touch-left-shoulders {
     left: calc(var(--klooie-touch-stick-left) + var(--klooie-touch-stick-center-offset));
-    bottom: calc(var(--klooie-touch-stick-bottom) + var(--klooie-touch-stick-height) + 8px);
+    bottom: calc(var(--klooie-touch-stick-bottom) + var(--klooie-touch-stick-height) + clamp(6px, 1.6dvh, 10px));
     transform: translateX(-50%);
 }
 
 .klooie-touch-right-shoulders {
     right: calc(var(--klooie-touch-face-right) + var(--klooie-touch-face-center-offset));
-    bottom: calc(var(--klooie-touch-face-bottom) + var(--klooie-touch-face-height) + 10px);
+    bottom: calc(var(--klooie-touch-face-bottom) + var(--klooie-touch-face-height) + clamp(6px, 1.6dvh, 10px));
     transform: translateX(50%);
 }
 
 .klooie-touch-shoulders button {
     min-width: var(--klooie-touch-shoulder-width);
-    min-height: clamp(42px, 7vh, 58px);
+    min-height: var(--klooie-touch-shoulder-height);
+    padding: 0 10px;
+    font-size: clamp(12px, 3dvh, 15px);
     color: rgba(15, 23, 42, .9);
     background: rgba(255, 255, 255, .54);
 }
@@ -251,17 +299,18 @@ body {
 
 .klooie-touch-system {
     position: absolute;
-    left: max(22px, env(safe-area-inset-left));
-    bottom: calc(max(8px, env(safe-area-inset-bottom)) + 78px);
+    left: var(--klooie-touch-system-left);
+    bottom: var(--klooie-touch-system-bottom);
     display: flex;
-    gap: 12px;
+    gap: clamp(8px, 2vw, 12px);
     pointer-events: none;
 }
 
     .klooie-touch-system button {
-        min-width: 64px;
-        min-height: 38px;
-        font-size: 13px;
+        min-width: clamp(52px, 12vw, 64px);
+        min-height: var(--klooie-touch-system-height);
+        padding: 0 10px;
+        font-size: clamp(12px, 3dvh, 13px);
         background: rgba(14, 20, 28, .42);
     }
         

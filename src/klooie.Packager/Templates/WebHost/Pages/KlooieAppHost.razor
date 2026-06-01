@@ -16,6 +16,22 @@
 }
 else
 {
+    <PageTitle>@registration.BrowserMetadata.BrowserTitle</PageTitle>
+    <HeadContent>
+        <meta name="application-name" content="@registration.BrowserMetadata.PwaName" />
+        <meta name="apple-mobile-web-app-title" content="@registration.BrowserMetadata.PwaShortName" />
+        <meta name="description" content="@registration.BrowserMetadata.Description" />
+        <meta name="theme-color" content="@registration.BrowserMetadata.ThemeColor" />
+        @if (registration.BrowserMetadata.FaviconPath is not null)
+        {
+            <link rel="icon" href="@registration.BrowserMetadata.FaviconPath" />
+            <link rel="shortcut icon" href="@registration.BrowserMetadata.FaviconPath" />
+        }
+        @if (registration.BrowserMetadata.AppIconPath is not null)
+        {
+            <link rel="apple-touch-icon" href="@registration.BrowserMetadata.AppIconPath" />
+        }
+    </HeadContent>
     <div @ref="hostElement" class="klooie-host" data-ticks="@tickCount" tabindex="0">
         <canvas class="klooie-canvas" aria-label="@registration.DisplayName"></canvas>
     </div>

@@ -41,14 +41,22 @@ window.klooieFramePump = {
             renderer: undefined,
             knownGamepads: new Map(),
             touchController: undefined,
+            zoomControl: undefined,
             mobileOptions: normalizeMobileOptions(mobileOptions),
+            zoomLevels: [0.6, 0.7, 0.8, 0.9, 1.0, 1.15, 1.3],
+            zoom: 1,
+            baseCellWidth: 8,
+            baseCellHeight: 16,
+            baseFont: "16px Consolas, 'Cascadia Mono', 'Courier New', monospace",
             listeners: []
         };
+        state.zoom = getInitialZoom(state);
         this.pumps[id] = state;
         window.klooiePwa.installPromptEnabled = window.klooiePwa.installPromptEnabled || (state.mobileOptions.requireHorizontal && shouldShowTouchController());
         setupKeyboard(hostElement, state);
         setupGamepads(state);
         setupTouchController(hostElement, state);
+        setupZoomControl(hostElement, state);
         updateCellMetrics(hostElement, state);
         state.renderer = createConsoleRenderer(canvas, state);
 
@@ -93,6 +101,7 @@ window.klooieFramePump = {
             teardownKeyboard(pump);
             teardownGamepads(pump);
             teardownTouchController(pump);
+            teardownZoomControl(pump);
         }
         delete this.pumps[id];
     }
@@ -477,8 +486,105 @@ function normalizeMobileOptions(options) {
     options = options || {};
     return {
         requireHorizontal: !!(options.requireHorizontal ?? options.RequireHorizontal),
-        touchTriggerToggle: !!(options.touchTriggerToggle ?? options.TouchTriggerToggle)
+        touchTriggerToggle: !!(options.touchTriggerToggle ?? options.TouchTriggerToggle),
+        enableZoom: (options.enableZoom ?? options.EnableZoom) !== false
     };
+}
+
+function setupZoomControl(hostElement, state) {
+    if (!state.mobileOptions.enableZoom || !shouldShowTouchController()) return;
+
+    const control = document.createElement("div");
+    control.className = "klooie-zoom-control";
+    control.innerHTML = `
+        <button type="button" class="klooie-zoom-out" aria-label="Zoom out">-</button>
+        <output class="klooie-zoom-value"></output>
+        <button type="button" class="klooie-zoom-in" aria-label="Zoom in">+</button>`;
+    hostElement.appendChild(control);
+
+    const value = control.querySelector(".klooie-zoom-value");
+    const zoomOut = control.querySelector(".klooie-zoom-out");
+    const zoomIn = control.querySelector(".klooie-zoom-in");
+
+    const render = () => {
+        value.textContent = `${Math.round(state.zoom * 100)}%`;
+        const index = getZoomIndex(state);
+        zoomOut.disabled = index <= 0;
+        zoomIn.disabled = index >= state.zoomLevels.length - 1;
+    };
+
+    const setZoomIndex = index => {
+        state.zoom = state.zoomLevels[clamp(index, 0, state.zoomLevels.length - 1)];
+        try {
+            localStorage.setItem("klooie-mobile-zoom-v2", String(state.zoom));
+        } catch {
+        }
+        updateCellMetrics(hostElement, state);
+        state.sizeDirty = true;
+        state.renderer?.invalidateMetrics();
+        state.requestImmediateFrame?.();
+        render();
+    };
+
+    zoomOut.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        setZoomIndex(getZoomIndex(state) - 1);
+    });
+
+    zoomIn.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        setZoomIndex(getZoomIndex(state) + 1);
+    });
+
+    render();
+    state.zoomControl = {
+        dispose() {
+            control.remove();
+        }
+    };
+}
+
+function teardownZoomControl(state) {
+    state.zoomControl?.dispose?.();
+    state.zoomControl = undefined;
+}
+
+function getInitialZoom(state) {
+    if (!state.mobileOptions.enableZoom || !shouldShowTouchController()) return 1;
+
+    try {
+        const stored = Number(localStorage.getItem("klooie-mobile-zoom-v2"));
+        if (Number.isFinite(stored) && state.zoomLevels.includes(stored)) return stored;
+    } catch {
+    }
+
+    return getDefaultMobileZoom(state);
+}
+
+function getDefaultMobileZoom() {
+    const viewport = window.visualViewport;
+    const width = viewport?.width || window.innerWidth || document.documentElement.clientWidth;
+    const height = viewport?.height || window.innerHeight || document.documentElement.clientHeight;
+    const shortSide = Math.min(width, height);
+    const longSide = Math.max(width, height);
+
+    if (shortSide <= 360 || longSide <= 700) return 0.6;
+    if (shortSide <= 390 || longSide <= 780) return 0.7;
+    return 0.8;
+}
+
+function getZoomIndex(state) {
+    let bestIndex = 0;
+    let bestDistance = Number.MAX_VALUE;
+    for (let i = 0; i < state.zoomLevels.length; i++) {
+        const distance = Math.abs(state.zoomLevels[i] - state.zoom);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestIndex = i;
+        }
+    }
+
+    return bestIndex;
 }
 
 function setupTouchController(hostElement, state)
@@ -922,10 +1028,13 @@ function updateCellMetrics(hostElement, state) {
     const probe = getMeasureProbe(hostElement);
     const rect = probe.getBoundingClientRect();
     const style = window.getComputedStyle(probe);
-    state.cellWidth = Math.max(1, rect?.width || 8);
-    state.cellHeight = Math.max(1, rect?.height || 16);
+    state.baseCellWidth = Math.max(1, rect?.width || 8);
+    state.baseCellHeight = Math.max(1, rect?.height || 16);
+    state.baseFont = style.font || "16px Consolas, 'Cascadia Mono', 'Courier New', monospace";
+    state.cellWidth = Math.max(1, state.baseCellWidth * state.zoom);
+    state.cellHeight = Math.max(1, state.baseCellHeight * state.zoom);
     state.devicePixelRatio = window.devicePixelRatio || 1;
-    state.font = style.font || "16px Consolas, 'Cascadia Mono', 'Courier New', monospace";
+    state.font = scaleFont(state.baseFont, state.zoom);
 }
 
 function getMeasureProbe(hostElement) {

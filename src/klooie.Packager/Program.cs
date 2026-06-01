@@ -53,7 +53,7 @@ internal static class Program
         var tempDirectory = Path.Combine(intermediateRoot, "web");
         var publishDirectory = Path.Combine(intermediateRoot, "publish");
         var outputDirectory = GetWebOutputDirectory(project);
-        var fingerprint = ComputeWebPackageFingerprint(project, templateDirectory, webMode);
+        var fingerprint = ComputeWebPackageFingerprint(project, templateDirectory, target, webMode);
 
         if (IsWebPackageCurrent(outputDirectory, fingerprint))
         {
@@ -603,16 +603,27 @@ internal static class Program
         return Path.Combine(outputDirectory, "klooie.package.stamp");
     }
 
-    private static string ComputeWebPackageFingerprint(ProjectInfo project, string templateDirectory, KlooieWebMode webMode)
+    private static string ComputeWebPackageFingerprint(ProjectInfo project, string templateDirectory, WebEntryPoint target, KlooieWebMode webMode)
     {
         var fingerprint = new StringBuilder();
         AddFingerprintText(fingerprint, $"mode:{webMode}");
         AddFingerprintText(fingerprint, $"target:{project.TargetFramework}");
+        AddFingerprintText(fingerprint, $"title:{target.BrowserTitle}");
+        AddFingerprintText(fingerprint, $"pwa:{target.PwaName}:{target.PwaShortName}");
 
         foreach (var file in EnumerateWebPackageInputs(project, templateDirectory).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
             var info = new FileInfo(file);
             AddFingerprintText(fingerprint, Path.GetFullPath(file).ToUpperInvariant());
+            AddFingerprintText(fingerprint, info.Length.ToString());
+            AddFingerprintText(fingerprint, info.LastWriteTimeUtc.Ticks.ToString());
+        }
+
+        var iconPath = ResolveWebIconPath(project, target);
+        if (iconPath is not null)
+        {
+            var info = new FileInfo(iconPath);
+            AddFingerprintText(fingerprint, Path.GetFullPath(iconPath).ToUpperInvariant());
             AddFingerprintText(fingerprint, info.Length.ToString());
             AddFingerprintText(fingerprint, info.LastWriteTimeUtc.Ticks.ToString());
         }
@@ -722,6 +733,7 @@ internal static class Program
         var projectReference = SecurityElement.Escape(project.Path);
         var targetFramework = SecurityElement.Escape(project.TargetFramework);
         var optimizeWebAssemblyText = optimizeWebAssembly.ToString().ToLowerInvariant();
+        var branding = CopyWebBrandingAssets(project, tempDirectory, target);
 
         File.WriteAllText(
             Path.Combine(tempDirectory, $"{GeneratedProjectName}.csproj"),
@@ -774,7 +786,16 @@ internal static class Program
                     runAsync: {{target.ToFuncTaskExpression()}},
                     mobileOptions: new KlooieBlazorMobileOptions(
                         RequireHorizontal: {{target.RequireHorizontal.ToString().ToLowerInvariant()}},
-                        TouchTriggerToggle: {{target.TouchTriggerToggle.ToString().ToLowerInvariant()}}));
+                        TouchTriggerToggle: {{target.TouchTriggerToggle.ToString().ToLowerInvariant()}}),
+                    browserMetadata: new KlooieBlazorBrowserMetadata(
+                        BrowserTitle: "{{EscapeCSharpString(target.BrowserTitle)}}",
+                        PwaName: "{{EscapeCSharpString(target.PwaName)}}",
+                        PwaShortName: "{{EscapeCSharpString(target.PwaShortName)}}",
+                        Description: "{{EscapeCSharpString(target.Description)}}",
+                        ThemeColor: "{{EscapeCSharpString(target.ThemeColor)}}",
+                        BackgroundColor: "{{EscapeCSharpString(target.BackgroundColor)}}",
+                        FaviconPath: "{{EscapeCSharpString(branding.FaviconPath)}}",
+                        AppIconPath: "{{EscapeCSharpString(branding.AppIconPath)}}"));
                 return registry;
             });
 
@@ -791,16 +812,23 @@ internal static class Program
 
         File.WriteAllText(
             Path.Combine(tempDirectory, "wwwroot", "index.html"),
-            """
+            $$"""
             <!DOCTYPE html>
             <html lang="en">
 
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-                <title>klooie</title>
+                <title>{{WebUtility.HtmlEncode(target.BrowserTitle)}}</title>
                 <base href="/" />
                 <link rel="manifest" href="manifest.webmanifest" />
+                <link rel="icon" href="{{WebUtility.HtmlEncode(branding.FaviconPath)}}" />
+                <link rel="shortcut icon" href="{{WebUtility.HtmlEncode(branding.FaviconPath)}}" />
+                <link rel="apple-touch-icon" href="{{WebUtility.HtmlEncode(branding.AppIconPath)}}" />
+                <meta name="application-name" content="{{WebUtility.HtmlEncode(target.PwaName)}}" />
+                <meta name="apple-mobile-web-app-title" content="{{WebUtility.HtmlEncode(target.PwaShortName)}}" />
+                <meta name="description" content="{{WebUtility.HtmlEncode(target.Description)}}" />
+                <meta name="theme-color" content="{{WebUtility.HtmlEncode(target.ThemeColor)}}" />
                 <link rel="preload" id="webassembly" />
                 <link rel="stylesheet" href="css/app.css" />
                 <script type="importmap"></script>
@@ -836,27 +864,110 @@ internal static class Program
             Path.Combine(tempDirectory, "wwwroot", "manifest.webmanifest"),
             JsonSerializer.Serialize(new
             {
-                name = target.DisplayName,
-                short_name = target.DisplayName,
+                name = target.PwaName,
+                short_name = target.PwaShortName,
                 description = target.Description,
                 start_url = ".",
                 scope = ".",
                 display = "fullscreen",
                 display_override = new[] { "fullscreen", "standalone", "minimal-ui" },
-                background_color = "#000000",
-                theme_color = "#000000",
+                background_color = target.BackgroundColor,
+                theme_color = target.ThemeColor,
                 orientation = target.RequireHorizontal ? "landscape" : "any",
-                icons = new[]
-                {
-                    new
-                    {
-                        src = "icon.svg",
-                        sizes = "any",
-                        type = "image/svg+xml",
-                        purpose = "any maskable"
-                    }
-                }
+                icons = branding.ManifestIcons
             }));
+    }
+
+    private static WebBrandingAssets CopyWebBrandingAssets(ProjectInfo project, string tempDirectory, WebEntryPoint target)
+    {
+        var defaultIcon = "icon.svg";
+        var iconPath = ResolveWebIconPath(project, target);
+        if (iconPath is null)
+        {
+            return new WebBrandingAssets(
+                defaultIcon,
+                defaultIcon,
+                new[]
+                {
+                    new WebManifestIcon(defaultIcon, "any", "image/svg+xml", "any maskable")
+                });
+        }
+
+        var wwwroot = Path.Combine(tempDirectory, "wwwroot");
+        var extension = Path.GetExtension(iconPath).ToLowerInvariant();
+        var faviconPath = extension == ".ico" ? "app-icon.ico" : "app-icon" + extension;
+        var faviconDestination = Path.Combine(wwwroot, faviconPath);
+        CopyFile(iconPath, faviconDestination);
+
+        var manifestIcons = new List<WebManifestIcon>();
+        var appIconPath = faviconPath;
+        if (extension == ".ico" && TryExtractLargestPngFromIco(iconPath, out var pngBytes, out var pngSize))
+        {
+            appIconPath = "app-icon.png";
+            File.WriteAllBytes(Path.Combine(wwwroot, appIconPath), pngBytes);
+            manifestIcons.Add(new WebManifestIcon(appIconPath, $"{pngSize}x{pngSize}", "image/png", "any maskable"));
+        }
+
+        var type = extension == ".ico" ? "image/x-icon" : GetIconContentType(extension);
+        manifestIcons.Add(new WebManifestIcon(faviconPath, "any", type, "any"));
+        return new WebBrandingAssets(faviconPath, appIconPath, manifestIcons.ToArray());
+    }
+
+    private static string? ResolveWebIconPath(ProjectInfo project, WebEntryPoint target)
+    {
+        if (string.IsNullOrWhiteSpace(target.IconPath)) return null;
+
+        var path = target.IconPath!;
+        if (Path.IsPathRooted(path) == false)
+        {
+            path = Path.Combine(project.Directory, path);
+        }
+
+        path = Path.GetFullPath(path);
+        if (File.Exists(path) == false)
+        {
+            throw new FileNotFoundException($"Web icon file '{target.IconPath}' was not found.", path);
+        }
+
+        return path;
+    }
+
+    private static string GetIconContentType(string extension)
+    {
+        if (string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase)) return "image/png";
+        if (string.Equals(extension, ".svg", StringComparison.OrdinalIgnoreCase)) return "image/svg+xml";
+        if (string.Equals(extension, ".webp", StringComparison.OrdinalIgnoreCase)) return "image/webp";
+        if (string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase) || string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase)) return "image/jpeg";
+        return "application/octet-stream";
+    }
+
+    private static bool TryExtractLargestPngFromIco(string iconPath, out byte[] pngBytes, out int size)
+    {
+        pngBytes = [];
+        size = 0;
+
+        var bytes = File.ReadAllBytes(iconPath);
+        if (bytes.Length < 6 || BitConverter.ToUInt16(bytes, 0) != 0 || BitConverter.ToUInt16(bytes, 2) != 1) return false;
+
+        var count = BitConverter.ToUInt16(bytes, 4);
+        for (var i = 0; i < count; i++)
+        {
+            var entryOffset = 6 + i * 16;
+            if (entryOffset + 16 > bytes.Length) break;
+
+            var width = bytes[entryOffset] == 0 ? 256 : bytes[entryOffset];
+            var height = bytes[entryOffset + 1] == 0 ? 256 : bytes[entryOffset + 1];
+            var byteCount = BitConverter.ToUInt32(bytes, entryOffset + 8);
+            var imageOffset = BitConverter.ToUInt32(bytes, entryOffset + 12);
+            if (imageOffset + byteCount > bytes.Length || byteCount < 8) continue;
+            if (bytes[imageOffset] != 0x89 || bytes[imageOffset + 1] != 0x50 || bytes[imageOffset + 2] != 0x4E || bytes[imageOffset + 3] != 0x47) continue;
+            if (width < size || height < size) continue;
+
+            size = Math.Min(width, height);
+            pngBytes = bytes.Skip((int)imageOffset).Take((int)byteCount).ToArray();
+        }
+
+        return pngBytes.Length > 0;
     }
 
     private static string LocateWebHostTemplateDirectory()
@@ -1156,12 +1267,22 @@ internal sealed record ProjectInfo(string Path, string Directory, string Assembl
     }
 }
 
+internal sealed record WebBrandingAssets(string FaviconPath, string AppIconPath, WebManifestIcon[] ManifestIcons);
+
+internal sealed record WebManifestIcon(string src, string sizes, string type, string purpose);
+
 internal sealed record WebEntryPoint(
     string TypeName,
     string MethodName,
     string ReturnType,
     string DisplayName,
+    string BrowserTitle,
+    string PwaName,
+    string PwaShortName,
     string Description,
+    string? IconPath,
+    string ThemeColor,
+    string BackgroundColor,
     bool RequireHorizontal,
     bool TouchTriggerToggle)
 {
@@ -1253,7 +1374,13 @@ internal static class WebEntryPointDiscoverer
             methodName,
             returnType,
             ReadAttributeString(attributeSource, "DisplayName") ?? project.AssemblyName,
+            ReadAttributeString(attributeSource, "BrowserTitle") ?? ReadAttributeString(attributeSource, "DisplayName") ?? project.AssemblyName,
+            ReadAttributeString(attributeSource, "PwaName") ?? ReadAttributeString(attributeSource, "DisplayName") ?? project.AssemblyName,
+            ReadAttributeString(attributeSource, "PwaShortName") ?? ReadAttributeString(attributeSource, "PwaName") ?? ReadAttributeString(attributeSource, "DisplayName") ?? project.AssemblyName,
             ReadAttributeString(attributeSource, "Description") ?? "Packaged klooie app.",
+            ReadAttributeString(attributeSource, "IconPath"),
+            ReadAttributeString(attributeSource, "ThemeColor") ?? "#000000",
+            ReadAttributeString(attributeSource, "BackgroundColor") ?? "#000000",
             ReadAttributeBool(attributeSource, "RequireHorizontal"),
             ReadAttributeBool(attributeSource, "TouchTriggerToggle"));
     }

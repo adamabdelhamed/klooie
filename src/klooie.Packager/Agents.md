@@ -9,6 +9,8 @@ This project builds the `kpack` command line tool. It packages normal klooie pro
 - Keep the generated Blazor host route simple: `/` should start the single packaged app directly.
 - The old `klooie.blazor` prototype project was intentionally folded into this packager as template files under `Templates/WebHost`.
 - The WebHost template injects a touch controller overlay only for coarse-pointer/touch environments. It synthesizes a browser gamepad snapshot with `mapping: "klooie-touch"` and Xbox-style button indexes; keep it compatible with `klooie/Controllers/BrowserGamepadController.cs` rather than app-specific input code.
+- Browser title, favicon, PWA manifest names, colors, and icon paths are generated from `[KlooieWebTarget]` metadata. Keep this C#-driven path intact so app authors do not need to edit host pages or manifests.
+- Mobile zoom is a browser presentation-layer feature in `Templates/WebHost/wwwroot/klooieFramePump.js`. It changes measured/rendered cell size before terminal dimensions are sent to the app; do not add app/game APIs for zoom.
 
 ## Key Files
 
@@ -66,7 +68,7 @@ For this milestone, packaging `klooie.blazorSampleApp` with `-type Web` should:
 - `-type Serve` first runs the normal web package path, then stops any existing Windows TCP listener on the requested port and serves `bin/klooie.web` on `127.0.0.1` with no-cache headers. Use it for Visual Studio F5/Ctrl+F5 browser launches instead of a standalone static server.
 - Windows `HttpListener` registrations can appear in `netstat` as PID 4, so serve cleanup also checks kpack PID files and `netsh http show servicestate` to stop stale `dotnet.exe` listeners for the requested localhost port.
 - The packager currently discovers `[KlooieWebTarget]` on a static no-argument `MainAsync` or `Main` method. If no marker exists, it falls back to no-argument static `MainAsync`/`Main` candidates.
-- `[KlooieWebTarget(DisplayName = "...", Description = "...")]` is used for generated registry metadata.
+- `[KlooieWebTarget(DisplayName = "...", BrowserTitle = "...", PwaName = "...", PwaShortName = "...", IconPath = "...", Description = "...")]` is used for generated registry, document head, and PWA manifest metadata. Relative `IconPath` values resolve from the target project directory; `.ico` files are copied for favicons, and embedded PNG frames are extracted for install icons when available.
 - The generated web host keeps `RootNamespace` as `klooie.blazor` because the folded template source still uses that namespace.
 - Web packaging uses `KlooieWebMode` from the target project unless `-webMode Fast|Aot` is passed. `Aot` makes the generated WebHost set `PublishTrimmed=true` and `RunAOTCompilation=true`; `Fast` leaves AOT off even in Release. Do not infer AOT from Debug/Release.
 - `kpack` writes `bin/klooie.web/klooie.package.stamp` and skips publish when the project graph, template, packager runtime, assets, and selected web mode are unchanged. Keep that stamp mode-aware so switching Fast/Aot repackages.
