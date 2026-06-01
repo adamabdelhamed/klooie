@@ -640,9 +640,17 @@ function setupTouchController(hostElement, state)
     const fullscreenButton = overlay.querySelector(".klooie-mobile-fullscreen");
     const installButton = overlay.querySelector(".klooie-mobile-install");
     const dismissButton = overlay.querySelector(".klooie-mobile-dismiss");
+    const leftStickPressButtonIndex = 10;
+    const leftStickTapMaxMs = 220;
+    const leftStickTapMaxMovementPx = 14;
     let stickPointerId = undefined;
     let stickBaseCenterX = 0;
     let stickBaseCenterY = 0;
+    let stickTapStartTime = 0;
+    let stickTapStartX = 0;
+    let stickTapStartY = 0;
+    let stickTapMoved = false;
+    let leftStickPressPulseReads = 0;
     let mobileActionsDismissed = sessionStorage.getItem("klooie-mobile-actions-dismissed") === "true";
     const stickRadius = () => Math.max(42, Math.min(72, stickBase.getBoundingClientRect().width * 0.42));
 
@@ -683,13 +691,26 @@ function setupTouchController(hostElement, state)
         stickBase.style.transform = `translate(${stickBaseCenterX - zoneRect.left - stickBase.offsetWidth / 2}px, ${stickBaseCenterY - zoneRect.top - stickBase.offsetHeight / 2}px)`;
     };
 
-    const resetStick = () =>
+    const resetStick = (event) =>
     {
+        if (event && stickPointerId !== event.pointerId) return;
+        event?.preventDefault?.();
+
+        const isTap =
+            event?.type === "pointerup" &&
+            stickTapMoved == false &&
+            performance.now() - stickTapStartTime <= leftStickTapMaxMs;
+
         axes[0] = 0;
         axes[1] = 0;
         stickPointerId = undefined;
         stickBase.style.transform = "";
         stickKnob.style.transform = "";
+
+        if (isTap) {
+            leftStickPressPulseReads = Math.max(leftStickPressPulseReads, 2);
+        }
+
         state.requestImmediateFrame?.();
     };
 
@@ -697,6 +718,9 @@ function setupTouchController(hostElement, state)
     {
         if (stickPointerId !== event.pointerId) return;
         event.preventDefault();
+        if (Math.hypot(event.clientX - stickTapStartX, event.clientY - stickTapStartY) > leftStickTapMaxMovementPx) {
+            stickTapMoved = true;
+        }
 
         const radius = stickRadius();
         clampStickBaseCenter();
@@ -740,6 +764,10 @@ function setupTouchController(hostElement, state)
         stickZone.setPointerCapture?.(event.pointerId);
         stickBaseCenterX = event.clientX;
         stickBaseCenterY = event.clientY;
+        stickTapStartTime = performance.now();
+        stickTapStartX = event.clientX;
+        stickTapStartY = event.clientY;
+        stickTapMoved = false;
         clampStickBaseCenter();
         moveStickBase();
         updateStick(event);
@@ -807,12 +835,21 @@ function setupTouchController(hostElement, state)
         axes,
         readGamepad()
         {
+            const effectiveButtons = buttons.map(pressed => ({ pressed, value: pressed ? 1 : 0 }));
+            if (leftStickPressPulseReads > 0) {
+                effectiveButtons[leftStickPressButtonIndex] = { pressed: true, value: 1 };
+                leftStickPressPulseReads--;
+                if (leftStickPressPulseReads === 0) {
+                    window.setTimeout(() => state.requestImmediateFrame?.(), 0);
+                }
+            }
+
             return {
                 id: "Klooie Touch Controller (Xbox)",
                 index: 1000,
                 connected: true,
                 mapping: "klooie-touch",
-                buttons: buttons.map(pressed => ({ pressed, value: pressed ? 1 : 0 })),
+                buttons: effectiveButtons,
                 axes: axes.slice(0)
             };
         },

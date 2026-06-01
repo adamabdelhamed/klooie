@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace klooie.blazor.BrowserConsole;
 
@@ -56,6 +57,10 @@ public sealed class BrowserAssetProvider : IBinaryAssetProvider
             return await http.GetFromJsonAsync<string[]>(ManifestPath) ?? [];
         }
         catch (HttpRequestException)
+        {
+            return [];
+        }
+        catch (JsonException)
         {
             return [];
         }
