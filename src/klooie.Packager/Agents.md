@@ -11,6 +11,7 @@ This project builds the `kpack` command line tool. It packages normal klooie pro
 - The WebHost template injects a touch controller overlay only for coarse-pointer/touch environments. It synthesizes a browser gamepad snapshot with `mapping: "klooie-touch"` and Xbox-style button indexes; keep it compatible with `klooie/Controllers/BrowserGamepadController.cs` rather than app-specific input code.
 - Browser title, favicon, PWA manifest names, colors, and icon paths are generated from `[KlooieWebTarget]` metadata. Keep this C#-driven path intact so app authors do not need to edit host pages or manifests.
 - Mobile zoom is a browser presentation-layer feature in `Templates/WebHost/wwwroot/klooieFramePump.js`. It changes measured/rendered cell size before terminal dimensions are sent to the app; do not add app/game APIs for zoom.
+- The mobile zoom buttons step on the displayed percent scale in 5% increments. Keep the internal zoom derived from `zoomDefault * displayedPercent / 100` so app-specific min/default/max values can tune the experience without making the UI feel irregular.
 
 ## Key Files
 

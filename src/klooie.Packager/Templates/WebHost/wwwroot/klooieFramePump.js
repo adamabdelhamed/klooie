@@ -502,10 +502,17 @@ function normalizeMobileOptions(options) {
 }
 
 function buildZoomLevels(options) {
-    const relativeLevels = [0.75, 0.85, 1, 1.15, 1.35, 1.65, 2.15];
-    const levels = relativeLevels
-        .map(relative => options.zoomDefault * relative)
-        .concat([options.zoomMin, options.zoomDefault, options.zoomMax])
+    const displayStep = 5;
+    const minDisplayPercent = Math.ceil(((options.zoomMin / options.zoomDefault) * 100) / displayStep) * displayStep;
+    const maxDisplayPercent = Math.floor(((options.zoomMax / options.zoomDefault) * 100) / displayStep) * displayStep;
+    const displayPercents = [];
+    for (let percent = minDisplayPercent; percent <= maxDisplayPercent; percent += displayStep) {
+        displayPercents.push(percent);
+    }
+
+    const levels = displayPercents
+        .concat([100])
+        .map(percent => options.zoomDefault * (percent / 100))
         .map(level => roundZoom(clamp(level, options.zoomMin, options.zoomMax)))
         .filter((level, index, all) => all.indexOf(level) === index)
         .sort((left, right) => left - right);
