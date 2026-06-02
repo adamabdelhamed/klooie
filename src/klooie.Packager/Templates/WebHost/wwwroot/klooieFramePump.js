@@ -24,6 +24,7 @@ window.klooieFramePump = {
     start(dotNetRef, hostElement, mobileOptions) {
         const id = this.nextId++;
         const canvas = hostElement.querySelector("canvas");
+        const normalizedMobileOptions = normalizeMobileOptions(mobileOptions);
         const state = {
             stopped: false,
             lastTimestamp: performance.now(),
@@ -42,8 +43,8 @@ window.klooieFramePump = {
             knownGamepads: new Map(),
             touchController: undefined,
             zoomControl: undefined,
-            mobileOptions: normalizeMobileOptions(mobileOptions),
-            zoomLevels: [0.6, 0.7, 0.8, 0.9, 1.0, 1.15, 1.3],
+            mobileOptions: normalizedMobileOptions,
+            zoomLevels: buildZoomLevels(normalizedMobileOptions),
             zoom: 1,
             baseCellWidth: 8,
             baseCellHeight: 16,
@@ -374,6 +375,7 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
         const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
         const gamepadSnapshotJson = readGamepadSnapshotJson(state);
         const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson);
+        applyBrowserControllerCommands(state, terminalFrame);
         state.renderer.render(canvas, terminalFrame, state);
         state.sizeDirty = false;
     } catch (error) {
@@ -484,11 +486,40 @@ function teardownGamepads(state) {
 
 function normalizeMobileOptions(options) {
     options = options || {};
+    const zoomMin = normalizePositiveNumber(options.zoomMin ?? options.ZoomMin, 0.6);
+    const zoomDefault = normalizePositiveNumber(options.zoomDefault ?? options.ZoomDefault, 0.6);
+    const zoomMax = normalizePositiveNumber(options.zoomMax ?? options.ZoomMax, 1.3);
+    const orderedMin = Math.min(zoomMin, zoomDefault, zoomMax);
+    const orderedMax = Math.max(zoomMin, zoomDefault, zoomMax);
     return {
         requireHorizontal: !!(options.requireHorizontal ?? options.RequireHorizontal),
         touchTriggerToggle: !!(options.touchTriggerToggle ?? options.TouchTriggerToggle),
-        enableZoom: (options.enableZoom ?? options.EnableZoom) !== false
+        enableZoom: (options.enableZoom ?? options.EnableZoom) !== false,
+        zoomMin: orderedMin,
+        zoomDefault: clamp(zoomDefault, orderedMin, orderedMax),
+        zoomMax: orderedMax
     };
+}
+
+function buildZoomLevels(options) {
+    const relativeLevels = [0.75, 0.85, 1, 1.15, 1.35, 1.65, 2.15];
+    const levels = relativeLevels
+        .map(relative => options.zoomDefault * relative)
+        .concat([options.zoomMin, options.zoomDefault, options.zoomMax])
+        .map(level => roundZoom(clamp(level, options.zoomMin, options.zoomMax)))
+        .filter((level, index, all) => all.indexOf(level) === index)
+        .sort((left, right) => left - right);
+
+    return levels.length === 0 ? [options.zoomDefault] : levels;
+}
+
+function normalizePositiveNumber(value, fallback) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+}
+
+function roundZoom(value) {
+    return Math.round(value * 1000) / 1000;
 }
 
 function setupZoomControl(hostElement, state) {
@@ -507,7 +538,7 @@ function setupZoomControl(hostElement, state) {
     const zoomIn = control.querySelector(".klooie-zoom-in");
 
     const render = () => {
-        value.textContent = `${Math.round(state.zoom * 100)}%`;
+        value.textContent = `${Math.round((state.zoom / state.mobileOptions.zoomDefault) * 100)}%`;
         const index = getZoomIndex(state);
         zoomOut.disabled = index <= 0;
         zoomIn.disabled = index >= state.zoomLevels.length - 1;
@@ -516,7 +547,7 @@ function setupZoomControl(hostElement, state) {
     const setZoomIndex = index => {
         state.zoom = state.zoomLevels[clamp(index, 0, state.zoomLevels.length - 1)];
         try {
-            localStorage.setItem("klooie-mobile-zoom-v2", String(state.zoom));
+            localStorage.setItem("klooie-mobile-zoom-v3", String(state.zoom));
         } catch {
         }
         updateCellMetrics(hostElement, state);
@@ -553,24 +584,16 @@ function getInitialZoom(state) {
     if (!state.mobileOptions.enableZoom || !shouldShowTouchController()) return 1;
 
     try {
-        const stored = Number(localStorage.getItem("klooie-mobile-zoom-v2"));
-        if (Number.isFinite(stored) && state.zoomLevels.includes(stored)) return stored;
+        const stored = Number(localStorage.getItem("klooie-mobile-zoom-v3"));
+        if (Number.isFinite(stored)) return state.zoomLevels[getZoomIndex({ ...state, zoom: stored })];
     } catch {
     }
 
     return getDefaultMobileZoom(state);
 }
 
-function getDefaultMobileZoom() {
-    const viewport = window.visualViewport;
-    const width = viewport?.width || window.innerWidth || document.documentElement.clientWidth;
-    const height = viewport?.height || window.innerHeight || document.documentElement.clientHeight;
-    const shortSide = Math.min(width, height);
-    const longSide = Math.max(width, height);
-
-    if (shortSide <= 360 || longSide <= 700) return 0.6;
-    if (shortSide <= 390 || longSide <= 780) return 0.7;
-    return 0.8;
+function getDefaultMobileZoom(state) {
+    return state.mobileOptions.zoomDefault;
 }
 
 function getZoomIndex(state) {
@@ -845,13 +868,23 @@ function setupTouchController(hostElement, state)
             }
 
             return {
-                id: "Klooie Touch Controller (Xbox)",
+                id: "Mobile Touch Controller",
                 index: 1000,
                 connected: true,
                 mapping: "klooie-touch",
                 buttons: effectiveButtons,
                 axes: axes.slice(0)
             };
+        },
+        releaseButtons(indices)
+        {
+            for (const index of indices || []) {
+                if (!Number.isInteger(index) || index < 0 || index >= buttons.length) continue;
+                buttons[index] = false;
+                overlay.querySelector(`button[data-button="${index}"]`)?.classList.remove("is-pressed");
+            }
+
+            state.requestImmediateFrame?.();
         },
         dispose()
         {
@@ -1037,6 +1070,13 @@ function readGamepadSnapshotJson(state) {
     } catch (error) {
         console.debug("klooie gamepad snapshot skipped", error);
         return null;
+    }
+}
+
+function applyBrowserControllerCommands(state, frame) {
+    const releases = frame?.touchButtonReleases || frame?.TouchButtonReleases;
+    if (releases?.length > 0) {
+        state.touchController?.releaseButtons(releases);
     }
 }
 

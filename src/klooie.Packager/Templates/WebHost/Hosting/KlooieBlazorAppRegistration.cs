@@ -8,7 +8,13 @@ public sealed record KlooieBlazorAppRegistration(
     KlooieBlazorMobileOptions MobileOptions,
     KlooieBlazorBrowserMetadata BrowserMetadata);
 
-public sealed record KlooieBlazorMobileOptions(bool RequireHorizontal = false, bool TouchTriggerToggle = false, bool EnableZoom = true);
+public sealed record KlooieBlazorMobileOptions(
+    bool RequireHorizontal = false,
+    bool TouchTriggerToggle = false,
+    bool EnableZoom = true,
+    double ZoomMin = 0.6,
+    double ZoomDefault = 0.6,
+    double ZoomMax = 1.3);
 
 public sealed record KlooieBlazorBrowserMetadata(
     string BrowserTitle,

@@ -11,7 +11,8 @@ public sealed class BrowserConsoleFrame
         Y = Array.Empty<int>(),
         Text = Array.Empty<string>(),
         Foreground = Array.Empty<int>(),
-        Background = Array.Empty<int>()
+        Background = Array.Empty<int>(),
+        TouchButtonReleases = Array.Empty<int>()
     };
 
     public required int Width { get; init; }
@@ -22,4 +23,5 @@ public sealed class BrowserConsoleFrame
     public required string[] Text { get; init; }
     public required int[] Foreground { get; init; }
     public required int[] Background { get; init; }
+    public int[] TouchButtonReleases { get; init; } = Array.Empty<int>();
 }

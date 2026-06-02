@@ -24,4 +24,10 @@ public sealed class KlooieWebTargetAttribute : Attribute
     public bool RequireHorizontal { get; set; }
 
     public bool TouchTriggerToggle { get; set; }
+
+    public double MobileZoomMin { get; set; } = 0.6;
+
+    public double MobileZoomDefault { get; set; } = 0.6;
+
+    public double MobileZoomMax { get; set; } = 1.3;
 }

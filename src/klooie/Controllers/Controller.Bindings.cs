@@ -523,7 +523,11 @@ public sealed partial class Controller
 
     private void ResetTriggerRuntimeState()
     {
+        var leftWasDown = LeftTrigger.IsDown;
+        var rightWasDown = RightTrigger.IsDown;
         LeftTrigger.ResetState();
         RightTrigger.ResetState();
+        if (leftWasDown) programmaticButtonReleased?.Fire(ControllerButtonId.LeftTrigger);
+        if (rightWasDown) programmaticButtonReleased?.Fire(ControllerButtonId.RightTrigger);
     }
 }

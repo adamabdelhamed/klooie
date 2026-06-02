@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Security;
 using System.Security.Cryptography;
@@ -786,7 +787,10 @@ internal static class Program
                     runAsync: {{target.ToFuncTaskExpression()}},
                     mobileOptions: new KlooieBlazorMobileOptions(
                         RequireHorizontal: {{target.RequireHorizontal.ToString().ToLowerInvariant()}},
-                        TouchTriggerToggle: {{target.TouchTriggerToggle.ToString().ToLowerInvariant()}}),
+                        TouchTriggerToggle: {{target.TouchTriggerToggle.ToString().ToLowerInvariant()}},
+                        ZoomMin: {{target.MobileZoomMin.ToString(CultureInfo.InvariantCulture)}},
+                        ZoomDefault: {{target.MobileZoomDefault.ToString(CultureInfo.InvariantCulture)}},
+                        ZoomMax: {{target.MobileZoomMax.ToString(CultureInfo.InvariantCulture)}}),
                     browserMetadata: new KlooieBlazorBrowserMetadata(
                         BrowserTitle: "{{EscapeCSharpString(target.BrowserTitle)}}",
                         PwaName: "{{EscapeCSharpString(target.PwaName)}}",
@@ -1284,7 +1288,10 @@ internal sealed record WebEntryPoint(
     string ThemeColor,
     string BackgroundColor,
     bool RequireHorizontal,
-    bool TouchTriggerToggle)
+    bool TouchTriggerToggle,
+    double MobileZoomMin,
+    double MobileZoomDefault,
+    double MobileZoomMax)
 {
     public string ToFuncTaskExpression()
     {
@@ -1382,7 +1389,10 @@ internal static class WebEntryPointDiscoverer
             ReadAttributeString(attributeSource, "ThemeColor") ?? "#000000",
             ReadAttributeString(attributeSource, "BackgroundColor") ?? "#000000",
             ReadAttributeBool(attributeSource, "RequireHorizontal"),
-            ReadAttributeBool(attributeSource, "TouchTriggerToggle"));
+            ReadAttributeBool(attributeSource, "TouchTriggerToggle"),
+            ReadAttributeDouble(attributeSource, "MobileZoomMin", 0.6),
+            ReadAttributeDouble(attributeSource, "MobileZoomDefault", 0.6),
+            ReadAttributeDouble(attributeSource, "MobileZoomMax", 1.3));
     }
 
     private static string? ReadAttributeString(string? attributeSource, string propertyName)
@@ -1399,6 +1409,14 @@ internal static class WebEntryPointDiscoverer
 
         var match = Regex.Match(attributeSource, $@"\b{Regex.Escape(propertyName)}\s*=\s*(?<value>true|false)", RegexOptions.IgnoreCase);
         return match.Success && bool.TryParse(match.Groups["value"].Value, out var value) && value;
+    }
+
+    private static double ReadAttributeDouble(string? attributeSource, string propertyName, double defaultValue)
+    {
+        if (attributeSource is null) return defaultValue;
+
+        var match = Regex.Match(attributeSource, $@"\b{Regex.Escape(propertyName)}\s*=\s*(?<value>-?\d+(?:\.\d+)?)", RegexOptions.IgnoreCase);
+        return match.Success && double.TryParse(match.Groups["value"].Value, CultureInfo.InvariantCulture, out var value) ? value : defaultValue;
     }
 
     private static int FindMatchingBrace(string text, int openBraceIndex)

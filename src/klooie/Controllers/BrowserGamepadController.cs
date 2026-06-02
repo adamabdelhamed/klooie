@@ -23,6 +23,17 @@ public static class BrowserControllerInput
             controllers[i].UpdateFromJson(json);
         }
     }
+
+    public static int[] DrainTouchButtonReleases()
+    {
+        HashSet<int>? releases = null;
+        for (var i = 0; i < controllers.Count; i++)
+        {
+            controllers[i].DrainTouchButtonReleases(ref releases);
+        }
+
+        return releases?.ToArray() ?? Array.Empty<int>();
+    }
 }
 
 public class BrowserGamepadController : Recyclable, IControllerProvider
@@ -32,6 +43,7 @@ public class BrowserGamepadController : Recyclable, IControllerProvider
     private int activeIndex = -1;
     private bool wasConnected;
     private bool primed;
+    private List<int>? pendingTouchButtonReleases;
 
     public Controller Controller { get; }
     public bool IsConnected => Controller.IsConnected;
@@ -44,6 +56,7 @@ public class BrowserGamepadController : Recyclable, IControllerProvider
         Controller.SetConnectionState(false);
         BrowserControllerInput.Register(this);
         ConsoleApp.Current?.AfterPaint.Subscribe(this, static me => me.Controller.Update(), this);
+        Controller.ProgrammaticButtonReleased.Subscribe(this, static (me, button) => me.QueueTouchButtonRelease(button), this);
     }
 
     public void UpdateFromJson(string? json)
@@ -206,8 +219,45 @@ public class BrowserGamepadController : Recyclable, IControllerProvider
     private void PollTriggers(WebGamepadState gamepad)
     {
         var nowTicks = DateTime.UtcNow.Ticks;
-        Controller.PollTrigger(ControllerButtonId.LeftTrigger, ReadButton(gamepad, 6) || Controller.IsTriggerDriven(ControllerButtonId.LeftTrigger), nowTicks, TriggerRepeatInterval);
-        Controller.PollTrigger(ControllerButtonId.RightTrigger, ReadButton(gamepad, 7) || Controller.IsTriggerDriven(ControllerButtonId.RightTrigger), nowTicks, TriggerRepeatInterval);
+        PollTrigger(ControllerButtonId.LeftTrigger, gamepad, 6, nowTicks);
+        PollTrigger(ControllerButtonId.RightTrigger, gamepad, 7, nowTicks);
+    }
+
+    private void PollTrigger(ControllerButtonId trigger, WebGamepadState gamepad, int buttonIndex, long nowTicks)
+    {
+        var browserPressed = ReadButton(gamepad, buttonIndex);
+        Controller.PollTrigger(trigger, browserPressed || Controller.IsTriggerDriven(trigger), nowTicks, TriggerRepeatInterval);
+        if (gamepad.Mapping == "klooie-touch" && browserPressed && Controller.GetButton(trigger).IsDown == false)
+        {
+            pendingTouchButtonReleases ??= new List<int>();
+            if (pendingTouchButtonReleases.Contains(buttonIndex) == false) pendingTouchButtonReleases.Add(buttonIndex);
+        }
+    }
+
+    internal void DrainTouchButtonReleases(ref HashSet<int>? releases)
+    {
+        if (pendingTouchButtonReleases is null || pendingTouchButtonReleases.Count == 0) return;
+
+        releases ??= new HashSet<int>();
+        for (var i = 0; i < pendingTouchButtonReleases.Count; i++)
+        {
+            releases.Add(pendingTouchButtonReleases[i]);
+        }
+
+        pendingTouchButtonReleases.Clear();
+    }
+
+    private void QueueTouchButtonRelease(ControllerButtonId button)
+    {
+        if (ActiveGamepad?.Mapping != "klooie-touch") return;
+
+        var buttonIndex = -1;
+        if (button == ControllerButtonId.LeftTrigger) buttonIndex = 6;
+        else if (button == ControllerButtonId.RightTrigger) buttonIndex = 7;
+        if (buttonIndex < 0) return;
+
+        pendingTouchButtonReleases ??= new List<int>();
+        if (pendingTouchButtonReleases.Contains(buttonIndex) == false) pendingTouchButtonReleases.Add(buttonIndex);
     }
 
     private void PollStick(ControllerStickId stick, WebGamepadState gamepad, int xAxis, int yAxis, int pressButton)
@@ -236,6 +286,7 @@ public class BrowserGamepadController : Recyclable, IControllerProvider
         activeIndex = -1;
         wasConnected = false;
         primed = false;
+        pendingTouchButtonReleases?.Clear();
         ActiveGamepad = null;
         Controller.TryDispose("klooie/Controllers/BrowserGamepadController.cs");
     }

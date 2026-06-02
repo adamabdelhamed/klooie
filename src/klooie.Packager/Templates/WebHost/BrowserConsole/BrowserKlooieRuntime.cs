@@ -41,7 +41,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
             currentApp.Tick(budget);
         }
 
-        return FrameBuffer.ToFrame();
+        return AddBrowserControllerCommands(FrameBuffer.ToFrame());
     }
 
     public void EnqueueKey(ConsoleKeyInfo key)
@@ -61,6 +61,25 @@ public sealed class BrowserKlooieRuntime : IDisposable
         catch
         {
         }
+    }
+
+    private static BrowserConsoleFrame AddBrowserControllerCommands(BrowserConsoleFrame frame)
+    {
+        var touchButtonReleases = BrowserControllerInput.DrainTouchButtonReleases();
+        if (touchButtonReleases.Length == 0) return frame;
+
+        return new BrowserConsoleFrame
+        {
+            Width = frame.Width,
+            Height = frame.Height,
+            Full = frame.Full,
+            X = frame.X,
+            Y = frame.Y,
+            Text = frame.Text,
+            Foreground = frame.Foreground,
+            Background = frame.Background,
+            TouchButtonReleases = touchButtonReleases
+        };
     }
 
     public void Dispose()
