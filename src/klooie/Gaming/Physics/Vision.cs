@@ -18,7 +18,6 @@ public class Vision : Recyclable, IFrameTask
     private Event? _visibleObjectsChanged;
     public Event VisibleObjectsChanged => _visibleObjectsChanged ??= Event.Create();
 
-
     private VisionFilterContext targetFilterContext = new VisionFilterContext();
     private readonly Dictionary<GameCollider, VisuallyTrackedObject> trackedObjectsMap = new Dictionary<GameCollider, VisuallyTrackedObject>(10);
     private Event<VisionFilterContext>? _targetBeingEvaluated;
@@ -35,14 +34,19 @@ public class Vision : Recyclable, IFrameTask
     public static Vision Create(FrameTaskScheduler scheduler, GameCollider eye, bool autoScan = true)
     {
         var vision = VisionPool.Instance.Rent();
-        vision.Eye = eye;
-        vision.AngleStep = 5;
-        vision.AngleFuzz = 2;
-        vision.CastingMode = CastingMode.SingleRay;
-        vision.MaxMemoryTime = TimeSpan.FromSeconds(2);
-        _visionInitiated?.Fire(vision);
-        scheduler.Enqueue(vision);
+        vision.Construct(scheduler, eye, autoScan);
         return vision;
+    }
+
+    protected void Construct(FrameTaskScheduler scheduler, GameCollider eye, bool autoScan = true)
+    {
+        Eye = eye;
+        AngleStep = 5;
+        AngleFuzz = 2;
+        CastingMode = CastingMode.SingleRay;
+        MaxMemoryTime = TimeSpan.FromSeconds(2);
+        _visionInitiated?.Fire(this);
+        scheduler.Enqueue(this);
     }
 
     protected override void OnInit()
@@ -58,6 +62,7 @@ public class Vision : Recyclable, IFrameTask
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     public void Scan()
     {
+        if(ShouldSkipScan()) return;
         RemoveStaleTrackedObjects();
         if (Eye.IsVisible == false)
         {
@@ -81,6 +86,8 @@ public class Vision : Recyclable, IFrameTask
         }
         _visibleObjectsChanged?.Fire();
     }
+
+    protected virtual bool ShouldSkipScan() => false;
 
     [method: MethodImpl(MethodImplOptions.NoInlining)]
     private RectF ResolveQueryBounds()
