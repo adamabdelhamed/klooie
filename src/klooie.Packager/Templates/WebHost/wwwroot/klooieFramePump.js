@@ -193,6 +193,7 @@ window.klooieAssets = {
                 const panner = typeof context.createStereoPanner === "function" ? context.createStereoPanner() : undefined;
                 const state = {
                     id: playbackId,
+                    trackId: url,
                     context,
                     source,
                     gain,
@@ -205,6 +206,7 @@ window.klooieAssets = {
                     paused: !!startPaused || this.paused,
                     startedAt: 0,
                     offset: 0,
+                    positionTimer: undefined,
                     stopping: false,
                     buffer
                 };
@@ -225,6 +227,7 @@ window.klooieAssets = {
                     if (!state.stopping && !state.loop) {
                         this.active.delete(playbackId);
                         this.music.delete(playbackId);
+                        this.clearPositionTimer(state);
                         state.dotNetRef?.invokeMethodAsync("AudioEnded", Number(playbackId))
                             ?.catch(error => console.debug("klooie audio ended callback failed", error));
                     }
@@ -245,9 +248,35 @@ window.klooieAssets = {
 
             state.startedAt = state.context.currentTime - state.offset;
             state.source.start(0, state.offset);
+            this.startPositionTimer(state);
         } catch (error) {
             console.debug("klooie audio play skipped", error);
         }
+    },
+
+    startPositionTimer(state) {
+        this.clearPositionTimer(state);
+        if (!state.isMusic || !state.dotNetRef) return;
+
+        const publishPosition = () => {
+            if (state.stopping || !this.active.has(state.id)) return;
+
+            const duration = state.buffer?.duration || 0;
+            const elapsed = Math.max(0, state.context.currentTime - state.startedAt);
+            const position = state.loop && duration > 0 ? elapsed % duration : Math.min(elapsed, duration || elapsed);
+            state.dotNetRef.invokeMethodAsync("AudioPositionChanged", Number(state.id), state.trackId || "", position, true)
+                .catch(error => console.debug("klooie audio position callback failed", error));
+        };
+
+        publishPosition();
+        state.positionTimer = window.setInterval(publishPosition, 100);
+    },
+
+    clearPositionTimer(state) {
+        if (state?.positionTimer === undefined) return;
+
+        window.clearInterval(state.positionTimer);
+        state.positionTimer = undefined;
     },
 
     getAudioContext() {
@@ -312,6 +341,7 @@ window.klooieAssets = {
         }
 
         try {
+            this.clearPositionTimer(state);
             state.source.disconnect();
             state.panner?.disconnect();
             state.gain.disconnect();

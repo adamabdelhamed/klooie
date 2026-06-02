@@ -2,7 +2,7 @@ using Microsoft.JSInterop;
 
 namespace klooie.blazor.BrowserConsole;
 
-public sealed class BrowserSoundProvider : ISoundProvider
+public sealed class BrowserSoundProvider : ISoundProvider, IAudioPlaybackPositionProvider
 {
     private readonly IJSRuntime js;
     private readonly ScheduledSignalSourceMixer scheduledSignalMixer = new(ScheduledSignalMixerMode.PreRenderOnly);
@@ -19,6 +19,7 @@ public sealed class BrowserSoundProvider : ISoundProvider
     }
 
     public VolumeKnob MasterVolume { get; }
+    public Event<AudioPlaybackPosition> PlaybackPositionChanged { get; } = Event<AudioPlaybackPosition>.Create();
     public EventLoop EventLoop => ConsoleApp.Current!;
     public long SamplesRendered => 0;
     public IConsoleAudioRecordingSink? AudioRecordingSink { get; set; }
@@ -40,7 +41,7 @@ public sealed class BrowserSoundProvider : ISoundProvider
                 false,
                 isMusic,
                 paused,
-                null);
+                isMusic ? dotNetReference : null);
             return Lifetime.Completed;
         }
 
@@ -80,6 +81,12 @@ public sealed class BrowserSoundProvider : ISoundProvider
         {
             playback.TryDispose("Browser audio ended");
         }
+    }
+
+    [JSInvokable]
+    public void AudioPositionChanged(long playbackId, string trackId, double timeSeconds, bool isMusic)
+    {
+        PlaybackPositionChanged.Fire(new AudioPlaybackPosition(playbackId, trackId, Math.Max(0, timeSeconds), isMusic));
     }
 
     private float MixVolume(VolumeKnob? volumeKnob)
@@ -133,7 +140,7 @@ public sealed class BrowserSoundProvider : ISoundProvider
                 loop,
                 isMusic,
                 provider.paused,
-                loop ? null : provider.dotNetReference);
+                isMusic || loop == false ? provider.dotNetReference : null);
 
             return playback;
         }

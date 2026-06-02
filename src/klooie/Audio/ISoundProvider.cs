@@ -32,6 +32,27 @@ public interface IConsoleAudioRecordingSink
     void WriteAudioSamples(ReadOnlySpan<float> samples, int sampleRate, int channels, long firstSampleFrame);
 }
 
+public readonly struct AudioPlaybackPosition
+{
+    public readonly long PlaybackId;
+    public readonly string TrackId;
+    public readonly double TimeSeconds;
+    public readonly bool IsMusic;
+
+    public AudioPlaybackPosition(long playbackId, string trackId, double timeSeconds, bool isMusic)
+    {
+        PlaybackId = playbackId;
+        TrackId = trackId;
+        TimeSeconds = timeSeconds;
+        IsMusic = isMusic;
+    }
+}
+
+public interface IAudioPlaybackPositionProvider
+{
+    Event<AudioPlaybackPosition> PlaybackPositionChanged { get; }
+}
+
 public static class SoundProvider
 {
     public const int SampleRate = 44100;
