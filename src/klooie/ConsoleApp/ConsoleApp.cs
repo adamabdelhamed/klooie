@@ -110,6 +110,11 @@ public class ConsoleApp : EventLoop
     public ConsolePanel LayoutRoot => layoutRoot;
 
     /// <summary>
+    /// Renderer-level presentation transforms for browser hosts. Desktop hosts ignore these requests.
+    /// </summary>
+    public IConsoleBitmapPresentation Presentation { get; } = new ConsoleBitmapPresentation();
+
+    /// <summary>
     /// Gets or sets the sound provider for this application. Note that klooie.Windows (a separate package)
     /// is required to actually have sound on Windows.
     /// </summary>

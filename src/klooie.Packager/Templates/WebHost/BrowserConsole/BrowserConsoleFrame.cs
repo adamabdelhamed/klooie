@@ -15,7 +15,8 @@ public sealed class BrowserConsoleFrame
         Foreground = Array.Empty<int>(),
         Background = Array.Empty<int>(),
         TouchButtonReleases = Array.Empty<int>(),
-        TouchButtonHints = Array.Empty<BrowserTouchButtonHint>()
+        TouchButtonHints = Array.Empty<BrowserTouchButtonHint>(),
+        Presentation = ConsoleBitmapPresentationFrame.Empty
     };
 
     public required int Width { get; init; }
@@ -28,4 +29,5 @@ public sealed class BrowserConsoleFrame
     public required int[] Background { get; init; }
     public int[] TouchButtonReleases { get; init; } = Array.Empty<int>();
     public BrowserTouchButtonHint[] TouchButtonHints { get; init; } = Array.Empty<BrowserTouchButtonHint>();
+    public ConsoleBitmapPresentationFrame Presentation { get; init; } = ConsoleBitmapPresentationFrame.Empty;
 }

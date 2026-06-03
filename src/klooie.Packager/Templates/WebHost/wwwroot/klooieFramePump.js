@@ -404,7 +404,8 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
         pumpKeyboardRepeats(state, timestamp);
         const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
         const gamepadSnapshotJson = readGamepadSnapshotJson(state);
-        const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson);
+        const mobileExperience = shouldShowTouchController();
+        const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson, mobileExperience);
         applyBrowserControllerCommands(state, terminalFrame);
         state.renderer.render(canvas, terminalFrame, state);
         state.sizeDirty = false;
@@ -1224,6 +1225,235 @@ function getMeasureProbe(hostElement) {
     return probe;
 }
 
+function buildPresentationDraws(frame, state, pixelWidth, pixelHeight) {
+    const fullSource = { left: 0, top: 0, width: frame.width, height: frame.height };
+    const fullTarget = { left: 0, top: 0, width: pixelWidth, height: pixelHeight };
+    const focus = updateFocusPresentation(frame, state, pixelWidth, pixelHeight, fullSource, fullTarget);
+    const viewTarget = mapSourceRectToTarget(fullSource, focus.source, focus.target);
+    const draws = [{ source: fullSource, target: viewTarget }];
+    const scaledRegions = frame.presentation?.scaledRegions || frame.presentation?.ScaledRegions || [];
+
+    for (const region of scaledRegions) {
+        const source = normalizePresentationRect(region.sourceRegion || region.SourceRegion, frame.width, frame.height);
+        if (!source) continue;
+
+        const scale = normalizePositiveNumber(region.scale ?? region.Scale, 1);
+        const baseTarget = mapSourceRectToTarget(source, focus.source, focus.target);
+        const targetWidth = baseTarget.width * scale;
+        const targetHeight = baseTarget.height * scale;
+        const anchor = region.anchor ?? region.Anchor ?? 0;
+        const offsetX = Number(region.offsetX ?? region.OffsetX ?? 0) * (baseTarget.width / Math.max(1, source.width));
+        const offsetY = Number(region.offsetY ?? region.OffsetY ?? 0) * (baseTarget.height / Math.max(1, source.height));
+        const anchorPoint = getAnchoredPoint(baseTarget, anchor);
+        const target = rectFromAnchor(anchorPoint.x + offsetX, anchorPoint.y + offsetY, targetWidth, targetHeight, anchor);
+        draws.push({ source, target });
+    }
+
+    return draws;
+}
+
+function getPresentationGlyphScale(draws, state) {
+    const baseCellWidth = Math.max(1, state.cellWidth * state.devicePixelRatio);
+    const baseCellHeight = Math.max(1, state.cellHeight * state.devicePixelRatio);
+    let scale = 1;
+
+    for (const draw of draws) {
+        const sourceWidth = Math.max(1, draw.source.width * baseCellWidth);
+        const sourceHeight = Math.max(1, draw.source.height * baseCellHeight);
+        scale = Math.max(scale, draw.target.width / sourceWidth, draw.target.height / sourceHeight);
+    }
+
+    return clamp(Math.ceil(scale), 1, 8);
+}
+
+function mapSourceRectToTarget(source, viewSource, viewTarget) {
+    const scaleX = viewTarget.width / Math.max(1, viewSource.width);
+    const scaleY = viewTarget.height / Math.max(1, viewSource.height);
+    return {
+        left: viewTarget.left + (source.left - viewSource.left) * scaleX,
+        top: viewTarget.top + (source.top - viewSource.top) * scaleY,
+        width: source.width * scaleX,
+        height: source.height * scaleY
+    };
+}
+
+function updateFocusPresentation(frame, state, pixelWidth, pixelHeight, fullSource, fullTarget) {
+    const activeFocus = getActiveFocusRegion(frame.presentation);
+    const now = performance.now();
+    const fullDraw = { source: fullSource, target: fullTarget };
+
+    if (activeFocus) {
+        const targetDraw = computeFocusDraw(activeFocus, frame, state, pixelWidth, pixelHeight);
+        if (!state.presentationFocus || state.presentationFocus.id !== activeFocus.id || state.presentationFocus.exiting) {
+            const fromDraw = state.presentationFocus?.currentDraw || fullDraw;
+            state.presentationFocus = { id: activeFocus.id, region: activeFocus, startedAt: now, exiting: false, fromDraw, toDraw: targetDraw };
+        } else {
+            state.presentationFocus.region = activeFocus;
+            state.presentationFocus.toDraw = targetDraw;
+        }
+
+        const duration = normalizePositiveNumber(activeFocus.animationMilliseconds ?? activeFocus.AnimationMilliseconds, 450);
+        const progress = easeInOutCinematic(clamp((now - state.presentationFocus.startedAt) / duration, 0, 1));
+        if (progress < 1) state.requestImmediateFrame?.();
+        const currentDraw = interpolateDraw(state.presentationFocus.fromDraw.source, state.presentationFocus.fromDraw.target, state.presentationFocus.toDraw.source, state.presentationFocus.toDraw.target, progress);
+        state.presentationFocus.currentDraw = currentDraw;
+        return currentDraw;
+    }
+
+    if (state.presentationFocus && !state.presentationFocus.exiting) {
+        state.presentationFocus = {
+            id: state.presentationFocus.id,
+            region: state.presentationFocus.region,
+            startedAt: now,
+            exiting: true,
+            fromDraw: state.presentationFocus.currentDraw || state.presentationFocus.toDraw || fullDraw,
+            toDraw: fullDraw
+        };
+    }
+
+    if (state.presentationFocus?.exiting) {
+        const region = state.presentationFocus.region;
+        const duration = normalizePositiveNumber(region.animationMilliseconds ?? region.AnimationMilliseconds, 450);
+        const progress = easeInOutCinematic(clamp((now - state.presentationFocus.startedAt) / duration, 0, 1));
+        if (progress < 1) {
+            state.requestImmediateFrame?.();
+            const currentDraw = interpolateDraw(state.presentationFocus.fromDraw.source, state.presentationFocus.fromDraw.target, state.presentationFocus.toDraw.source, state.presentationFocus.toDraw.target, progress);
+            state.presentationFocus.currentDraw = currentDraw;
+            return currentDraw;
+        }
+
+        state.presentationFocus = undefined;
+    }
+
+    return { source: fullSource, target: fullTarget };
+}
+
+function getActiveFocusRegion(presentation) {
+    const focusRegions = presentation?.focusRegions || presentation?.FocusRegions || [];
+    return focusRegions.length > 0 ? focusRegions[focusRegions.length - 1] : undefined;
+}
+
+function computeFocusDraw(region, frame, state, pixelWidth, pixelHeight) {
+    const source = normalizePresentationRect(region.sourceRegion || region.SourceRegion, frame.width, frame.height) || { left: 0, top: 0, width: frame.width, height: frame.height };
+    const padding = clamp(Number(region.padding ?? region.Padding ?? .06), 0, .45);
+    const safe = getSafeAreaPixels(pixelWidth, pixelHeight);
+    const safeWidth = Math.max(1, pixelWidth - safe.left - safe.right);
+    const safeHeight = Math.max(1, pixelHeight - safe.top - safe.bottom);
+    const paddedWidth = Math.max(1, safeWidth * (1 - padding * 2));
+    const paddedHeight = Math.max(1, safeHeight * (1 - padding * 2));
+    const sourcePixelWidth = source.width * state.cellWidth * state.devicePixelRatio;
+    const sourcePixelHeight = source.height * state.cellHeight * state.devicePixelRatio;
+    const scale = Math.min(paddedWidth / Math.max(1, sourcePixelWidth), paddedHeight / Math.max(1, sourcePixelHeight));
+    const targetWidth = sourcePixelWidth * scale;
+    const targetHeight = sourcePixelHeight * scale;
+    const anchor = region.anchor ?? region.Anchor ?? 4;
+    const offsetX = Number(region.offsetX ?? region.OffsetX ?? 0) * state.cellWidth * state.devicePixelRatio;
+    const offsetY = Number(region.offsetY ?? region.OffsetY ?? 0) * state.cellHeight * state.devicePixelRatio;
+    const anchorPoint = getAnchoredPoint({
+        left: safe.left + padding * safeWidth,
+        top: safe.top + padding * safeHeight,
+        width: paddedWidth,
+        height: paddedHeight
+    }, anchor);
+
+    return {
+        source,
+        target: rectFromAnchor(anchorPoint.x + offsetX, anchorPoint.y + offsetY, targetWidth, targetHeight, anchor)
+    };
+}
+
+function normalizePresentationRect(rect, frameWidth, frameHeight) {
+    if (!rect) return undefined;
+
+    const left = Math.max(0, Number(rect.left ?? rect.Left ?? 0));
+    const top = Math.max(0, Number(rect.top ?? rect.Top ?? 0));
+    if (left >= frameWidth || top >= frameHeight) return undefined;
+
+    const width = Math.max(1, Number(rect.width ?? rect.Width ?? 1));
+    const height = Math.max(1, Number(rect.height ?? rect.Height ?? 1));
+    const clippedWidth = Math.min(width, frameWidth - left);
+    const clippedHeight = Math.min(height, frameHeight - top);
+    return { left, top, width: clippedWidth, height: clippedHeight };
+}
+
+function getSafeAreaPixels(pixelWidth, pixelHeight) {
+    let probe = document.querySelector(".klooie-safe-area-probe");
+    if (!probe) {
+        probe = document.createElement("div");
+        probe.className = "klooie-safe-area-probe";
+        probe.style.cssText = "position:fixed;inset:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);pointer-events:none;visibility:hidden;";
+        document.body.appendChild(probe);
+    }
+
+    const style = window.getComputedStyle(probe);
+    const dpr = window.devicePixelRatio || 1;
+    return {
+        left: clamp(parseCssPixels(style.paddingLeft) * dpr, 0, pixelWidth * .45),
+        top: clamp(parseCssPixels(style.paddingTop) * dpr, 0, pixelHeight * .45),
+        right: clamp(parseCssPixels(style.paddingRight) * dpr, 0, pixelWidth * .45),
+        bottom: clamp(parseCssPixels(style.paddingBottom) * dpr, 0, pixelHeight * .45)
+    };
+}
+
+function parseCssPixels(value) {
+    const numeric = Number.parseFloat(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function getAnchoredPoint(rect, anchor) {
+    const index = normalizeAnchor(anchor);
+    const x = index === 2 || index === 5 || index === 8 ? rect.left + rect.width : index === 1 || index === 4 || index === 7 ? rect.left + rect.width / 2 : rect.left;
+    const y = index === 6 || index === 7 || index === 8 ? rect.top + rect.height : index === 3 || index === 4 || index === 5 ? rect.top + rect.height / 2 : rect.top;
+    return { x, y };
+}
+
+function rectFromAnchor(anchorX, anchorY, width, height, anchor) {
+    const index = normalizeAnchor(anchor);
+    const left = index === 2 || index === 5 || index === 8 ? anchorX - width : index === 1 || index === 4 || index === 7 ? anchorX - width / 2 : anchorX;
+    const top = index === 6 || index === 7 || index === 8 ? anchorY - height : index === 3 || index === 4 || index === 5 ? anchorY - height / 2 : anchorY;
+    return { left, top, width, height };
+}
+
+function normalizeAnchor(anchor) {
+    if (typeof anchor === "number") return clamp(Math.round(anchor), 0, 8);
+    switch (String(anchor || "Center")) {
+        case "TopLeft": return 0;
+        case "Top": return 1;
+        case "TopRight": return 2;
+        case "Left": return 3;
+        case "Right": return 5;
+        case "BottomLeft": return 6;
+        case "Bottom": return 7;
+        case "BottomRight": return 8;
+        default: return 4;
+    }
+}
+
+function interpolateDraw(fromSource, fromTarget, toSource, toTarget, progress) {
+    return {
+        source: interpolateRect(fromSource, toSource, progress),
+        target: interpolateRect(fromTarget, toTarget, progress)
+    };
+}
+
+function interpolateRect(from, to, progress) {
+    return {
+        left: lerp(from.left, to.left, progress),
+        top: lerp(from.top, to.top, progress),
+        width: lerp(from.width, to.width, progress),
+        height: lerp(from.height, to.height, progress)
+    };
+}
+
+function lerp(from, to, progress) {
+    return from + (to - from) * progress;
+}
+
+function easeInOutCinematic(value) {
+    value = clamp(value, 0, 1);
+    return value * value * value * (value * (value * 6 - 15) + 10);
+}
+
 function createConsoleRenderer(canvas, state) {
     try {
         return new WebGl2CellConsoleRenderer(canvas, state);
@@ -1328,14 +1558,18 @@ class WebGl2CellConsoleRenderer {
             atlasSize: gl.getUniformLocation(this.program, "u_atlasSize"),
             atlasCellSize: gl.getUniformLocation(this.program, "u_atlasCellSize"),
             glyphSize: gl.getUniformLocation(this.program, "u_glyphSize"),
-            atlasColumns: gl.getUniformLocation(this.program, "u_atlasColumns")
+            atlasColumns: gl.getUniformLocation(this.program, "u_atlasColumns"),
+            sourceOrigin: gl.getUniformLocation(this.program, "u_sourceOrigin"),
+            sourceSize: gl.getUniformLocation(this.program, "u_sourceSize"),
+            targetOrigin: gl.getUniformLocation(this.program, "u_targetOrigin"),
+            targetSize: gl.getUniformLocation(this.program, "u_targetSize")
         };
 
         this.configureCellTexture(this.glyphTexture);
         this.configureCellTexture(this.foregroundTexture);
         this.configureCellTexture(this.backgroundTexture);
         this.configureAtlasTexture();
-        this.ensureMetrics(state);
+        this.ensureMetrics(state, 1);
     }
 
     invalidateMetrics() {
@@ -1363,11 +1597,13 @@ class WebGl2CellConsoleRenderer {
             canvas.height = pixelHeight;
         }
 
-        this.ensureMetrics(state);
+        const draws = buildPresentationDraws(frame, state, pixelWidth, pixelHeight);
+        const glyphScale = getPresentationGlyphScale(draws, state);
+        this.ensureMetrics(state, glyphScale);
         const resized = this.ensureCellTextures(frame.width, frame.height);
         const uploadAll = this.applyFrame(frame, resized);
         this.uploadCellTextures(uploadAll);
-        this.draw(pixelWidth, pixelHeight, state);
+        this.draw(pixelWidth, pixelHeight, frame, state, draws);
         if (!this.blackFrameReported && this.blackFrameChecks < 3 && frame.text.length > 0) {
             this.blackFrameChecks++;
             this.blackFrameReported = !verifyWebGlFrame(this.gl, pixelWidth, pixelHeight, "webgl2-cell", frame, state);
@@ -1392,11 +1628,12 @@ class WebGl2CellConsoleRenderer {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     }
 
-    ensureMetrics(state) {
+    ensureMetrics(state, presentationScale) {
         const dpr = state.devicePixelRatio || 1;
-        const glyphWidth = Math.max(1, Math.ceil(state.cellWidth * dpr));
-        const glyphHeight = Math.max(1, Math.ceil(state.cellHeight * dpr));
-        const key = `${glyphWidth}x${glyphHeight}:${dpr}:${state.font}`;
+        const scale = normalizePositiveNumber(presentationScale, 1);
+        const glyphWidth = Math.max(1, Math.ceil(state.cellWidth * dpr * scale));
+        const glyphHeight = Math.max(1, Math.ceil(state.cellHeight * dpr * scale));
+        const key = `${glyphWidth}x${glyphHeight}:${dpr}:${scale}:${state.font}`;
         if (key === this.metricsKey) return;
 
         this.metricsKey = key;
@@ -1405,7 +1642,7 @@ class WebGl2CellConsoleRenderer {
         this.atlasCellWidth = glyphWidth + this.atlasPadding * 2;
         this.atlasCellHeight = glyphHeight + this.atlasPadding * 2;
         this.atlasColumns = Math.max(1, Math.floor(this.atlasSize / this.atlasCellWidth));
-        this.scaledFont = scaleFont(state.font, dpr);
+        this.scaledFont = scaleFont(state.font, dpr * scale);
         this.rasterizeAtlas();
     }
 
@@ -1605,7 +1842,7 @@ class WebGl2CellConsoleRenderer {
         this.atlasDirty = false;
     }
 
-    draw(pixelWidth, pixelHeight, state) {
+    draw(pixelWidth, pixelHeight, frame, state, draws) {
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, pixelWidth, pixelHeight);
@@ -1626,19 +1863,35 @@ class WebGl2CellConsoleRenderer {
         this.bindTexture(2, this.backgroundTexture, this.locations.backgroundTexture);
         this.bindTexture(3, this.atlasTexture, this.locations.atlasTexture);
 
+        for (const draw of draws) {
+            this.drawRegion(pixelWidth, pixelHeight, draw);
+        }
+    }
+
+    drawRegion(pixelWidth, pixelHeight, draw) {
+        const gl = this.gl;
+        gl.uniform2f(this.locations.sourceOrigin, draw.source.left, draw.source.top);
+        gl.uniform2f(this.locations.sourceSize, draw.source.width, draw.source.height);
+        gl.uniform2f(this.locations.targetOrigin, draw.target.left, draw.target.top);
+        gl.uniform2f(this.locations.targetSize, draw.target.width, draw.target.height);
+
         const data = this.vertexData;
-        data[0] = 0;
-        data[1] = 0;
-        data[2] = pixelWidth;
-        data[3] = 0;
-        data[4] = 0;
-        data[5] = pixelHeight;
-        data[6] = 0;
-        data[7] = pixelHeight;
-        data[8] = pixelWidth;
-        data[9] = 0;
-        data[10] = pixelWidth;
-        data[11] = pixelHeight;
+        const left = draw.target.left;
+        const top = draw.target.top;
+        const right = left + draw.target.width;
+        const bottom = top + draw.target.height;
+        data[0] = left;
+        data[1] = top;
+        data[2] = right;
+        data[3] = top;
+        data[4] = left;
+        data[5] = bottom;
+        data[6] = left;
+        data[7] = bottom;
+        data[8] = right;
+        data[9] = top;
+        data[10] = right;
+        data[11] = bottom;
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, data, gl.STREAM_DRAW);
@@ -1797,7 +2050,7 @@ class WebGlConsoleRenderer {
             this.drawText(this.renderTargetWidth, this.renderTargetHeight);
         }
 
-        this.blitToCanvas(displayPixelWidth, displayPixelHeight);
+        this.blitToCanvas(displayPixelWidth, displayPixelHeight, frame, state);
         if (!this.blackFrameReported && this.blackFrameChecks < 3 && frame.text.length > 0) {
             this.blackFrameChecks++;
             this.blackFrameReported = !verifyWebGlFrame(this.gl, displayPixelWidth, displayPixelHeight, "webgl-retained", frame, state);
@@ -1990,7 +2243,7 @@ class WebGlConsoleRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.textVertexCount);
     }
 
-    blitToCanvas(pixelWidth, pixelHeight) {
+    blitToCanvas(pixelWidth, pixelHeight, frame, state) {
         const gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, pixelWidth, pixelHeight);
@@ -2003,14 +2256,12 @@ class WebGlConsoleRenderer {
         gl.bindTexture(gl.TEXTURE_2D, this.frameTexture);
         gl.uniform1i(this.screenLocations.frame, 0);
 
-        const data = new Float32Array([
-            0, 0, 0, 1,
-            pixelWidth, 0, 1, 1,
-            0, pixelHeight, 0, 0,
-            0, pixelHeight, 0, 0,
-            pixelWidth, 0, 1, 1,
-            pixelWidth, pixelHeight, 1, 0
-        ]);
+        const vertices = [];
+        const draws = buildPresentationDraws(frame, state, pixelWidth, pixelHeight);
+        for (const draw of draws) {
+            this.appendScreenRegion(vertices, draw, state);
+        }
+        const data = new Float32Array(vertices);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.screenBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, data, gl.STREAM_DRAW);
@@ -2020,8 +2271,31 @@ class WebGlConsoleRenderer {
         gl.vertexAttribPointer(this.screenLocations.position, 2, gl.FLOAT, false, stride, 0);
         gl.enableVertexAttribArray(this.screenLocations.texCoord);
         gl.vertexAttribPointer(this.screenLocations.texCoord, 2, gl.FLOAT, false, stride, 2 * Float32Array.BYTES_PER_ELEMENT);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        gl.drawArrays(gl.TRIANGLES, 0, data.length / 4);
         gl.enable(gl.BLEND);
+    }
+
+    appendScreenRegion(vertices, draw, state) {
+        const left = draw.target.left;
+        const top = draw.target.top;
+        const right = left + draw.target.width;
+        const bottom = top + draw.target.height;
+        const sourceLeft = draw.source.left * state.cellWidth * this.renderScale;
+        const sourceTop = draw.source.top * state.cellHeight * this.renderScale;
+        const sourceRight = sourceLeft + draw.source.width * state.cellWidth * this.renderScale;
+        const sourceBottom = sourceTop + draw.source.height * state.cellHeight * this.renderScale;
+        const u0 = sourceLeft / this.renderTargetWidth;
+        const u1 = sourceRight / this.renderTargetWidth;
+        const v0 = 1 - sourceTop / this.renderTargetHeight;
+        const v1 = 1 - sourceBottom / this.renderTargetHeight;
+
+        vertices.push(
+            left, top, u0, v0,
+            right, top, u1, v0,
+            left, bottom, u0, v1,
+            left, bottom, u0, v1,
+            right, top, u1, v0,
+            right, bottom, u1, v1);
     }
 
     parseColor(color) {
@@ -2038,6 +2312,8 @@ class Canvas2DConsoleRenderer {
     constructor(canvas) {
         canvas.dataset.klooieRenderer = "canvas2d";
         this.context = canvas.getContext("2d", { alpha: false });
+        this.frameCanvas = createRasterCanvas(1, 1);
+        this.frameContext = this.frameCanvas.getContext("2d", { alpha: false });
     }
 
     invalidateMetrics() {
@@ -2047,8 +2323,6 @@ class Canvas2DConsoleRenderer {
     }
 
     render(canvas, frame, state) {
-        if (!frame.full && frame.text.length === 0) return;
-
         const cssWidth = frame.width * state.cellWidth;
         const cssHeight = frame.height * state.cellHeight;
         const pixelWidth = Math.max(1, Math.ceil(cssWidth * state.devicePixelRatio));
@@ -2059,12 +2333,18 @@ class Canvas2DConsoleRenderer {
             canvas.height = pixelHeight;
         }
 
-        this.context.setTransform(state.devicePixelRatio, 0, 0, state.devicePixelRatio, 0, 0);
-        this.context.textBaseline = "top";
-        this.context.font = state.font;
+        if (this.frameCanvas.width !== pixelWidth || this.frameCanvas.height !== pixelHeight) {
+            this.frameCanvas.width = pixelWidth;
+            this.frameCanvas.height = pixelHeight;
+            frame = { ...frame, full: true };
+        }
+
+        this.frameContext.setTransform(state.devicePixelRatio, 0, 0, state.devicePixelRatio, 0, 0);
+        this.frameContext.textBaseline = "top";
+        this.frameContext.font = state.font;
         if (frame.full) {
-            this.context.fillStyle = "#000";
-            this.context.fillRect(0, 0, cssWidth, cssHeight);
+            this.frameContext.fillStyle = "#000";
+            this.frameContext.fillRect(0, 0, cssWidth, cssHeight);
         }
 
         const x = frame.x;
@@ -2077,10 +2357,28 @@ class Canvas2DConsoleRenderer {
             const left = x[i] * state.cellWidth;
             const top = y[i] * state.cellHeight;
             const runText = text[i];
-            this.context.fillStyle = frameColorToCss(background[i]);
-            this.context.fillRect(left, top, runText.length * state.cellWidth, state.cellHeight);
-            this.context.fillStyle = frameColorToCss(foreground[i]);
-            this.context.fillText(runText, left, top);
+            this.frameContext.fillStyle = frameColorToCss(background[i]);
+            this.frameContext.fillRect(left, top, runText.length * state.cellWidth, state.cellHeight);
+            this.frameContext.fillStyle = frameColorToCss(foreground[i]);
+            this.frameContext.fillText(runText, left, top);
+        }
+
+        this.context.setTransform(1, 0, 0, 1, 0, 0);
+        this.context.fillStyle = "#000";
+        this.context.fillRect(0, 0, pixelWidth, pixelHeight);
+
+        const draws = buildPresentationDraws(frame, state, pixelWidth, pixelHeight);
+        for (const draw of draws) {
+            this.context.drawImage(
+                this.frameCanvas,
+                draw.source.left * state.cellWidth * state.devicePixelRatio,
+                draw.source.top * state.cellHeight * state.devicePixelRatio,
+                draw.source.width * state.cellWidth * state.devicePixelRatio,
+                draw.source.height * state.cellHeight * state.devicePixelRatio,
+                draw.target.left,
+                draw.target.top,
+                draw.target.width,
+                draw.target.height);
         }
     }
 }
@@ -2236,11 +2534,21 @@ uniform vec2 u_atlasSize;
 uniform vec2 u_atlasCellSize;
 uniform vec2 u_glyphSize;
 uniform float u_atlasColumns;
+uniform vec2 u_sourceOrigin;
+uniform vec2 u_sourceSize;
+uniform vec2 u_targetOrigin;
+uniform vec2 u_targetSize;
 out vec4 outColor;
 
 void main() {
     vec2 pixel = vec2(gl_FragCoord.x, u_resolution.y - gl_FragCoord.y);
-    vec2 cell = floor(pixel / u_cellSize);
+    vec2 local = (pixel - u_targetOrigin) / u_targetSize;
+    if (local.x < 0.0 || local.y < 0.0 || local.x > 1.0 || local.y > 1.0) {
+        discard;
+    }
+
+    vec2 sourcePixel = (u_sourceOrigin + local * u_sourceSize) * u_cellSize;
+    vec2 cell = floor(sourcePixel / u_cellSize);
     if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= u_gridSize.x || cell.y >= u_gridSize.y) {
         outColor = vec4(0.0, 0.0, 0.0, 1.0);
         return;
@@ -2257,7 +2565,7 @@ void main() {
 
     float atlasColumn = mod(glyphIndex, u_atlasColumns);
     float atlasRow = floor(glyphIndex / u_atlasColumns);
-    vec2 cellLocal = fract(pixel / u_cellSize);
+    vec2 cellLocal = fract(sourcePixel / u_cellSize);
     vec2 atlasPixel = vec2(atlasColumn, atlasRow) * u_atlasCellSize + vec2(2.0, 2.0) + cellLocal * u_glyphSize;
     float glyphAlpha = texture(u_atlas, atlasPixel / u_atlasSize).a;
     vec4 foreground = texture(u_foreground, cellUv);

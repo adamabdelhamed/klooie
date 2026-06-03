@@ -64,6 +64,12 @@ public static class Dialog
     public static Event Shown { get; private set; } = Event.Create();
 
     /// <summary>
+    /// An event that fires when any dialog is shown, with the root dialog container as the argument.
+    /// It is fired once the dialog has settled (i.e. the open animation is completed, the content is visible).
+    /// </summary>
+    public static Event<ConsoleControl> ShownWithContainer { get; private set; } = Event<ConsoleControl>.Create();
+
+    /// <summary>
     /// Shows a dialog
     /// </summary>
     /// <param name="contentFactory">responsible for setting your own width and height</param>
@@ -110,6 +116,7 @@ public static class Dialog
         }
 
         Shown.Fire();
+        ShownWithContainer.Fire(dialogContainer);
 
         
         if (content.IsStillValid(lease))

@@ -28,11 +28,12 @@ public sealed class BrowserKlooieRuntime : IDisposable
 
     public BrowserConsoleFrameBuffer FrameBuffer { get; }
 
-    public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget, string? gamepadSnapshotJson)
+    public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget, string? gamepadSnapshotJson, bool mobileExperience)
     {
         if (disposed) return BrowserConsoleFrame.Empty;
         if (entryException is not null) throw entryException;
 
+        BrowserHostEnvironment.IsMobileExperience = mobileExperience;
         TryUpdateBrowserGamepads(gamepadSnapshotJson);
         host.Resize(width, height);
         var currentApp = app;
@@ -41,7 +42,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
             currentApp.Tick(budget);
         }
 
-        return AddBrowserControllerCommands(FrameBuffer.ToFrame());
+        return AddFrameCommands(FrameBuffer.ToFrame(), currentApp);
     }
 
     public void EnqueueKey(ConsoleKeyInfo key)
@@ -63,11 +64,12 @@ public sealed class BrowserKlooieRuntime : IDisposable
         }
     }
 
-    private static BrowserConsoleFrame AddBrowserControllerCommands(BrowserConsoleFrame frame)
+    private static BrowserConsoleFrame AddFrameCommands(BrowserConsoleFrame frame, ConsoleApp? app)
     {
         var touchButtonReleases = BrowserControllerInput.DrainTouchButtonReleases();
         var touchButtonHints = BrowserControllerInput.DrainTouchButtonHints();
-        if (touchButtonReleases.Length == 0 && touchButtonHints.Length == 0) return frame;
+        var presentation = app?.Presentation is ConsoleBitmapPresentation browserPresentation ? browserPresentation.CreateFrame() : ConsoleBitmapPresentationFrame.Empty;
+        if (touchButtonReleases.Length == 0 && touchButtonHints.Length == 0 && ReferenceEquals(presentation, ConsoleBitmapPresentationFrame.Empty)) return frame;
 
         return new BrowserConsoleFrame
         {
@@ -80,7 +82,8 @@ public sealed class BrowserKlooieRuntime : IDisposable
             Foreground = frame.Foreground,
             Background = frame.Background,
             TouchButtonReleases = touchButtonReleases,
-            TouchButtonHints = touchButtonHints
+            TouchButtonHints = touchButtonHints,
+            Presentation = presentation
         };
     }
 
