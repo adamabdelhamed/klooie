@@ -59,6 +59,7 @@ public sealed partial class Controller
             PruneContexts(app.FocusStackDepth);
             RefreshTriggerHandlers(resetTriggerState: true);
             RefreshTriggerHoldHandlers(resetTriggerState: true);
+            NotifyBindingStateChanged();
         }, this);
     }
 
@@ -100,8 +101,12 @@ public sealed partial class Controller
 
         var binding = new FocusedButtonBinding { Control = control, Action = handler };
         bindings.Add(binding);
+        NotifyBindingStateChanged();
 
-        control.OnDisposed(() => RemoveFocusedBinding(context, button, binding));
+        control.OnDisposed(() =>
+        {
+            if (RemoveFocusedBinding(context, button, binding)) NotifyBindingStateChanged();
+        });
     }
 
     public void BindFocusedButton(ControllerButtonId button, Action handler, ConsoleControl control) => BindFocusedButton(GetButton(button), handler, control);
@@ -119,12 +124,14 @@ public sealed partial class Controller
         };
         triggerBindings.Add(binding);
         RefreshTriggerHandlers(resetTriggerState: true);
+        NotifyBindingStateChanged();
 
         lt.OnDisposed(() =>
         {
             if (triggerBindings.Remove(binding))
             {
                 RefreshTriggerHandlers(resetTriggerState: true);
+                NotifyBindingStateChanged();
             }
         });
     }
@@ -140,12 +147,14 @@ public sealed partial class Controller
         };
         triggerHoldBindings.Add(binding);
         RefreshTriggerHoldHandlers(resetTriggerState: true);
+        NotifyBindingStateChanged();
 
         lt.OnDisposed(() =>
         {
             if (triggerHoldBindings.Remove(binding))
             {
                 RefreshTriggerHoldHandlers(resetTriggerState: true);
+                NotifyBindingStateChanged();
             }
         });
     }
@@ -312,14 +321,15 @@ public sealed partial class Controller
         }
     }
 
-    private static void BindButton(InputContext context, GamePadButton button, Action handler, ILifetime lt)
+    private void BindButton(InputContext context, GamePadButton button, Action handler, ILifetime lt)
     {
         var binding = new ButtonBinding { Action = handler };
         AddBinding(context, button, binding);
+        NotifyBindingStateChanged();
 
         lt.OnDisposed(() =>
         {
-            RemoveBinding(context, button, binding);
+            if (RemoveBinding(context, button, binding)) NotifyBindingStateChanged();
         });
     }
 
@@ -334,9 +344,9 @@ public sealed partial class Controller
         bindings.Add(binding);
     }
 
-    private static void RemoveBinding(InputContext context, GamePadButton button, ButtonBinding binding)
+    private static bool RemoveBinding(InputContext context, GamePadButton button, ButtonBinding binding)
     {
-        if (context.ButtonBindings.TryGetValue(button, out var list) == false) return;
+        if (context.ButtonBindings.TryGetValue(button, out var list) == false) return false;
 
         for (var i = list.Count - 1; i >= 0; i--)
         {
@@ -344,13 +354,15 @@ public sealed partial class Controller
 
             list.RemoveAt(i);
             if (list.Count == 0) context.ButtonBindings.Remove(button);
-            break;
+            return true;
         }
+
+        return false;
     }
 
-    private static void RemoveFocusedBinding(InputContext context, GamePadButton button, FocusedButtonBinding binding)
+    private static bool RemoveFocusedBinding(InputContext context, GamePadButton button, FocusedButtonBinding binding)
     {
-        if (context.FocusedButtonBindings.TryGetValue(button, out var list) == false) return;
+        if (context.FocusedButtonBindings.TryGetValue(button, out var list) == false) return false;
 
         for (var i = list.Count - 1; i >= 0; i--)
         {
@@ -358,8 +370,10 @@ public sealed partial class Controller
 
             list.RemoveAt(i);
             if (list.Count == 0) context.FocusedButtonBindings.Remove(button);
-            break;
+            return true;
         }
+
+        return false;
     }
  
 
@@ -529,5 +543,14 @@ public sealed partial class Controller
         RightTrigger.ResetState();
         if (leftWasDown) programmaticButtonReleased?.Fire(ControllerButtonId.LeftTrigger);
         if (rightWasDown) programmaticButtonReleased?.Fire(ControllerButtonId.RightTrigger);
+    }
+
+    public bool IsButtonEffectivelyBound(ControllerButtonId button) => TryResolveBoundAction(GetButton(button), out _);
+
+    public bool IsTriggerEffectivelyBound(ControllerButtonId trigger)
+    {
+        if (trigger == ControllerButtonId.LeftTrigger) return leftTriggerHandler != null || leftTriggerHoldStarted != null || leftTriggerHoldEnded != null;
+        if (trigger == ControllerButtonId.RightTrigger) return rightTriggerHandler != null || rightTriggerHoldStarted != null || rightTriggerHoldEnded != null;
+        throw new ArgumentOutOfRangeException(nameof(trigger), trigger, "Only triggers can be queried for trigger bindings.");
     }
 }

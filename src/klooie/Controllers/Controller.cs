@@ -8,6 +8,8 @@ public sealed partial class Controller : Recyclable
     private Event? anyButtonPressed;
     private Event<bool>? connectionChanged;
     private Event<ControllerButtonId>? programmaticButtonReleased;
+    private Event? bindingStateChanged;
+    private int bindingStateChangedLease;
     private readonly IControllerProvider? provider;
 
     public Controller(IControllerProvider? provider = null)
@@ -66,7 +68,19 @@ public sealed partial class Controller : Recyclable
     }
     public Event<bool> ConnectionChanged => connectionChanged ??= Event<bool>.Create();
     public Event<ControllerButtonId> ProgrammaticButtonReleased => programmaticButtonReleased ??= Event<ControllerButtonId>.Create();
+    public Event BindingStateChanged
+    {
+        get
+        {
+            if (bindingStateChanged != null) return bindingStateChanged;
+            bindingStateChanged = Event.Create();
+            bindingStateChangedLease = bindingStateChanged.Lease;
+            return bindingStateChanged;
+        }
+    }
     public bool IsConnected { get; private set; }
+
+    private void NotifyBindingStateChanged() => bindingStateChanged?.Fire();
 
     public void Update()
     {
@@ -399,6 +413,8 @@ public sealed partial class Controller : Recyclable
         connectionChanged = null;
         programmaticButtonReleased?.TryDispose("TotallyTextualBattleSimulator/Controller/Controller.cs:385");
         programmaticButtonReleased = null;
+        bindingStateChanged?.Dispose(bindingStateChangedLease, "TotallyTextualBattleSimulator/Controller/Controller.cs:387");
+        bindingStateChanged = null;
         contextStack.Clear();
         contextStack.Add(new InputContext());
         globalContext.ButtonBindings.Clear();

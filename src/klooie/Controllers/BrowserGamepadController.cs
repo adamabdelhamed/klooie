@@ -19,6 +19,8 @@ public static class BrowserControllerInput
 
     public static void Unregister(BrowserGamepadController controller) => controllers.Remove(controller);
 
+    public static void NotifyTouchHintStateChanged() => touchHintsDirty = true;
+
     public static void UpdateGamepadsJson(string? json)
     {
         for (var i = 0; i < controllers.Count; i++)
@@ -39,11 +41,15 @@ public static class BrowserControllerInput
     }
 
     public static void SetTouchButtonHints(IReadOnlyList<BrowserTouchButtonHint> hints, ILifetime lifetime)
+        => SetTouchButtonHints(hints, static () => true, lifetime);
+
+    public static void SetTouchButtonHints(IReadOnlyList<BrowserTouchButtonHint> hints, Func<bool> isActive, ILifetime lifetime)
     {
         ArgumentNullException.ThrowIfNull(hints);
+        ArgumentNullException.ThrowIfNull(isActive);
         ArgumentNullException.ThrowIfNull(lifetime);
 
-        var scope = new BrowserTouchButtonHintScope(++nextTouchHintScopeId, hints.ToArray());
+        var scope = new BrowserTouchButtonHintScope(++nextTouchHintScopeId, hints.ToArray(), isActive);
         touchHintScopes.Add(scope);
         touchHintsDirty = true;
         lifetime.OnDisposed(scope, static scope =>
@@ -70,6 +76,8 @@ public static class BrowserControllerInput
         Dictionary<int, BrowserTouchButtonHint> effective = new();
         for (var scopeIndex = 0; scopeIndex < touchHintScopes.Count; scopeIndex++)
         {
+            if (touchHintScopes[scopeIndex].IsActive() == false) continue;
+
             var hints = touchHintScopes[scopeIndex].Hints;
             for (var hintIndex = 0; hintIndex < hints.Length; hintIndex++)
             {
@@ -83,7 +91,56 @@ public static class BrowserControllerInput
             if (effective.ContainsKey(button) == false) effective[button] = BrowserTouchButtonHint.Defaults[i] with { Enabled = false };
         }
 
-        return effective.Values.OrderBy(h => h.Button).ToArray();
+        return effective.Values.Select(ApplyEffectiveEnabled).OrderBy(h => h.Button).ToArray();
+    }
+
+    private static BrowserTouchButtonHint ApplyEffectiveEnabled(BrowserTouchButtonHint hint)
+    {
+        if (hint.Enabled == false) return hint;
+        return hint with { Enabled = IsTouchButtonEffectivelyBound(hint.Button) };
+    }
+
+    private static bool IsTouchButtonEffectivelyBound(int button)
+    {
+        if (button == 10) return true;
+        if (TryGetTouchButtonId(button, out var buttonId) == false) return true;
+        if (controllers.Count == 0) return true;
+
+        for (var i = 0; i < controllers.Count; i++)
+        {
+            var controller = controllers[i].Controller;
+            if (buttonId == ControllerButtonId.LeftTrigger || buttonId == ControllerButtonId.RightTrigger)
+            {
+                if (controller.IsTriggerEffectivelyBound(buttonId)) return true;
+                continue;
+            }
+
+            if (controller.IsButtonEffectivelyBound(buttonId)) return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetTouchButtonId(int button, out ControllerButtonId buttonId)
+    {
+        buttonId = ControllerButtonId.A;
+        if (button == 0) return SetButtonId(ControllerButtonId.A, out buttonId);
+        if (button == 1) return SetButtonId(ControllerButtonId.B, out buttonId);
+        if (button == 2) return SetButtonId(ControllerButtonId.X, out buttonId);
+        if (button == 3) return SetButtonId(ControllerButtonId.Y, out buttonId);
+        if (button == 4) return SetButtonId(ControllerButtonId.LeftBumper, out buttonId);
+        if (button == 5) return SetButtonId(ControllerButtonId.RightBumper, out buttonId);
+        if (button == 6) return SetButtonId(ControllerButtonId.LeftTrigger, out buttonId);
+        if (button == 7) return SetButtonId(ControllerButtonId.RightTrigger, out buttonId);
+        if (button == 8) return SetButtonId(ControllerButtonId.View, out buttonId);
+        if (button == 9) return SetButtonId(ControllerButtonId.Start, out buttonId);
+        return false;
+    }
+
+    private static bool SetButtonId(ControllerButtonId value, out ControllerButtonId buttonId)
+    {
+        buttonId = value;
+        return true;
     }
 }
 
@@ -107,7 +164,7 @@ public readonly record struct BrowserTouchButtonHint(int Button, string Label, b
     ];
 }
 
-internal sealed record BrowserTouchButtonHintScope(int Id, BrowserTouchButtonHint[] Hints);
+internal sealed record BrowserTouchButtonHintScope(int Id, BrowserTouchButtonHint[] Hints, Func<bool> IsActive);
 
 public class BrowserGamepadController : Recyclable, IControllerProvider
 {
@@ -130,6 +187,7 @@ public class BrowserGamepadController : Recyclable, IControllerProvider
         BrowserControllerInput.Register(this);
         ConsoleApp.Current?.AfterPaint.Subscribe(this, static me => me.Controller.Update(), this);
         Controller.ProgrammaticButtonReleased.Subscribe(this, static (me, button) => me.QueueTouchButtonRelease(button), this);
+        Controller.BindingStateChanged.Subscribe(this, static me => BrowserControllerInput.NotifyTouchHintStateChanged(), this);
     }
 
     public void UpdateFromJson(string? json)
