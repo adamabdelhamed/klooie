@@ -45,6 +45,7 @@ body {
     --klooie-touch-button-size: clamp(48px, 15dvh, 68px);
     --klooie-touch-shoulder-width: clamp(56px, 12vw, 82px);
     --klooie-touch-shoulder-height: clamp(34px, 10dvh, 48px);
+    --klooie-touch-shoulder-lift: clamp(22px, 5dvh, 40px);
     position: fixed;
     inset: 0;
     z-index: 20;
@@ -65,6 +66,11 @@ body {
         box-shadow: 0 6px 18px rgba(0, 0, 0, .22), inset 0 0 18px rgba(255, 255, 255, .08);
         font: 700 16px Consolas, "Cascadia Mono", "Courier New", monospace;
     }
+
+.klooie-touch-face button,
+.klooie-touch-shoulders button {
+    border-radius: 14px;
+}
 
         .klooie-touch-controller button.is-pressed {
             background: rgba(255, 255, 255, 1);
@@ -273,13 +279,13 @@ body {
 
 .klooie-touch-left-shoulders {
     left: calc(var(--klooie-touch-stick-left) + var(--klooie-touch-stick-center-offset));
-    bottom: calc(var(--klooie-touch-stick-bottom) + var(--klooie-touch-stick-height) + clamp(6px, 1.6dvh, 10px));
+    bottom: calc(var(--klooie-touch-stick-bottom) + var(--klooie-touch-stick-height) + var(--klooie-touch-shoulder-lift) + clamp(6px, 1.6dvh, 10px));
     transform: translateX(-50%);
 }
 
 .klooie-touch-right-shoulders {
     right: calc(var(--klooie-touch-face-right) + var(--klooie-touch-face-center-offset));
-    bottom: calc(var(--klooie-touch-face-bottom) + var(--klooie-touch-face-height) + clamp(6px, 1.6dvh, 10px));
+    bottom: calc(var(--klooie-touch-face-bottom) + var(--klooie-touch-face-height) + var(--klooie-touch-shoulder-lift) + clamp(6px, 1.6dvh, 10px));
     transform: translateX(50%);
 }
 
@@ -292,6 +298,11 @@ body {
     background: rgba(255, 255, 255, .54);
 }
 
+    .klooie-touch-shoulders button[data-button="6"],
+    .klooie-touch-shoulders button[data-button="7"] {
+        min-height: calc(var(--klooie-touch-shoulder-height) * 2);
+    }
+
     .klooie-touch-shoulders button.is-pressed {
         color: rgba(15, 23, 42, 1);
         background: rgba(255, 255, 255, 1);
@@ -299,15 +310,16 @@ body {
 
 .klooie-touch-system {
     position: absolute;
-    left: var(--klooie-touch-system-left);
+    left: calc(var(--klooie-touch-stick-left) + var(--klooie-touch-stick-center-offset));
     bottom: var(--klooie-touch-system-bottom);
     display: flex;
-    gap: clamp(8px, 2vw, 12px);
+    gap: clamp(6px, 1.6vw, 8px);
     pointer-events: none;
+    transform: translateX(-50%);
 }
 
     .klooie-touch-system button {
-        min-width: clamp(52px, 12vw, 64px);
+        min-width: clamp(50px, 10vw, 60px);
         min-height: var(--klooie-touch-system-height);
         padding: 0 10px;
         font-size: clamp(12px, 3dvh, 13px);
