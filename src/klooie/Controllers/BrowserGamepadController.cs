@@ -7,6 +7,9 @@ namespace klooie;
 public static class BrowserControllerInput
 {
     private static readonly List<BrowserGamepadController> controllers = new();
+    private static readonly List<BrowserTouchButtonHintScope> touchHintScopes = new();
+    private static int nextTouchHintScopeId;
+    private static bool touchHintsDirty;
 
     public static void Register(BrowserGamepadController controller)
     {
@@ -34,7 +37,77 @@ public static class BrowserControllerInput
 
         return releases?.ToArray() ?? Array.Empty<int>();
     }
+
+    public static void SetTouchButtonHints(IReadOnlyList<BrowserTouchButtonHint> hints, ILifetime lifetime)
+    {
+        ArgumentNullException.ThrowIfNull(hints);
+        ArgumentNullException.ThrowIfNull(lifetime);
+
+        var scope = new BrowserTouchButtonHintScope(++nextTouchHintScopeId, hints.ToArray());
+        touchHintScopes.Add(scope);
+        touchHintsDirty = true;
+        lifetime.OnDisposed(scope, static scope =>
+        {
+            for (var i = touchHintScopes.Count - 1; i >= 0; i--)
+            {
+                if (touchHintScopes[i].Id == scope.Id)
+                {
+                    touchHintScopes.RemoveAt(i);
+                    touchHintsDirty = true;
+                    return;
+                }
+            }
+        });
+    }
+
+    public static BrowserTouchButtonHint[] DrainTouchButtonHints()
+    {
+        if (touchHintsDirty == false) return Array.Empty<BrowserTouchButtonHint>();
+
+        touchHintsDirty = false;
+        if (touchHintScopes.Count == 0) return BrowserTouchButtonHint.ResetToDefaults;
+
+        Dictionary<int, BrowserTouchButtonHint> effective = new();
+        for (var scopeIndex = 0; scopeIndex < touchHintScopes.Count; scopeIndex++)
+        {
+            var hints = touchHintScopes[scopeIndex].Hints;
+            for (var hintIndex = 0; hintIndex < hints.Length; hintIndex++)
+            {
+                effective[hints[hintIndex].Button] = hints[hintIndex];
+            }
+        }
+
+        for (var i = 0; i < BrowserTouchButtonHint.Defaults.Length; i++)
+        {
+            var button = BrowserTouchButtonHint.Defaults[i].Button;
+            if (effective.ContainsKey(button) == false) effective[button] = BrowserTouchButtonHint.Defaults[i] with { Enabled = false };
+        }
+
+        return effective.Values.OrderBy(h => h.Button).ToArray();
+    }
 }
+
+public readonly record struct BrowserTouchButtonHint(int Button, string Label, bool Enabled)
+{
+    public static BrowserTouchButtonHint[] ResetToDefaults { get; } = [new(-1, "", true)];
+
+    public static BrowserTouchButtonHint[] Defaults { get; } =
+    [
+        new(0, "A", true),
+        new(1, "B", true),
+        new(2, "X", true),
+        new(3, "Y", true),
+        new(4, "LB", true),
+        new(5, "RB", true),
+        new(6, "LT", true),
+        new(7, "RT", true),
+        new(8, "View", true),
+        new(9, "Menu", true),
+        new(10, "LS", true),
+    ];
+}
+
+internal sealed record BrowserTouchButtonHintScope(int Id, BrowserTouchButtonHint[] Hints);
 
 public class BrowserGamepadController : Recyclable, IControllerProvider
 {

@@ -1,3 +1,5 @@
+using klooie;
+
 namespace klooie.blazor.BrowserConsole;
 
 public sealed class BrowserConsoleFrame
@@ -12,7 +14,8 @@ public sealed class BrowserConsoleFrame
         Text = Array.Empty<string>(),
         Foreground = Array.Empty<int>(),
         Background = Array.Empty<int>(),
-        TouchButtonReleases = Array.Empty<int>()
+        TouchButtonReleases = Array.Empty<int>(),
+        TouchButtonHints = Array.Empty<BrowserTouchButtonHint>()
     };
 
     public required int Width { get; init; }
@@ -24,4 +27,5 @@ public sealed class BrowserConsoleFrame
     public required int[] Foreground { get; init; }
     public required int[] Background { get; init; }
     public int[] TouchButtonReleases { get; init; } = Array.Empty<int>();
+    public BrowserTouchButtonHint[] TouchButtonHints { get; init; } = Array.Empty<BrowserTouchButtonHint>();
 }

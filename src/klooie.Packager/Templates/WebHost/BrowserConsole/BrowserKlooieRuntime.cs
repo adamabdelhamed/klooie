@@ -66,7 +66,8 @@ public sealed class BrowserKlooieRuntime : IDisposable
     private static BrowserConsoleFrame AddBrowserControllerCommands(BrowserConsoleFrame frame)
     {
         var touchButtonReleases = BrowserControllerInput.DrainTouchButtonReleases();
-        if (touchButtonReleases.Length == 0) return frame;
+        var touchButtonHints = BrowserControllerInput.DrainTouchButtonHints();
+        if (touchButtonReleases.Length == 0 && touchButtonHints.Length == 0) return frame;
 
         return new BrowserConsoleFrame
         {
@@ -78,7 +79,8 @@ public sealed class BrowserKlooieRuntime : IDisposable
             Text = frame.Text,
             Foreground = frame.Foreground,
             Background = frame.Background,
-            TouchButtonReleases = touchButtonReleases
+            TouchButtonReleases = touchButtonReleases,
+            TouchButtonHints = touchButtonHints
         };
     }
 

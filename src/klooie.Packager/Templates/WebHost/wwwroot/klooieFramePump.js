@@ -667,7 +667,8 @@ function setupTouchController(hostElement, state)
             <button type="button" class="klooie-mobile-dismiss" aria-label="Dismiss">X</button>
         </div>
         <div class="klooie-touch-stick-zone">
-            <div class="klooie-touch-stick-base">
+            <div class="klooie-touch-stick-base" data-button="10">
+                <div class="klooie-touch-stick-label">LS</div>
                 <div class="klooie-touch-stick-knob"></div>
             </div>
         </div>
@@ -923,6 +924,10 @@ function setupTouchController(hostElement, state)
 
             state.requestImmediateFrame?.();
         },
+        applyButtonHints(hints)
+        {
+            applyTouchButtonHints(overlay, hints);
+        },
         dispose()
         {
             window.removeEventListener("resize", updateMobileMode);
@@ -1115,6 +1120,62 @@ function applyBrowserControllerCommands(state, frame) {
     if (releases?.length > 0) {
         state.touchController?.releaseButtons(releases);
     }
+
+    const hints = frame?.touchButtonHints || frame?.TouchButtonHints;
+    if (hints?.length > 0) {
+        state.touchController?.applyButtonHints(hints);
+    }
+}
+
+function applyTouchButtonHints(overlay, hints) {
+    if (!overlay) return;
+
+    const resetToDefaults = hints?.some?.(hint => Number(hint?.button ?? hint?.Button) < 0);
+    if (resetToDefaults) {
+        for (const element of overlay.querySelectorAll("[data-button]")) {
+            const index = Number(element.dataset.button);
+            const labelElement = element.classList.contains("klooie-touch-stick-base")
+                ? element.querySelector(".klooie-touch-stick-label")
+                : element;
+            if (labelElement) labelElement.textContent = getDefaultTouchButtonLabel(index);
+            element.classList.remove("is-disabled");
+            element.setAttribute("aria-disabled", "false");
+        }
+
+        return;
+    }
+
+    for (const hint of hints || []) {
+        const index = Number(hint?.button ?? hint?.Button);
+        if (!Number.isInteger(index) || index < 0) continue;
+
+        const label = String(hint?.label ?? hint?.Label ?? getDefaultTouchButtonLabel(index));
+        const enabled = (hint?.enabled ?? hint?.Enabled) !== false;
+        const element = overlay.querySelector(`[data-button="${index}"]`);
+        if (!element) continue;
+
+        const labelElement = element.classList.contains("klooie-touch-stick-base")
+            ? element.querySelector(".klooie-touch-stick-label")
+            : element;
+        if (labelElement) labelElement.textContent = label;
+        element.classList.toggle("is-disabled", !enabled);
+        element.setAttribute("aria-disabled", enabled ? "false" : "true");
+    }
+}
+
+function getDefaultTouchButtonLabel(index) {
+    if (index === 0) return "A";
+    if (index === 1) return "B";
+    if (index === 2) return "X";
+    if (index === 3) return "Y";
+    if (index === 4) return "LB";
+    if (index === 5) return "RB";
+    if (index === 6) return "LT";
+    if (index === 7) return "RT";
+    if (index === 8) return "View";
+    if (index === 9) return "Menu";
+    if (index === 10) return "LS";
+    return "";
 }
 
 function normalizeAxis(value) {
