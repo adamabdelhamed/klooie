@@ -97,6 +97,7 @@ public static class BrowserControllerInput
     private static BrowserTouchButtonHint ApplyEffectiveEnabled(BrowserTouchButtonHint hint)
     {
         if (hint.Enabled == false) return hint;
+        if (hint.ForceEnabled) return hint;
         return hint with { Enabled = IsTouchButtonEffectivelyBound(hint.Button) };
     }
 
@@ -144,7 +145,7 @@ public static class BrowserControllerInput
     }
 }
 
-public readonly record struct BrowserTouchButtonHint(int Button, string Label, bool Enabled)
+public readonly record struct BrowserTouchButtonHint(int Button, string Label, bool Enabled, bool ForceEnabled = false)
 {
     public static BrowserTouchButtonHint[] ResetToDefaults { get; } = [new(-1, "", true)];
 
