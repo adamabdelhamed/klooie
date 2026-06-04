@@ -12,6 +12,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
     private readonly Task entryTask;
     private ConsoleApp? app;
     private Exception? entryException;
+    private bool lastFrameHadPresentation;
     private bool disposed;
 
     public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http)
@@ -64,12 +65,15 @@ public sealed class BrowserKlooieRuntime : IDisposable
         }
     }
 
-    private static BrowserConsoleFrame AddFrameCommands(BrowserConsoleFrame frame, ConsoleApp? app)
+    private BrowserConsoleFrame AddFrameCommands(BrowserConsoleFrame frame, ConsoleApp? app)
     {
         var touchButtonReleases = BrowserControllerInput.DrainTouchButtonReleases();
         var touchButtonHints = BrowserControllerInput.DrainTouchButtonHints();
         var presentation = app?.Presentation is ConsoleBitmapPresentation browserPresentation ? browserPresentation.CreateFrame() : ConsoleBitmapPresentationFrame.Empty;
-        if (touchButtonReleases.Length == 0 && touchButtonHints.Length == 0 && ReferenceEquals(presentation, ConsoleBitmapPresentationFrame.Empty)) return frame;
+        var hasPresentation = ReferenceEquals(presentation, ConsoleBitmapPresentationFrame.Empty) == false;
+        if (touchButtonReleases.Length == 0 && touchButtonHints.Length == 0 && hasPresentation == false && lastFrameHadPresentation == false) return frame;
+
+        lastFrameHadPresentation = hasPresentation;
 
         return new BrowserConsoleFrame
         {

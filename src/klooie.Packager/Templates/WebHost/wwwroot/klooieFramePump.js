@@ -1502,11 +1502,11 @@ function easeInOutCinematic(value) {
 
 function createConsoleRenderer(canvas, state) {
     try {
-        return new WebGl2CellConsoleRenderer(canvas, state);
+        return new WebGlConsoleRenderer(canvas, state);
     } catch (error) {
-        console.warn("klooie WebGL2 cell renderer unavailable; falling back to retained WebGL renderer", error);
+        console.warn("klooie retained WebGL renderer unavailable; falling back to WebGL2 cell renderer", error);
         try {
-            return new WebGlConsoleRenderer(canvas, state);
+            return new WebGl2CellConsoleRenderer(canvas, state);
         } catch (fallbackError) {
             console.warn("klooie GPU renderer unavailable; falling back to Canvas2D", fallbackError);
             return new Canvas2DConsoleRenderer(canvas);
@@ -2135,8 +2135,8 @@ class WebGlConsoleRenderer {
 
         const gl = this.gl;
         gl.bindTexture(gl.TEXTURE_2D, this.frameTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -2410,6 +2410,7 @@ class Canvas2DConsoleRenderer {
         }
 
         this.context.setTransform(1, 0, 0, 1, 0, 0);
+        this.context.imageSmoothingEnabled = false;
         this.context.fillStyle = "#000";
         this.context.fillRect(0, 0, pixelWidth, pixelHeight);
 
@@ -2613,7 +2614,16 @@ void main() {
     float atlasRow = floor(glyphIndex / u_atlasColumns);
     vec2 cellLocal = fract(sourcePixel / u_cellSize);
     vec2 atlasPixel = vec2(atlasColumn, atlasRow) * u_atlasCellSize + vec2(2.0, 2.0) + cellLocal * u_glyphSize;
-    float glyphAlpha = texture(u_atlas, atlasPixel / u_atlasSize).a;
+    vec2 atlasUv = atlasPixel / u_atlasSize;
+    float glyphAlpha = texture(u_atlas, atlasUv).a;
+    vec2 presentationScale = u_targetSize / max(vec2(1.0), u_sourceSize * u_cellSize);
+    if (max(presentationScale.x, presentationScale.y) > 1.01) {
+        vec2 atlasTexel = vec2(1.0) / u_atlasSize;
+        glyphAlpha = max(glyphAlpha, texture(u_atlas, atlasUv + vec2(atlasTexel.x, 0.0)).a);
+        glyphAlpha = max(glyphAlpha, texture(u_atlas, atlasUv - vec2(atlasTexel.x, 0.0)).a);
+        glyphAlpha = max(glyphAlpha, texture(u_atlas, atlasUv + vec2(0.0, atlasTexel.y)).a);
+        glyphAlpha = max(glyphAlpha, texture(u_atlas, atlasUv - vec2(0.0, atlasTexel.y)).a);
+    }
     vec4 foreground = texture(u_foreground, cellUv);
     outColor = vec4(mix(background.rgb, foreground.rgb, glyphAlpha), 1.0);
 }`;
