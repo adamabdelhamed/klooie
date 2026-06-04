@@ -723,6 +723,7 @@ function setupTouchController(hostElement, state)
         overlay.classList.toggle("requires-horizontal", requireHorizontal);
         overlay.classList.toggle("is-portrait", requireHorizontal && portrait);
         hostElement.classList.toggle("klooie-mobile-portrait-blocked", requireHorizontal && portrait);
+        fitTouchButtonLabels(overlay);
         updateMobileActions();
     };
 
@@ -1138,7 +1139,7 @@ function applyTouchButtonHints(overlay, hints) {
             const labelElement = element.classList.contains("klooie-touch-stick-base")
                 ? element.querySelector(".klooie-touch-stick-label")
                 : element;
-            if (labelElement) labelElement.textContent = getDefaultTouchButtonLabel(index);
+            setTouchButtonLabel(element, labelElement, getDefaultTouchButtonLabel(index));
             element.classList.remove("is-disabled");
             element.setAttribute("aria-disabled", "false");
         }
@@ -1158,10 +1159,55 @@ function applyTouchButtonHints(overlay, hints) {
         const labelElement = element.classList.contains("klooie-touch-stick-base")
             ? element.querySelector(".klooie-touch-stick-label")
             : element;
-        if (labelElement) labelElement.textContent = label;
+        setTouchButtonLabel(element, labelElement, label);
         element.classList.toggle("is-disabled", !enabled);
         element.setAttribute("aria-disabled", enabled ? "false" : "true");
     }
+}
+
+function setTouchButtonLabel(element, labelElement, label) {
+    if (!labelElement) return;
+
+    labelElement.textContent = label;
+    labelElement.title = label;
+    fitTouchButtonLabel(element, labelElement);
+}
+
+function fitTouchButtonLabels(overlay) {
+    if (!overlay) return;
+
+    for (const element of overlay.querySelectorAll("[data-button]")) {
+        const labelElement = element.classList.contains("klooie-touch-stick-base")
+            ? element.querySelector(".klooie-touch-stick-label")
+            : element;
+        fitTouchButtonLabel(element, labelElement);
+    }
+}
+
+function fitTouchButtonLabel(element, labelElement) {
+    if (!element || !labelElement) return;
+
+    labelElement.style.fontSize = "";
+
+    const maxWidth = getTouchButtonLabelMaxWidth(element, labelElement);
+    if (maxWidth <= 0 || labelElement.scrollWidth <= maxWidth) return;
+
+    const style = window.getComputedStyle(labelElement);
+    const baseFontSize = parseFloat(style.fontSize);
+    if (!Number.isFinite(baseFontSize) || baseFontSize <= 0) return;
+
+    const minFontSize = Math.max(10, baseFontSize * 0.72);
+    const fittedFontSize = Math.max(minFontSize, Math.floor(baseFontSize * maxWidth / labelElement.scrollWidth));
+    labelElement.style.fontSize = `${fittedFontSize}px`;
+}
+
+function getTouchButtonLabelMaxWidth(element, labelElement) {
+    const rect = labelElement.getBoundingClientRect();
+    if (element.classList.contains("klooie-touch-stick-base")) {
+        return Math.max(0, rect.width);
+    }
+
+    return Math.max(0, element.clientWidth - 2);
 }
 
 function getDefaultTouchButtonLabel(index) {
