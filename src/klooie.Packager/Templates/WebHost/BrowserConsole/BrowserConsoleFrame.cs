@@ -30,4 +30,5 @@ public sealed class BrowserConsoleFrame
     public int[] TouchButtonReleases { get; init; } = Array.Empty<int>();
     public BrowserTouchButtonHint[] TouchButtonHints { get; init; } = Array.Empty<BrowserTouchButtonHint>();
     public ConsoleBitmapPresentationFrame Presentation { get; init; } = ConsoleBitmapPresentationFrame.Empty;
+    public bool AppStopped { get; init; }
 }

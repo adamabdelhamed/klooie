@@ -4,6 +4,463 @@ window.klooiePwa = window.klooiePwa || {
     installed: window.matchMedia?.("(display-mode: fullscreen)")?.matches || window.matchMedia?.("(display-mode: standalone)")?.matches || navigator.standalone === true
 };
 
+window.klooieLifecycle = window.klooieLifecycle || (() => {
+    const state = {
+        loadingElement: undefined,
+        stoppedElement: undefined,
+        loadingReady: false,
+        loadingDismissed: false,
+        loadingDismissListeners: new Set(),
+        stoppedShown: false,
+        options: normalizeLifecycleOptions(window.klooieLifecycleOptions)
+    };
+
+    function normalizeLifecycleOptions(options) {
+        options = options || {};
+        return {
+            loadingHtmlPath: options.loadingHtmlPath || options.LoadingHtmlPath || undefined,
+            stoppedHtmlPath: options.stoppedHtmlPath || options.StoppedHtmlPath || undefined
+        };
+    }
+
+    function configure(options) {
+        state.options = { ...state.options, ...normalizeLifecycleOptions(options) };
+        if (!state.loadingDismissed) showLoading();
+    }
+
+    function showLoading() {
+        const host = ensureOverlay("klooie-lifecycle-loading");
+        state.loadingElement = host;
+        loadLifecycleHtml(state.options.loadingHtmlPath, getDefaultLoadingHtml())
+            .then(html => {
+                if (state.loadingDismissed) return;
+                mountLifecycleHtml(host, html);
+            });
+    }
+
+    function showStopped() {
+        if (state.stoppedShown) return;
+        state.stoppedShown = true;
+        dismissLoading();
+        const host = ensureOverlay("klooie-lifecycle-stopped");
+        state.stoppedElement = host;
+        loadLifecycleHtml(state.options.stoppedHtmlPath, getDefaultStoppedHtml())
+            .then(html => {
+                mountLifecycleHtml(host, html);
+                wireRefresh(host);
+                window.klooieStoppedScreen?.show?.();
+            });
+    }
+
+    function markReady(message) {
+        if (state.loadingReady || state.loadingDismissed) return;
+
+        state.loadingReady = true;
+        const loader = window.klooieLoader;
+        if (loader?.ready) {
+            loader.ready(message);
+            return;
+        }
+
+        dismissLoading();
+    }
+
+    function dismissLoading() {
+        if (state.loadingDismissed) return;
+        state.loadingDismissed = true;
+        const loader = window.klooieLoader;
+        if (loader?.hide) {
+            loader.hide();
+            notifyLoadingDismissed();
+            return;
+        }
+
+        removeOverlay(state.loadingElement || document.getElementById("klooie-lifecycle-loading"));
+        notifyLoadingDismissed();
+    }
+
+    function notifyLoadingDismissed() {
+        for (const listener of Array.from(state.loadingDismissListeners)) {
+            listener();
+        }
+    }
+
+    function isLoadingDismissed() {
+        return state.loadingDismissed;
+    }
+
+    function afterLoadingDismissed(listener) {
+        if (typeof listener !== "function") return () => {};
+        if (state.loadingDismissed) {
+            listener();
+            return () => {};
+        }
+
+        state.loadingDismissListeners.add(listener);
+        return () => state.loadingDismissListeners.delete(listener);
+    }
+
+    async function requestFullscreenAndLandscape() {
+        await requestFullscreen(document.documentElement);
+        try {
+            if (screen.orientation?.lock) await screen.orientation.lock("landscape");
+        } catch {
+        }
+    }
+
+    function ensureOverlay(id) {
+        let element = document.getElementById(id);
+        if (!element) {
+            element = document.createElement("div");
+            element.id = id;
+            document.body.appendChild(element);
+        }
+
+        element.style.position = "fixed";
+        element.style.inset = "0";
+        element.style.zIndex = id.endsWith("stopped") ? "120" : "100";
+        element.style.background = "#000";
+        return element;
+    }
+
+    function removeOverlay(element) {
+        if (!element) return;
+        element.style.opacity = "0";
+        element.style.pointerEvents = "none";
+        element.style.transition = "opacity 220ms ease";
+        window.setTimeout(() => element.remove(), 240);
+    }
+
+    async function loadLifecycleHtml(path, fallback) {
+        if (!path) return fallback;
+        try {
+            const response = await fetch(path, { cache: "force-cache" });
+            if (!response.ok) return fallback;
+            return await response.text();
+        } catch {
+            return fallback;
+        }
+    }
+
+    function mountLifecycleHtml(host, html) {
+        host.replaceChildren();
+        window.klooieLoader = undefined;
+        const template = document.createElement("template");
+        template.innerHTML = extractBodyHtml(html);
+        host.appendChild(template.content.cloneNode(true));
+        for (const script of Array.from(host.querySelectorAll("script"))) {
+            const replacement = document.createElement("script");
+            for (const attribute of Array.from(script.attributes)) replacement.setAttribute(attribute.name, attribute.value);
+            replacement.textContent = script.textContent;
+            script.replaceWith(replacement);
+        }
+        wireRefresh(host);
+    }
+
+    function extractBodyHtml(html) {
+        const bodyMatch = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(html || "");
+        return bodyMatch ? bodyMatch[1] : html;
+    }
+
+    function wireRefresh(host) {
+        for (const element of host.querySelectorAll("[data-klooie-refresh]")) {
+            element.addEventListener("click", () => location.reload());
+        }
+    }
+
+    function getDefaultLoadingHtml() {
+        return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Loading</title>
+</head>
+<body style="margin:0;background:#000;overflow:hidden">
+<div id="klooie-loader" style="
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100dvh;
+  min-height:100vh;
+  background:#000;
+  color:#d7fff5;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:Consolas,Menlo,Monaco,'Courier New',monospace;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;
+">
+  <style>
+    #klooie-loader, #klooie-loader * { box-sizing:border-box; }
+    #klooie-loader .shell {
+      position:relative;
+      width:min(92vw,680px);
+      height:min(72dvh,420px);
+      min-height:260px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:22px;
+      border:1px solid rgba(120,255,220,.24);
+      border-radius:24px;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(0,255,190,.11), transparent 42%),
+        linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.01));
+      box-shadow:0 0 44px rgba(0,255,190,.12), inset 0 0 40px rgba(0,255,190,.045);
+      overflow:hidden;
+    }
+
+    #klooie-loader .shell:before {
+      content:"";
+      position:absolute;
+      inset:-80px;
+      background:
+        linear-gradient(rgba(80,255,210,.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(80,255,210,.055) 1px, transparent 1px);
+      background-size:28px 28px;
+      transform:perspective(500px) rotateX(58deg) translateY(20px);
+      animation:klooie-grid 2.8s linear infinite;
+    }
+
+    #klooie-loader .core {
+      position:relative;
+      width:116px;
+      height:116px;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      filter:drop-shadow(0 0 18px rgba(60,255,215,.45));
+    }
+
+    #klooie-loader .core:before,
+    #klooie-loader .core:after {
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:50%;
+      border:2px solid transparent;
+    }
+
+    #klooie-loader .core:before {
+      border-top-color:#a8fff0;
+      border-right-color:rgba(168,255,240,.42);
+      animation:klooie-spin 1.2s linear infinite;
+    }
+
+    #klooie-loader .core:after {
+      inset:16px;
+      border-bottom-color:#59ffd7;
+      border-left-color:rgba(89,255,215,.35);
+      animation:klooie-spin 1.7s linear infinite reverse;
+    }
+
+    #klooie-loader .glyph {
+      position:relative;
+      font-size:42px;
+      font-weight:800;
+      letter-spacing:-4px;
+      color:#eafffb;
+      text-shadow:0 0 8px rgba(180,255,245,.85), 0 0 24px rgba(0,255,190,.55);
+      animation:klooie-pulse 1.8s ease-in-out infinite;
+    }
+
+    #klooie-loader .title {
+      position:relative;
+      font-size:clamp(18px,4.2vw,30px);
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      color:#f1fffc;
+      text-shadow:0 0 14px rgba(0,255,200,.45);
+    }
+
+    #klooie-loader .subtitle {
+      position:relative;
+      width:min(72%,420px);
+      height:12px;
+      border-radius:999px;
+      border:1px solid rgba(160,255,235,.28);
+      overflow:hidden;
+      background:rgba(255,255,255,.045);
+    }
+
+    #klooie-loader .bar {
+      width:38%;
+      height:100%;
+      border-radius:999px;
+      background:linear-gradient(90deg, transparent, rgba(150,255,235,.95), transparent);
+      animation:klooie-load 1.6s ease-in-out infinite;
+    }
+
+    #klooie-loader .status {
+      position:relative;
+      min-height:1.2em;
+      font-size:clamp(11px,2.5vw,14px);
+      letter-spacing:.12em;
+      color:rgba(220,255,248,.72);
+    }
+
+    #klooie-loader .bits {
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:.45;
+    }
+
+    #klooie-loader .bit {
+      position:absolute;
+      width:4px;
+      height:4px;
+      border-radius:50%;
+      background:#8ffff0;
+      box-shadow:0 0 12px #8ffff0;
+      animation:klooie-float 3.5s ease-in-out infinite;
+    }
+
+    #klooie-loader .bit:nth-child(1){ left:18%; top:24%; animation-delay:-.2s; }
+    #klooie-loader .bit:nth-child(2){ left:79%; top:28%; animation-delay:-1.1s; }
+    #klooie-loader .bit:nth-child(3){ left:26%; top:74%; animation-delay:-2.0s; }
+    #klooie-loader .bit:nth-child(4){ left:68%; top:72%; animation-delay:-2.8s; }
+    #klooie-loader .bit:nth-child(5){ left:50%; top:18%; animation-delay:-1.7s; }
+
+    @media (orientation:landscape) {
+      #klooie-loader .shell {
+        width:min(78vw,760px);
+        height:min(78dvh,390px);
+        flex-direction:row;
+        gap:36px;
+        padding:34px;
+      }
+
+      #klooie-loader .copy {
+        position:relative;
+        display:flex;
+        flex-direction:column;
+        align-items:flex-start;
+        gap:16px;
+        min-width:260px;
+      }
+
+      #klooie-loader .subtitle {
+        width:min(42vw,390px);
+      }
+    }
+
+    @media (orientation:portrait) {
+      #klooie-loader .shell {
+        padding:30px 20px;
+      }
+
+      #klooie-loader .copy {
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:14px;
+      }
+    }
+
+    @keyframes klooie-spin { to { transform:rotate(360deg); } }
+    @keyframes klooie-pulse { 0%,100% { transform:scale(.96); opacity:.75; } 50% { transform:scale(1.04); opacity:1; } }
+    @keyframes klooie-load { 0% { transform:translateX(-105%); } 100% { transform:translateX(270%); } }
+    @keyframes klooie-grid { to { transform:perspective(500px) rotateX(58deg) translateY(48px); } }
+    @keyframes klooie-float { 0%,100% { transform:translateY(0) scale(.8); opacity:.25; } 50% { transform:translateY(-18px) scale(1.25); opacity:1; } }
+  </style>
+
+  <div class="shell">
+    <div class="bits">
+      <i class="bit"></i><i class="bit"></i><i class="bit"></i><i class="bit"></i><i class="bit"></i>
+    </div>
+
+    <div class="core">
+      <div class="glyph">K</div>
+    </div>
+
+    <div class="copy">
+      <div class="title">Loading</div>
+      <div class="subtitle"><div class="bar"></div></div>
+      <div class="status" id="klooie-loader-status">Preparing console surface</div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const el = document.getElementById("klooie-loader-status");
+      const loader = document.getElementById("klooie-loader");
+      const phrases = [
+        "Preparing console surface",
+        "Warming render loop",
+        "Binding input layer",
+        "Painting first frame"
+      ];
+
+      let i = 0;
+      const timer = el ? setInterval(() => {
+        i = (i + 1) % phrases.length;
+        el.textContent = phrases[i];
+      }, 1400) : undefined;
+
+      window.klooieLoader = {
+        ready: () => window.klooieLifecycle.dismissLoading(),
+        hide: () => {
+          if (timer) clearInterval(timer);
+          loader?.remove();
+          document.getElementById("klooie-lifecycle-loading")?.remove();
+        }
+      };
+    })();
+  </script>
+</div>
+</body>
+</html>`;
+    }
+
+    function getDefaultStoppedHtml() {
+        return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>App Stopped</title>
+</head>
+<body style="margin:0;background:#000;overflow:hidden">
+<div id="klooie-stopped" style="position:fixed;inset:0;width:100vw;height:100dvh;min-height:100vh;background:#000;color:#d7fff5;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:Consolas,Menlo,Monaco,'Courier New',monospace;user-select:none;-webkit-user-select:none;touch-action:none">
+  <style>
+    #klooie-stopped,#klooie-stopped *{box-sizing:border-box}
+    #klooie-stopped .shell{position:relative;width:min(92vw,620px);min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:34px;border:1px solid rgba(120,255,220,.24);border-radius:24px;background:radial-gradient(circle at 50% 35%,rgba(0,255,190,.10),transparent 45%),linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.01));box-shadow:0 0 44px rgba(0,255,190,.12),inset 0 0 40px rgba(0,255,190,.045);overflow:hidden;text-align:center}
+    #klooie-stopped .glyph{font-size:46px;font-weight:800;color:#eafffb;text-shadow:0 0 8px rgba(180,255,245,.85),0 0 24px rgba(0,255,190,.55)}
+    #klooie-stopped .title{font-size:clamp(18px,4.2vw,30px);letter-spacing:.18em;text-transform:uppercase;color:#f1fffc;text-shadow:0 0 14px rgba(0,255,200,.45)}
+    #klooie-stopped .message{max-width:460px;font-size:clamp(12px,2.6vw,15px);line-height:1.6;color:rgba(220,255,248,.72)}
+    #klooie-stopped button{border:1px solid rgba(160,255,235,.34);border-radius:999px;padding:13px 28px;font:800 14px Consolas,Menlo,monospace;letter-spacing:.13em;text-transform:uppercase;color:#eafffb;background:rgba(0,255,190,.13);box-shadow:0 0 20px rgba(0,255,190,.16);cursor:pointer}
+  </style>
+  <div class="shell">
+    <div class="glyph">K</div>
+    <div class="title">App Stopped</div>
+    <div class="message">The console app has ended. Refresh the page to start a new browser process and launch it again.</div>
+    <button type="button" data-klooie-refresh>Refresh</button>
+  </div>
+</div>
+</body>
+</html>`;
+    }
+
+    return {
+        configure,
+        showLoading,
+        markReady,
+        dismissLoading,
+        isLoadingDismissed,
+        afterLoadingDismissed,
+        requestFullscreenAndLandscape,
+        showStopped
+    };
+})();
+
+window.klooieLifecycle.showLoading();
+
 window.addEventListener("beforeinstallprompt", event => {
     if (!window.klooiePwa.installPromptEnabled) return;
 
@@ -43,6 +500,10 @@ window.klooieFramePump = {
             knownGamepads: new Map(),
             touchController: undefined,
             zoomControl: undefined,
+            pendingTouchButtonHints: undefined,
+            firstVisibleFramePresented: false,
+            stoppedScreenPresented: false,
+            loadingDismissSubscription: undefined,
             mobileOptions: normalizedMobileOptions,
             mobileExperience: shouldShowTouchController(),
             zoomLevels: buildZoomLevels(normalizedMobileOptions),
@@ -57,8 +518,9 @@ window.klooieFramePump = {
         window.klooiePwa.installPromptEnabled = window.klooiePwa.installPromptEnabled || (state.mobileOptions.requireHorizontal && shouldShowTouchController());
         setupKeyboard(hostElement, state);
         setupGamepads(state);
-        setupTouchController(hostElement, state);
-        setupZoomControl(hostElement, state);
+        state.loadingDismissSubscription = window.klooieLifecycle?.afterLoadingDismissed?.(() => {
+            if (state.firstVisibleFramePresented) ensureMobileControls(hostElement, state);
+        });
         updateCellMetrics(hostElement, state);
         state.renderer = createConsoleRenderer(canvas, state);
 
@@ -104,6 +566,7 @@ window.klooieFramePump = {
             teardownGamepads(pump);
             teardownTouchController(pump);
             teardownZoomControl(pump);
+            pump.loadingDismissSubscription?.();
         }
         delete this.pumps[id];
     }
@@ -180,6 +643,8 @@ window.klooieAssets = {
     paused: false,
 
     play(id, url, volume, pan, loop, isMusic, startPaused, dotNetRef) {
+        if (!isMusic && window.klooieLifecycle?.isLoadingDismissed?.() === false) return;
+
         const playbackId = String(id);
         this.stop(playbackId);
         if (isMusic) {
@@ -416,15 +881,42 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
         const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson, mobileExperience);
         applyBrowserControllerCommands(state, terminalFrame);
         state.renderer.render(canvas, terminalFrame, state);
+        applyLifecycleFrameState(hostElement, terminalFrame, state);
         state.sizeDirty = false;
     } catch (error) {
-        console.error("klooie frame pump tick failed", error);
+        if (isCleanDotNetExit(error)) {
+            handleAppStopped(state);
+        } else {
+            console.error("klooie frame pump tick failed", error);
+        }
     } finally {
         state.inFrame = false;
         if (state.pendingKeys.length > 0) {
             state.requestImmediateFrame?.();
         }
     }
+}
+
+function isCleanDotNetExit(error) {
+    return error?.name === "ExitStatus" && Number(error?.status) === 0;
+}
+
+function handleAppStopped(state) {
+    if (state.stoppedScreenPresented) return;
+
+    state.stopped = true;
+    state.stoppedScreenPresented = true;
+    if (state.frameAnimationId !== undefined) {
+        cancelAnimationFrame(state.frameAnimationId);
+        state.frameAnimationId = undefined;
+    }
+
+    teardownKeyboard(state);
+    teardownGamepads(state);
+    teardownTouchController(state);
+    teardownZoomControl(state);
+    state.loadingDismissSubscription?.();
+    window.klooieLifecycle?.showStopped?.();
 }
 
 function setupKeyboard(hostElement, state) {
@@ -521,6 +1013,57 @@ function setupGamepads(state) {
 
 function teardownGamepads(state) {
     state.knownGamepads?.clear();
+}
+
+function applyLifecycleFrameState(hostElement, frame, state) {
+    if (!state.firstVisibleFramePresented && frameHasVisibleContent(frame)) {
+        state.firstVisibleFramePresented = true;
+        window.klooieLifecycle?.markReady?.("Ready");
+        if (window.klooieLifecycle?.isLoadingDismissed?.() !== false) ensureMobileControls(hostElement, state);
+    } else if (state.firstVisibleFramePresented && state.mobileExperience && !state.touchController) {
+        if (window.klooieLifecycle?.isLoadingDismissed?.() !== false) ensureMobileControls(hostElement, state);
+    }
+
+    const appStopped = !!(frame?.appStopped ?? frame?.AppStopped);
+    if (appStopped && !state.stoppedScreenPresented) {
+        state.stoppedScreenPresented = true;
+        window.klooieLifecycle?.showStopped?.();
+    }
+}
+
+function frameHasVisibleContent(frame) {
+    const text = frame?.text || frame?.Text || [];
+    const foreground = frame?.foreground || frame?.Foreground || [];
+    const background = frame?.background || frame?.Background || [];
+    for (let i = 0; i < text.length; i++) {
+        const runText = text[i] || "";
+        const bg = normalizeFrameColorValue(background[i]);
+        if (bg !== 0) return true;
+        const fg = normalizeFrameColorValue(foreground[i]);
+        if (fg !== 0 && Array.from(runText).some(ch => !isBlankGlyph(ch))) return true;
+    }
+
+    const presentation = frame?.presentation || frame?.Presentation;
+    const scaledRegions = presentation?.scaledRegions || presentation?.ScaledRegions || [];
+    const focusRegions = presentation?.focusRegions || presentation?.FocusRegions || [];
+    return scaledRegions.length > 0 || focusRegions.length > 0;
+}
+
+function normalizeFrameColorValue(color) {
+    if (typeof color === "number") return color & 0xffffff;
+    if (typeof color === "string" && color[0] === "#") {
+        const parsed = parseInt(color.slice(1), 16);
+        return Number.isFinite(parsed) ? parsed & 0xffffff : 0;
+    }
+
+    return 0;
+}
+
+function ensureMobileControls(hostElement, state) {
+    if (!shouldShowTouchController()) return;
+    if (!state.touchController) setupTouchController(hostElement, state, true);
+    if (state.pendingTouchButtonHints?.length > 0) state.touchController?.applyButtonHints(state.pendingTouchButtonHints);
+    if (!state.zoomControl) setupZoomControl(hostElement, state);
 }
 
 function normalizeMobileOptions(options) {
@@ -656,12 +1199,12 @@ function getZoomIndex(state) {
     return bestIndex;
 }
 
-function setupTouchController(hostElement, state)
+function setupTouchController(hostElement, state, fadeIn)
 {
     if (!shouldShowTouchController()) return;
 
     const overlay = document.createElement("div");
-    overlay.className = "klooie-touch-controller";
+    overlay.className = fadeIn ? "klooie-touch-controller klooie-touch-controller-enter" : "klooie-touch-controller";
     overlay.setAttribute("aria-hidden", "true");
     overlay.innerHTML = `
         <div class="klooie-horizontal-required">
@@ -700,6 +1243,9 @@ function setupTouchController(hostElement, state)
             <button type="button" class="klooie-touch-a" data-button="0">A</button>
         </div>`;
     hostElement.appendChild(overlay);
+    if (fadeIn) {
+        requestAnimationFrame(() => overlay.classList.add("is-visible"));
+    }
 
     const buttons = new Array(17).fill(false);
     const axes = [0, 0, 0, 0];
@@ -1003,13 +1549,20 @@ function isPortraitViewport() {
 }
 
 function isFullscreenActive() {
-    return !!(document.fullscreenElement || document.webkitFullscreenElement) ||
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function isInstalledDisplayMode() {
+    return !!(
         window.matchMedia?.("(display-mode: fullscreen)")?.matches ||
         window.matchMedia?.("(display-mode: standalone)")?.matches ||
-        navigator.standalone === true;
+        navigator.standalone === true
+    );
 }
 
 function canRequestFullscreen() {
+    if (isInstalledDisplayMode()) return false;
+
     const element = document.documentElement;
     return !!(element.requestFullscreen || element.webkitRequestFullscreen);
 }
@@ -1019,9 +1572,11 @@ function isIosBrowser() {
 }
 
 async function requestFullscreen(element) {
+    if (isInstalledDisplayMode()) return;
+
     try {
         if (element.requestFullscreen) {
-            await element.requestFullscreen({ navigationUI: "hide" });
+            await element.requestFullscreen({ navigationUI: "auto" });
         } else if (element.webkitRequestFullscreen) {
             element.webkitRequestFullscreen();
         }
@@ -1133,6 +1688,7 @@ function applyBrowserControllerCommands(state, frame) {
 
     const hints = frame?.touchButtonHints || frame?.TouchButtonHints;
     if (hints?.length > 0) {
+        state.pendingTouchButtonHints = hints;
         state.touchController?.applyButtonHints(hints);
     }
 }

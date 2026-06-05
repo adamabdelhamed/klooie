@@ -6,7 +6,8 @@ public sealed record KlooieBlazorAppRegistration(
     string Description,
     Func<Task> RunAsync,
     KlooieBlazorMobileOptions MobileOptions,
-    KlooieBlazorBrowserMetadata BrowserMetadata);
+    KlooieBlazorBrowserMetadata BrowserMetadata,
+    KlooieBlazorLifecycleOptions LifecycleOptions);
 
 public sealed record KlooieBlazorMobileOptions(
     bool RequireHorizontal = false,
@@ -31,3 +32,7 @@ public sealed record KlooieBlazorBrowserMetadata(
         return new KlooieBlazorBrowserMetadata(displayName, displayName, displayName, description);
     }
 }
+
+public sealed record KlooieBlazorLifecycleOptions(
+    string? LoadingHtmlPath = null,
+    string? StoppedHtmlPath = null);

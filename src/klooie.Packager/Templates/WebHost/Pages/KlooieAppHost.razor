@@ -84,6 +84,7 @@ else
         runtime?.Dispose();
 
         activeRoute = registration.Route;
+        await JS.InvokeVoidAsync("klooieLifecycle.configure", registration.LifecycleOptions);
         runtime = new BrowserKlooieRuntime(registration, JS, Http);
         dotNetRef = DotNetObjectReference.Create(this);
         pumpId = await JS.InvokeAsync<int>("klooieFramePump.start", dotNetRef, hostElement, registration.MobileOptions);

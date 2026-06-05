@@ -21,6 +21,10 @@ public sealed class KlooieWebTargetAttribute : Attribute
 
     public string? BackgroundColor { get; set; }
 
+    public string? LoadingHtmlAssetPath { get; set; }
+
+    public string? StoppedHtmlAssetPath { get; set; }
+
     public bool RequireHorizontal { get; set; }
 
     public bool TouchTriggerToggle { get; set; }

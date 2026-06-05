@@ -56,6 +56,17 @@ body {
     -webkit-touch-callout: none;
 }
 
+.klooie-touch-controller-enter {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 420ms ease, transform 420ms ease;
+}
+
+.klooie-touch-controller-enter.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
     .klooie-touch-controller button {
         pointer-events: auto;
         touch-action: none;

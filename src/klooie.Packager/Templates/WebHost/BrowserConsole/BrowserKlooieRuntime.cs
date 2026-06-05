@@ -13,6 +13,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
     private ConsoleApp? app;
     private Exception? entryException;
     private bool lastFrameHadPresentation;
+    private bool entryPointCompleted;
     private bool disposed;
 
     public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http)
@@ -43,7 +44,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
             currentApp.Tick(budget);
         }
 
-        return AddFrameCommands(FrameBuffer.ToFrame(), currentApp);
+        return AddFrameCommands(FrameBuffer.ToFrame(), currentApp, entryPointCompleted && app is null);
     }
 
     public void EnqueueKey(ConsoleKeyInfo key)
@@ -65,13 +66,13 @@ public sealed class BrowserKlooieRuntime : IDisposable
         }
     }
 
-    private BrowserConsoleFrame AddFrameCommands(BrowserConsoleFrame frame, ConsoleApp? app)
+    private BrowserConsoleFrame AddFrameCommands(BrowserConsoleFrame frame, ConsoleApp? app, bool appStopped)
     {
         var touchButtonReleases = BrowserControllerInput.DrainTouchButtonReleases();
         var touchButtonHints = BrowserControllerInput.DrainTouchButtonHints();
         var presentation = app?.Presentation is ConsoleBitmapPresentation browserPresentation ? browserPresentation.CreateFrame() : ConsoleBitmapPresentationFrame.Empty;
         var hasPresentation = ReferenceEquals(presentation, ConsoleBitmapPresentationFrame.Empty) == false;
-        if (touchButtonReleases.Length == 0 && touchButtonHints.Length == 0 && hasPresentation == false && lastFrameHadPresentation == false) return frame;
+        if (touchButtonReleases.Length == 0 && touchButtonHints.Length == 0 && hasPresentation == false && lastFrameHadPresentation == false && appStopped == false) return frame;
 
         lastFrameHadPresentation = hasPresentation;
 
@@ -87,7 +88,8 @@ public sealed class BrowserKlooieRuntime : IDisposable
             Background = frame.Background,
             TouchButtonReleases = touchButtonReleases,
             TouchButtonHints = touchButtonHints,
-            Presentation = presentation
+            Presentation = presentation,
+            AppStopped = appStopped
         };
     }
 
@@ -117,6 +119,10 @@ public sealed class BrowserKlooieRuntime : IDisposable
         catch (Exception ex)
         {
             entryException = ex;
+        }
+        finally
+        {
+            entryPointCompleted = true;
         }
     }
 

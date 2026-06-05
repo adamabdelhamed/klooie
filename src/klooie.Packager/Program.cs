@@ -735,6 +735,8 @@ internal static class Program
         var targetFramework = SecurityElement.Escape(project.TargetFramework);
         var optimizeWebAssemblyText = optimizeWebAssembly.ToString().ToLowerInvariant();
         var branding = CopyWebBrandingAssets(project, tempDirectory, target);
+        var loadingHtmlPath = ToWebAssetUrl(target.LoadingHtmlAssetPath);
+        var stoppedHtmlPath = ToWebAssetUrl(target.StoppedHtmlAssetPath);
 
         File.WriteAllText(
             Path.Combine(tempDirectory, $"{GeneratedProjectName}.csproj"),
@@ -799,7 +801,10 @@ internal static class Program
                         ThemeColor: "{{EscapeCSharpString(target.ThemeColor)}}",
                         BackgroundColor: "{{EscapeCSharpString(target.BackgroundColor)}}",
                         FaviconPath: "{{EscapeCSharpString(branding.FaviconPath)}}",
-                        AppIconPath: "{{EscapeCSharpString(branding.AppIconPath)}}"));
+                        AppIconPath: "{{EscapeCSharpString(branding.AppIconPath)}}"),
+                    lifecycleOptions: new KlooieBlazorLifecycleOptions(
+                        LoadingHtmlPath: {{ToNullableCSharpString(loadingHtmlPath)}},
+                        StoppedHtmlPath: {{ToNullableCSharpString(stoppedHtmlPath)}}));
                 return registry;
             });
 
@@ -836,6 +841,12 @@ internal static class Program
                 <link rel="preload" id="webassembly" />
                 <link rel="stylesheet" href="css/app.css" />
                 <script type="importmap"></script>
+                <script>
+                    window.klooieLifecycleOptions = {
+                        loadingHtmlPath: {{ToJsonStringLiteral(loadingHtmlPath)}},
+                        stoppedHtmlPath: {{ToJsonStringLiteral(stoppedHtmlPath)}}
+                    };
+                </script>
             </head>
 
             <body>
@@ -1143,6 +1154,31 @@ internal static class Program
     {
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
+
+    private static string ToNullableCSharpString(string? value)
+    {
+        return value is null ? "null" : $"\"{EscapeCSharpString(value)}\"";
+    }
+
+    private static string ToJsonStringLiteral(string? value)
+    {
+        return value is null ? "null" : JsonSerializer.Serialize(value);
+    }
+
+    private static string? ToWebAssetUrl(string? assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(assetPath)) return null;
+
+        assetPath = assetPath.Trim().Replace('\\', '/').TrimStart('/');
+        if (assetPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            assetPath.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            assetPath.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            return assetPath;
+        }
+
+        return $"assets/{assetPath}";
+    }
 }
 
 internal sealed record PackageOptions(string ProjectPath, PackageType Type, int Port, KlooieWebMode? WebMode)
@@ -1285,6 +1321,8 @@ internal sealed record WebEntryPoint(
     string PwaShortName,
     string Description,
     string? IconPath,
+    string? LoadingHtmlAssetPath,
+    string? StoppedHtmlAssetPath,
     string ThemeColor,
     string BackgroundColor,
     bool RequireHorizontal,
@@ -1386,6 +1424,8 @@ internal static class WebEntryPointDiscoverer
             ReadAttributeString(attributeSource, "PwaShortName") ?? ReadAttributeString(attributeSource, "PwaName") ?? ReadAttributeString(attributeSource, "DisplayName") ?? project.AssemblyName,
             ReadAttributeString(attributeSource, "Description") ?? "Packaged klooie app.",
             ReadAttributeString(attributeSource, "IconPath"),
+            ReadAttributeString(attributeSource, "LoadingHtmlAssetPath"),
+            ReadAttributeString(attributeSource, "StoppedHtmlAssetPath"),
             ReadAttributeString(attributeSource, "ThemeColor") ?? "#000000",
             ReadAttributeString(attributeSource, "BackgroundColor") ?? "#000000",
             ReadAttributeBool(attributeSource, "RequireHorizontal"),

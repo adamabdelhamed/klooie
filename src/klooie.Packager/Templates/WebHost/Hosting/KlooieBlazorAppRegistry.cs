@@ -12,7 +12,8 @@ public sealed class KlooieBlazorAppRegistry
         string description,
         Func<Task> runAsync,
         KlooieBlazorMobileOptions? mobileOptions = null,
-        KlooieBlazorBrowserMetadata? browserMetadata = null)
+        KlooieBlazorBrowserMetadata? browserMetadata = null,
+        KlooieBlazorLifecycleOptions? lifecycleOptions = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(route);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -30,7 +31,8 @@ public sealed class KlooieBlazorAppRegistry
             description,
             runAsync,
             mobileOptions ?? new KlooieBlazorMobileOptions(),
-            browserMetadata ?? KlooieBlazorBrowserMetadata.FromDisplayName(displayName, description)));
+            browserMetadata ?? KlooieBlazorBrowserMetadata.FromDisplayName(displayName, description),
+            lifecycleOptions ?? new KlooieBlazorLifecycleOptions()));
     }
 
     public KlooieBlazorAppRegistration? Find(string route)
