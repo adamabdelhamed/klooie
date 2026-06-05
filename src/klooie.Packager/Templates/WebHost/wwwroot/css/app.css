@@ -441,6 +441,10 @@ body {
     white-space: pre;
 }
 
+.browser-console-measure-mobile {
+    font-weight: 700;
+}
+
 #blazor-error-ui {
     color-scheme: light only;
     background: lightyellow;

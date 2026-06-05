@@ -44,6 +44,7 @@ window.klooieFramePump = {
             touchController: undefined,
             zoomControl: undefined,
             mobileOptions: normalizedMobileOptions,
+            mobileExperience: shouldShowTouchController(),
             zoomLevels: buildZoomLevels(normalizedMobileOptions),
             zoom: 1,
             baseCellWidth: 8,
@@ -405,6 +406,13 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
         const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
         const gamepadSnapshotJson = readGamepadSnapshotJson(state);
         const mobileExperience = shouldShowTouchController();
+        if (mobileExperience !== state.mobileExperience) {
+            state.mobileExperience = mobileExperience;
+            updateCellMetrics(hostElement, state);
+            state.sizeDirty = true;
+            state.renderer?.invalidateMetrics();
+        }
+
         const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson, mobileExperience);
         applyBrowserControllerCommands(state, terminalFrame);
         state.renderer.render(canvas, terminalFrame, state);
@@ -1248,6 +1256,7 @@ function measure(hostElement, state) {
 
 function updateCellMetrics(hostElement, state) {
     const probe = getMeasureProbe(hostElement);
+    probe.classList.toggle("browser-console-measure-mobile", state.mobileExperience);
     const rect = probe.getBoundingClientRect();
     const style = window.getComputedStyle(probe);
     state.baseCellWidth = Math.max(1, rect?.width || 8);
