@@ -14,6 +14,9 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         stoppedShown: false,
         overlayElement: undefined,
         overlayActive: false,
+        overlayGamepad: createOverlayGamepadNavigator(),
+        overlayInputAnimationId: undefined,
+        postOverlayGamepadReleasePending: false,
         options: normalizeLifecycleOptions(window.klooieLifecycleOptions)
     };
 
@@ -33,10 +36,13 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
     function showLoading() {
         const host = ensureOverlay("klooie-lifecycle-loading");
         state.loadingElement = host;
+        prepareOverlayHost(host);
+        startOverlayInputPump();
         loadLifecycleHtml(state.options.loadingHtmlPath, getDefaultLoadingHtml())
             .then(html => {
                 if (state.loadingDismissed) return;
                 mountLifecycleHtml(host, html);
+                state.overlayGamepad.reset(host);
             });
     }
 
@@ -46,10 +52,13 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         dismissLoading();
         const host = ensureOverlay("klooie-lifecycle-stopped");
         state.stoppedElement = host;
+        prepareOverlayHost(host);
+        startOverlayInputPump();
         loadLifecycleHtml(state.options.stoppedHtmlPath, getDefaultStoppedHtml())
             .then(html => {
                 mountLifecycleHtml(host, html);
                 wireRefresh(host);
+                state.overlayGamepad.reset(host);
                 window.klooieStoppedScreen?.show?.();
             });
     }
@@ -62,23 +71,51 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         host.style.background = "transparent";
         state.overlayElement = host;
         state.overlayActive = true;
+        prepareOverlayHost(host);
+        startOverlayInputPump();
 
         const dismiss = () => dismissOverlay();
         const handled = window.klooieCustomOverlay?.show?.(host, command, dismiss);
-        if (handled) return;
+        if (handled) {
+            state.overlayGamepad.reset(host);
+            return;
+        }
 
         mountDefaultOverlay(host, command, dismiss);
+        state.overlayGamepad.reset(host);
     }
 
     function dismissOverlay() {
         const element = state.overlayElement || document.getElementById("klooie-lifecycle-overlay");
         state.overlayElement = undefined;
         state.overlayActive = false;
+        state.overlayGamepad.reset();
+        state.postOverlayGamepadReleasePending = true;
         element?.remove();
     }
 
     function isOverlayActive() {
-        return state.overlayActive;
+        return state.overlayActive || isLifecycleOverlayVisible();
+    }
+
+    function isLifecycleOverlayVisible() {
+        return (state.loadingDismissed == false && isElementVisible(state.loadingElement || document.getElementById("klooie-lifecycle-loading"))) ||
+            isElementVisible(state.stoppedElement || document.getElementById("klooie-lifecycle-stopped"));
+    }
+
+    function pumpGamepadNavigation(timestamp, gamepads) {
+        const host = getActiveOverlayHost();
+        if (!host) return;
+        state.overlayGamepad.pump(host, timestamp, gamepads);
+    }
+
+    function shouldBlockAppInput(gamepads) {
+        if (isOverlayActive()) return true;
+        if (state.postOverlayGamepadReleasePending == false) return false;
+        if (hasHeldOverlayActionButton(gamepads)) return true;
+
+        state.postOverlayGamepadReleasePending = false;
+        return false;
     }
 
     function markReady(message) {
@@ -100,11 +137,15 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         const loader = window.klooieLoader;
         if (loader?.hide) {
             loader.hide();
+            state.overlayGamepad.reset();
+            state.postOverlayGamepadReleasePending = true;
             notifyLoadingDismissed();
             return;
         }
 
         removeOverlay(state.loadingElement || document.getElementById("klooie-lifecycle-loading"));
+        state.overlayGamepad.reset();
+        state.postOverlayGamepadReleasePending = true;
         notifyLoadingDismissed();
     }
 
@@ -152,12 +193,100 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         return element;
     }
 
+    function prepareOverlayHost(host) {
+        if (!host) return;
+        ensureOverlayFocusStyle();
+        host.classList.add("klooie-lifecycle-overlay-host");
+        host.addEventListener("focusin", syncOverlayFocusAttribute);
+        host.addEventListener("focusout", syncOverlayFocusAttribute);
+        host.addEventListener("keydown", handleOverlayKeyDown, true);
+    }
+
+    function getActiveOverlayHost() {
+        const commandOverlay = state.overlayActive ? state.overlayElement || document.getElementById("klooie-lifecycle-overlay") : undefined;
+        if (isElementVisible(commandOverlay)) return commandOverlay;
+
+        const loading = state.loadingDismissed == false ? state.loadingElement || document.getElementById("klooie-lifecycle-loading") : undefined;
+        if (isElementVisible(loading)) return loading;
+
+        const stopped = state.stoppedElement || document.getElementById("klooie-lifecycle-stopped");
+        if (isElementVisible(stopped)) return stopped;
+
+        return undefined;
+    }
+
+    function startOverlayInputPump() {
+        if (state.overlayInputAnimationId !== undefined) return;
+
+        const frame = timestamp => {
+            if (isOverlayActive()) {
+                pumpGamepadNavigation(timestamp, readConnectedBrowserGamepads());
+                state.overlayInputAnimationId = requestAnimationFrame(frame);
+                return;
+            }
+
+            state.overlayInputAnimationId = undefined;
+            state.overlayGamepad.reset();
+        };
+
+        state.overlayInputAnimationId = requestAnimationFrame(frame);
+    }
+
     function removeOverlay(element) {
         if (!element) return;
         element.style.opacity = "0";
         element.style.pointerEvents = "none";
         element.style.transition = "opacity 220ms ease";
         window.setTimeout(() => element.remove(), 240);
+    }
+
+    function ensureOverlayFocusStyle() {
+        if (document.getElementById("klooie-lifecycle-overlay-focus-style")) return;
+
+        const style = document.createElement("style");
+        style.id = "klooie-lifecycle-overlay-focus-style";
+        style.textContent = `
+.klooie-lifecycle-overlay-host :where(a[href],button,input,select,textarea,[tabindex]):focus,
+.klooie-lifecycle-overlay-host :where(a[href],button,input,select,textarea,[tabindex])[data-klooie-overlay-focused="true"]{
+  outline:3px solid var(--klooie-overlay-focus-color,#fff5a8) !important;
+  outline-offset:4px !important;
+  box-shadow:0 0 0 2px rgba(0,0,0,.9),0 0 18px var(--klooie-overlay-focus-glow,rgba(255,245,168,.72)) !important;
+}
+.klooie-lifecycle-overlay-host :where(a[href],button,input,select,textarea,[tabindex])[data-klooie-overlay-focused="true"]{
+  filter:brightness(1.14);
+}`;
+        document.head.appendChild(style);
+    }
+
+    function syncOverlayFocusAttribute(event) {
+        const host = event.currentTarget;
+        if (!host) return;
+        for (const element of host.querySelectorAll("[data-klooie-overlay-focused]")) {
+            element.removeAttribute("data-klooie-overlay-focused");
+        }
+
+        const current = document.activeElement;
+        if (current && host.contains(current) && isOverlayFocusable(current)) {
+            current.setAttribute("data-klooie-overlay-focused", "true");
+        }
+    }
+
+    function handleOverlayKeyDown(event) {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        const host = getActiveOverlayHost();
+        if (!host || !host.contains(event.target)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const current = document.activeElement;
+        activateOverlayControl(current && host.contains(current) ? current : event.target);
+    }
+
+    function isElementVisible(element) {
+        if (!element || !document.body.contains(element)) return false;
+        const style = window.getComputedStyle(element);
+        if (style.display === "none" || style.visibility === "hidden" || style.pointerEvents === "none") return false;
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
     }
 
     async function loadLifecycleHtml(path, fallback) {
@@ -198,7 +327,7 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
   <h1 style="margin:0 0 18px;font-size:28px">${escapeHtml(title)}</h1>
   <p style="margin:0 0 24px;line-height:1.6;color:rgba(255,255,255,.78)">${escapeHtml(message)}</p>
   <a href="${escapeAttribute(steamUrl)}" target="_blank" rel="noopener" style="display:inline-block;margin:0 8px 12px;padding:12px 18px;color:white;background:#1b5cff;text-decoration:none">View on Steam</a>
-  <button type="button" style="display:inline-block;margin:0 8px 12px;padding:12px 18px;color:white;background:#333;border:0;cursor:pointer">Back to Demo</button>
+  <button type="button" data-klooie-overlay-dismiss style="display:inline-block;margin:0 8px 12px;padding:12px 18px;color:white;background:#333;border:0;cursor:pointer">Back to Demo</button>
 </div>`;
         root.querySelector("button")?.addEventListener("click", dismiss);
         host.appendChild(root);
@@ -513,9 +642,324 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         showStopped,
         showOverlay,
         dismissOverlay,
-        isOverlayActive
+        isOverlayActive,
+        shouldBlockAppInput,
+        pumpGamepadNavigation
     };
 })();
+
+function createOverlayGamepadNavigator() {
+    const state = {
+        host: undefined,
+        lastDirection: undefined,
+        stickCommitted: false,
+        previousButtons: new Map(),
+        repeatDirection: undefined,
+        nextRepeatAt: 0
+    };
+
+    function reset(host) {
+        state.host = host;
+        state.lastDirection = undefined;
+        state.stickCommitted = false;
+        state.previousButtons.clear();
+        state.repeatDirection = undefined;
+        state.nextRepeatAt = 0;
+        if (host) focusFirstOverlayControl(host);
+    }
+
+    function pump(host, timestamp, gamepads) {
+        host = host || state.host;
+        if (!host || !document.body.contains(host)) {
+            reset();
+            return;
+        }
+
+        state.host = host;
+        focusOverlayControlIfNeeded(host);
+        const gamepad = selectOverlayGamepad(gamepads);
+        if (!gamepad) {
+            state.lastDirection = undefined;
+            state.stickCommitted = false;
+            state.previousButtons.clear();
+            state.repeatDirection = undefined;
+            state.nextRepeatAt = 0;
+            return;
+        }
+
+        pumpOverlayDirection(host, readOverlayDirection(gamepad, state), timestamp);
+        pumpOverlayButtons(host, gamepad);
+    }
+
+    function pumpOverlayDirection(host, direction, timestamp) {
+        if (!direction) {
+            state.lastDirection = undefined;
+            state.stickCommitted = false;
+            state.repeatDirection = undefined;
+            state.nextRepeatAt = 0;
+            return;
+        }
+
+        if (direction !== state.lastDirection) {
+            state.lastDirection = direction;
+            state.repeatDirection = direction;
+            state.nextRepeatAt = timestamp + 430;
+            moveOverlayFocus(host, direction);
+            return;
+        }
+
+        if (direction !== state.repeatDirection) {
+            state.repeatDirection = direction;
+            state.nextRepeatAt = timestamp + 430;
+            return;
+        }
+
+        let repeats = 0;
+        while (timestamp >= state.nextRepeatAt && repeats < 3) {
+            moveOverlayFocus(host, direction);
+            state.nextRepeatAt += 120;
+            repeats++;
+        }
+
+        if (repeats === 3 && timestamp >= state.nextRepeatAt) state.nextRepeatAt = timestamp + 120;
+    }
+
+    function pumpOverlayButtons(host, gamepad) {
+        const activate = readOverlayButton(gamepad, 0) || readOverlayButton(gamepad, 9);
+        const back = readOverlayButton(gamepad, 1);
+
+        if (buttonPressed("activate", activate)) activateOverlayFocus(host);
+        if (buttonPressed("back", back)) activateOverlayBack(host);
+    }
+
+    function buttonPressed(id, isDown) {
+        if (state.previousButtons.has(id) == false) {
+            state.previousButtons.set(id, isDown);
+            return false;
+        }
+
+        const wasDown = state.previousButtons.get(id) === true;
+        state.previousButtons.set(id, isDown);
+        return isDown && !wasDown;
+    }
+
+    return { reset, pump };
+}
+
+function selectOverlayGamepad(gamepads) {
+    for (const gamepad of gamepads || []) {
+        if (gamepad?.connected) return gamepad;
+    }
+
+    return undefined;
+}
+
+function hasHeldOverlayActionButton(gamepads) {
+    for (const gamepad of gamepads || []) {
+        if (!gamepad?.connected) continue;
+        if (readOverlayButton(gamepad, 0) || readOverlayButton(gamepad, 1) || readOverlayButton(gamepad, 9)) return true;
+    }
+
+    return false;
+}
+
+function readOverlayDirection(gamepad, state) {
+    if (readOverlayButton(gamepad, 12)) return "up";
+    if (readOverlayButton(gamepad, 13)) return "down";
+    if (readOverlayButton(gamepad, 14)) return "left";
+    if (readOverlayButton(gamepad, 15)) return "right";
+    return leftStickToOverlayDirection(gamepad, state);
+}
+
+function leftStickToOverlayDirection(gamepad, state) {
+    const x = remapOverlayStickAxis(gamepad?.axes?.[0]);
+    const y = remapOverlayStickAxis(gamepad?.axes?.[1]);
+    const magnitude = Math.sqrt((x * x) + (y * y));
+    const previous = state.lastDirection;
+    if (previous) {
+        if (magnitude < 0.22) {
+            state.stickCommitted = false;
+            return undefined;
+        }
+
+        const stronglyHeld = isOverlayDirectionStronglyHeld(previous, x, y, 0.725);
+        if (!state.stickCommitted) {
+            if (stronglyHeld) state.stickCommitted = true;
+            return previous;
+        }
+
+        if (!stronglyHeld) {
+            state.stickCommitted = false;
+            return undefined;
+        }
+
+        return previous;
+    }
+
+    if (magnitude < 0.60) {
+        state.stickCommitted = false;
+        return undefined;
+    }
+
+    let angle = Math.atan2(y, x) * 180 / Math.PI;
+    angle = normalizeOverlayDegrees(angle - 8);
+    let result = undefined;
+    if (isOverlayAngleWithinSector(angle, 0, 35)) result = "right";
+    else if (isOverlayAngleWithinSector(angle, 90, 35)) result = "down";
+    else if (isOverlayAngleWithinSector(angle, 180, 35)) result = "left";
+    else if (isOverlayAngleWithinSector(angle, 270, 35)) result = "up";
+
+    state.stickCommitted = result ? isOverlayDirectionStronglyHeld(result, x, y, 0.725) : false;
+    return result;
+}
+
+function isOverlayDirectionStronglyHeld(direction, x, y, threshold) {
+    if (direction === "up") return y <= -threshold;
+    if (direction === "down") return y >= threshold;
+    if (direction === "left") return x <= -threshold;
+    if (direction === "right") return x >= threshold;
+    return false;
+}
+
+function remapOverlayStickAxis(value) {
+    value = normalizeAxis(value);
+    const magnitude = Math.abs(value);
+    if (magnitude < 0.24) return 0;
+    return clamp(((magnitude - 0.24) / 0.76) * Math.sign(value), -1, 1);
+}
+
+function readOverlayButton(gamepad, index) {
+    const button = gamepad?.buttons?.[index];
+    return !!button?.pressed || normalizeUnit(button?.value, 0) > (8 / 255);
+}
+
+function focusFirstOverlayControl(host) {
+    window.setTimeout(() => {
+        if (!host || !document.body.contains(host)) return;
+        focusOverlayControlIfNeeded(host);
+    }, 0);
+}
+
+function focusOverlayControlIfNeeded(host) {
+    const current = document.activeElement;
+    if (current && host.contains(current) && isOverlayFocusable(current)) return;
+    setOverlayFocusedControl(findOverlayControls(host)[0]);
+}
+
+function moveOverlayFocus(host, direction) {
+    const controls = findOverlayControls(host);
+    if (controls.length === 0) return;
+    if (controls.length === 1) {
+        setOverlayFocusedControl(controls[0]);
+        return;
+    }
+
+    const current = controls.includes(document.activeElement) ? document.activeElement : controls[0];
+    const currentRect = centerOf(current.getBoundingClientRect());
+    const candidates = controls.filter(control => control !== current)
+        .map(control => ({ control, score: scoreOverlayFocusCandidate(currentRect, centerOf(control.getBoundingClientRect()), direction) }))
+        .filter(candidate => Number.isFinite(candidate.score))
+        .sort((a, b) => a.score - b.score);
+
+    const next = candidates[0]?.control || controls[(controls.indexOf(current) + 1) % controls.length];
+    setOverlayFocusedControl(next);
+}
+
+function scoreOverlayFocusCandidate(from, to, direction) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    if (direction === "up" && dy >= -1) return Number.POSITIVE_INFINITY;
+    if (direction === "down" && dy <= 1) return Number.POSITIVE_INFINITY;
+    if (direction === "left" && dx >= -1) return Number.POSITIVE_INFINITY;
+    if (direction === "right" && dx <= 1) return Number.POSITIVE_INFINITY;
+
+    const primary = direction === "up" || direction === "down" ? Math.abs(dy) : Math.abs(dx);
+    const secondary = direction === "up" || direction === "down" ? Math.abs(dx) : Math.abs(dy);
+    return primary + (secondary * 2.2);
+}
+
+function activateOverlayFocus(host) {
+    const current = document.activeElement;
+    const target = current && host.contains(current) && isOverlayFocusable(current)
+        ? current
+        : findOverlayControls(host)[0];
+    activateOverlayControl(target);
+}
+
+function activateOverlayBack(host) {
+    const controls = findOverlayControls(host);
+    const target = controls.find(control => isOverlayBackControl(control));
+    activateOverlayControl(target);
+}
+
+function setOverlayFocusedControl(target) {
+    if (!target) return;
+    const host = target.closest(".klooie-lifecycle-overlay-host");
+    for (const element of host?.querySelectorAll("[data-klooie-overlay-focused]") || []) {
+        element.removeAttribute("data-klooie-overlay-focused");
+    }
+
+    target.setAttribute("data-klooie-overlay-focused", "true");
+    target.focus({ preventScroll: true });
+}
+
+function activateOverlayControl(target) {
+    if (!target) return;
+    if (target instanceof HTMLAnchorElement && target.href) {
+        if ((target.target || "").toLowerCase() === "_blank") {
+            window.open(target.href, "_blank", "noopener");
+            return;
+        }
+
+        window.location.href = target.href;
+        return;
+    }
+
+    target.click?.();
+}
+
+function isOverlayBackControl(control) {
+    if (control.hasAttribute("data-klooie-overlay-dismiss")) return true;
+    const text = (control.textContent || control.getAttribute("aria-label") || control.title || "").trim().toLowerCase();
+    return text === "back" || text.includes("back") || text.includes("cancel") || text.includes("close") || text.includes("dismiss");
+}
+
+function findOverlayControls(host) {
+    return Array.from(host.querySelectorAll("a[href],button,input,select,textarea,[tabindex]")).filter(isOverlayFocusable);
+}
+
+function isOverlayFocusable(element) {
+    if (!element || element.disabled || element.getAttribute("aria-disabled") === "true") return false;
+    if (element.tabIndex < 0) return false;
+    const style = window.getComputedStyle(element);
+    if (style.visibility === "hidden" || style.display === "none") return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+}
+
+function centerOf(rect) {
+    return {
+        x: rect.left + (rect.width / 2),
+        y: rect.top + (rect.height / 2)
+    };
+}
+
+function normalizeOverlayDegrees(angle) {
+    while (angle < 0) angle += 360;
+    while (angle >= 360) angle -= 360;
+    return angle;
+}
+
+function isOverlayAngleWithinSector(angle, center, halfWidth) {
+    return Math.abs(shortestOverlayAngleDelta(angle, center)) <= halfWidth;
+}
+
+function shortestOverlayAngleDelta(a, b) {
+    let delta = a - b;
+    while (delta <= -180) delta += 360;
+    while (delta > 180) delta -= 360;
+    return delta;
+}
 
 window.klooieLifecycle.showLoading();
 
@@ -925,16 +1369,17 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
 
     try {
         const size = measure(hostElement, state);
-        const overlayActive = window.klooieLifecycle?.isOverlayActive?.() === true;
-        if (overlayActive) {
+        const browserGamepads = readConnectedBrowserGamepads(state);
+        const appInputBlocked = window.klooieLifecycle?.shouldBlockAppInput?.(browserGamepads) === true;
+        if (appInputBlocked) {
             clearAllHeldKeys(state);
             state.pendingKeys.length = 0;
             state.touchController?.releaseAll?.();
         } else {
             pumpKeyboardRepeats(state, timestamp);
         }
-        const keys = overlayActive ? [] : state.pendingKeys.splice(0, state.pendingKeys.length);
-        const gamepadSnapshotJson = overlayActive ? getNeutralGamepadSnapshotJson() : readGamepadSnapshotJson(state);
+        const keys = appInputBlocked ? [] : state.pendingKeys.splice(0, state.pendingKeys.length);
+        const gamepadSnapshotJson = appInputBlocked ? getNeutralGamepadSnapshotJson() : readGamepadSnapshotJson(state, browserGamepads);
         const mobileExperience = shouldShowTouchController();
         if (mobileExperience !== state.mobileExperience) {
             state.mobileExperience = mobileExperience;
@@ -1724,23 +2169,28 @@ function isModifierOnlyKey(key) {
         key === "SymbolLock";
 }
 
-function readGamepadSnapshotJson(state) {
+function readConnectedBrowserGamepads(state) {
+    const rawGamepads = typeof navigator !== "undefined" && typeof navigator.getGamepads === "function"
+        ? navigator.getGamepads()
+        : [];
+    const gamepadsByIndex = new Map();
+    for (const gamepad of state?.knownGamepads?.values?.() || []) {
+        if (!gamepad || !gamepad.connected) continue;
+        gamepadsByIndex.set(gamepad.index || 0, gamepad);
+    }
+
+    for (const gamepad of rawGamepads) {
+        if (!gamepad || !gamepad.connected) continue;
+        gamepadsByIndex.set(gamepad.index || 0, gamepad);
+    }
+
+    return Array.from(gamepadsByIndex.values());
+}
+
+function readGamepadSnapshotJson(state, browserGamepads) {
     try {
-        const rawGamepads = typeof navigator !== "undefined" && typeof navigator.getGamepads === "function"
-            ? navigator.getGamepads()
-            : [];
-        const gamepadsByIndex = new Map();
-        for (const gamepad of state?.knownGamepads?.values?.() || []) {
-            if (!gamepad || !gamepad.connected) continue;
-            gamepadsByIndex.set(gamepad.index || 0, gamepad);
-        }
-
-        for (const gamepad of rawGamepads) {
-            if (!gamepad || !gamepad.connected) continue;
-            gamepadsByIndex.set(gamepad.index || 0, gamepad);
-        }
-
-        const gamepads = Array.from(gamepadsByIndex.values(), gamepad => ({
+        browserGamepads = browserGamepads || readConnectedBrowserGamepads(state);
+        const gamepads = Array.from(browserGamepads, gamepad => ({
             id: gamepad.id || "",
             index: gamepad.index || 0,
             connected: !!gamepad.connected,
