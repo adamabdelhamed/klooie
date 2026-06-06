@@ -12,6 +12,8 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         loadingDismissed: false,
         loadingDismissListeners: new Set(),
         stoppedShown: false,
+        overlayElement: undefined,
+        overlayActive: false,
         options: normalizeLifecycleOptions(window.klooieLifecycleOptions)
     };
 
@@ -50,6 +52,33 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
                 wireRefresh(host);
                 window.klooieStoppedScreen?.show?.();
             });
+    }
+
+    function showOverlay(command) {
+        command = command || {};
+        dismissOverlay();
+        const host = ensureOverlay("klooie-lifecycle-overlay");
+        host.style.zIndex = "2000";
+        host.style.background = "transparent";
+        state.overlayElement = host;
+        state.overlayActive = true;
+
+        const dismiss = () => dismissOverlay();
+        const handled = window.klooieCustomOverlay?.show?.(host, command, dismiss);
+        if (handled) return;
+
+        mountDefaultOverlay(host, command, dismiss);
+    }
+
+    function dismissOverlay() {
+        const element = state.overlayElement || document.getElementById("klooie-lifecycle-overlay");
+        state.overlayElement = undefined;
+        state.overlayActive = false;
+        element?.remove();
+    }
+
+    function isOverlayActive() {
+        return state.overlayActive;
     }
 
     function markReady(message) {
@@ -155,6 +184,32 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
             script.replaceWith(replacement);
         }
         wireRefresh(host);
+    }
+
+    function mountDefaultOverlay(host, command, dismiss) {
+        host.replaceChildren();
+        const title = command.title || command.Title || "Feature unavailable";
+        const message = command.message || command.Message || "This feature is not available here.";
+        const steamUrl = command.steamUrl || command.SteamUrl || "https://store.steampowered.com/";
+        const root = document.createElement("div");
+        root.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.88);color:white;font-family:Consolas,Menlo,Monaco,'Courier New',monospace;user-select:none;touch-action:none";
+        root.innerHTML = `
+<div style="max-width:680px;text-align:center;border:1px solid rgba(255,255,255,.2);padding:28px;background:#050505">
+  <h1 style="margin:0 0 18px;font-size:28px">${escapeHtml(title)}</h1>
+  <p style="margin:0 0 24px;line-height:1.6;color:rgba(255,255,255,.78)">${escapeHtml(message)}</p>
+  <a href="${escapeAttribute(steamUrl)}" target="_blank" rel="noopener" style="display:inline-block;margin:0 8px 12px;padding:12px 18px;color:white;background:#1b5cff;text-decoration:none">View on Steam</a>
+  <button type="button" style="display:inline-block;margin:0 8px 12px;padding:12px 18px;color:white;background:#333;border:0;cursor:pointer">Back to Demo</button>
+</div>`;
+        root.querySelector("button")?.addEventListener("click", dismiss);
+        host.appendChild(root);
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]));
+    }
+
+    function escapeAttribute(value) {
+        return escapeHtml(value).replace(/`/g, "&#96;");
     }
 
     function extractBodyHtml(html) {
@@ -455,7 +510,10 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         isLoadingDismissed,
         afterLoadingDismissed,
         requestFullscreenAndLandscape,
-        showStopped
+        showStopped,
+        showOverlay,
+        dismissOverlay,
+        isOverlayActive
     };
 })();
 
@@ -500,7 +558,7 @@ window.klooieFramePump = {
             knownGamepads: new Map(),
             touchController: undefined,
             zoomControl: undefined,
-            pendingTouchButtonHints: undefined,
+            pendingTouchButtonHints: [],
             firstVisibleFramePresented: false,
             stoppedScreenPresented: false,
             loadingDismissSubscription: undefined,
@@ -867,9 +925,16 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
 
     try {
         const size = measure(hostElement, state);
-        pumpKeyboardRepeats(state, timestamp);
-        const keys = state.pendingKeys.splice(0, state.pendingKeys.length);
-        const gamepadSnapshotJson = readGamepadSnapshotJson(state);
+        const overlayActive = window.klooieLifecycle?.isOverlayActive?.() === true;
+        if (overlayActive) {
+            clearAllHeldKeys(state);
+            state.pendingKeys.length = 0;
+            state.touchController?.releaseAll?.();
+        } else {
+            pumpKeyboardRepeats(state, timestamp);
+        }
+        const keys = overlayActive ? [] : state.pendingKeys.splice(0, state.pendingKeys.length);
+        const gamepadSnapshotJson = overlayActive ? getNeutralGamepadSnapshotJson() : readGamepadSnapshotJson(state);
         const mobileExperience = shouldShowTouchController();
         if (mobileExperience !== state.mobileExperience) {
             state.mobileExperience = mobileExperience;
@@ -925,6 +990,7 @@ function setupKeyboard(hostElement, state) {
     }
 
     const startRepeat = (event) => {
+        if (window.klooieLifecycle?.isOverlayActive?.() === true) return;
         const keyId = keyboardEventId(event);
         if (state.heldKeys.has(keyId)) return;
 
@@ -946,6 +1012,7 @@ function setupKeyboard(hostElement, state) {
 
     const keydown = (event) => {
         if (event.isComposing || event.key === "Process") return;
+        if (window.klooieLifecycle?.isOverlayActive?.() === true) return;
         event.preventDefault();
         event.stopPropagation();
 
@@ -955,6 +1022,7 @@ function setupKeyboard(hostElement, state) {
     };
 
     const keyup = (event) => {
+        if (window.klooieLifecycle?.isOverlayActive?.() === true) return;
         clearRepeat(event);
         event.preventDefault();
         event.stopPropagation();
@@ -984,6 +1052,12 @@ function teardownKeyboard(state) {
     }
 
     state.listeners = [];
+    for (const keyId of state.heldKeys.keys()) {
+        clearHeldKey(state, keyId);
+    }
+}
+
+function clearAllHeldKeys(state) {
     for (const keyId of state.heldKeys.keys()) {
         clearHeldKey(state, keyId);
     }
@@ -1062,7 +1136,7 @@ function normalizeFrameColorValue(color) {
 function ensureMobileControls(hostElement, state) {
     if (!shouldShowTouchController()) return;
     if (!state.touchController) setupTouchController(hostElement, state, true);
-    if (state.pendingTouchButtonHints?.length > 0) state.touchController?.applyButtonHints(state.pendingTouchButtonHints);
+    if (state.pendingTouchButtonHints.length > 0) state.touchController?.applyButtonHints(state.pendingTouchButtonHints);
     if (!state.zoomControl) setupZoomControl(hostElement, state);
 }
 
@@ -1480,6 +1554,19 @@ function setupTouchController(hostElement, state, fadeIn)
 
             state.requestImmediateFrame?.();
         },
+        releaseAll()
+        {
+            for (let i = 0; i < buttons.length; i++) buttons[i] = false;
+            axes[0] = 0;
+            axes[1] = 0;
+            axes[2] = 0;
+            axes[3] = 0;
+            leftStickPressPulseReads = 0;
+            stickPointerId = undefined;
+            stickBase.style.transform = "";
+            stickKnob.style.transform = "";
+            for (const button of buttonElements) button.classList.remove("is-pressed");
+        },
         applyButtonHints(hints)
         {
             applyTouchButtonHints(overlay, hints);
@@ -1552,16 +1639,12 @@ function isFullscreenActive() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
 }
 
-function isInstalledDisplayMode() {
-    return !!(
-        window.matchMedia?.("(display-mode: fullscreen)")?.matches ||
-        window.matchMedia?.("(display-mode: standalone)")?.matches ||
-        navigator.standalone === true
-    );
+function isFullscreenDisplayMode() {
+    return window.matchMedia?.("(display-mode: fullscreen)")?.matches === true;
 }
 
 function canRequestFullscreen() {
-    if (isInstalledDisplayMode()) return false;
+    if (isFullscreenDisplayMode()) return false;
 
     const element = document.documentElement;
     return !!(element.requestFullscreen || element.webkitRequestFullscreen);
@@ -1572,7 +1655,7 @@ function isIosBrowser() {
 }
 
 async function requestFullscreen(element) {
-    if (isInstalledDisplayMode()) return;
+    if (isFullscreenDisplayMode()) return;
 
     try {
         if (element.requestFullscreen) {
@@ -1680,7 +1763,25 @@ function readGamepadSnapshotJson(state) {
     }
 }
 
+function getNeutralGamepadSnapshotJson() {
+    return JSON.stringify({
+        gamepads: [{
+            id: "overlay-blocked",
+            index: 0,
+            connected: true,
+            mapping: "",
+            buttons: new Array(17).fill(0).map(() => ({ pressed: false, value: 0 })),
+            axes: [0, 0, 0, 0]
+        }]
+    });
+}
+
 function applyBrowserControllerCommands(state, frame) {
+    const overlays = frame?.overlayCommands || frame?.OverlayCommands;
+    if (overlays?.length > 0) {
+        for (const overlay of overlays) window.klooieLifecycle?.showOverlay?.(overlay);
+    }
+
     const releases = frame?.touchButtonReleases || frame?.TouchButtonReleases;
     if (releases?.length > 0) {
         state.touchController?.releaseButtons(releases);
@@ -1688,9 +1789,26 @@ function applyBrowserControllerCommands(state, frame) {
 
     const hints = frame?.touchButtonHints || frame?.TouchButtonHints;
     if (hints?.length > 0) {
-        state.pendingTouchButtonHints = hints;
+        state.pendingTouchButtonHints = mergeTouchButtonHints(state.pendingTouchButtonHints, hints);
         state.touchController?.applyButtonHints(hints);
     }
+}
+
+function mergeTouchButtonHints(existing, incoming) {
+    if (incoming?.some?.(hint => Number(hint?.button ?? hint?.Button) < 0)) return incoming;
+
+    const byButton = new Map();
+    for (const hint of existing || []) {
+        const index = Number(hint?.button ?? hint?.Button);
+        if (Number.isInteger(index) && index >= 0) byButton.set(index, hint);
+    }
+
+    for (const hint of incoming || []) {
+        const index = Number(hint?.button ?? hint?.Button);
+        if (Number.isInteger(index) && index >= 0) byButton.set(index, hint);
+    }
+
+    return Array.from(byButton.values());
 }
 
 function applyTouchButtonHints(overlay, hints) {

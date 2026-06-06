@@ -16,4 +16,14 @@ public static class BrowserHostEnvironment
     }
 
     public static Event<bool> MobileExperienceChanged { get; } = Event<bool>.Create();
+
+    public static Event<BrowserOverlayRequest> OverlayRequested { get; } = Event<BrowserOverlayRequest>.Create();
+
+    public static void ShowOverlay(string id, string? title = null, string? message = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        OverlayRequested.Fire(new BrowserOverlayRequest(id, title, message));
+    }
 }
+
+public sealed record BrowserOverlayRequest(string Id, string? Title = null, string? Message = null);

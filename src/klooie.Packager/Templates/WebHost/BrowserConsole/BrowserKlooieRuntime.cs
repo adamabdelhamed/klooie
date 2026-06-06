@@ -10,6 +10,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
     private readonly Recyclable subscriptionLifetime;
     private readonly int subscriptionLifetimeLease;
     private readonly Task entryTask;
+    private readonly Queue<BrowserOverlayCommand> overlayCommands = new();
     private ConsoleApp? app;
     private Exception? entryException;
     private bool lastFrameHadPresentation;
@@ -25,6 +26,7 @@ public sealed class BrowserKlooieRuntime : IDisposable
         host = new BrowserKlooieTerminalHost(FrameBuffer);
         subscriptionLifetime = DefaultRecyclablePool.Instance.Rent(out subscriptionLifetimeLease);
         ConsoleApp.Starting.Subscribe(this, static me => me.BindStartingApp(), subscriptionLifetime);
+        BrowserHostEnvironment.OverlayRequested.Subscribe(this, static (me, request) => me.EnqueueOverlayCommand(request), subscriptionLifetime);
         entryTask = RunEntryPointAsync(registration, js, http);
     }
 
@@ -70,9 +72,10 @@ public sealed class BrowserKlooieRuntime : IDisposable
     {
         var touchButtonReleases = BrowserControllerInput.DrainTouchButtonReleases();
         var touchButtonHints = BrowserControllerInput.DrainTouchButtonHints();
+        var overlayCommands = DrainOverlayCommands();
         var presentation = app?.Presentation is ConsoleBitmapPresentation browserPresentation ? browserPresentation.CreateFrame() : ConsoleBitmapPresentationFrame.Empty;
         var hasPresentation = ReferenceEquals(presentation, ConsoleBitmapPresentationFrame.Empty) == false;
-        if (touchButtonReleases.Length == 0 && touchButtonHints.Length == 0 && hasPresentation == false && lastFrameHadPresentation == false && appStopped == false) return frame;
+        if (touchButtonReleases.Length == 0 && touchButtonHints.Length == 0 && overlayCommands.Length == 0 && hasPresentation == false && lastFrameHadPresentation == false && appStopped == false) return frame;
 
         lastFrameHadPresentation = hasPresentation;
 
@@ -89,8 +92,28 @@ public sealed class BrowserKlooieRuntime : IDisposable
             TouchButtonReleases = touchButtonReleases,
             TouchButtonHints = touchButtonHints,
             Presentation = presentation,
+            OverlayCommands = overlayCommands,
             AppStopped = appStopped
         };
+    }
+
+    private void EnqueueOverlayCommand(BrowserOverlayRequest request)
+    {
+        lock (overlayCommands)
+        {
+            overlayCommands.Enqueue(new BrowserOverlayCommand(request.Id, request.Title, request.Message));
+        }
+    }
+
+    private BrowserOverlayCommand[] DrainOverlayCommands()
+    {
+        lock (overlayCommands)
+        {
+            if (overlayCommands.Count == 0) return Array.Empty<BrowserOverlayCommand>();
+            var ret = overlayCommands.ToArray();
+            overlayCommands.Clear();
+            return ret;
+        }
     }
 
     public void Dispose()

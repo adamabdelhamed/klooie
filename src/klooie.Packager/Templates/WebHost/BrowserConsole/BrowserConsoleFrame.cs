@@ -16,7 +16,8 @@ public sealed class BrowserConsoleFrame
         Background = Array.Empty<int>(),
         TouchButtonReleases = Array.Empty<int>(),
         TouchButtonHints = Array.Empty<BrowserTouchButtonHint>(),
-        Presentation = ConsoleBitmapPresentationFrame.Empty
+        Presentation = ConsoleBitmapPresentationFrame.Empty,
+        OverlayCommands = Array.Empty<BrowserOverlayCommand>()
     };
 
     public required int Width { get; init; }
@@ -30,5 +31,8 @@ public sealed class BrowserConsoleFrame
     public int[] TouchButtonReleases { get; init; } = Array.Empty<int>();
     public BrowserTouchButtonHint[] TouchButtonHints { get; init; } = Array.Empty<BrowserTouchButtonHint>();
     public ConsoleBitmapPresentationFrame Presentation { get; init; } = ConsoleBitmapPresentationFrame.Empty;
+    public BrowserOverlayCommand[] OverlayCommands { get; init; } = Array.Empty<BrowserOverlayCommand>();
     public bool AppStopped { get; init; }
 }
+
+public sealed record BrowserOverlayCommand(string Id, string? Title = null, string? Message = null);
