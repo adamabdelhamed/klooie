@@ -4,6 +4,8 @@ public static class BrowserHostEnvironment
 {
     private static bool isMobileExperience;
 
+    public static string HostName { get; set; } = "";
+
     public static bool IsMobileExperience
     {
         get => isMobileExperience;

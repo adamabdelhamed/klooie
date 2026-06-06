@@ -17,10 +17,11 @@ public sealed class BrowserKlooieRuntime : IDisposable
     private bool entryPointCompleted;
     private bool disposed;
 
-    public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http)
+    public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http, string? hostName)
     {
         ArgumentNullException.ThrowIfNull(registration);
 
+        BrowserHostEnvironment.HostName = hostName ?? "";
         BrowserKlooieTerminalHost.InitConsoleProvider();
         FrameBuffer = new BrowserConsoleFrameBuffer(80, 25);
         host = new BrowserKlooieTerminalHost(FrameBuffer);
@@ -32,11 +33,12 @@ public sealed class BrowserKlooieRuntime : IDisposable
 
     public BrowserConsoleFrameBuffer FrameBuffer { get; }
 
-    public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget, string? gamepadSnapshotJson, bool mobileExperience)
+    public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget, string? gamepadSnapshotJson, bool mobileExperience, string? hostName)
     {
         if (disposed) return BrowserConsoleFrame.Empty;
         if (entryException is not null) throw entryException;
 
+        BrowserHostEnvironment.HostName = hostName ?? "";
         BrowserHostEnvironment.IsMobileExperience = mobileExperience;
         TryUpdateBrowserGamepads(gamepadSnapshotJson);
         host.Resize(width, height);

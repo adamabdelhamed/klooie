@@ -1388,7 +1388,7 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
             state.renderer?.invalidateMetrics();
         }
 
-        const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson, mobileExperience);
+        const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson, mobileExperience, window.location.hostname || "");
         applyBrowserControllerCommands(state, terminalFrame);
         state.renderer.render(canvas, terminalFrame, state);
         applyLifecycleFrameState(hostElement, terminalFrame, state);
