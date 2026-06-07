@@ -181,7 +181,18 @@ body {
     pointer-events: auto;
     user-select: none;
     -webkit-user-select: none;
+    opacity: 1;
+    transition: opacity 180ms ease;
 }
+
+    .klooie-zoom-control.is-dimmed {
+        opacity: .34;
+    }
+
+    .klooie-zoom-control.is-hidden-by-encourage {
+        opacity: 0;
+        pointer-events: none;
+    }
 
     .klooie-zoom-control button {
         width: 36px;

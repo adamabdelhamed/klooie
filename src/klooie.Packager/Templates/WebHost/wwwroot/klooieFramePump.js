@@ -1154,6 +1154,11 @@ window.klooieFramePump = {
         state.frameAnimationId = requestAnimationFrame(pumpFrame);
         return id;
     },
+    syncZoomEncourageVisibility(visible) {
+        for (const id of Object.keys(this.pumps)) {
+            this.pumps[id]?.zoomControl?.syncEncourageVisibility?.(visible === true);
+        }
+    },
     stop(id) {
         const pump = this.pumps[id];
         if (pump) {
@@ -1732,7 +1737,7 @@ function setupZoomControl(hostElement, state) {
     if (!state.mobileOptions.enableZoom || !shouldShowTouchController()) return;
 
     const control = document.createElement("div");
-    control.className = "klooie-zoom-control";
+    control.className = "klooie-zoom-control is-dimmed";
     control.innerHTML = `
         <button type="button" class="klooie-zoom-out" aria-label="Zoom out">-</button>
         <output class="klooie-zoom-value"></output>
@@ -1742,6 +1747,18 @@ function setupZoomControl(hostElement, state) {
     const value = control.querySelector(".klooie-zoom-value");
     const zoomOut = control.querySelector(".klooie-zoom-out");
     const zoomIn = control.querySelector(".klooie-zoom-in");
+    let dimTimer = undefined;
+
+    const dim = () => {
+        control.classList.add("is-dimmed");
+        dimTimer = undefined;
+    };
+
+    const markInteractive = () => {
+        control.classList.remove("is-dimmed");
+        if (dimTimer !== undefined) window.clearTimeout(dimTimer);
+        dimTimer = window.setTimeout(dim, 5000);
+    };
 
     const render = () => {
         value.textContent = `${Math.round((state.zoom / state.mobileOptions.zoomDefault) * 100)}%`;
@@ -1765,20 +1782,34 @@ function setupZoomControl(hostElement, state) {
 
     zoomOut.addEventListener("pointerdown", event => {
         event.preventDefault();
+        markInteractive();
         setZoomIndex(getZoomIndex(state) - 1);
     });
 
     zoomIn.addEventListener("pointerdown", event => {
         event.preventDefault();
+        markInteractive();
         setZoomIndex(getZoomIndex(state) + 1);
     });
 
+    control.addEventListener("pointerenter", markInteractive);
+    control.addEventListener("focusin", markInteractive);
     render();
+    control.classList.toggle("is-hidden-by-encourage", isTouchEncourageDrawerVisible());
     state.zoomControl = {
+        syncEncourageVisibility(visible) {
+            control.classList.toggle("is-hidden-by-encourage", visible === true);
+        },
         dispose() {
+            if (dimTimer !== undefined) window.clearTimeout(dimTimer);
             control.remove();
         }
     };
+}
+
+function isTouchEncourageDrawerVisible() {
+    const drawer = document.querySelector(".klooie-touch-encourage-drawer:not([hidden])");
+    return !!drawer && drawer.textContent.trim().length > 0;
 }
 
 function teardownZoomControl(state) {
@@ -2414,7 +2445,9 @@ function updateTouchEncourageDrawer(overlay, hints) {
     }
 
     drawer.textContent = message;
-    drawer.hidden = message.trim().length === 0;
+    const visible = message.trim().length > 0;
+    drawer.hidden = !visible;
+    window.klooieFramePump?.syncZoomEncourageVisibility?.(visible);
 }
 
 function setTouchButtonLabel(element, labelElement, label) {
