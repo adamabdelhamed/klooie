@@ -17,11 +17,11 @@ public sealed class BrowserKlooieRuntime : IDisposable
     private bool entryPointCompleted;
     private bool disposed;
 
-    public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http, string? hostName)
+    public BrowserKlooieRuntime(KlooieBlazorAppRegistration registration, IJSRuntime js, HttpClient http, string? hostName, string? queryString)
     {
         ArgumentNullException.ThrowIfNull(registration);
 
-        BrowserHostEnvironment.HostName = hostName ?? "";
+        SyncBrowserHostEnvironment(hostName, queryString);
         BrowserKlooieTerminalHost.InitConsoleProvider();
         FrameBuffer = new BrowserConsoleFrameBuffer(80, 25);
         host = new BrowserKlooieTerminalHost(FrameBuffer);
@@ -33,12 +33,12 @@ public sealed class BrowserKlooieRuntime : IDisposable
 
     public BrowserConsoleFrameBuffer FrameBuffer { get; }
 
-    public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget, string? gamepadSnapshotJson, bool mobileExperience, string? hostName)
+    public BrowserConsoleFrame Tick(int width, int height, TimeSpan budget, string? gamepadSnapshotJson, bool mobileExperience, string? hostName, string? queryString)
     {
         if (disposed) return BrowserConsoleFrame.Empty;
         if (entryException is not null) throw entryException;
 
-        BrowserHostEnvironment.HostName = hostName ?? "";
+        SyncBrowserHostEnvironment(hostName, queryString);
         BrowserHostEnvironment.IsMobileExperience = mobileExperience;
         TryUpdateBrowserGamepads(gamepadSnapshotJson);
         host.Resize(width, height);
@@ -68,6 +68,12 @@ public sealed class BrowserKlooieRuntime : IDisposable
         catch
         {
         }
+    }
+
+    private static void SyncBrowserHostEnvironment(string? hostName, string? queryString)
+    {
+        BrowserHostEnvironment.HostName = hostName ?? "";
+        BrowserHostEnvironment.QueryString = queryString ?? "";
     }
 
     private BrowserConsoleFrame AddFrameCommands(BrowserConsoleFrame frame, ConsoleApp? app, bool appStopped)

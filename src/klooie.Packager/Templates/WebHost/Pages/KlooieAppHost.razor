@@ -51,7 +51,7 @@ else
     public string? AppRoute { get; set; }
 
     [JSInvokable]
-    public BrowserConsoleFrame Tick(int width, int height, double elapsedMilliseconds, BrowserKeyboardEvent[] keyboardEvents, string? gamepadSnapshotJson, bool mobileExperience, string? hostName)
+    public BrowserConsoleFrame Tick(int width, int height, double elapsedMilliseconds, BrowserKeyboardEvent[] keyboardEvents, string? gamepadSnapshotJson, bool mobileExperience, string? hostName, string? queryString)
     {
         foreach (var keyboardEvent in keyboardEvents)
         {
@@ -60,7 +60,7 @@ else
 
         tickCount++;
         var budget = TimeSpan.FromMilliseconds(Math.Clamp(elapsedMilliseconds, 1, 33));
-        return runtime?.Tick(width, height, budget, gamepadSnapshotJson, mobileExperience, hostName ?? new Uri(Navigation.Uri).Host) ?? BrowserConsoleFrame.Empty;
+        return runtime?.Tick(width, height, budget, gamepadSnapshotJson, mobileExperience, hostName ?? new Uri(Navigation.Uri).Host, queryString ?? new Uri(Navigation.Uri).Query) ?? BrowserConsoleFrame.Empty;
     }
 
     [JSInvokable]
@@ -86,7 +86,8 @@ else
 
         activeRoute = registration.Route;
         await JS.InvokeVoidAsync("klooieLifecycle.configure", registration.LifecycleOptions);
-        runtime = new BrowserKlooieRuntime(registration, JS, Http, new Uri(Navigation.Uri).Host);
+        var uri = new Uri(Navigation.Uri);
+        runtime = new BrowserKlooieRuntime(registration, JS, Http, uri.Host, uri.Query);
         dotNetRef = DotNetObjectReference.Create(this);
         pumpId = await JS.InvokeAsync<int>("klooieFramePump.start", dotNetRef, hostElement, registration.MobileOptions);
     }

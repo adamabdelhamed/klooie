@@ -337,6 +337,11 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
 
     function mountDefaultOverlay(host, command, dismiss) {
         host.replaceChildren();
+        if ((command.id || command.Id) === "claws-settings-cleared") {
+            mountSettingsClearedOverlay(host, command, dismiss);
+            return;
+        }
+
         const title = command.title || command.Title || "Feature unavailable";
         const message = command.message || command.Message || "This feature is not available here.";
         const steamUrl = command.steamUrl || command.SteamUrl || "https://store.steampowered.com/";
@@ -350,6 +355,23 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
   <button type="button" data-klooie-overlay-dismiss style="display:inline-block;margin:0 8px 12px;padding:12px 18px;color:white;background:#333;border:0;cursor:pointer">Back to Demo</button>
 </div>`;
         root.querySelector("button")?.addEventListener("click", dismiss);
+        host.appendChild(root);
+    }
+
+    function mountSettingsClearedOverlay(host, command, dismiss) {
+        const title = command.title || command.Title || "Settings cleared";
+        const message = command.message || command.Message || "Saved game state has been cleared.";
+        const root = document.createElement("div");
+        root.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.88);color:white;font-family:Consolas,Menlo,Monaco,'Courier New',monospace;user-select:none;touch-action:none";
+        root.innerHTML = `
+<div style="max-width:680px;text-align:center;border:1px solid rgba(255,255,255,.2);padding:28px;background:#050505">
+  <h1 style="margin:0 0 18px;font-size:28px">${escapeHtml(title)}</h1>
+  <p style="margin:0 0 24px;line-height:1.6;color:rgba(255,255,255,.78)">${escapeHtml(message)}</p>
+  <button type="button" style="display:inline-block;margin:0 8px 12px;padding:12px 18px;color:white;background:#1b5cff;border:0;cursor:pointer">Reset</button>
+  <button type="button" data-klooie-overlay-dismiss style="display:inline-block;margin:0 8px 12px;padding:12px 18px;color:white;background:#333;border:0;cursor:pointer">Close</button>
+</div>`;
+        root.querySelector("button")?.addEventListener("click", () => location.reload());
+        root.querySelector("[data-klooie-overlay-dismiss]")?.addEventListener("click", dismiss);
         host.appendChild(root);
     }
 
@@ -667,6 +689,62 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         pumpGamepadNavigation
     };
 })();
+
+window.klooieStorage = window.klooieStorage || {};
+window.klooieStorage.clearGameStateAndReload = function () {
+    const clearStorage = storage => {
+        if (!storage) return;
+        for (let i = storage.length - 1; i >= 0; i--) {
+            const key = storage.key(i);
+            if (key && (key.startsWith("CLAWS:") || key.startsWith("klooie-"))) storage.removeItem(key);
+        }
+    };
+
+    const clearCookies = () => {
+        const expire = name => {
+            document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+            document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=" + location.pathname;
+        };
+
+        for (const cookie of document.cookie.split(";")) {
+            const name = cookie.split("=")[0]?.trim();
+            if (name) expire(name);
+        }
+    };
+
+    const clearAsyncState = async () => {
+        try {
+            if (window.caches?.keys) {
+                for (const key of await caches.keys()) await caches.delete(key);
+            }
+        } catch {
+        }
+
+        try {
+            if (navigator.serviceWorker?.getRegistrations) {
+                for (const registration of await navigator.serviceWorker.getRegistrations()) await registration.unregister();
+            }
+        } catch {
+        }
+    };
+
+    try {
+        clearStorage(localStorage);
+    } catch {
+    }
+
+    try {
+        clearStorage(sessionStorage);
+    } catch {
+    }
+
+    try {
+        clearCookies();
+    } catch {
+    }
+
+    clearAsyncState().finally(() => location.reload());
+};
 
 function createOverlayGamepadNavigator() {
     const state = {
@@ -1408,7 +1486,7 @@ async function runFrame(dotNetRef, hostElement, canvas, state, timestamp) {
             state.renderer?.invalidateMetrics();
         }
 
-        const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson, mobileExperience, window.location.hostname || "");
+        const terminalFrame = await dotNetRef.invokeMethodAsync("Tick", size.width, size.height, elapsed, keys, gamepadSnapshotJson, mobileExperience, window.location.hostname || "", window.location.search || "");
         applyBrowserControllerCommands(state, terminalFrame);
         state.renderer.render(canvas, terminalFrame, state);
         applyLifecycleFrameState(hostElement, terminalFrame, state);

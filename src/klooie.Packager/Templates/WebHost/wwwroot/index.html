@@ -19,6 +19,33 @@
             loadingHtmlPath: null,
             stoppedHtmlPath: null
         };
+        window.klooieStorage = window.klooieStorage || {};
+        window.klooieStorage.clearGameState = function () {
+            try {
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && (key.startsWith("CLAWS:") || key.startsWith("klooie-"))) localStorage.removeItem(key);
+                }
+            } catch {
+            }
+
+            try {
+                for (let i = sessionStorage.length - 1; i >= 0; i--) {
+                    const key = sessionStorage.key(i);
+                    if (key && (key.startsWith("CLAWS:") || key.startsWith("klooie-"))) sessionStorage.removeItem(key);
+                }
+            } catch {
+            }
+
+            try {
+                for (const cookie of document.cookie.split(";")) {
+                    const name = cookie.split("=")[0]?.trim();
+                    if (!name || (name.startsWith("CLAWS") || name.startsWith("klooie")) === false) continue;
+                    document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+                }
+            } catch {
+            }
+        };
     </script>
 </head>
 
