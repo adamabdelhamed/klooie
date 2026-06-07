@@ -5,9 +5,20 @@ window.klooiePwa = window.klooiePwa || {
 };
 
 window.klooieLifecycle = window.klooieLifecycle || (() => {
+    const layerZIndex = {
+        klooie: 0,
+        zoom: 30,
+        touchController: 40,
+        encourage: 50,
+        loading: 3000,
+        stopped: 3000,
+        temporaryOverlay: 4000
+    };
+
     const state = {
         loadingElement: undefined,
         stoppedElement: undefined,
+        loadingShown: false,
         loadingReady: false,
         loadingDismissed: false,
         loadingDismissListeners: new Set(),
@@ -34,6 +45,8 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
     }
 
     function showLoading() {
+        if (state.loadingShown) return;
+        state.loadingShown = true;
         const host = ensureOverlay("klooie-lifecycle-loading");
         state.loadingElement = host;
         prepareOverlayHost(host);
@@ -67,7 +80,7 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
         command = command || {};
         dismissOverlay();
         const host = ensureOverlay("klooie-lifecycle-overlay");
-        host.style.zIndex = "2000";
+        host.style.zIndex = String(layerZIndex.temporaryOverlay);
         host.style.background = "transparent";
         state.overlayElement = host;
         state.overlayActive = true;
@@ -134,6 +147,7 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
     function dismissLoading() {
         if (state.loadingDismissed) return;
         state.loadingDismissed = true;
+        state.loadingShown = false;
         const loader = window.klooieLoader;
         if (loader?.hide) {
             loader.hide();
@@ -188,7 +202,7 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
 
         element.style.position = "fixed";
         element.style.inset = "0";
-        element.style.zIndex = id.endsWith("stopped") ? "120" : "100";
+        element.style.zIndex = String(id.endsWith("stopped") ? layerZIndex.stopped : layerZIndex.loading);
         element.style.background = "#000";
         return element;
     }
@@ -292,12 +306,18 @@ window.klooieLifecycle = window.klooieLifecycle || (() => {
     async function loadLifecycleHtml(path, fallback) {
         if (!path) return fallback;
         try {
-            const response = await fetch(path, { cache: "force-cache" });
+            const response = await fetch(cacheBustUrl(path), { cache: "no-store" });
             if (!response.ok) return fallback;
             return await response.text();
         } catch {
             return fallback;
         }
+    }
+
+    function cacheBustUrl(path) {
+        const url = new URL(path, document.baseURI);
+        url.searchParams.set("v", window.klooieBuildId || String(Date.now()));
+        return url.toString();
     }
 
     function mountLifecycleHtml(host, html) {
@@ -1737,6 +1757,7 @@ function setupTouchController(hostElement, state, fadeIn)
             <button type="button" class="klooie-mobile-install" hidden>Install</button>
             <button type="button" class="klooie-mobile-dismiss" aria-label="Dismiss">X</button>
         </div>
+        <div class="klooie-touch-encourage-drawer" hidden></div>
         <div class="klooie-touch-stick-zone">
             <div class="klooie-touch-stick-base" data-button="10">
                 <div class="klooie-touch-stick-label">LS</div>
@@ -2240,7 +2261,7 @@ function applyBrowserControllerCommands(state, frame) {
     const hints = frame?.touchButtonHints || frame?.TouchButtonHints;
     if (hints?.length > 0) {
         state.pendingTouchButtonHints = mergeTouchButtonHints(state.pendingTouchButtonHints, hints);
-        state.touchController?.applyButtonHints(hints);
+        state.touchController?.applyButtonHints(state.pendingTouchButtonHints);
     }
 }
 
@@ -2273,9 +2294,11 @@ function applyTouchButtonHints(overlay, hints) {
                 : element;
             setTouchButtonLabel(element, labelElement, getDefaultTouchButtonLabel(index));
             element.classList.remove("is-disabled");
+            element.classList.remove("is-encouraged");
             element.setAttribute("aria-disabled", "false");
         }
 
+        updateTouchEncourageDrawer(overlay, []);
         return;
     }
 
@@ -2285,6 +2308,7 @@ function applyTouchButtonHints(overlay, hints) {
 
         const label = String(hint?.label ?? hint?.Label ?? getDefaultTouchButtonLabel(index));
         const enabled = (hint?.enabled ?? hint?.Enabled) !== false;
+        const encouraged = (hint?.encourage ?? hint?.Encourage) === true;
         const element = overlay.querySelector(`[data-button="${index}"]`);
         if (!element) continue;
 
@@ -2293,8 +2317,26 @@ function applyTouchButtonHints(overlay, hints) {
             : element;
         setTouchButtonLabel(element, labelElement, label);
         element.classList.toggle("is-disabled", !enabled);
+        element.classList.toggle("is-encouraged", encouraged);
         element.setAttribute("aria-disabled", enabled ? "false" : "true");
     }
+
+    updateTouchEncourageDrawer(overlay, hints);
+}
+
+function updateTouchEncourageDrawer(overlay, hints) {
+    const drawer = overlay.querySelector(".klooie-touch-encourage-drawer");
+    if (!drawer) return;
+
+    let message = "";
+    for (const hint of hints || []) {
+        if ((hint?.encourage ?? hint?.Encourage) !== true) continue;
+        message = String(hint?.encourageMessage ?? hint?.EncourageMessage ?? "");
+        if (message.trim().length > 0) break;
+    }
+
+    drawer.textContent = message;
+    drawer.hidden = message.trim().length === 0;
 }
 
 function setTouchButtonLabel(element, labelElement, label) {

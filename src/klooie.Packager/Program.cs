@@ -67,7 +67,7 @@ internal static class Program
         Directory.CreateDirectory(tempDirectory);
         Directory.CreateDirectory(publishDirectory);
         CopyWebHostTemplate(templateDirectory, tempDirectory);
-        WriteGeneratedWebProject(project, tempDirectory, target, ShouldOptimizeWebAssembly(webMode));
+        WriteGeneratedWebProject(project, tempDirectory, target, ShouldOptimizeWebAssembly(webMode), fingerprint);
 
         var generatedProjectPath = Path.Combine(tempDirectory, $"{GeneratedProjectName}.csproj");
         await RunDotNetAsync(
@@ -729,7 +729,7 @@ internal static class Program
         fingerprint.Append('\0');
     }
 
-    private static void WriteGeneratedWebProject(ProjectInfo project, string tempDirectory, WebEntryPoint target, bool optimizeWebAssembly)
+    private static void WriteGeneratedWebProject(ProjectInfo project, string tempDirectory, WebEntryPoint target, bool optimizeWebAssembly, string fingerprint)
     {
         var projectReference = SecurityElement.Escape(project.Path);
         var targetFramework = SecurityElement.Escape(project.TargetFramework);
@@ -830,7 +830,7 @@ internal static class Program
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <title>{{WebUtility.HtmlEncode(target.BrowserTitle)}}</title>
                 <base href="/" />
-                <link rel="manifest" href="manifest.webmanifest" />
+                <link rel="manifest" href="manifest.webmanifest?v={{fingerprint}}" />
                 <link rel="icon" href="{{WebUtility.HtmlEncode(branding.FaviconPath)}}" />
                 <link rel="shortcut icon" href="{{WebUtility.HtmlEncode(branding.FaviconPath)}}" />
                 <link rel="apple-touch-icon" href="{{WebUtility.HtmlEncode(branding.AppIconPath)}}" />
@@ -839,9 +839,10 @@ internal static class Program
                 <meta name="description" content="{{WebUtility.HtmlEncode(target.Description)}}" />
                 <meta name="theme-color" content="{{WebUtility.HtmlEncode(target.ThemeColor)}}" />
                 <link rel="preload" id="webassembly" />
-                <link rel="stylesheet" href="css/app.css" />
+                <link rel="stylesheet" href="css/app.css?v={{fingerprint}}" />
                 <script type="importmap"></script>
                 <script>
+                    window.klooieBuildId = {{ToJsonStringLiteral(fingerprint)}};
                     window.klooieLifecycleOptions = {
                         loadingHtmlPath: {{ToJsonStringLiteral(loadingHtmlPath)}},
                         stoppedHtmlPath: {{ToJsonStringLiteral(stoppedHtmlPath)}}
@@ -863,10 +864,10 @@ internal static class Program
                     <a href="." class="reload">Reload</a>
                     <span class="dismiss">X</span>
                 </div>
-                <script src="klooieFramePump.js"></script>
+                <script src="klooieFramePump.js?v={{fingerprint}}"></script>
                 <script>
                     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-                        navigator.serviceWorker.register("service-worker.js").catch(() => {});
+                        navigator.serviceWorker.register("service-worker.js?v={{fingerprint}}").catch(() => {});
                     }
                 </script>
                 <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>

@@ -12,6 +12,11 @@ body {
 }
 
 .klooie-host {
+    --klooie-layer-canvas: 0;
+    --klooie-layer-zoom: 30;
+    --klooie-layer-touch-controller: 40;
+    --klooie-layer-encourage: 50;
+    --klooie-layer-orientation: 60;
     position: relative;
     width: 100vw;
     height: 100vh;
@@ -48,7 +53,7 @@ body {
     --klooie-touch-shoulder-lift: clamp(22px, 5dvh, 40px);
     position: fixed;
     inset: 0;
-    z-index: 20;
+    z-index: var(--klooie-layer-touch-controller);
     pointer-events: none;
     touch-action: none;
     user-select: none;
@@ -68,6 +73,7 @@ body {
 }
 
     .klooie-touch-controller button {
+        position: relative;
         pointer-events: auto;
         touch-action: none;
         border: 1px solid rgba(255, 255, 255, .36);
@@ -80,6 +86,29 @@ body {
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+
+        .klooie-touch-controller [data-button].is-encouraged {
+            z-index: 2;
+            scale: 1;
+            overflow: visible;
+            animation: klooie-touch-encourage-pulse 1.15s ease-in-out infinite;
+        }
+
+        .klooie-touch-controller [data-button].is-encouraged::before {
+            content: "";
+            position: absolute;
+            inset: -18px;
+            border-radius: inherit;
+            background: radial-gradient(circle, rgba(255, 232, 120, .58), rgba(255, 156, 64, .30) 44%, rgba(255, 156, 64, 0) 72%);
+            filter: blur(1px);
+            z-index: -1;
+            pointer-events: none;
+            animation: klooie-touch-encourage-glow 1.15s ease-in-out infinite;
+        }
+
+        .klooie-touch-stick-base.is-encouraged::before {
+            border-radius: 50%;
+        }
 
 .klooie-touch-face button,
 .klooie-touch-shoulders button {
@@ -105,9 +134,31 @@ body {
     place-items: center;
     color: white;
     background: rgba(0, 0, 0, .78);
-    z-index: 5;
+    z-index: var(--klooie-layer-orientation);
     pointer-events: auto;
 }
+
+.klooie-touch-encourage-drawer {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    box-sizing: border-box;
+    padding: calc(max(10px, env(safe-area-inset-top)) + 8px) max(18px, env(safe-area-inset-right)) 13px max(18px, env(safe-area-inset-left));
+    color: rgba(255, 255, 255, .98);
+    background: rgba(8, 13, 20, .88);
+    border-bottom: 1px solid rgba(255, 255, 255, .24);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .32), 0 0 22px rgba(255, 204, 92, .18);
+    font: 800 clamp(16px, 4.6dvh, 24px) Consolas, "Cascadia Mono", "Courier New", monospace;
+    text-align: center;
+    z-index: var(--klooie-layer-encourage);
+    pointer-events: none;
+    animation: klooie-touch-drawer-in 220ms ease-out both;
+}
+
+    .klooie-touch-encourage-drawer[hidden] {
+        display: none;
+    }
 
 .klooie-touch-controller.requires-horizontal.is-portrait .klooie-horizontal-required {
     display: grid;
@@ -118,7 +169,7 @@ body {
     left: 50%;
     top: max(10px, env(safe-area-inset-top));
     transform: translateX(-50%);
-    z-index: 30;
+    z-index: var(--klooie-layer-zoom);
     display: flex;
     align-items: center;
     gap: 5px;
@@ -360,6 +411,38 @@ body {
         font-size: clamp(12px, 3dvh, 13px);
         background: rgba(14, 20, 28, .42);
     }
+
+@keyframes klooie-touch-encourage-pulse {
+    0%, 100% {
+        scale: 1;
+    }
+
+    50% {
+        scale: 1.12;
+    }
+}
+
+@keyframes klooie-touch-encourage-glow {
+    0%, 100% {
+        opacity: .58;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes klooie-touch-drawer-in {
+    from {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
         
 @media (pointer: fine) and (hover: hover) {
     .klooie-touch-controller {
@@ -434,6 +517,8 @@ body {
 
 .klooie-canvas {
     display: block;
+    position: relative;
+    z-index: var(--klooie-layer-canvas);
     width: 100vw;
     height: 100vh;
     width: 100%;

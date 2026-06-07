@@ -8,7 +8,10 @@
     <base href="/" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preload" id="webassembly" />
-    <link rel="stylesheet" href="css/app.css" />
+    <script>
+        window.klooieBuildId = String(Date.now());
+        document.write('<link rel="stylesheet" href="css/app.css?v=' + encodeURIComponent(window.klooieBuildId) + '" />');
+    </script>
     <link href="klooie.blazor.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
     <script>
@@ -33,10 +36,12 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
-    <script src="klooieFramePump.js"></script>
+    <script>
+        document.write('<script src="klooieFramePump.js?v=' + encodeURIComponent(window.klooieBuildId) + '"><\/script>');
+    </script>
     <script>
         if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-            navigator.serviceWorker.register("service-worker.js").catch(() => {});
+            navigator.serviceWorker.register("service-worker.js?v=" + encodeURIComponent(window.klooieBuildId)).catch(() => {});
         }
     </script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>

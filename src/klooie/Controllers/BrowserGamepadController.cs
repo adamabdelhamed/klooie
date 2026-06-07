@@ -145,7 +145,7 @@ public static class BrowserControllerInput
     }
 }
 
-public readonly record struct BrowserTouchButtonHint(int Button, string Label, bool Enabled, bool ForceEnabled = false)
+public readonly record struct BrowserTouchButtonHint(int Button, string Label, bool Enabled, bool ForceEnabled = false, bool Encourage = false, string EncourageMessage = "")
 {
     public static BrowserTouchButtonHint[] ResetToDefaults { get; } = [new(-1, "", true)];
 
