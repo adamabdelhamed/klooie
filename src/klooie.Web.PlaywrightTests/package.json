@@ -1,0 +1,15 @@
+{
+  "name": "klooie-web-playwright-tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "install:browsers": "playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "pngjs": "^7.0.0"
+  }
+}

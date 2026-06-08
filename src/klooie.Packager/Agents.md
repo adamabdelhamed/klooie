@@ -17,6 +17,8 @@ This project builds the `kpack` command line tool. It packages normal klooie pro
 - Generated web packages use the package fingerprint as `window.klooieBuildId` and append it to host CSS/JS/manifest/service-worker URLs. Lifecycle HTML fetches add that same build id and use `no-store`; avoid `force-cache` for host lifecycle assets because stale loader CSS/HTML can break mobile startup layering.
 - HTML lifecycle overlays consume live browser gamepad input in `klooieFramePump.js` while the app receives a neutral gamepad snapshot. Keep this separation so overlay links/buttons remain usable from controllers without leaking overlay navigation into C# game input. Overlay HTML can rely on the host's focus indicator; mark the dismiss/back action with `data-klooie-overlay-dismiss` so the B button has a stable target.
 - The mobile zoom buttons step on the displayed percent scale in 5% increments. Keep the internal zoom derived from `zoomDefault * displayedPercent / 100` so app-specific min/default/max values can tune the experience without making the UI feel irregular.
+- The browser host supports WebGL only. `createConsoleRenderer` may fall from the retained WebGL renderer to the WebGL2 cell renderer, but if both fail it must show `#klooie-webgl-required` and must not use Canvas2D as a hidden support path.
+- Playwright coverage for this host lives in `../klooie.Web.PlaywrightTests`; run it after changes to `Templates/WebHost/wwwroot/klooieFramePump.js`, lifecycle overlay loading, renderer fallback behavior, or mobile controls. App-specific loader tests belong in the consuming app repo.
 
 ## Key Files
 
@@ -53,6 +55,20 @@ Serve generated static output for browser verification:
 
 ```powershell
 dotnet .\src\klooie.Packager\bin\Debug\net10.0\kpack.dll .\src\klooie.blazorSampleApp\klooie.blazorSampleApp.csproj -type Serve -port 5187
+```
+
+Run browser regression tests:
+
+```powershell
+cd .\src\klooie.Web.PlaywrightTests
+npm test
+```
+
+Or use the no-argument wrapper scripts from the klooie repo root:
+
+```powershell
+.\Scripts\Test-Klooie-Web-Fast-Headless.cmd
+.\Scripts\Test-Klooie-Web-Fast-Headful.cmd
 ```
 
 ## Acceptance Check

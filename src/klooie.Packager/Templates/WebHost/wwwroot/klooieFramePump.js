@@ -2794,9 +2794,36 @@ function createConsoleRenderer(canvas, state) {
         try {
             return new WebGl2CellConsoleRenderer(canvas, state);
         } catch (fallbackError) {
-            console.warn("klooie GPU renderer unavailable; falling back to Canvas2D", fallbackError);
-            return new Canvas2DConsoleRenderer(canvas);
+            console.error("klooie GPU renderer unavailable; WebGL is required", fallbackError);
+            return new WebGlRequiredRenderer(canvas);
         }
+    }
+}
+
+class WebGlRequiredRenderer {
+    constructor(canvas) {
+        canvas.dataset.klooieRenderer = "unsupported-webgl";
+        this.overlay = document.createElement("div");
+        this.overlay.id = "klooie-webgl-required";
+        this.overlay.setAttribute("role", "alert");
+        this.overlay.style.cssText = "position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;padding:24px;background:#050505;color:white;font-family:Consolas,Menlo,Monaco,'Courier New',monospace;text-align:center";
+        this.overlay.innerHTML = `<div style="max-width:680px;border:1px solid rgba(255,255,255,.22);padding:28px;background:#101010">
+  <h1 style="margin:0 0 16px;font-size:28px">WebGL Required</h1>
+  <p style="margin:0;line-height:1.6;color:rgba(255,255,255,.78)">This browser or device does not expose WebGL, which this app needs for the web renderer. Try a current browser with hardware acceleration enabled.</p>
+</div>`;
+        document.body.appendChild(this.overlay);
+        window.klooieLifecycle?.dismissLoading?.();
+    }
+
+    invalidateMetrics() {
+    }
+
+    render() {
+    }
+
+    dispose() {
+        this.overlay?.remove();
+        this.overlay = undefined;
     }
 }
 
