@@ -27,3 +27,5 @@ The config intentionally defaults to one worker. Parallel browser first-loads ca
 - CLAWS-specific assertions belong in the parent repo's `Claws.Web.PlaywrightTests`, not here.
 - Do not reintroduce Canvas2D renderer support. WebGL failure should present `#klooie-webgl-required`.
 - Keep mobile checks geometry-based: controls must exist, fit the viewport, and layer above the canvas after lifecycle loading is dismissed.
+- The Playwright project matrix intentionally covers desktop Chromium/Firefox/WebKit, narrow and ultrawide desktop Chromium, phone portrait/landscape Chromium, phone portrait/landscape WebKit, and tablet portrait/landscape WebKit. Keep scenario tests project-agnostic where possible and skip only assertions that require mobile/coarse-pointer behavior.
+- Critical-step screenshots are written by tests to `screenshots/<project>/<test>/` and that folder is gitignored. Capture stable lifecycle moments there so successful visual evidence is available after a full run without committing generated PNGs.

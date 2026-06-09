@@ -26,7 +26,7 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "retain-on-failure",
-    screenshot: "only-on-failure",
+    screenshot: "off",
     video: "retain-on-failure"
   },
   webServer: shouldStartServer ? {
@@ -44,15 +44,61 @@ export default defineConfig({
       }
     },
     {
+      name: "chromium-ultrawide",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 2560, height: 1080 }
+      }
+    },
+    {
+      name: "chromium-small-desktop",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1024, height: 640 }
+      }
+    },
+    {
+      name: "firefox-desktop",
+      use: {
+        ...devices["Desktop Firefox"],
+        viewport: { width: 1440, height: 900 }
+      }
+    },
+    {
+      name: "webkit-desktop",
+      use: {
+        ...devices["Desktop Safari"],
+        viewport: { width: 1440, height: 900 }
+      }
+    },
+    {
       name: "mobile-chrome-landscape",
       use: {
         ...devices["Pixel 7 landscape"]
       }
     },
     {
+      name: "mobile-chrome-portrait",
+      use: {
+        ...devices["Pixel 7"]
+      }
+    },
+    {
       name: "mobile-safari-portrait",
       use: {
         ...devices["iPhone 14"]
+      }
+    },
+    {
+      name: "mobile-safari-landscape",
+      use: {
+        ...devices["iPhone 14 landscape"]
+      }
+    },
+    {
+      name: "webkit-tablet-portrait",
+      use: {
+        ...devices["iPad Pro 11"]
       }
     },
     {
