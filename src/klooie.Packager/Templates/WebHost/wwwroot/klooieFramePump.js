@@ -1243,6 +1243,7 @@ window.klooieAssets = {
     audioCache: new Map(),
     decodedAudioCache: new Map(),
     active: new Map(),
+    playGenerations: new Map(),
     music: new Set(),
     audioContext: undefined,
     paused: false,
@@ -1252,12 +1253,15 @@ window.klooieAssets = {
 
         const playbackId = String(id);
         this.stop(playbackId);
+        const playGeneration = this.nextPlayGeneration(playbackId);
         if (isMusic) {
             for (const musicId of Array.from(this.music)) this.stop(musicId);
         }
 
         this.getDecodedAudio(url)
             .then(buffer => {
+                if (this.playGenerations.get(playbackId) !== playGeneration) return;
+
                 const context = this.getAudioContext();
                 const source = context.createBufferSource();
                 const gain = context.createGain();
@@ -1309,6 +1313,13 @@ window.klooieAssets = {
                 this.startState(state);
             })
             .catch(error => console.debug("klooie audio play failed", error));
+    },
+
+    nextPlayGeneration(id) {
+        const playbackId = String(id);
+        const next = (this.playGenerations.get(playbackId) || 0) + 1;
+        this.playGenerations.set(playbackId, next);
+        return next;
     },
 
     startState(state) {
@@ -1402,7 +1413,10 @@ window.klooieAssets = {
     },
 
     stop(id) {
-        const state = this.active.get(String(id));
+        const playbackId = String(id);
+        this.nextPlayGeneration(playbackId);
+
+        const state = this.active.get(playbackId);
         if (!state) return;
 
         state.stopping = true;
@@ -1419,8 +1433,8 @@ window.klooieAssets = {
         } catch {
         }
 
-        this.active.delete(String(id));
-        this.music.delete(String(id));
+        this.active.delete(playbackId);
+        this.music.delete(playbackId);
     },
 
     pauseAll() {
