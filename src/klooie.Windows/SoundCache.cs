@@ -1,5 +1,6 @@
 ﻿using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using System.Collections.Concurrent;
 
 namespace klooie;
 internal sealed class SoundCache
@@ -139,17 +140,60 @@ internal sealed class CachedSound
 
 public static class PcmCache
 {
+    private static readonly ConcurrentDictionary<string, object> buildLocks = new(StringComparer.OrdinalIgnoreCase);
+
     public static string GetOrBuild(string assetId, IBinaryAssetProvider provider)
     {
         var cachePath = Path.Combine(Path.GetTempPath(), $"ttbs_{assetId}.wav");
-        if (File.Exists(cachePath)) return cachePath;
+        var buildLock = buildLocks.GetOrAdd(cachePath, static _ => new object());
+        lock (buildLock)
+        {
+            if (IsValidWav(cachePath)) return cachePath;
+            if (File.Exists(cachePath)) TryDelete(cachePath);
 
-        // decode once; pick your poison: WMF or Mp3FileReader
-        using var s = provider.Open(assetId);
-        using WaveStream decoder = s is FileStream fs ? new MediaFoundationReader(fs.Name) : new Mp3FileReader(s); // fallback
-        using var outFs = new FileStream(cachePath, FileMode.Create, FileAccess.Write, FileShare.Read);
-        WaveFileWriter.WriteWavFileToStream(outFs, decoder); // streamed, not MemoryStream
-        return cachePath;
+            var tempPath = Path.Combine(Path.GetTempPath(), $"ttbs_{assetId}.{Guid.NewGuid():N}.tmp");
+            try
+            {
+                // Decode once; write to a temp file first so readers never see a partial WAV.
+                using var s = provider.Open(assetId);
+                using WaveStream decoder = s is FileStream fs ? new MediaFoundationReader(fs.Name) : new Mp3FileReader(s);
+                using (var outFs = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    WaveFileWriter.WriteWavFileToStream(outFs, decoder);
+                }
+
+                using (new WaveFileReader(tempPath)) { }
+                File.Move(tempPath, cachePath, overwrite: true);
+                return cachePath;
+            }
+            finally
+            {
+                TryDelete(tempPath);
+            }
+        }
+    }
+
+    private static bool IsValidWav(string path)
+    {
+        if (File.Exists(path) == false) return false;
+        try
+        {
+            using var reader = new WaveFileReader(path);
+            return reader.WaveFormat != null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch { }
     }
 }
 
