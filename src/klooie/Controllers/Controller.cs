@@ -94,6 +94,7 @@ public sealed partial class Controller : Recyclable
         {
             TryForceStopProviderRumble();
             SetConnectionState(false);
+            throw;
         }
     }
 
