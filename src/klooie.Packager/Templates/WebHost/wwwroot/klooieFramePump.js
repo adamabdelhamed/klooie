@@ -1948,7 +1948,8 @@ function setupTouchController(hostElement, state, fadeIn)
     {
         const active = state.mobileOptions.requireHorizontal && !isPortraitViewport() && !mobileActionsDismissed;
         const canInstall = !!window.klooiePwa?.deferredInstallPrompt && !window.klooiePwa.installed;
-        const canManualInstall = isIosBrowser() && !window.klooiePwa.installed;
+        // Keep iPhone Safari in the browser-mode launch flow; manual Add to Home Screen prompts add friction before gameplay.
+        const canManualInstall = false;
         const fullscreenActive = isFullscreenActive();
         const canFullscreen = canRequestFullscreen();
         fullscreenButton.hidden = fullscreenActive || !canFullscreen;
